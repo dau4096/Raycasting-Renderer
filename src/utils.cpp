@@ -30,15 +30,20 @@ void GLErrorcheck(std::string location, bool shouldPause) {
 }
 
 
+float determinant(glm::vec2 vecA, glm::vec2 vecB) {
+	return vecA.x * vecB.y - vecA.y * vecB.x;
+}
+
+
 // FrameBuffer Class method implementations
 FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
 	data.resize(width * height * 3); // 3 channels for RGB
 	for (int i = 0; i < width * height * 3; i += 3) {
 		bool topHalf = i >= width*height*1.5;
 
-		data[i + 0] = (topHalf) ? display::topColour[0] : display::lowColour[0];
-		data[i + 1] = (topHalf) ? display::topColour[1] : display::lowColour[1];
-		data[i + 2] = (topHalf) ? display::topColour[2] : display::lowColour[2];
+		data[i + 0] = (topHalf) ? display::topColour.x : display::lowColour.x;
+		data[i + 1] = (topHalf) ? display::topColour.y : display::lowColour.y;
+		data[i + 2] = (topHalf) ? display::topColour.z : display::lowColour.z;
 	}
 };
 
@@ -57,11 +62,50 @@ void FrameBuffer::clearBuffer() {
 	for (int i = 0; i < width * height * 3; i += 3) {
 		bool topHalf = i >= width*height*1.5;
 
-		data[i + 0] = (topHalf) ? display::topColour[0] : display::lowColour[0];
-		data[i + 1] = (topHalf) ? display::topColour[1] : display::lowColour[1];
-		data[i + 2] = (topHalf) ? display::topColour[2] : display::lowColour[2];
+		data[i + 0] = (topHalf) ? display::topColour.x : display::lowColour.x;
+		data[i + 1] = (topHalf) ? display::topColour.y : display::lowColour.y;
+		data[i + 2] = (topHalf) ? display::topColour.z : display::lowColour.z;
 	}	
 }
+
+void FrameBuffer::drawLine(int xCoord, int lineHeight, glm::vec3 colour) {
+	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
+		return;
+	}
+
+	int midPointY = this->height / 2;
+	setPixel(getIndex(xCoord, midPointY), colour);
+
+
+    //Go upwards.
+    for (int yOffset = 1; yOffset <= lineHeight / 2; yOffset++) {
+        int yUp = midPointY - yOffset;
+        if (yUp >= 0) { // Ensure within bounds
+            setPixel(getIndex(xCoord, yUp), colour);
+        }
+    }
+
+    //Gp downwards.
+    for (int yOffset = 1; yOffset <= lineHeight / 2; yOffset++) {
+        int yDown = midPointY + yOffset;
+        if (yDown < this->height) { // Ensure within bounds
+            setPixel(getIndex(xCoord, yDown), colour);
+        }
+    }
+
+}
+
+
+void FrameBuffer::setPixel(int index, glm::vec3 colour) {
+	data[index + 0] = colour.x;
+	data[index + 1] = colour.y;
+	data[index + 2] = colour.z;	
+}
+
+int FrameBuffer::getIndex(int xCoord, int yCoord) {
+	return 3 * (xCoord + yCoord * width);
+}
+
 
 
 
@@ -89,6 +133,9 @@ void printFramebuffer(FrameBuffer frameBuffer) {
 
 
 bool saveTextureToFile(GLuint textureID, int width, int height, const std::string& filename) {
+	return true;
+
+	/*
 	// Bind the texture
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
@@ -109,6 +156,7 @@ bool saveTextureToFile(GLuint textureID, int width, int height, const std::strin
 	}
 
 	// Use stb_image_write to save the data as a PNG file
+	*/
 	/*
 	if (stbi_write_png(filename.c_str(), width, height, 3, buffer.data(), width * 3)) {
 		std::cout << "Texture saved to " << filename << std::endl;
@@ -118,11 +166,13 @@ bool saveTextureToFile(GLuint textureID, int width, int height, const std::strin
 		return false;
 	}
 	*/
+	/*
 	
-    for (unsigned char c : buffer) {
-        std::cout << static_cast<int>(c) << " ";
-    }
-	raise("done");
+	for (unsigned char c : buffer) {
+		std::cout << static_cast<int>(c) << " ";
+	}
+	raise("Saved Image");
+	*/
 }
 
 }

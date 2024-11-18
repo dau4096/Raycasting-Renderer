@@ -14,6 +14,9 @@ namespace utils {
 	void GLErrorcheck(std::string location = "", bool shouldPause = false);
 
 
+	float determinant(glm::vec2 vecA, glm::vec2 vecB);
+
+
 	class FrameBuffer {
 	public:
 		FrameBuffer(int width, int height);
@@ -26,20 +29,34 @@ namespace utils {
 		unsigned char* getData();
 
 		void clearBuffer();
+		void drawLine(int xCoord, int height, glm::vec3 colour);
+		void setPixel(int index, glm::vec3 colour);
+		int getIndex(int xCoord, int yCoord);
 
 	private:
 		int width, height;
-		std::vector<unsigned char> data; // 2D vector for storing color values
+		std::vector<unsigned char> data;
 	};
 
-	struct Line {
+
+	struct Wall {
 		glm::vec2 start, end;
-		unsigned char colour;
+		glm::vec3 colour;
+
+	    Wall() : start(0.0f, 0.0f), end(0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f) {}
+
+		Wall(glm::vec2 start, glm::vec2 end, glm::vec3 colour)
+			: start(start), end(end), colour(colour) {}
 	};
+
 
 	struct Ray {
-		glm::vec2 position, direction;
+		glm::vec2 position, direction, end;
+
+		Ray(glm::vec2 position, glm::vec2 direction)
+			: position(position), direction(direction) {}
 	};
+
 
 	void printFramebuffer(utils::FrameBuffer frameBuffer);
 

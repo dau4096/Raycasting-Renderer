@@ -9,26 +9,48 @@ using namespace glm;
 
 
 
-vec2 playerPosition(0.0f, 0.0f);
+glm::vec2 playerPosition(0.0f, 0.0f);
 float playerViewAngle = 0.0f;
 
 unordered_map<int, bool> keyMap = {};
-utils::Line levelData[256];
 
 // Keyboard presses to monitor.
 const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added later, without having to change that value.
 	GLFW_KEY_W, GLFW_KEY_S,
 	GLFW_KEY_A, GLFW_KEY_D,
+	GLFW_KEY_E, GLFW_KEY_Q,
 	GLFW_KEY_SPACE,
 	GLFW_KEY_LEFT_CONTROL
 };
 
-int main() {
-	//OpenGL error #1282 again. Happens here and later at glGetError().
-	//I dislike this, I just want to do cool raycasting rendering :(
-	
 
+std::array<utils::Wall, 128> prepLines() {
+	std::array<utils::Wall, 128> wallData;
+
+	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), glm::vec3(255, 000, 255));
+	wallData[1] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), glm::vec3(000, 255, 255));
+
+
+	wallData[2] = Wall(glm::vec2(-8, -8), glm::vec2( 0, -8), glm::vec3(255, 000, 000));
+	wallData[3] = Wall(glm::vec2( 0, -8), glm::vec2( 8, -8), glm::vec3(255, 000, 000));
+
+	wallData[4] = Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), glm::vec3(255, 000, 000));
+	wallData[5] = Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), glm::vec3(255, 000, 000));
+
+	wallData[6] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), glm::vec3(255, 000, 000));
+	wallData[7] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), glm::vec3(255, 000, 000));
+
+	wallData[8] = Wall(glm::vec2( 8, -8), glm::vec2( 8,  0), glm::vec3(255, 000, 000));
+	wallData[9] = Wall(glm::vec2( 8,  0), glm::vec2( 8,  8), glm::vec3(255, 000, 000));
+
+	return wallData;
+}
+
+
+int main() {
+	std::array<utils::Wall, 128> wallData = prepLines();
 	FrameBuffer frameBuffer = FrameBuffer(display::screenWidth, display::screenHeight);
+
 	
 	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Window");
 	utils::GLErrorcheck("Window Creation", true);
@@ -37,7 +59,7 @@ int main() {
 	GLuint frameBufferTexture = render::createTexture();
 	GLuint shaderProgram = render::loadShaders();
 
-	//Not any of these causing the 1282
+
 	glViewport(0, 0, display::screenWidth, display::screenHeight);
 	glDisable(GL_DEPTH_TEST);
 	GLuint VAO = render::getVAO();
@@ -52,6 +74,7 @@ int main() {
 
 	while (!glfwWindowShouldClose(Window)) {
 		glClear(GL_COLOR_BUFFER_BIT);
+		frameBuffer.clearBuffer();
 		glfwPollEvents();
 
 		// Get inputs for this frame
@@ -64,35 +87,28 @@ int main() {
 			}
 		}
 
-		if (keyMap[GLFW_KEY_A]) {
+		if (keyMap[GLFW_KEY_Q]) {
 			playerViewAngle -= player::turnSpeed;
-		} else if (keyMap[GLFW_KEY_D]) {
+		} else if (keyMap[GLFW_KEY_E]) {
 			playerViewAngle += player::turnSpeed;
 		}
-		playerViewAngle = fmod(playerViewAngle, 360.0f); // -180 -> 180 degrees
+		playerViewAngle = physics::angleClamp(playerViewAngle);
 
-		playerPosition = physics::playerMove(playerPosition, playerViewAngle);
+		playerPosition = physics::playerMove(playerPosition, playerViewAngle, keyMap);
 
-		// Update Texture with current frameBuffer contents
 
-		// Render to screen
-		glUseProgram(shaderProgram);
-		utils::GLErrorcheck("ShaderProgram Binding", true);
 
-		/*
-		#Previous implementation in PyOpenGL, in another project
-		glBindVertexArray(VAO_QUAD)
-		glBindTextureUnit(0, TCB_SCENE)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
-		glBindVertexArray(0)
-		*/
+		//Update the pixels and Raycast.
+		raycasting::checkRays(&frameBuffer, playerViewAngle, playerPosition, &wallData);
+
 		render::updateTexture(frameBufferTexture, frameBuffer);
 		utils::GLErrorcheck("TextureUpd", true);
 
-		//utils::saveTextureToFile(frameBufferTexture, display::screenWidth, display::screenHeight, "output.png");
-		//utils::pause();
+
+
+		//Shader and Screen
+		glUseProgram(shaderProgram);
+		utils::GLErrorcheck("ShaderProgram Binding", true);
 
 
 		GLuint frameBufferShaderLoc = glGetUniformLocation(shaderProgram, "frameBufferID");

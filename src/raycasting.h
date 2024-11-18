@@ -3,9 +3,10 @@
 
 #include "includes.h"
 #include "utils.h"
-//Function names and args here.
-//I.e. int add(int a, int b);
+
 namespace raycasting {
+
+	void checkRays(utils::FrameBuffer* frameBuffer, float playerViewAngle, glm::vec2 playerPosition, const std::array<utils::Wall, 128>* lineData);
 
 }
 
