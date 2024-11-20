@@ -9,34 +9,14 @@
 //Utility functions
 namespace utils {
 	void print(std::string str);
+	void printVec2(glm::vec2 vector);
 	void raise(std::string str);
 	void pause();
 	void GLErrorcheck(std::string location = "", bool shouldPause = false);
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
-
-
-	class FrameBuffer {
-	public:
-		FrameBuffer(int width, int height);
-
-		unsigned char* operator[](int y);
-
-		int getWidth();
-		int getHeight();
-
-		unsigned char* getData();
-
-		void clearBuffer();
-		void drawLine(int xCoord, int height, glm::vec3 colour);
-		void setPixel(int index, glm::vec3 colour);
-		int getIndex(int xCoord, int yCoord);
-
-	private:
-		int width, height;
-		std::vector<unsigned char> data;
-	};
+	float angleClamp(float value);
 
 
 	struct Wall {
@@ -58,9 +38,42 @@ namespace utils {
 	};
 
 
+	struct Player {
+		glm::vec2 position;
+		float viewAngle;
+
+		Player(glm::vec2 position, float angle)
+			: position(position), viewAngle(angle) {}
+	};
+
+
+	class FrameBuffer {
+	public:
+		FrameBuffer(int width, int height);
+
+		unsigned char* operator[](int y);
+
+		int getWidth();
+		int getHeight();
+
+		unsigned char* getData();
+
+		void clearBuffer();
+		void drawLine(int xCoord, int height, utils::Wall wall, glm::vec2 position, unsigned char* textureData, float multiplier);
+		void setPixel(int index, glm::vec3 colour);
+		int getIndex(int xCoord, int yCoord);
+
+	private:
+		int width, height;
+		std::vector<unsigned char> data;
+	};
+
+
 	void printFramebuffer(utils::FrameBuffer frameBuffer);
 
 	bool saveTextureToFile(GLuint textureID, int width, int height, const std::string& filename);
+
+	glm::vec3 getPixelData(float xUV, float yUV, unsigned char* textureData);
 }
 
 #endif

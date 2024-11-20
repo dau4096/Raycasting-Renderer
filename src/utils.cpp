@@ -6,7 +6,14 @@ using namespace glm;
 
 namespace utils {
 
-#define print(value) std::cout << value << std::endl;
+void print(std::string value) {
+	std::cout << value << std::endl;
+}
+
+
+void printVec2(glm::vec2 vector) {
+	std::cout << "<" << vector.x << ", " << vector.y << ">" << std::endl;
+}
 
 
 void raise(string err) {
@@ -35,17 +42,26 @@ float determinant(glm::vec2 vecA, glm::vec2 vecB) {
 }
 
 
+float angleClamp(float value) {
+	if (value < 0.0f) {
+		return 360.0f + value;
+	}
+	return fmod(value, 360.0f);
+}
+
+
 // FrameBuffer Class method implementations
 FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
-	data.resize(width * height * 3); // 3 channels for RGB
-	for (int i = 0; i < width * height * 3; i += 3) {
-		bool topHalf = i >= width*height*1.5;
-
-		data[i + 0] = (topHalf) ? display::topColour.x : display::lowColour.x;
-		data[i + 1] = (topHalf) ? display::topColour.y : display::lowColour.y;
-		data[i + 2] = (topHalf) ? display::topColour.z : display::lowColour.z;
+	data.resize(width * height * 3);
+	
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			int i = (y * width + x) * 3;
+			glm::vec3 colour = (y > height / 2) ? display::topColour : display::lowColour;
+			setPixel(i, colour);
+		}
 	}
-};
+}
 
 unsigned char* FrameBuffer::operator[](int y) {
 	return &data[y * width * 3]; // Return a pointer to the start of the row
@@ -59,40 +75,52 @@ unsigned char* FrameBuffer::getData() {
 }
 
 void FrameBuffer::clearBuffer() {
-	for (int i = 0; i < width * height * 3; i += 3) {
-		bool topHalf = i >= width*height*1.5;
-
-		data[i + 0] = (topHalf) ? display::topColour.x : display::lowColour.x;
-		data[i + 1] = (topHalf) ? display::topColour.y : display::lowColour.y;
-		data[i + 2] = (topHalf) ? display::topColour.z : display::lowColour.z;
-	}	
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			int i = (y * width + x) * 3;
+			glm::vec3 colour = (y > height / 2) ? display::topColour : display::lowColour;
+			setPixel(i, colour);
+		}
+	}
 }
 
-void FrameBuffer::drawLine(int xCoord, int lineHeight, glm::vec3 colour) {
+
+void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, unsigned char* textureData, float multiplier) {
 	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
 		return;
 	}
 
 	int midPointY = this->height / 2;
-	setPixel(getIndex(xCoord, midPointY), colour);
+
+	float repeatInterval = 1.0f;
+
+	glm::vec2 wallDirection = wall.end - wall.start;
+	glm::vec2 wallPosition = position - wall.start;
+	float wallLength = glm::length(wallDirection);
+	float projection = glm::dot(wallPosition, glm::normalize(wallDirection));
+	float xUV = fmod(projection / repeatInterval, 1.0f);
+	if (xUV < 0.0f) xUV += 1.0f;
 
 
-    //Go upwards.
-    for (int yOffset = 1; yOffset <= lineHeight / 2; yOffset++) {
-        int yUp = midPointY - yOffset;
-        if (yUp >= 0) { // Ensure within bounds
-            setPixel(getIndex(xCoord, yUp), colour);
-        }
-    }
+	for (int yOffset = -lineHeight / 2; yOffset <= lineHeight / 2; yOffset++) {
+		int yCoord = midPointY + yOffset;
+		if (yCoord < 0 || yCoord >= height) {
+			continue;
+		}
 
-    //Gp downwards.
-    for (int yOffset = 1; yOffset <= lineHeight / 2; yOffset++) {
-        int yDown = midPointY + yOffset;
-        if (yDown < this->height) { // Ensure within bounds
-            setPixel(getIndex(xCoord, yDown), colour);
-        }
-    }
 
+		float yUV = (yCoord - (midPointY - lineHeight / 2.0f)) / lineHeight;
+		yUV = glm::clamp(yUV, 0.0f, 1.0f);
+
+		glm::vec3 pixelColour;
+		if (dev::drawUV) {
+			pixelColour = glm::vec3(xUV*255, yUV*255, 0.0f);
+		} else {
+			pixelColour = getPixelData(xUV, yUV, textureData) * multiplier;
+		}
+
+		setPixel(getIndex(xCoord, yCoord), pixelColour);
+	}
 }
 
 
@@ -173,6 +201,18 @@ bool saveTextureToFile(GLuint textureID, int width, int height, const std::strin
 	}
 	raise("Saved Image");
 	*/
+}
+
+
+glm::vec3 getPixelData(float xUV, float yUV, unsigned char* textureData) {
+	int texX = static_cast<int>(xUV * (constants::textureWidth - 1));
+	int texY = static_cast<int>((1.0f - yUV) * (constants::textureHeight - 1));
+	int pixelIndex = (texY * constants::textureWidth + texX) * 3;
+	int red = textureData[pixelIndex];
+	int green = textureData[pixelIndex + 1];
+	int blue = textureData[pixelIndex + 2];
+	
+	return glm::vec3(red, green, blue);
 }
 
 }

@@ -6,7 +6,8 @@
 
 namespace raycasting {
 
-	void checkRays(utils::FrameBuffer* frameBuffer, float playerViewAngle, glm::vec2 playerPosition, const std::array<utils::Wall, 128>* lineData);
+	void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Wall, 128>* lineData, unsigned char* textureData);
+	glm::vec2 castRay(utils::Ray ray, utils::Wall wall);
 
 }
 

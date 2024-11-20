@@ -7,9 +7,7 @@
 //I.e. int add(int a, int b);
 namespace physics {
 
-	glm::vec2 playerMove(glm::vec2 playerPosition, float playerViewAngle, std::unordered_map<int, bool> keyMap);
-	bool checkCollision();
-	float angleClamp(float value);
+	utils::Player playerMove(utils::Player player, std::unordered_map<int, bool> keyMap, const std::array<utils::Wall, 128>* wallData);
 
 }
 

@@ -1,41 +1,85 @@
 #include "includes.h"
 #include "utils.h"
+#include "raycasting.h"
 using namespace std;
 using namespace utils;
 
 namespace physics {
 
-glm::vec2 playerMove(glm::vec2 playerPosition, float playerViewAngle, unordered_map<int, bool> keyMap) {
+bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius) {
+	glm::vec2 lineDir = line.end - line.start;  // Direction vector of the line segment
+	glm::vec2 lineToCircle = circlePosition - line.start; // Vector from line start to circle center
+
+	// Project lineToCircle onto lineDir to find the closest point on the line
+	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
+
+	// Clamp t to [0, 1] to restrict to the line segment
+	t = glm::clamp(t, 0.0f, 1.0f);
+
+	// Find the closest point on the line segment
+	glm::vec2 closestPoint = line.start + t * lineDir;
+
+	// Calculate the distance from the circle's center to the closest point
+	float distToCircle = glm::length(circlePosition - closestPoint);
+
+	// Check if the distance is less than or equal to the radius
+	return distToCircle <= radius;
+}
+
+
+utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 128>* wallData) {
+	float newX = 0.0f;
+	float newY = 0.0f;
+
+	// Determine the movement vector based on key presses
 	if (keyMap[GLFW_KEY_W]) {
-		playerPosition.x += 0.05f /*player::moveSpeed*/ * sin(playerViewAngle * constants::toRad); //Change in X
-		playerPosition.y += 0.05f /*player::moveSpeed*/ * cos(playerViewAngle * constants::toRad); //Change in Y
+		newX = playerConfig::moveSpeed * sin(player.viewAngle * constants::toRad);
+		newY = playerConfig::moveSpeed * cos(player.viewAngle * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_S]) {
-		playerPosition.x -= 0.05f /*player::moveSpeed*/ * sin(playerViewAngle * constants::toRad); //Change in X
-		playerPosition.y -= 0.05f /*player::moveSpeed*/ * cos(playerViewAngle * constants::toRad); //Change in Y
+		newX = -playerConfig::moveSpeed * sin(player.viewAngle * constants::toRad);
+		newY = -playerConfig::moveSpeed * cos(player.viewAngle * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_A]) {
-		playerPosition.x -= 0.05f /*player::moveSpeed*/ * sin((playerViewAngle + 90.0f) * constants::toRad); //Change in X
-		playerPosition.y -= 0.05f /*player::moveSpeed*/ * cos((playerViewAngle + 90.0f) * constants::toRad); //Change in Y
+		newX = -playerConfig::moveSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
+		newY = -playerConfig::moveSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_D]) {
-		playerPosition.x += 0.05f /*player::moveSpeed*/ * sin((playerViewAngle + 90.0f) * constants::toRad); //Change in X
-		playerPosition.y += 0.05f /*player::moveSpeed*/ * cos((playerViewAngle + 90.0f) * constants::toRad); //Change in Y
+		newX = playerConfig::moveSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
+		newY = playerConfig::moveSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
 	}
-	return playerPosition;
+
+	glm::vec2 movementVector(newX, newY);
+	if (glm::length(movementVector) < 1e-5) {
+		return player;
+	}
+
+
+	if (dev::noCollis) {
+		player.position += movementVector;
+		return player;
+	}
+
+
+	movementVector = glm::normalize(movementVector) * playerConfig::moveSpeed;
+
+
+
+	float maxAllowedDistance = glm::length(movementVector);
+	bool collided = false;
+	for (const utils::Wall& wall : *wallData) {
+		if (circleLineIntersect(wall, player.position + movementVector, playerConfig::minCollisionDist)) {
+			collided = true;
+		}
+	}
+
+
+	if (!collided) {
+		player.position += movementVector;
+	}
+
+	return player;
 };
 
-
-bool checkCollision() {
-	return false;
-}
-
-
-float angleClamp(float value) {
-	if (value < 0.0) {
-		return 360 + value;
-	}
-	return fmod(value, 360.0);
-}
 
 }

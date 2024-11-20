@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 #include "src/includes.h"
 #include "src/raycasting.h"
 #include "src/physics.h"
@@ -8,9 +10,8 @@ using namespace utils;
 using namespace glm;
 
 
+const double wait_time = 1.0f / display::maxFPS;
 
-glm::vec2 playerPosition(0.0f, 0.0f);
-float playerViewAngle = 0.0f;
 
 unordered_map<int, bool> keyMap = {};
 
@@ -40,8 +41,8 @@ std::array<utils::Wall, 128> prepLines() {
 	wallData[6] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), glm::vec3(255, 000, 000));
 	wallData[7] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), glm::vec3(255, 000, 000));
 
-	wallData[8] = Wall(glm::vec2( 8, -8), glm::vec2( 8,  0), glm::vec3(255, 000, 000));
-	wallData[9] = Wall(glm::vec2( 8,  0), glm::vec2( 8,  8), glm::vec3(255, 000, 000));
+	wallData[8] = Wall(glm::vec2( 8, -8), glm::vec2( 8,  -0.5), glm::vec3(255, 000, 000));
+	wallData[9] = Wall(glm::vec2( 8,  0.5), glm::vec2( 8,  8), glm::vec3(255, 000, 000));
 
 	return wallData;
 }
@@ -50,8 +51,22 @@ std::array<utils::Wall, 128> prepLines() {
 int main() {
 	std::array<utils::Wall, 128> wallData = prepLines();
 	FrameBuffer frameBuffer = FrameBuffer(display::screenWidth, display::screenHeight);
+	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
-	
+
+
+	const char* texturePath = "src/textures/texture.jpg";
+	int width, height, channels;
+	unsigned char* textureData = stbi_load(texturePath, &width, &height, &channels, 0);
+
+	if (textureData == nullptr) {
+		std::cout << stbi_failure_reason() << std::endl;
+		raise("Failed to load image");
+		return -1;
+	}
+
+
+
 	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Window");
 	utils::GLErrorcheck("Window Creation", true);
 
@@ -66,6 +81,8 @@ int main() {
 
 	utils::GLErrorcheck("Initialisation", true);
 
+	double frame_start;
+
 
 	// Initialize keyMap for input tracking
 	for (int key : monitoredKeys) {
@@ -73,6 +90,7 @@ int main() {
 	}
 
 	while (!glfwWindowShouldClose(Window)) {
+		frame_start = glfwGetTime();
 		glClear(GL_COLOR_BUFFER_BIT);
 		frameBuffer.clearBuffer();
 		glfwPollEvents();
@@ -88,18 +106,19 @@ int main() {
 		}
 
 		if (keyMap[GLFW_KEY_Q]) {
-			playerViewAngle -= player::turnSpeed;
-		} else if (keyMap[GLFW_KEY_E]) {
-			playerViewAngle += player::turnSpeed;
+			player.viewAngle -= playerConfig::turnSpeed;
 		}
-		playerViewAngle = physics::angleClamp(playerViewAngle);
+		if (keyMap[GLFW_KEY_E]) {
+			player.viewAngle += playerConfig::turnSpeed;
+		}
+		player.viewAngle = utils::angleClamp(player.viewAngle);
 
-		playerPosition = physics::playerMove(playerPosition, playerViewAngle, keyMap);
+		player = physics::playerMove(player, keyMap, &wallData);
 
 
 
 		//Update the pixels and Raycast.
-		raycasting::checkRays(&frameBuffer, playerViewAngle, playerPosition, &wallData);
+		raycasting::checkRays(&frameBuffer, player, &wallData, textureData);
 
 		render::updateTexture(frameBufferTexture, frameBuffer);
 		utils::GLErrorcheck("TextureUpd", true);
@@ -122,9 +141,15 @@ int main() {
 
 		glfwSwapBuffers(Window);
 		utils::GLErrorcheck("Rendering", true);
+
+
+		while (glfwGetTime() - frame_start < wait_time) {}
+		double totalTime = (glfwGetTime() - frame_start);
+		//std::cout << "FPS " << 1/totalTime << endl;
 	}
 
 	glfwDestroyWindow(Window);
 	glfwTerminate();
+	stbi_image_free(textureData);
 	return 0;
 }

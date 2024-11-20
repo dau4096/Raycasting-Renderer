@@ -18,9 +18,6 @@
 #include <C:/Users/User/Documents/code/.cpp/glfw-3.4.bin.WIN64/include/GLFW/glfw3.h>
 
 //Include STB.
-//#define STB_IMAGE_WRITE_IMPLEMENTATION
-//#include <C:\Users\User\Documents\code\.cpp\stb_image_write.h>
-//#include <glad/glad.h>
 
 //Include std subheaders.
 #include <iostream>

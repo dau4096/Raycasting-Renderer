@@ -5,29 +5,44 @@
 #include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
 
 namespace constants {
-	constexpr float pi = 3.1415926;
-	constexpr float exp = 2.7182818;
+	constexpr float pi = 3.1415926f;
+	constexpr float exp = 2.7182818f;
 
 	//Constant values for converting between angle units.
-	constexpr float toRad = 0.0174533;
-	constexpr float toDeg = 57.295780;
+	constexpr float toRad = 0.0174533f;
+	constexpr float toDeg = 57.295780f;
+
+	constexpr int textureWidth = 128;
+	constexpr int textureHeight = 128;
 }
 
 namespace display {
 	constexpr int screenWidth = 640;
 	constexpr int screenHeight = 360;
 
+	constexpr int maxFPS = 45;
+
 	constexpr float maxRayAngle = 70.0f;
 	constexpr float maxRayDistance = 64.0f;
 
 	//Framebuffer roof/floor colours.
-	constexpr glm::vec3 topColour(196, 196, 196);
+	constexpr glm::vec3 topColour(135, 206, 235);
 	constexpr glm::vec3 lowColour(128, 128, 128);
+	constexpr float dimmingStrength = 1.0f;
 }
 
-namespace player {
+namespace playerConfig {
 	constexpr float turnSpeed = 1.0f;
 	constexpr float moveSpeed = 0.05f;
+	constexpr float minCollisionDist = 0.125f;
+
+	constexpr glm::vec2 playerStartPos = glm::vec2(-2.5f, -2.5f);
+	constexpr float playerStartAngle = 315.0f;
+}
+
+namespace dev {
+	constexpr bool drawUV = false;
+	constexpr bool noCollis = false;
 }
 
 #endif // CONSTANTS_H
