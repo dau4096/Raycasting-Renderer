@@ -85,7 +85,7 @@ void FrameBuffer::clearBuffer() {
 }
 
 
-void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, unsigned char* textureData, float multiplier) {
+void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, unsigned char* textureData, int channels, float multiplier) {
 	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
 		return;
 	}
@@ -116,7 +116,7 @@ void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::ve
 		if (dev::drawUV) {
 			pixelColour = glm::vec3(xUV*255, yUV*255, 0.0f);
 		} else {
-			pixelColour = getPixelData(xUV, yUV, textureData) * multiplier;
+			pixelColour = getPixelData(xUV, yUV, textureData, channels) * multiplier;
 		}
 
 		setPixel(getIndex(xCoord, yCoord), pixelColour);
@@ -204,10 +204,10 @@ bool saveTextureToFile(GLuint textureID, int width, int height, const std::strin
 }
 
 
-glm::vec3 getPixelData(float xUV, float yUV, unsigned char* textureData) {
+glm::vec3 getPixelData(float xUV, float yUV, unsigned char* textureData, int channels) {
 	int texX = static_cast<int>(xUV * (constants::textureWidth - 1));
 	int texY = static_cast<int>((1.0f - yUV) * (constants::textureHeight - 1));
-	int pixelIndex = (texY * constants::textureWidth + texX) * 3;
+	int pixelIndex = (texY * constants::textureWidth + texX) * channels;
 	int red = textureData[pixelIndex];
 	int green = textureData[pixelIndex + 1];
 	int blue = textureData[pixelIndex + 2];

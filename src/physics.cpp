@@ -31,22 +31,28 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	float newX = 0.0f;
 	float newY = 0.0f;
 
+	float playerSpeed = playerConfig::moveSpeed;
+
+	if (keyMap[GLFW_KEY_LEFT_SHIFT]) {
+		playerSpeed *= playerConfig::runMultiplier;
+	}
+
 	// Determine the movement vector based on key presses
 	if (keyMap[GLFW_KEY_W]) {
-		newX = playerConfig::moveSpeed * sin(player.viewAngle * constants::toRad);
-		newY = playerConfig::moveSpeed * cos(player.viewAngle * constants::toRad);
+		newX += playerSpeed * sin(player.viewAngle * constants::toRad);
+		newY += playerSpeed * cos(player.viewAngle * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_S]) {
-		newX = -playerConfig::moveSpeed * sin(player.viewAngle * constants::toRad);
-		newY = -playerConfig::moveSpeed * cos(player.viewAngle * constants::toRad);
+		newX -= playerSpeed * sin(player.viewAngle * constants::toRad);
+		newY -= playerSpeed * cos(player.viewAngle * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_A]) {
-		newX = -playerConfig::moveSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
-		newY = -playerConfig::moveSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
+		newX -= playerSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
+		newY -= playerSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_D]) {
-		newX = playerConfig::moveSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
-		newY = playerConfig::moveSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
+		newX += playerSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
+		newY += playerSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
 	}
 
 	glm::vec2 movementVector(newX, newY);
@@ -61,7 +67,7 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	}
 
 
-	movementVector = glm::normalize(movementVector) * playerConfig::moveSpeed;
+	movementVector = glm::normalize(movementVector) * playerSpeed;
 
 
 

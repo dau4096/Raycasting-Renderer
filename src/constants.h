@@ -32,17 +32,20 @@ namespace display {
 }
 
 namespace playerConfig {
-	constexpr float turnSpeed = 1.0f;
+	constexpr float turnSpeedKB = 1.0f;
+	constexpr float turnSpeedCursor = 0.25f;
 	constexpr float moveSpeed = 0.05f;
+	constexpr float runMultiplier = 2.0f;
 	constexpr float minCollisionDist = 0.125f;
 
 	constexpr glm::vec2 playerStartPos = glm::vec2(-2.5f, -2.5f);
-	constexpr float playerStartAngle = 315.0f;
+	constexpr float playerStartAngle = -45.0f;
 }
 
 namespace dev {
 	constexpr bool drawUV = false;
 	constexpr bool noCollis = false;
+	constexpr bool printFPS = false;
 }
 
 #endif // CONSTANTS_H

@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "utils.h"
+#include <array>
 using namespace std;
 using namespace utils;
 
@@ -58,7 +59,7 @@ glm::vec2 castRay(utils::Ray ray, utils::Wall wall) {
 }
 
 
-void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Wall, 128>* wallData, unsigned char* textureData) {
+void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Wall, 128>* wallData, std::array<unsigned char*, 16> textureArray, std::array<int, 16> textureChannels) {
 	for (int xCoord = 0; xCoord < display::screenWidth; xCoord++) {
 		float rayOffset = -display::maxRayAngle + (xCoord / (float)display::screenWidth) * 2 * display::maxRayAngle;
 		float angle = utils::angleClamp(player.viewAngle + 180 + rayOffset);
@@ -87,7 +88,7 @@ void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std:
 				lowestDistance = intersectDistance;
 
 				glm::vec2 wallVec = glm::normalize(wall.start - wall.end);
-				float angleMultiplier = glm::dot(wallVec, glm::vec2(0, 1))* 0.1 + 0.9;
+				float angleMultiplier = glm::dot(wallVec, glm::vec2(0, 1))* 0.2 + 0.8;
 				float distanceMultiplier = 1.0f - (2.0f * intersectDistance) / display::maxRayDistance;
 				float multiplier = angleMultiplier * distanceMultiplier;
 				savedMultiplier = multiplier;
@@ -101,7 +102,10 @@ void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std:
 			float adjustedDistance = (1.0f - correctionFactor) * lowestDistance + correctionFactor * (lowestDistance * cos(rayOffset * constants::toRad));
 			float wallHeight = display::screenHeight / (adjustedDistance + 0.0001f);
 
-			frameBuffer->drawLine(xCoord, wallHeight, closestWall, closeIntersectPoint, textureData, savedMultiplier);
+			unsigned char* textureData = textureArray[closestWall.textureID];
+			int channels = textureChannels[closestWall.textureID];
+
+			frameBuffer->drawLine(xCoord, wallHeight, closestWall, closeIntersectPoint, textureData, channels, savedMultiplier);
 		}
 	}
 }
