@@ -105,7 +105,7 @@ void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std:
 			unsigned char* textureData = textureArray[closestWall.textureID];
 			int channels = textureChannels[closestWall.textureID];
 
-			frameBuffer->drawLine(xCoord, wallHeight, closestWall, closeIntersectPoint, textureData, channels, savedMultiplier);
+			frameBuffer->drawLine(xCoord, wallHeight, closestWall, closeIntersectPoint, lowestDistance, textureData, channels, savedMultiplier);
 		}
 	}
 }

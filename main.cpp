@@ -78,6 +78,7 @@ int main() {
 		if (textureData == nullptr) {
 			std::cout << stbi_failure_reason() << std::endl;
 			raise("Failed to load image " + textureName + ".bmp");
+			pause();
 			return -1;
 		}
 
@@ -162,6 +163,9 @@ int main() {
 		//Update the pixels and Raycast.
 		raycasting::checkRays(&frameBuffer, player, &wallData, textureArray, textureChannels);
 
+		//int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, unsigned char* textureData, int channels, float multiplier
+		//frameBuffer.drawLine(50, 250, wallData[0], player.position, 10.0f, textureArray[1], 3, 1.0);
+
 		render::updateTexture(frameBufferTexture, frameBuffer);
 		utils::GLErrorcheck("TextureUpd", true);
 
@@ -203,9 +207,11 @@ int main() {
 
 	} catch (const std::exception& e) {
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
+		pause();
 		return -1;
 	} catch (...) {
 		std::cerr << "An unspecified exception was thrown." << std::endl;
+		pause();
 		return -1;
 	}
 }

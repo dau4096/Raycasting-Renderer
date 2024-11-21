@@ -53,6 +53,7 @@ float angleClamp(float value) {
 // FrameBuffer Class method implementations
 FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
 	data.resize(width * height * 3);
+	depths.resize(width*height, display::maxRayDistance);
 	
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
@@ -64,20 +65,30 @@ FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
 }
 
 unsigned char* FrameBuffer::operator[](int y) {
+	if (y < 0 || y >= height) {return nullptr;}
 	return &data[y * width * 3]; // Return a pointer to the start of the row
 }
 
 int FrameBuffer::getWidth() {return width;};
 int FrameBuffer::getHeight() {return height;};
 
+void FrameBuffer::setDepth(int index, float depth) {
+	if (index < 0 || index >= this->width * this->height) {return;}
+	depths[index] = depth;
+}
+float FrameBuffer::getDepth(int index) {
+	if (index < 0 || index >= this->width * this->height) {return display::maxRayDistance;}
+	return depths[index];
+}
 unsigned char* FrameBuffer::getData() {
 	return data.data(); // Return a pointer to the raw data
 }
 
 void FrameBuffer::clearBuffer() {
-	for (int y = 0; y < height; ++y) {
+	//std::fill(depths.begin(), depths.end(), display::maxRayDistance);
+    for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
-			int i = (y * width + x) * 3;
+			int i = 3*(y * width + x);
 			glm::vec3 colour = (y > height / 2) ? display::topColour : display::lowColour;
 			setPixel(i, colour);
 		}
@@ -85,7 +96,7 @@ void FrameBuffer::clearBuffer() {
 }
 
 
-void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, unsigned char* textureData, int channels, float multiplier) {
+void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, unsigned char* textureData, int channels, float multiplier) {
 	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
 		return;
 	}
@@ -119,7 +130,9 @@ void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::ve
 			pixelColour = getPixelData(xUV, yUV, textureData, channels) * multiplier;
 		}
 
-		setPixel(getIndex(xCoord, yCoord), pixelColour);
+		int pixelIndex = getIndex(xCoord, yCoord);
+		setDepth(pixelIndex, depth);
+		setPixel(pixelIndex*3, pixelColour);
 	}
 }
 
@@ -131,7 +144,7 @@ void FrameBuffer::setPixel(int index, glm::vec3 colour) {
 }
 
 int FrameBuffer::getIndex(int xCoord, int yCoord) {
-	return 3 * (xCoord + yCoord * width);
+	return xCoord + (yCoord * width);
 }
 
 

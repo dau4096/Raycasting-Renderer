@@ -29,6 +29,17 @@ namespace utils {
 			: start(start), end(end), textureID(textureID) {}
 	};
 
+	struct Sprite {
+		glm::vec2 position;
+		float width;
+		int textureID;
+
+		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0) {}
+
+		Sprite(glm::vec2 position, float width, int textureID)
+			: position(position), width(width), textureID(textureID) {}
+	};
+
 
 	struct Ray {
 		glm::vec2 position, direction, end;
@@ -56,16 +67,20 @@ namespace utils {
 		int getWidth();
 		int getHeight();
 
+		void setDepth(int index, float depth);
+		float getDepth(int index);
+
 		unsigned char* getData();
 
 		void clearBuffer();
-		void drawLine(int xCoord, int height, utils::Wall wall, glm::vec2 position, unsigned char* textureData, int channels, float multiplier);
+		void drawLine(int xCoord, int height, utils::Wall wall, glm::vec2 position, float depth, unsigned char* textureData, int channels, float multiplier);
 		void setPixel(int index, glm::vec3 colour);
 		int getIndex(int xCoord, int yCoord);
 
 	private:
 		int width, height;
 		std::vector<unsigned char> data;
+		std::vector<float> depths;
 	};
 
 
