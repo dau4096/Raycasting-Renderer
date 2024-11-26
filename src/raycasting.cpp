@@ -119,7 +119,7 @@ int getSpriteScreenX(utils::Sprite sprite, utils::Player player, float onScreenW
 
 	float dot = glm::dot(spriteDirection, playerDirection);
 	float angleBetween = acos(glm::clamp(dot, -1.0f, 1.0f)) * constants::toDeg;
-	if (angleBetween > display::maxRayAngle) { return -1e3; }
+	if (angleBetween > 180.0f) { return -1e3; }
 
 	float dotDegrees = (1.0f - dot) * 180.0f;
 
@@ -155,7 +155,7 @@ void drawSprites(utils::FrameBuffer* frameBuffer, utils::Player player, const st
 
 
 		int centrePixelX = getSpriteScreenX(sprite, player, spriteWidth, zoom);
-		if (centrePixelX < -spriteWidth/2 || centrePixelX >= display::screenWidth + (spriteWidth/2)) {continue;} //Offscreen, horizontally.
+		if (centrePixelX < -(spriteWidth/2) || centrePixelX >= display::screenWidth + (spriteWidth/2)) {continue;} //Offscreen, horizontally.
 
 		utils::Texture texture = textureArray[sprite.textureID];
 
