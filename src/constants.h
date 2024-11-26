@@ -22,7 +22,8 @@ namespace display {
 
 	constexpr int maxFPS = 45;
 
-	constexpr float maxRayAngle = 70.0f;
+	constexpr float zoomFactor = 3.0f;
+	constexpr float maxRayAngle = 30.0f;
 	constexpr float maxRayDistance = 64.0f;
 
 	//Framebuffer roof/floor colours.

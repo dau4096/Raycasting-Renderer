@@ -20,8 +20,7 @@ std::array<std::string, 16> textureNames = {
 	"b",
 	"c",
 };
-array<unsigned char*, 16> textureArray = {};
-array<int, 16> textureChannels = {};
+array<utils::Texture, 16> textureArray = {};
 
 // Keyboard presses to monitor.
 const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added later, without having to change that value.
@@ -30,12 +29,12 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 	GLFW_KEY_E, GLFW_KEY_Q,
 	GLFW_KEY_SPACE,
 	GLFW_KEY_LEFT_SHIFT,
-	GLFW_KEY_1,
+	GLFW_KEY_1, GLFW_KEY_C,
 	GLFW_KEY_ESCAPE,
 };
 
 
-std::array<utils::Wall, 128> prepLines() {
+std::array<utils::Wall, 128> prepWalls() {
 	std::array<utils::Wall, 128> wallData;
 
 	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), 1);
@@ -57,11 +56,21 @@ std::array<utils::Wall, 128> prepLines() {
 	return wallData;
 }
 
+std::array<utils::Sprite, 128> prepSprites() {
+	std::array<utils::Sprite, 128> spriteData;
+
+	spriteData[0] = Sprite(glm::vec2(5, 5), 1.0f, 0);
+
+	return spriteData;
+
+}
+
 
 int main() {
 	try { //Catch exceptions
 
-	std::array<utils::Wall, 128> wallData = prepLines();
+	std::array<utils::Wall, 128> wallData = prepWalls();
+	std::array<utils::Sprite, 128> spriteData = prepSprites();
 	FrameBuffer frameBuffer = FrameBuffer(display::screenWidth, display::screenHeight);
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
@@ -82,8 +91,7 @@ int main() {
 			return -1;
 		}
 
-		textureArray[index] = textureData;
-		textureChannels[index] = channels;
+		textureArray[index] = Texture(glm::vec2(width, height), channels, textureData);
 
 		index++;
 
@@ -152,8 +160,10 @@ int main() {
 			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 		}
 
+		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::maxRayAngle/display::zoomFactor : display::maxRayAngle;
+
 		cursorXDelta = cursorXPos - cursorXPosPrev;
-		player.viewAngle += cursorXDelta * playerConfig::turnSpeedCursor;
+		player.viewAngle += cursorXDelta * (playerConfig::turnSpeedCursor * (rayAngle/display::maxRayAngle));
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
 		player = physics::playerMove(player, keyMap, &wallData);
@@ -161,14 +171,13 @@ int main() {
 
 
 		//Update the pixels and Raycast.
-		raycasting::checkRays(&frameBuffer, player, &wallData, textureArray, textureChannels);
+		raycasting::checkRays(&frameBuffer, player, &wallData, textureArray, rayAngle);
+		raycasting::drawSprites(&frameBuffer, player, &spriteData, textureArray, keyMap[GLFW_KEY_C]);
 
-		//int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, unsigned char* textureData, int channels, float multiplier
-		//frameBuffer.drawLine(50, 250, wallData[0], player.position, 10.0f, textureArray[1], 3, 1.0);
+
 
 		render::updateTexture(frameBufferTexture, frameBuffer);
 		utils::GLErrorcheck("TextureUpd", true);
-
 
 
 		//Shader and Screen
@@ -200,11 +209,14 @@ int main() {
 
 	glfwDestroyWindow(Window);
 	glfwTerminate();
-	for (unsigned char* texture : textureArray) {
-		stbi_image_free(texture);
+	for (utils::Texture texture : textureArray) {
+		stbi_image_free(texture.data);
+		texture.valid = false;
 	}
 	return 0;
 
+
+	//Catch exceptions.
 	} catch (const std::exception& e) {
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
 		pause();

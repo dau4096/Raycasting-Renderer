@@ -19,25 +19,40 @@ namespace utils {
 	float angleClamp(float value);
 
 
+	struct Texture {
+		glm::vec2 dimentions;
+		int channels;
+		unsigned char* data;
+		bool valid;
+
+		Texture() : dimentions(0.0f, 0.0f), channels(0), data(nullptr), valid(false) {}
+
+		Texture(glm::vec2 dimentions, int channels, unsigned char* data)
+			: dimentions(dimentions), channels(channels), data(data), valid(true) {}
+	};
+
+
 	struct Wall {
 		glm::vec2 start, end;
 		int textureID;
+		bool valid;
 
-	    Wall() : start(0.0f, 0.0f), end(0.0f, 0.0f), textureID(0) {}
+	    Wall() : start(0.0f, 0.0f), end(0.0f, 0.0f), textureID(0), valid(false) {}
 
 		Wall(glm::vec2 start, glm::vec2 end, int textureID)
-			: start(start), end(end), textureID(textureID) {}
+			: start(start), end(end), textureID(textureID), valid(true) {}
 	};
 
 	struct Sprite {
 		glm::vec2 position;
 		float width;
 		int textureID;
+		bool valid;
 
-		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0) {}
+		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(false) {}
 
 		Sprite(glm::vec2 position, float width, int textureID)
-			: position(position), width(width), textureID(textureID) {}
+			: position(position), width(width), textureID(textureID), valid(true) {}
 	};
 
 
@@ -73,7 +88,8 @@ namespace utils {
 		unsigned char* getData();
 
 		void clearBuffer();
-		void drawLine(int xCoord, int height, utils::Wall wall, glm::vec2 position, float depth, unsigned char* textureData, int channels, float multiplier);
+		void drawWallLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, utils::Texture texture, float multiplier);
+		void drawSpriteLine(int xCoord, int lineHeight, utils::Sprite sprite, int spriteX, float spriteWidth, float depth, utils::Texture texture);
 		void setPixel(int index, glm::vec3 colour);
 		int getIndex(int xCoord, int yCoord);
 
@@ -86,9 +102,7 @@ namespace utils {
 
 	void printFramebuffer(utils::FrameBuffer frameBuffer);
 
-	bool saveTextureToFile(GLuint textureID, int width, int height, const std::string& filename);
-
-	glm::vec3 getPixelData(float xUV, float yUV, unsigned char* textureData, int channels);
+	glm::vec3 getPixelData(float xUV, float yUV, utils::Texture texture);
 }
 
 #endif

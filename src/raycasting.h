@@ -6,9 +6,10 @@
 #include <array>
 
 namespace raycasting {
-
-	void checkRays(utils::FrameBuffer* frameBuffer,	utils::Player player, const std::array<utils::Wall, 128>* lineData,	std::array<unsigned char*, 16> textureArray, std::array<int, 16> textureChannels);
+	
 	glm::vec2 castRay(utils::Ray ray, utils::Wall wall);
+	void checkRays(utils::FrameBuffer* frameBuffer,	utils::Player player, const std::array<utils::Wall, 128>* lineData,	std::array<utils::Texture, 16> textureArray, float rayAngle);
+	void drawSprites(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Sprite, 128>* spriteData, std::array<utils::Texture, 16> textureArray, bool zoom);
 
 }
 
