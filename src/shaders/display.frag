@@ -1,12 +1,23 @@
+//display.frag
 #version 460 core
 
 in vec2 fragTexCoord;
 out vec4 fragColour;
 
-uniform sampler2D frameBufferID;
+layout(rgba32f, binding=0) uniform image2D renderedFrame;
+layout(std140, binding = 1) uniform constUBO {
+    float zoomFactor;
+    float maxRayAngle;
+    float maxRayDistance;
+    float dimmingStrength;
+
+    vec3 topColour;
+    vec3 lowColour;
+
+    int drawUV;
+};
+
 
 void main() {
-    fragColour = texture(frameBufferID, fragTexCoord);
-    
-    //fragColour = vec4(1.0, 0.0, 1.0, 1.0);
+    fragColour = imageLoad(renderedFrame, ivec2(gl_FragCoord.xy));
 }

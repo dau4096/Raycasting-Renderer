@@ -138,7 +138,7 @@ int getSpriteScreenX(utils::Sprite sprite, utils::Player player, float onScreenW
 
 
 
-void drawSprites(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Sprite, 128>* spriteData, std::array<utils::Texture, 16> textureArray, bool zoom) {
+void drawSprites(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Sprite, 32>* spriteData, std::array<utils::Texture, 16> textureArray, bool zoom) {
 	for (const utils::Sprite& sprite : *spriteData) {
 		if (!sprite.valid) {continue;}
 		float spriteDistance = glm::length(player.position - sprite.position);

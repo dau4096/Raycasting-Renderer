@@ -56,8 +56,8 @@ std::array<utils::Wall, 128> prepWalls() {
 	return wallData;
 }
 
-std::array<utils::Sprite, 128> prepSprites() {
-	std::array<utils::Sprite, 128> spriteData;
+std::array<utils::Sprite, 32> prepSprites() {
+	std::array<utils::Sprite, 32> spriteData;
 
 	spriteData[0] = Sprite(glm::vec2(5, 5), 1.0f, 0);
 
@@ -70,7 +70,7 @@ int main() {
 	try { //Catch exceptions
 
 	std::array<utils::Wall, 128> wallData = prepWalls();
-	std::array<utils::Sprite, 128> spriteData = prepSprites();
+	std::array<utils::Sprite, 32> spriteData = prepSprites();
 	FrameBuffer frameBuffer = FrameBuffer(display::screenWidth, display::screenHeight);
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
@@ -107,8 +107,24 @@ int main() {
 	utils::GLErrorcheck("Window Creation", true);
 
 
-	GLuint frameBufferTexture = render::createTexture();
-	GLuint shaderProgram = render::loadShaders();
+
+
+	GLuint frameTextureID = render::createTexture(display::screenWidth, display::screenHeight);
+	render::createConstUBO();
+	render::createWallUBO(&wallData);
+	GLuint spriteUBO = render::createSpriteUBO();
+
+	//World Shader
+	GLuint worldShader = render::createShaderProgram("world", false);
+
+	//Sprite Shader
+	GLuint spriteShader = render::createShaderProgram("sprites", false);
+
+	//Possible uiShader
+	//GLuint uiShader = render::createShaderProgram("interface", false);
+
+	//Display Shader
+	GLuint displayShader = render::createShaderProgram("display", true);
 
 
 	glViewport(0, 0, display::screenWidth, display::screenHeight);
@@ -116,6 +132,8 @@ int main() {
 	GLuint VAO = render::getVAO();
 
 	utils::GLErrorcheck("Initialisation", true);
+
+
 
 	double frame_start;
 	double cursorXDelta;
@@ -175,27 +193,43 @@ int main() {
 		raycasting::drawSprites(&frameBuffer, player, &spriteData, textureArray, keyMap[GLFW_KEY_C]);
 
 
-
-		render::updateTexture(frameBufferTexture, frameBuffer);
-		utils::GLErrorcheck("TextureUpd", true);
-
-
-		//Shader and Screen
-		glUseProgram(shaderProgram);
-		utils::GLErrorcheck("ShaderProgram Binding", true);
+		//Update Sprites UBO.
+		render::updateSpriteUBO(&spriteUBO, &spriteData);
 
 
-		GLuint frameBufferShaderLoc = glGetUniformLocation(shaderProgram, "frameBufferID");
-		glUniform1i(frameBufferShaderLoc, 0);
-
-		// Bind the texture to render
+		//World Shader.
+		glUseProgram(worldShader);
+		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 		glBindVertexArray(VAO);
-		glBindTextureUnit(0, frameBufferTexture);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		utils::GLErrorcheck("World Shader", true);
+
+
+		//Sprite Shader.
+		glUseProgram(spriteShader);
+		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+		glBindVertexArray(0);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		utils::GLErrorcheck("Sprite Shader", true);
+
+
+		//Space for a possible uiShader later to take the place of.
+
+
+		//Display Shader and update screen.
+		glUseProgram(displayShader);
+		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+		glBindVertexArray(0);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		glfwSwapBuffers(Window);
-		utils::GLErrorcheck("Rendering", true);
+		utils::GLErrorcheck("Display Shader", true);
 
 
 		while (glfwGetTime() - frame_start < wait_time) {}

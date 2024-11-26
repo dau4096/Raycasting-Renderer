@@ -13,35 +13,66 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 
-std::string readFile(const std::string& filePath) {
-    std::ifstream fileStream(filePath);
-    if (!fileStream.is_open()) {
-		raise("Error: Could not open file: " + string(filePath));
-        return "";
-    }
+GLFWwindow* initializeWindow(int width, int height, const char* title) {
+	if (!glfwInit()) {
+		raise("Failed to initialize GLFW");
+		return nullptr;
+	}
 
-    std::stringstream buffer;
-    buffer << fileStream.rdbuf();
-    return buffer.str();
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);  // Set OpenGL major version
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);  // Set OpenGL minor version
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // Use Core profile
+
+
+	GLFWwindow* Window = glfwCreateWindow(width, height, title, NULL, NULL);
+	if (!Window) {
+		glfwTerminate();
+		raise("Failed to create GLFW window");
+		return nullptr;
+	}
+	glfwMakeContextCurrent(Window);
+
+	glewExperimental = GL_TRUE;
+	if (glewInit() != GLEW_OK) {
+		raise("Failed to initialize GLEW.");
+	}
+
+	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
+	return Window;
+}
+
+
+std::string readFile(const std::string& filePath) {
+	std::ifstream fileStream(filePath);
+	if (!fileStream.is_open()) {
+		raise("Error: Could not open file: " + string(filePath));
+		return "";
+	}
+
+	std::stringstream buffer;
+	buffer << fileStream.rdbuf();
+	return buffer.str();
 }
 
 
 GLuint compileShader(GLenum shaderType, string filePath) {
 	std::string source = readFile(filePath);
-    const char* src = source.c_str();
+	const char* src = source.c_str();
 
-    // Create a shader object
-    GLuint shader = glCreateShader(shaderType);
-    if (shader == 0) {
-        raise("Error: Failed to create shader.");
-        return 0;
-    }
+	// Create a shader object
+	GLuint shader = glCreateShader(shaderType);
+	if (shader == 0) {
+		raise("Error: Failed to create shader.");
+		return 0;
+	}
 
-    // Attach the shader source code to the shader object
-    glShaderSource(shader, 1, &src, nullptr);
+	// Attach the shader source code to the shader object
+	glShaderSource(shader, 1, &src, nullptr);
 
-    // Compile the shader
-    glCompileShader(shader);
+	// Compile the shader
+	glCompileShader(shader);
+	
 
 	GLint success;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -55,9 +86,14 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 }
 
 
-GLuint loadShaders() {
-	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\display.vert");
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src\\shaders\\display.frag");
+GLuint createShaderProgram(std::string name, bool hasVertexSource) {
+	GLuint vertexShader;
+	if (hasVertexSource) {
+		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\"+ name +".vert");
+	} else {
+		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\generic.vert");
+	}
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src\\shaders\\"+ name +".frag");
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
@@ -79,61 +115,104 @@ GLuint loadShaders() {
 }
 
 
-GLFWwindow* initializeWindow(int width, int height, const char* title) {
-	if (!glfwInit()) {
-		raise("Failed to initialize GLFW");
-		return nullptr;
-	}
+void createConstUBO() {
+	struct ConstData {
+		float zoomFactor;
+		float maxRayAngle;
+		float maxRayDistance;
+		float dimmingStrength;
 
+		glm::vec3 topColour;
+		glm::vec3 lowColour;
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);  // Set OpenGL major version
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);  // Set OpenGL minor version
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // Use Core profile
+		int drawUV;
+		float padding[3];
+	};
 
+	ConstData constData = {
+		display::zoomFactor,
+		display::maxRayAngle,
+		display::maxRayDistance,
+		display::dimmingStrength,
 
-	GLFWwindow* Window = glfwCreateWindow(width, height, title, NULL, NULL);
-	if (!Window) {
-		glfwTerminate();
-		raise("Failed to create GLFW window");
-		return nullptr;
-	}
-	glfwMakeContextCurrent(Window);
+		{ display::topColour.x, display::topColour.y, display::topColour.z },
+		{ display::lowColour.x, display::lowColour.y, display::lowColour.z },
 
-	glewExperimental = GL_TRUE;
-	if (glewInit() != GLEW_OK) {
-		raise("Failed to initialize GLEW.");
-	}
+		static_cast<int>(dev::drawUV),
+		{ 0.0f, 0.0f, 0.0f }
+	};
 
-	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
-	return Window;
+	GLuint constUBO;
+	glGenBuffers(1, &constUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, constUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(ConstData), &constData, GL_STATIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, constUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 
 
-GLuint createTexture() {
+void createWallUBO(const std::array<utils::Wall, 128>* dataSet) {
+	GLuint wallUBO;
+	glGenBuffers(1, &wallUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Wall) * dataSet->size(), dataSet->data(), GL_STATIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 2, wallUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+GLuint createSpriteUBO() {
+	GLuint spriteUBO;
+	glGenBuffers(1, &spriteUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Sprite) * 32, nullptr, GL_DYNAMIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, spriteUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	return spriteUBO;
+}
+
+
+void updateSpriteUBO(GLuint* spriteUBO, const std::array<utils::Sprite, 32>* dataSet) {
+	glBindBuffer(GL_UNIFORM_BUFFER, *spriteUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, dataSet->data(), sizeof(utils::Sprite) * dataSet->size());
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to spriteUBO.");
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+GLuint createTexture(int width, int height) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
-	
-	// Set texture parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// Allocate storage for the texture with a suitable format
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, width, height);
+
+	// Set filtering (optional, doesn't matter much for image load/store)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, display::screenWidth, display::screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-
-	glBindTexture(GL_TEXTURE_2D, 0); // Unbind the texture
+	// Unbind the texture
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return textureID;
 }
 
-void updateTexture(GLuint textureID, utils::FrameBuffer frameBuffer) {
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, display::screenWidth, display::screenHeight,
-                        GL_RGB, GL_UNSIGNED_BYTE, frameBuffer.getData());
-        glBindTexture(GL_TEXTURE_2D, 0);
-}
 
 GLuint getVAO() {
 	const float vertices[] = {
