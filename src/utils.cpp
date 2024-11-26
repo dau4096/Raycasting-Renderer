@@ -53,6 +53,7 @@ float angleClamp(float value) {
 // FrameBuffer Class method implementations
 FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
 	data.resize(width * height * 3);
+	depths.resize(width*height, display::maxRayDistance);
 	
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
@@ -64,20 +65,30 @@ FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
 }
 
 unsigned char* FrameBuffer::operator[](int y) {
+	if (y < 0 || y >= height) {return nullptr;}
 	return &data[y * width * 3]; // Return a pointer to the start of the row
 }
 
 int FrameBuffer::getWidth() {return width;};
 int FrameBuffer::getHeight() {return height;};
 
+void FrameBuffer::setDepth(int index, float depth) {
+	if (index < 0 || index >= this->width * this->height) {return;}
+	depths[index] = depth;
+}
+float FrameBuffer::getDepth(int index) {
+	if (index < 0 || index >= this->width * this->height) {return display::maxRayDistance;}
+	return depths[index];
+}
 unsigned char* FrameBuffer::getData() {
 	return data.data(); // Return a pointer to the raw data
 }
 
 void FrameBuffer::clearBuffer() {
-	for (int y = 0; y < height; ++y) {
+	std::fill(depths.begin(), depths.end(), display::maxRayDistance);
+    for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
-			int i = (y * width + x) * 3;
+			int i = 3*(y * width + x);
 			glm::vec3 colour = (y > height / 2) ? display::topColour : display::lowColour;
 			setPixel(i, colour);
 		}
@@ -85,7 +96,7 @@ void FrameBuffer::clearBuffer() {
 }
 
 
-void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, unsigned char* textureData, int channels, float multiplier) {
+void FrameBuffer::drawWallLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, utils::Texture texture, float multiplier) {
 	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
 		return;
 	}
@@ -116,11 +127,61 @@ void FrameBuffer::drawLine(int xCoord, int lineHeight, utils::Wall wall, glm::ve
 		if (dev::drawUV) {
 			pixelColour = glm::vec3(xUV*255, yUV*255, 0.0f);
 		} else {
-			pixelColour = getPixelData(xUV, yUV, textureData, channels) * multiplier;
+			pixelColour = getPixelData(xUV, yUV, texture) * multiplier;
 		}
 
-		setPixel(getIndex(xCoord, yCoord), pixelColour);
+		if (pixelColour == glm::vec3(-1.0f)) {
+			continue; //Pixel is transparent.
+		}
+
+		int pixelIndex = getIndex(xCoord, yCoord);
+		setDepth(pixelIndex, depth);
+		setPixel(pixelIndex*3, pixelColour);
 	}
+}
+
+
+void FrameBuffer::drawSpriteLine(int xCoord, int lineHeight, utils::Sprite sprite, int spriteX, float spriteWidth, float depth, utils::Texture texture) {
+	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
+		return;
+	}
+
+
+	int midPointY = this->height/2;
+	float xUV = spriteX / spriteWidth;
+
+	float distanceMultiplier = 1.0f - (2.0f * depth) / display::maxRayDistance;
+
+
+	for (int yOffset = -lineHeight/2; yOffset <= lineHeight/2; yOffset++) {
+		int yCoord = midPointY + yOffset;
+		if (yCoord < 0 || yCoord > this->height) {
+			continue;
+		}
+
+		float yUV = (yCoord - (midPointY - lineHeight / 2.0f)) / lineHeight;
+		yUV = glm::clamp(yUV, 0.0f, 1.0f);
+
+
+
+		int pixelIndex = getIndex(xCoord, yCoord);
+		float savedDepth = getDepth(pixelIndex);
+		if (savedDepth < depth) {continue;} //Pixel is covered.
+
+		glm::vec3 pixelColour;
+		if (dev::drawUV) {
+			pixelColour = glm::vec3(255.0f, 0.0f, 255.0f);
+		} else {
+			pixelColour = getPixelData(xUV, yUV, texture) * distanceMultiplier;
+		}
+
+		if (pixelColour == glm::vec3(-1.0f)) {continue;} //Pixel is transparent.
+
+
+		setDepth(pixelIndex, depth);
+		setPixel(pixelIndex*3, pixelColour);
+	}
+
 }
 
 
@@ -131,7 +192,7 @@ void FrameBuffer::setPixel(int index, glm::vec3 colour) {
 }
 
 int FrameBuffer::getIndex(int xCoord, int yCoord) {
-	return 3 * (xCoord + yCoord * width);
+	return xCoord + (yCoord * width);
 }
 
 
@@ -160,57 +221,19 @@ void printFramebuffer(FrameBuffer frameBuffer) {
 }
 
 
-bool saveTextureToFile(GLuint textureID, int width, int height, const std::string& filename) {
-	return true;
-
-	/*
-	// Bind the texture
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	// Allocate a buffer to store the texture data (RGBA format)
-	std::vector<unsigned char> buffer(width * height * 3);
-
-	// Read the texture data
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
-
-	// Unbind the texture
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Check for OpenGL errors
-	GLenum err = glGetError();
-	if (err != GL_NO_ERROR) {
-		std::cerr << "OpenGL Error while reading texture: " << err << std::endl;
-		return false;
-	}
-
-	// Use stb_image_write to save the data as a PNG file
-	*/
-	/*
-	if (stbi_write_png(filename.c_str(), width, height, 3, buffer.data(), width * 3)) {
-		std::cout << "Texture saved to " << filename << std::endl;
-		return true;
-	} else {
-		std::cerr << "Failed to save texture to " << filename << std::endl;
-		return false;
-	}
-	*/
-	/*
-	
-	for (unsigned char c : buffer) {
-		std::cout << static_cast<int>(c) << " ";
-	}
-	raise("Saved Image");
-	*/
-}
-
-
-glm::vec3 getPixelData(float xUV, float yUV, unsigned char* textureData, int channels) {
+glm::vec3 getPixelData(float xUV, float yUV, utils::Texture texture) {
 	int texX = static_cast<int>(xUV * (constants::textureWidth - 1));
 	int texY = static_cast<int>((1.0f - yUV) * (constants::textureHeight - 1));
-	int pixelIndex = (texY * constants::textureWidth + texX) * channels;
-	int red = textureData[pixelIndex];
-	int green = textureData[pixelIndex + 1];
-	int blue = textureData[pixelIndex + 2];
+	int pixelIndex = (texY * constants::textureWidth + texX) * texture.channels;
+	int red = texture.data[pixelIndex];
+	int green = texture.data[pixelIndex + 1];
+	int blue = texture.data[pixelIndex + 2];
+
+	if (texture.channels == 4) {
+		if (texture.data[pixelIndex + 3] < 128) {
+			return glm::vec3(-1.0f); //Pixel is transparent.
+		}
+	}
 	
 	return glm::vec3(red, green, blue);
 }

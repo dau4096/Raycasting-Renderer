@@ -59,9 +59,9 @@ glm::vec2 castRay(utils::Ray ray, utils::Wall wall) {
 }
 
 
-void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Wall, 128>* wallData, std::array<unsigned char*, 16> textureArray, std::array<int, 16> textureChannels) {
+void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Wall, 128>* wallData, std::array<utils::Texture, 16> textureArray, float rayAngle) {
 	for (int xCoord = 0; xCoord < display::screenWidth; xCoord++) {
-		float rayOffset = -display::maxRayAngle + (xCoord / (float)display::screenWidth) * 2 * display::maxRayAngle;
+		float rayOffset = -rayAngle + (xCoord / (float)display::screenWidth) * 2 * rayAngle;
 		float angle = utils::angleClamp(player.viewAngle + 180 + rayOffset);
 
 
@@ -77,6 +77,7 @@ void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std:
 
 
 		for (const utils::Wall& wall : *wallData) {
+			if (!wall.valid) {continue;}
 			glm::vec2 intersectPoint = raycasting::castRay(ray, wall);
 
 			if (intersectPoint == glm::vec2(1e30)) {continue;}
@@ -100,13 +101,67 @@ void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std:
 		if (savedMultiplier != 0.0) {
 			float correctionFactor = 0.25f; //Multiplies by amount of correction.
 			float adjustedDistance = (1.0f - correctionFactor) * lowestDistance + correctionFactor * (lowestDistance * cos(rayOffset * constants::toRad));
-			float wallHeight = display::screenHeight / (adjustedDistance + 0.0001f);
+			float wallHeight = (display::screenHeight / (adjustedDistance + 0.0001f)) * (display::maxRayAngle/rayAngle);
 
-			unsigned char* textureData = textureArray[closestWall.textureID];
-			int channels = textureChannels[closestWall.textureID];
+			utils::Texture texture = textureArray[closestWall.textureID];
 
-			frameBuffer->drawLine(xCoord, wallHeight, closestWall, closeIntersectPoint, textureData, channels, savedMultiplier);
+			frameBuffer->drawWallLine(xCoord, wallHeight, closestWall, closeIntersectPoint, lowestDistance, texture, savedMultiplier);
 		}
+	}
+}
+
+
+
+int getSpriteScreenX(utils::Sprite sprite, utils::Player player, float onScreenWidth, bool zoom) {
+	//Make sure to return a VERY offscreen x coordinate to be interpreted as "Invalid"
+	glm::vec2 spriteDirection = glm::normalize(sprite.position - player.position);
+	glm::vec2 playerDirection = glm::normalize(glm::vec2(sin(player.viewAngle * constants::toRad), cos(player.viewAngle * constants::toRad)));
+
+	float dot = glm::dot(spriteDirection, playerDirection);
+	float angleBetween = acos(glm::clamp(dot, -1.0f, 1.0f)) * constants::toDeg;
+	if (angleBetween > display::maxRayAngle) { return -1e3; }
+
+	float dotDegrees = (1.0f - dot) * 180.0f;
+
+	float cross = spriteDirection.x * playerDirection.y - spriteDirection.y * playerDirection.x; // 2D cross product
+	int dotDirection = (cross >= 0) ? 1 : -1;
+
+
+	float screenXRelative = tan(angleBetween * constants::toRad) / tan(display::maxRayAngle * constants::toRad);
+	screenXRelative = (zoom) ? screenXRelative*display::zoomFactor : screenXRelative;
+	int centrePixelX = (display::screenWidth / 2) + (dotDirection * screenXRelative * (display::screenWidth / 2));
+
+	if (centrePixelX + onScreenWidth/2 < 0 || centrePixelX - onScreenWidth/2 > display::screenWidth) {return -1e3;} //Also offscreen.
+
+	return centrePixelX;
+}
+
+
+
+void drawSprites(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Sprite, 128>* spriteData, std::array<utils::Texture, 16> textureArray, bool zoom) {
+	for (const utils::Sprite& sprite : *spriteData) {
+		if (!sprite.valid) {continue;}
+		float spriteDistance = glm::length(player.position - sprite.position);
+
+		if (spriteDistance > display::maxRayDistance) {continue;} //Too far to see onscreen.
+
+		float correctionFactor = 0.25f; //Multiplies by amount of correction.
+		float adjustedDistance = (1.0f - correctionFactor) * spriteDistance + correctionFactor * spriteDistance;
+		float spriteHeight = display::screenHeight / (adjustedDistance + 0.0001f);
+		float spriteWidth = (sprite.width / adjustedDistance) * (display::screenWidth / (2 * tan(display::maxRayAngle * constants::toRad)));
+
+		spriteWidth = (zoom) ? spriteWidth * display::zoomFactor : spriteWidth;
+		spriteHeight = (zoom) ? spriteHeight * display::zoomFactor : spriteHeight;
+
+
+		int centrePixelX = getSpriteScreenX(sprite, player, spriteWidth, zoom);
+		if (centrePixelX < -spriteWidth/2 || centrePixelX >= display::screenWidth + (spriteWidth/2)) {continue;} //Offscreen, horizontally.
+
+		utils::Texture texture = textureArray[sprite.textureID];
+
+		for (int xCoord = -spriteWidth/2; xCoord < spriteWidth/2; xCoord++) {
+			frameBuffer->drawSpriteLine(xCoord + centrePixelX, spriteHeight, sprite, xCoord + spriteWidth/2, spriteWidth, spriteDistance, texture);
+		}		
 	}
 }
 
