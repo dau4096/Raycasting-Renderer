@@ -15,12 +15,11 @@ const double wait_time = 1.0f / display::maxFPS;
 
 unordered_map<int, bool> keyMap = {};
 
-std::array<std::string, 16> textureNames = {
+std::array<std::string, 32> textureNames = {
 	"a",
 	"b",
 	"c",
 };
-array<utils::Texture, 16> textureArray = {};
 
 // Keyboard presses to monitor.
 const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added later, without having to change that value.
@@ -66,6 +65,8 @@ std::array<utils::Sprite, 32> prepSprites() {
 }
 
 
+
+
 int main() {
 	try { //Catch exceptions
 
@@ -75,6 +76,7 @@ int main() {
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
 
+	/*
 	int index = 0;
 	unsigned char* textureData;
 	for (const std::string& textureName : textureNames) {
@@ -96,12 +98,15 @@ int main() {
 		index++;
 
 	}
+	*/
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
+
+
 	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Window");
-	glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
+
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
 	utils::GLErrorcheck("Window Creation", true);
@@ -110,12 +115,17 @@ int main() {
 
 
 	GLuint frameTextureID = render::createTexture(display::screenWidth, display::screenHeight);
+	GLuint textureArray = render::createTextureArray(textureNames);
 	render::createConstUBO();
 	render::createWallUBO(&wallData);
 	GLuint spriteUBO = render::createSpriteUBO();
 
-	//World Shader
-	GLuint worldShader = render::createShaderProgram("world", false);
+
+	//Visplane Shader (Roof and Floor).
+	GLuint visplaneShader = render::createShaderProgram("visplanes", false);
+
+	//Wall Shader
+	GLuint wallShader = render::createShaderProgram("walls", false);
 
 	//Sprite Shader
 	GLuint spriteShader = render::createShaderProgram("sprites", false);
@@ -135,8 +145,8 @@ int main() {
 
 
 
-	double frame_start;
-	double cursorXDelta;
+	double frame_start, cursorXDelta;
+	GLint topIndexLocation, lowIndexLocation, zoomLocation, playerPosLocation, playerAngleLocation;
 
 	// Initialize keyMap for input tracking
 	for (int key : monitoredKeys) {
@@ -188,23 +198,60 @@ int main() {
 
 
 
-		//Update the pixels and Raycast.
-		raycasting::checkRays(&frameBuffer, player, &wallData, textureArray, rayAngle);
-		raycasting::drawSprites(&frameBuffer, player, &spriteData, textureArray, keyMap[GLFW_KEY_C]);
+		//[CPU ONLY] Update the pixels and Raycast.
+		//raycasting::checkRays(&frameBuffer, player, &wallData, textureArray, rayAngle);
+		//raycasting::drawSprites(&frameBuffer, player, &spriteData, textureArray, keyMap[GLFW_KEY_C]);
 
 
 		//Update Sprites UBO.
 		render::updateSpriteUBO(&spriteUBO, &spriteData);
 
 
-		//World Shader.
-		glUseProgram(worldShader);
+
+		//Visplanes Shader.
+		glUseProgram(visplaneShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		glBindTextureUnit(0, textureArray);
+
+		topIndexLocation = glGetUniformLocation(visplaneShader, "topIndex");
+		lowIndexLocation = glGetUniformLocation(visplaneShader, "lowIndex");
+		playerPosLocation = glGetUniformLocation(visplaneShader, "playerPosition");
+		playerAngleLocation = glGetUniformLocation(visplaneShader, "playerViewAngle");
+		zoomLocation = glGetUniformLocation(visplaneShader, "zoom");
+		
+		glUniform1i(topIndexLocation, display::topIndex);
+		glUniform1i(lowIndexLocation, display::lowIndex);
+		glUniform2f(playerPosLocation, player.position.x, player.position.y);
+		glUniform1f(playerAngleLocation, player.viewAngle);
+		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("World Shader", true);
+		utils::GLErrorcheck("Visplane Shader", true);
+
+
+		//Wall Shader.
+		glUseProgram(wallShader);
+		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+		glBindTextureUnit(0, textureArray);
+
+		playerPosLocation = glGetUniformLocation(wallShader, "playerPosition");
+		playerAngleLocation = glGetUniformLocation(wallShader, "playerViewAngle");
+		zoomLocation = glGetUniformLocation(wallShader, "zoom");
+		
+		glUniform2f(playerPosLocation, player.position.x, player.position.y);
+		glUniform1f(playerAngleLocation, player.viewAngle);
+		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+		glBindVertexArray(0);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		utils::GLErrorcheck("Walls Shader", true);
 
 
 		//Sprite Shader.
@@ -243,10 +290,12 @@ int main() {
 
 	glfwDestroyWindow(Window);
 	glfwTerminate();
+	/*
 	for (utils::Texture texture : textureArray) {
 		stbi_image_free(texture.data);
 		texture.valid = false;
 	}
+	*/
 	return 0;
 
 

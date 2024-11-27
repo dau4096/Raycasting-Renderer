@@ -13,6 +13,7 @@ namespace render {
     GLuint createSpriteUBO();
     void updateSpriteUBO(GLuint* spriteUBO, const std::array<utils::Sprite, 32>* dataSet);
     GLuint createTexture(int width, int height);
+    GLuint createTextureArray(const std::array<std::string, 32>& textureNames);
     GLuint getVAO();
 }
 

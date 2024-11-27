@@ -1,5 +1,6 @@
 #include "includes.h"
 #include "utils.h"
+#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
@@ -7,6 +8,7 @@ using namespace glm;
 
 namespace render {
 //Functions
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
@@ -39,6 +41,7 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 	}
 
 	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
+	glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	return Window;
 }
 
@@ -122,11 +125,12 @@ void createConstUBO() {
 		float maxRayDistance;
 		float dimmingStrength;
 
-		glm::vec3 topColour;
-		glm::vec3 lowColour;
+		float toRad;
+
+		glm::vec2 textureSize;
 
 		int drawUV;
-		float padding[3];
+		float padding[2];
 	};
 
 	ConstData constData = {
@@ -135,11 +139,12 @@ void createConstUBO() {
 		display::maxRayDistance,
 		display::dimmingStrength,
 
-		{ display::topColour.x, display::topColour.y, display::topColour.z },
-		{ display::lowColour.x, display::lowColour.y, display::lowColour.z },
+		constants::toRad,
+
+		{constants::textureWidth, constants::textureHeight},
 
 		static_cast<int>(dev::drawUV),
-		{ 0.0f, 0.0f, 0.0f }
+		{0.0f, 0.0f}
 	};
 
 	GLuint constUBO;
@@ -212,6 +217,66 @@ GLuint createTexture(int width, int height) {
 
 	return textureID;
 }
+
+
+GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
+    const int maxTextureArrayLayers = 32;
+
+    // Texture array ID
+    GLuint sheetArrayID;
+    glGenTextures(1, &sheetArrayID);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
+
+    // Allocate storage for the texture array
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::textureWidth, constants::textureHeight, maxTextureArrayLayers, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // Load textures and populate the array
+    int width, height, channels;
+    int layerIndex = 0;
+
+    for (const std::string& textureName : textureNames) {
+        if (textureName.empty()) continue;
+
+        std::string texturePath = "src/textures/" + textureName + ".bmp";
+        unsigned char* textureData = stbi_load(texturePath.c_str(), &width, &height, &channels, 4); // Force RGBA (4 channels)
+
+        if (!textureData) {
+            std::cerr << "Failed to load image " << texturePath << ": " << stbi_failure_reason() << std::endl;
+            glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+            glDeleteTextures(1, &sheetArrayID);
+            return 0; // Indicate failure
+        }
+
+        // Ensure all textures match the expected dimensions
+        if (width != constants::textureWidth || height != constants::textureHeight) {
+            std::cerr << "Texture " << textureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
+                      << constants::textureWidth << "x" << constants::textureHeight << "." << std::endl;
+            stbi_image_free(textureData);
+            continue;
+        }
+
+        // Upload texture to the correct layer of the 2D array
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::textureWidth, constants::textureHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
+        // Free the texture data after uploading
+        stbi_image_free(textureData);
+
+        layerIndex++;
+        if (layerIndex >= maxTextureArrayLayers) break; // Prevent exceeding maximum layers
+    }
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0); // Unbind texture array
+
+    return sheetArrayID;
+}
+
+
 
 
 GLuint getVAO() {

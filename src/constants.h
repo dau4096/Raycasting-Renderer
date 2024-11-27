@@ -27,6 +27,8 @@ namespace display {
 	constexpr float maxRayDistance = 64.0f;
 
 	//Framebuffer roof/floor colours.
+	constexpr int topIndex = 1;
+	constexpr int lowIndex = 2;
 	constexpr glm::vec3 topColour(135, 206, 235);
 	constexpr glm::vec3 lowColour(128, 128, 128);
 	constexpr float dimmingStrength = 1.0f;
@@ -44,7 +46,7 @@ namespace playerConfig {
 }
 
 namespace dev {
-	constexpr bool drawUV = false;
+	constexpr bool drawUV = true;
 	constexpr bool noCollis = false;
 	constexpr bool printFPS = false;
 }
