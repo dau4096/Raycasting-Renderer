@@ -64,7 +64,18 @@ std::array<utils::Sprite, 32> prepSprites() {
 
 }
 
+GLuint frameTextureID;
 
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+	glDisable(GL_DEPTH_TEST);
+
+    GLuint newFrameTextureID = render::createTexture(width, height);
+
+    glDeleteTextures(1, &frameTextureID);
+    frameTextureID = newFrameTextureID;
+}
 
 
 int main() {
@@ -72,39 +83,14 @@ int main() {
 
 	std::array<utils::Wall, 128> wallData = prepWalls();
 	std::array<utils::Sprite, 32> spriteData = prepSprites();
-	FrameBuffer frameBuffer = FrameBuffer(display::screenWidth, display::screenHeight);
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
-
-
-	/*
-	int index = 0;
-	unsigned char* textureData;
-	for (const std::string& textureName : textureNames) {
-		if (textureName.empty()) {continue;}
-
-		std::string texturePath = "src/textures/" + textureName + ".bmp";
-		int width, height, channels;
-		textureData = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
-
-		if (textureData == nullptr) {
-			std::cout << stbi_failure_reason() << std::endl;
-			raise("Failed to load image " + textureName + ".bmp");
-			pause();
-			return -1;
-		}
-
-		textureArray[index] = Texture(glm::vec2(width, height), channels, textureData);
-
-		index++;
-
-	}
-	*/
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 
 
 	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Window");
+	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 
 	cursorXPosPrev = cursorXPos;
@@ -114,7 +100,7 @@ int main() {
 
 
 
-	GLuint frameTextureID = render::createTexture(display::screenWidth, display::screenHeight);
+	frameTextureID = render::createTexture(display::screenWidth, display::screenHeight);
 	GLuint textureArray = render::createTextureArray(textureNames);
 	render::createConstUBO();
 	render::createWallUBO(&wallData);
@@ -156,7 +142,6 @@ int main() {
 	while (!glfwWindowShouldClose(Window)) {
 		frame_start = glfwGetTime();
 		glClear(GL_COLOR_BUFFER_BIT);
-		frameBuffer.clearBuffer();
 		glfwPollEvents();
 
 		// Get inputs for this frame
@@ -205,7 +190,6 @@ int main() {
 
 		//Update Sprites UBO.
 		render::updateSpriteUBO(&spriteUBO, &spriteData);
-
 
 
 		//Visplanes Shader.

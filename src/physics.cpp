@@ -61,7 +61,7 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	}
 
 
-	if (dev::noCollis) {
+	if (dev::noCollis == 1.0f) {
 		player.position += movementVector;
 		return player;
 	}

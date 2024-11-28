@@ -10,10 +10,6 @@ namespace render {
 //Functions
 
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, width, height);
-}
-
 
 GLFWwindow* initializeWindow(int width, int height, const char* title) {
 	if (!glfwInit()) {
@@ -40,7 +36,6 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 		raise("Failed to initialize GLEW.");
 	}
 
-	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	return Window;
 }
@@ -123,13 +118,14 @@ void createConstUBO() {
 		float zoomFactor;
 		float maxRayAngle;
 		float maxRayDistance;
-		float dimmingStrength;
 
-		float toRad;
+		float topIndex;
+		float lowIndex;
 
 		glm::vec2 textureSize;
 
-		int drawUV;
+		float drawUV;
+
 		float padding[2];
 	};
 
@@ -137,14 +133,15 @@ void createConstUBO() {
 		display::zoomFactor,
 		display::maxRayAngle,
 		display::maxRayDistance,
-		display::dimmingStrength,
 
-		constants::toRad,
+		display::topIndex,
+		display::lowIndex,
 
 		{constants::textureWidth, constants::textureHeight},
 
-		static_cast<int>(dev::drawUV),
-		{0.0f, 0.0f}
+		static_cast<float>(dev::drawUV),
+
+		{0.0f, 0.0f},
 	};
 
 	GLuint constUBO;

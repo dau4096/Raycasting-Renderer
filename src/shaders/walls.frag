@@ -104,7 +104,7 @@ vec2 castRay(Ray ray, Wall wall) {
     float divisor = determinant(xDiff, yDiff);
     if (abs(divisor) < 1e-7) {
         //Lines do not intersect
-        return vec2(1e30);
+        return vec2(1e30, 1e30);
     }
 
     vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wall.start, wall.end));
@@ -116,7 +116,7 @@ vec2 castRay(Ray ray, Wall wall) {
     // Check if the intersection is within the wall segment
     if (intersectPoint.x < min(wall.start.x, wall.end.x) || intersectPoint.x > max(wall.start.x, wall.end.x) ||
         intersectPoint.y < min(wall.start.y, wall.end.y) || intersectPoint.y > max(wall.start.y, wall.end.y)) {
-        return vec2(1e30); // Intersection is outside the wall segment
+        return vec2(1e30, 1e30); // Intersection is outside the wall segment
     }
 
     vec2 intersectDirection = normalize(intersectPoint - ray.position);
@@ -124,7 +124,7 @@ vec2 castRay(Ray ray, Wall wall) {
 
     if (abs(directionDifference.x) < 0.1 && abs(directionDifference.y) < 0.1) {
         //Wrong way, behind camera.
-        return vec2(1e30);
+        return vec2(1e30, 1e30);
     }
 
     return intersectPoint;  
@@ -135,8 +135,7 @@ vec2 castRay(Ray ray, Wall wall) {
 void main() {
 	ivec2 fragPosition = ivec2(gl_FragCoord.xy);
 	ivec2 screenDimentions = imageSize(renderedFrame);
-	vec4 fragColour = (fragPosition.y > (screenDimentions.y/2)) ? vec4(0.5294, 0.8078, 0.9216, maxRayDistance) : vec4(0.5000, 0.5000, 0.5000, maxRayDistance);
-	//vec4 fragColour = (fragPosition.y > (screenDimentions.y/2)) ? vec4(topColour.xyz, maxRayDistance) : vec4(lowColour.xyz, maxRayDistance);
+	vec4 fragColour;
 
 
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
@@ -161,7 +160,7 @@ void main() {
 		if (wall.valid == 0) {continue;}
 		vec2 intersectPoint = castRay(ray, wall);
 
-		if (intersectPoint == vec2(1e30)) {continue;}
+		if (intersectPoint == vec2(1e30, 1e30)) {continue;}
 
 		float intersectDistance = length(intersectPoint - ray.position);
 
@@ -192,12 +191,6 @@ void main() {
 	}
 
 
-
-
-	//Effectively CTRL+C/CTRL+V raycasting.cpp into this place, its all C syntax.
-	//Just use `1.0f - ((fragPosition.x / screenDimentions.x) * 2.0f)` rather than a for-loop for xCoord values.
-	//Check Y pixel value against fragPosition.y before drawing colour.
-	//Use texture(...) and a sampler2DArray (ID is z) to get pixColour.
-	//Use alpha-value as `depth/maxRayDistance`, to be utilised in sprites.frag and subsequently ignored in display.frag.
+	//Use alpha-value as `depth/maxRayDistance`, to be utilised in sprites.frag and subsequently ignored in {possible interface.frag} display.frag.
 
 }
