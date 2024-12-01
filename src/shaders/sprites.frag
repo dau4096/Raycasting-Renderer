@@ -1,4 +1,4 @@
-//sprites.frag
+/* sprites.frag */
 #version 460 core
 
 layout(rgba32f, binding=0) uniform image2D renderedFrame;
@@ -25,6 +25,19 @@ struct Sprite {
 layout(std140, binding=3) uniform spriteUBO {
     Sprite sprites[32];
 };
+
+
+struct Light {
+    vec3 position;      //Light Position
+    vec3 colour;        //Light Colour.
+    float intensity;    //Light intensity.
+    int valid;          //Light; Valid or not?
+};
+layout(std140, binding=4) uniform lightUBO {
+    Light lights[32];
+};
+
+
 
 void main() {
 	//Do nothing, for now.

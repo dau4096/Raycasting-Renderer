@@ -1,3 +1,4 @@
+/* visplanes.frag */
 #version 460 core
 
 uniform bool zoom;
@@ -22,6 +23,19 @@ layout(std140, binding = 1) uniform constUBO {
 	float padding[2];
 };
 
+
+struct Light {
+	vec3 position;		//Light Position
+	vec3 colour;		//Light Colour.
+	float intensity;	//Light intensity.
+	int valid;			//Light; Valid or not?
+};
+layout(std140, binding=4) uniform lightUBO {
+	Light lights[32];
+};
+
+
+
 vec2 fragPosition;
 ivec2 screenDimentions;
 vec4 fragColour;
@@ -35,6 +49,7 @@ float angleClamp(float value) {
 }
 
 
+
 vec3 getUVCoords() {
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	bool topHalf = fragPosition.y > screenDimentions.y/2;
@@ -45,7 +60,9 @@ vec3 getUVCoords() {
 	float normY = (2.0 * fragPosition.y / screenDimentions.y) - 1.0; // Normalized screen Y [-1, 1]
 	float viewAngleOffset = normY * (verticalFOV/2);
 	float distance = ceilingHeight / abs(tan(viewAngleOffset));
-	actualDistance = clamp(distance, 0.0f, maxRayDistance);
+	float linearDistance = ceilingHeight / abs(tan(viewAngleOffset));
+	actualDistance = clamp(linearDistance, 0.0f, maxRayDistance);
+
 
 
 	float offset = -rayAngle + (fragPosition.x / screenDimentions.x) * 2 * rayAngle; //0 being screen centre collumn, -/+ maxRayAngle at the left and right edge respectively.
@@ -70,12 +87,13 @@ vec3 getUVCoords() {
 
 
 void main() {
+	bool drawUV = false;
 	fragPosition = gl_FragCoord.xy;
 	screenDimentions = imageSize(renderedFrame);
 
 	vec3 UVcoords = getUVCoords();
 
-	if (drawUV != 0.0f) {
+	if (drawUV) {
 		fragColour = vec4(UVcoords.xy, UVcoords.z/2, 1.0); // Visualize UV coords
 	} else {
 		float distanceFade = 1.0f - (actualDistance / maxRayDistance);

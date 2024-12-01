@@ -10,6 +10,7 @@
 namespace utils {
 	void print(std::string str);
 	void printVec2(glm::vec2 vector);
+	void printVec3(glm::vec3 vector);
 	void raise(std::string str);
 	void pause();
 	void GLErrorcheck(std::string location = "", bool shouldPause = false);
@@ -23,36 +24,50 @@ namespace utils {
 		glm::vec2 dimentions;
 		int channels;
 		unsigned char* data;
-		bool valid;
+		int valid;
 
-		Texture() : dimentions(0.0f, 0.0f), channels(0), data(nullptr), valid(false) {}
+		Texture() : dimentions(0.0f, 0.0f), channels(0), data(nullptr), valid(0) {}
 
 		Texture(glm::vec2 dimentions, int channels, unsigned char* data)
-			: dimentions(dimentions), channels(channels), data(data), valid(true) {}
+			: dimentions(dimentions), channels(channels), data(data), valid(1) {}
 	};
 
 
 	struct Wall {
-		glm::vec2 start, end;
-		int textureID;
-		bool valid;
+	    glm::vec2 start;       // vec2 -> occupies 16 bytes
+	    glm::vec2 end;         // vec2 -> occupies 16 bytes
+	    int textureID;         // int -> occupies 4 bytes
+	    int valid;             // int -> occupies 4 bytes
+	    float padding[2];      // Padding -> occupies 8 bytes (to align struct to 16-byte boundary)
 
-	    Wall() : start(0.0f, 0.0f), end(0.0f, 0.0f), textureID(0), valid(false) {}
+	    Wall()
+	        : start(0.0f, 0.0f), end(0.0f, 0.0f), textureID(0), valid(0), padding{0.0f, 0.0f} {}
 
-		Wall(glm::vec2 start, glm::vec2 end, int textureID)
-			: start(start), end(end), textureID(textureID), valid(true) {}
+	    Wall(glm::vec2 start, glm::vec2 end, int textureID)
+	        : start(start), end(end), textureID(textureID), valid(1), padding{0.0f, 0.0f} {}
 	};
 
 	struct Sprite {
 		glm::vec2 position;
 		float width;
 		int textureID;
-		bool valid;
+		int valid;
 
-		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(false) {}
+		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(0) {}
 
 		Sprite(glm::vec2 position, float width, int textureID)
-			: position(position), width(width), textureID(textureID), valid(true) {}
+			: position(position), width(width), textureID(textureID), valid(1) {}
+	};
+
+	struct Light {
+		glm::vec3 position, colour;
+		float intensity;
+		int valid;
+
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0) {}
+
+		Light(glm::vec3 position, glm::vec3 colour, float intensity)
+			: position(position), colour(colour), intensity(intensity), valid(1) {}
 	};
 
 

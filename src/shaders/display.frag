@@ -1,4 +1,4 @@
-//display.frag
+/* display.frag */
 #version 460 core
 
 in vec2 fragTexCoord;

@@ -1,4 +1,4 @@
-//generic.vert
+/* generic.vert */
 #version 460 core
 
 void main() {

@@ -16,6 +16,11 @@ void printVec2(glm::vec2 vector) {
 }
 
 
+void printVec3(glm::vec3 vector) {
+	std::cout << "<" << vector.x << ", " << vector.y << ", " << vector.z << ">" << std::endl;
+}
+
+
 void raise(string err) {
 	std::cerr << err << std::endl;
 	std::string end;

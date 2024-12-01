@@ -20,15 +20,15 @@ namespace display {
 	constexpr int screenWidth = 640;
 	constexpr int screenHeight = 360;
 
-	constexpr int maxFPS = 45;
+	constexpr int maxFPS = 60;
 
 	constexpr float zoomFactor = 3.0f;
-	constexpr float maxRayAngle = 30.0f;
+	constexpr float maxRayAngle = 35.0f;
 	constexpr float maxRayDistance = 64.0f;
 
 	//Framebuffer roof/floor colours.
-	constexpr int topIndex = 1;
-	constexpr int lowIndex = 2;
+	constexpr int topIndex = 3;
+	constexpr int lowIndex = 1;
 	constexpr glm::vec3 topColour(135, 206, 235);
 	constexpr glm::vec3 lowColour(128, 128, 128);
 	constexpr float dimmingStrength = 1.0f;
@@ -46,9 +46,9 @@ namespace playerConfig {
 }
 
 namespace dev {
-	constexpr float drawUV = false;
-	constexpr float noCollis = true;
-	constexpr float printFPS = false;
+	constexpr float drawUV = 0;
+	constexpr float noCollis = 0;
+	constexpr float printFPS = 0;
 }
 
 #endif // CONSTANTS_H

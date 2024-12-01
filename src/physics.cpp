@@ -27,7 +27,7 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 }
 
 
-utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 128>* wallData) {
+utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData) {
 	float newX = 0.0f;
 	float newY = 0.0f;
 
@@ -55,10 +55,11 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 		newY += playerSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
 	}
 
-	glm::vec2 movementVector(newX, newY);
+	glm::vec2 movementVector = glm::vec2(newX, newY);
 	if (glm::length(movementVector) < 1e-5) {
 		return player;
 	}
+	movementVector = glm::normalize(movementVector) * playerSpeed;
 
 
 	if (dev::noCollis == 1.0f) {
@@ -67,7 +68,6 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	}
 
 
-	movementVector = glm::normalize(movementVector) * playerSpeed;
 
 
 

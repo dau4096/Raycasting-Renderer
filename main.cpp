@@ -19,6 +19,8 @@ std::array<std::string, 32> textureNames = {
 	"a",
 	"b",
 	"c",
+	"s_t_a_r_e",
+	"tabs=fish"
 };
 
 // Keyboard presses to monitor.
@@ -33,27 +35,27 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 };
 
 
-std::array<utils::Wall, 128> prepWalls() {
-	std::array<utils::Wall, 128> wallData;
+std::array<utils::Wall, 256> prepWalls() {
+	std::array<utils::Wall, 256> wallData;
 
-	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), 1);
-	wallData[1] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), 1);
+	wallData[0*2] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), 4);
+	wallData[1*2] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), 4);
 
+	wallData[2*2] = Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), 0);
+	wallData[3*2] = Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), 0);
 
-	wallData[2] = Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), 2);
-	wallData[3] = Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), 2);
+	wallData[4*2] = Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), 0);
+	wallData[5*2] = Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), 0);
 
-	wallData[4] = Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), 0);
-	wallData[5] = Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), 0);
+	wallData[6*2] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), 0);
+	wallData[7*2] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), 0);
 
-	wallData[6] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), 0);
-	wallData[7] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), 0);
-
-	wallData[8] = Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), 0);
-	wallData[9] = Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), 0);
+	wallData[8*2] = Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), 0);
+	wallData[9*2] = Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), 0);
 
 	return wallData;
 }
+
 
 std::array<utils::Sprite, 32> prepSprites() {
 	std::array<utils::Sprite, 32> spriteData;
@@ -63,6 +65,16 @@ std::array<utils::Sprite, 32> prepSprites() {
 	return spriteData;
 
 }
+
+
+std::array<utils::Light, 32> prepLights() {
+	std::array<utils::Light, 32> lightData;
+
+	lightData[0] = Light(glm::vec3(0, 0, 0), glm::vec3(255, 0, 255), 1.0f);
+
+	return lightData;
+}
+
 
 GLuint frameTextureID;
 
@@ -81,15 +93,16 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 int main() {
 	try { //Catch exceptions
 
-	std::array<utils::Wall, 128> wallData = prepWalls();
+	std::array<utils::Wall, 256> wallData = prepWalls();
 	std::array<utils::Sprite, 32> spriteData = prepSprites();
+	std::array<utils::Light, 32> lightData = prepLights();
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 
 
-	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Window");
+	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Raycasting-Renderer");
 	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 
@@ -104,6 +117,7 @@ int main() {
 	GLuint textureArray = render::createTextureArray(textureNames);
 	render::createConstUBO();
 	render::createWallUBO(&wallData);
+	render::createLightUBO(&lightData);
 	GLuint spriteUBO = render::createSpriteUBO();
 
 
@@ -141,7 +155,7 @@ int main() {
 
 	while (!glfwWindowShouldClose(Window)) {
 		frame_start = glfwGetTime();
-		glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT);
 		glfwPollEvents();
 
 		// Get inputs for this frame

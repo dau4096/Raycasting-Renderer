@@ -156,7 +156,7 @@ void createConstUBO() {
 
 
 
-void createWallUBO(const std::array<utils::Wall, 128>* dataSet) {
+void createWallUBO(const std::array<utils::Wall, 256>* dataSet) {
 	GLuint wallUBO;
 	glGenBuffers(1, &wallUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
@@ -193,6 +193,18 @@ void updateSpriteUBO(GLuint* spriteUBO, const std::array<utils::Sprite, 32>* dat
 		raise("Failed to write data to spriteUBO.");
 	}
 
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+void createLightUBO(const std::array<utils::Light, 32>* dataSet) {
+	GLuint lightUBO;
+	glGenBuffers(1, &lightUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * dataSet->size(), dataSet->data(), GL_STATIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 4, lightUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
