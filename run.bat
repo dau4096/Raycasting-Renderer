@@ -9,9 +9,6 @@ IF EXIST "constants.o" (
 IF EXIST "physics.o" (
     DEL /Q "physics.o"
 )
-IF EXIST "raycasting.o" (
-    DEL /Q "raycasting.o"
-)
 IF EXIST "render.o" (
     DEL /Q "render.o"
 )

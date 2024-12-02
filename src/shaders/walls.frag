@@ -6,10 +6,10 @@ uniform sampler2DArray textureArray;
 uniform float playerViewAngle;
 uniform vec2 playerPosition;
 uniform bool zoom;
+uniform int drawUV;
 
 
-
-layout(rgba32f, binding=0) uniform image2D renderedFrame;
+layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
 	float zoomFactor;
 	float maxRayAngle;
@@ -21,18 +21,19 @@ layout(std140, binding = 1) uniform constUBO {
 	vec3 topColour;
 	vec3 lowColour;
 
-	int drawUV;
+	float padding[3];
 };
 
 
 struct Wall {
-    vec2 start;    // 16 bytes
-    vec2 end;      // 16 bytes
-    int textureID; // 4 bytes
-    int valid;     // 4 bytes
-    float padding[2]; // 8 bytes (explicit padding to align to 16 bytes)
+    vec2 start;			//Wall Start.
+    vec2 end;			//Wall End.
+    int textureID;		//Wall Texture.
+    int valid;			//Wall Validity.
+    float padding[2];	//Wall Padding.
 };
-layout(std140, binding=2) uniform wallUBO {
+
+layout(std140, binding = 2) uniform wallUBO {
 	Wall walls[256];
 };
 
@@ -40,10 +41,11 @@ layout(std140, binding=2) uniform wallUBO {
 struct Light {
 	vec3 position;		//Light Position
 	vec3 colour;		//Light Colour.
-	float intensity;	//Light intensity.
-	int valid;			//Light; Valid or not?
+	float intensity;	//Light Intensity.
+	int valid;			//Light Validity.
+	float padding[2];	//Light Padding.
 };
-layout(std140, binding=4) uniform lightUBO {
+layout(std140, binding = 4) uniform lightUBO {
 	Light lights[32];
 };
 
@@ -151,8 +153,6 @@ vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight) {
 
 
 void main() {
-	bool drawUV = false;
-
 	fragPosition = gl_FragCoord.xy;
 	screenDimentions = imageSize(renderedFrame);
 	fragColour = vec4(1.0f, 0.0f, 1.0f, maxRayDistance);
@@ -175,8 +175,7 @@ void main() {
 	for (int index = 0; index < 256; index++) {
 		Wall thisWall = walls[index];
 		thisWall.padding[0] = 0.0f; thisWall.padding[1] = 0.0f;
-		//if(index>9){break;}
-		if (thisWall.valid == 0) {continue;}
+		if (thisWall.valid == 0) {continue; /* Wall is empty */}
 
 		vec2 intersectPoint = rayIntersectCheck(fragRay, thisWall);
 		if (intersectPoint == vec2(1e30f, 1e30f)) {continue;}
@@ -192,39 +191,15 @@ void main() {
 	}
 
 
-	/*
-	///////////////////////////////////////////////////////////
-	//  Testing a preset wall, just in case walls is empty.  //
-	///////////////////////////////////////////////////////////
-	Wall thisWall = walls[0];
 
-	//fragColour = vec4(thisWall.valid, 0.5 + 0.5 * (fragRay.direction.x), 0.5 + 0.5 * (fragRay.direction.y), 1.0f);
-	//imageStore(renderedFrame, ivec2(fragPosition), fragColour);
-
-	if (thisWall.valid != 1) {return;}
-	vec2 intersectPoint = rayIntersectCheck(fragRay, thisWall);
-	if (intersectPoint == vec2(1e30f, 1e30f)) {return;}
-	float wallDistance = length(playerPosition - intersectPoint);
-	if (wallDistance >= minDistance) {return;}
-	
-	//Set closest.
-	minDistance = wallDistance;
-	closestWall = thisWall;
-	closestIntersectPoint = intersectPoint;
-	///////////////////////////////////////////////////////////
-	*/
-
-
-	//If a wall was collided with, add to frameBuffer.
 	if (minDistance == maxRayDistance) {return; /* No collision was detected. */}
 
 
-	float wallMaxHeight = 0.475f; //Touches floor and ceiling.
-	float correctionFactor = 0.25f; //Multiplies by amount of correction.
+	float wallMaxHeight = 1.0f;
 
-
-	float adjustedDistance = ((1.0f - correctionFactor) * minDistance) + (correctionFactor * (minDistance*0.75) * cos(radians(rayOffset)));
-	float wallHeight = ((zoom) ? zoomFactor : 1.0f) * wallMaxHeight * (screenDimentions.y / (adjustedDistance + 0.0001f)) * zoomFactor;
+	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
+	float viewAngleOffset = atan(wallMaxHeight/minDistance);
+	float wallHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
 
 	
 	vec2 wallVec = normalize(closestWall.start - closestWall.end);
@@ -235,7 +210,7 @@ void main() {
 	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallHeight);
 	if (wallUV == vec2(1e30f, 1e30f)) {return; /* Invalid UV coordinates. */}
 
-	if (drawUV) {
+	if (drawUV == 1) {
 		fragColour = vec4(wallUV.xy, closestWall.textureID / 32.0f, maxRayDistance);
 	} else {
 		fragColour = texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID))) * multiplier;

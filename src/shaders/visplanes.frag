@@ -5,6 +5,8 @@ uniform bool zoom;
 uniform float playerViewAngle;
 uniform vec2 playerPosition;
 uniform sampler2DArray textureArray;
+uniform int drawUV;
+
 
 layout(rgba32f, binding=0) uniform image2D renderedFrame;
 
@@ -18,19 +20,18 @@ layout(std140, binding = 1) uniform constUBO {
 
 	vec2 textureSize;
 
-	float drawUV;
-
-	float padding[2];
+	float padding[3];
 };
 
 
 struct Light {
 	vec3 position;		//Light Position
 	vec3 colour;		//Light Colour.
-	float intensity;	//Light intensity.
-	int valid;			//Light; Valid or not?
+	float intensity;	//Light Intensity.
+	int valid;			//Light Validity.
+	float padding[2];	//Light Padding.
 };
-layout(std140, binding=4) uniform lightUBO {
+layout(std140, binding = 4) uniform lightUBO {
 	Light lights[32];
 };
 
@@ -59,7 +60,6 @@ vec3 getUVCoords() {
 
 	float normY = (2.0 * fragPosition.y / screenDimentions.y) - 1.0; // Normalized screen Y [-1, 1]
 	float viewAngleOffset = normY * (verticalFOV/2);
-	float distance = ceilingHeight / abs(tan(viewAngleOffset));
 	float linearDistance = ceilingHeight / abs(tan(viewAngleOffset));
 	actualDistance = clamp(linearDistance, 0.0f, maxRayDistance);
 
@@ -87,13 +87,12 @@ vec3 getUVCoords() {
 
 
 void main() {
-	bool drawUV = false;
 	fragPosition = gl_FragCoord.xy;
 	screenDimentions = imageSize(renderedFrame);
 
 	vec3 UVcoords = getUVCoords();
 
-	if (drawUV) {
+	if (drawUV == 1) {
 		fragColour = vec4(UVcoords.xy, UVcoords.z/2, 1.0); // Visualize UV coords
 	} else {
 		float distanceFade = 1.0f - (actualDistance / maxRayDistance);

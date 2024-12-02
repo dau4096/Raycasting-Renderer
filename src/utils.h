@@ -52,22 +52,24 @@ namespace utils {
 		float width;
 		int textureID;
 		int valid;
+		float padding[2];
 
-		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(0) {}
+		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(0), padding{0.0f, 0.0f} {}
 
 		Sprite(glm::vec2 position, float width, int textureID)
-			: position(position), width(width), textureID(textureID), valid(1) {}
+			: position(position), width(width), textureID(textureID), valid(1), padding{0.0f, 0.0f} {}
 	};
 
 	struct Light {
 		glm::vec3 position, colour;
 		float intensity;
 		int valid;
+		float padding[2];
 
-		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0) {}
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), padding{0.0f, 0.0f} {}
 
 		Light(glm::vec3 position, glm::vec3 colour, float intensity)
-			: position(position), colour(colour), intensity(intensity), valid(1) {}
+			: position(position), colour(colour), intensity(intensity), valid(1), padding{0.0f, 0.0f} {}
 	};
 
 
@@ -87,37 +89,6 @@ namespace utils {
 			: position(position), viewAngle(angle) {}
 	};
 
-
-	class FrameBuffer {
-	public:
-		FrameBuffer(int width, int height);
-
-		unsigned char* operator[](int y);
-
-		int getWidth();
-		int getHeight();
-
-		void setDepth(int index, float depth);
-		float getDepth(int index);
-
-		unsigned char* getData();
-
-		void clearBuffer();
-		void drawWallLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, utils::Texture texture, float multiplier);
-		void drawSpriteLine(int xCoord, int lineHeight, utils::Sprite sprite, int spriteX, float spriteWidth, float depth, utils::Texture texture);
-		void setPixel(int index, glm::vec3 colour);
-		int getIndex(int xCoord, int yCoord);
-
-	private:
-		int width, height;
-		std::vector<unsigned char> data;
-		std::vector<float> depths;
-	};
-
-
-	void printFramebuffer(utils::FrameBuffer frameBuffer);
-
-	glm::vec3 getPixelData(float xUV, float yUV, utils::Texture texture);
 }
 
 #endif

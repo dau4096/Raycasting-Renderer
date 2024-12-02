@@ -1,28 +1,20 @@
 #include "includes.h"
 #include "utils.h"
-#include "raycasting.h"
 using namespace std;
 using namespace utils;
 
 namespace physics {
 
 bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius) {
-	glm::vec2 lineDir = line.end - line.start;  // Direction vector of the line segment
-	glm::vec2 lineToCircle = circlePosition - line.start; // Vector from line start to circle center
+	glm::vec2 lineDir = line.end - line.start;
+	glm::vec2 lineToCircle = circlePosition - line.start;
 
-	// Project lineToCircle onto lineDir to find the closest point on the line
 	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
-
-	// Clamp t to [0, 1] to restrict to the line segment
 	t = glm::clamp(t, 0.0f, 1.0f);
 
-	// Find the closest point on the line segment
 	glm::vec2 closestPoint = line.start + t * lineDir;
-
-	// Calculate the distance from the circle's center to the closest point
 	float distToCircle = glm::length(circlePosition - closestPoint);
 
-	// Check if the distance is less than or equal to the radius
 	return distToCircle <= radius;
 }
 

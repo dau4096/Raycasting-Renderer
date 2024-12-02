@@ -20,7 +20,7 @@ namespace display {
 	constexpr int screenWidth = 640;
 	constexpr int screenHeight = 360;
 
-	constexpr int maxFPS = 60;
+	constexpr int maxFPS = 75;
 
 	constexpr float zoomFactor = 3.0f;
 	constexpr float maxRayAngle = 35.0f;

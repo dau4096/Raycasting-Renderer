@@ -14,7 +14,7 @@ layout(std140, binding = 1) uniform constUBO {
     vec3 topColour;
     vec3 lowColour;
 
-    int drawUV;
+    float padding[3];
 };
 
 
