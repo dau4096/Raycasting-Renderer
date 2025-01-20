@@ -23,6 +23,9 @@ layout(std140, binding = 1) uniform constUBO {
 	float padding[3];
 };
 
+layout(std430, binding = 5) buffer depthBuffer {
+	float depths[];
+};
 
 struct Light {
 	vec3 position;		//Light Position
@@ -102,5 +105,6 @@ void main() {
 	//Write the colour to the frame.
 	ivec2 framePosition = ivec2(fragPosition);
 	vec4 finalFragColour = vec4(fragColour.rgb, maxRayDistance);
+	depths[framePosition.x] = maxRayDistance;
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }

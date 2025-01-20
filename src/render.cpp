@@ -227,6 +227,19 @@ GLuint createTexture(int width, int height) {
 	return textureID;
 }
 
+GLuint createDepthSSBO(int width) {
+	GLuint SSBO;
+
+	glGenBuffers(1, &SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+
+	glBufferData(GL_SHADER_STORAGE_BUFFER, width * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	return SSBO;
+}
+
 
 GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
     const int maxTextureArrayLayers = 32;

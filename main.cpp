@@ -75,7 +75,7 @@ std::array<utils::Light, 32> prepLights() {
 }
 
 
-GLuint frameTextureID;
+GLuint frameTextureID, depthSSBO;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -86,6 +86,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
     glDeleteTextures(1, &frameTextureID);
     frameTextureID = newFrameTextureID;
+	depthSSBO = render::createDepthSSBO(display::screenWidth);
 }
 
 
@@ -118,6 +119,7 @@ int main() {
 	render::createWallUBO(&wallData);
 	render::createLightUBO(&lightData);
 	GLuint spriteUBO = render::createSpriteUBO();
+	depthSSBO = render::createDepthSSBO(display::screenWidth);
 
 
 	//Visplane Shader (Roof and Floor).
@@ -129,11 +131,12 @@ int main() {
 	//Sprite Shader
 	GLuint spriteShader = render::createShaderProgram("sprites", false);
 
-	//Possible uiShader
-	//GLuint uiShader = render::createShaderProgram("interface", false);
+	//uiShader
+	GLuint uiShader = render::createShaderProgram("interface", false);
 
 	//Display Shader
 	GLuint displayShader = render::createShaderProgram("display", true);
+
 
 
 	glViewport(0, 0, display::screenWidth, display::screenHeight);
@@ -203,6 +206,7 @@ int main() {
 		//Visplanes Shader.
 		glUseProgram(visplaneShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
@@ -230,6 +234,7 @@ int main() {
 		//Wall Shader.
 		glUseProgram(wallShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
@@ -253,6 +258,7 @@ int main() {
 		//Sprite Shader.
 		glUseProgram(spriteShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
@@ -273,10 +279,11 @@ int main() {
 		utils::GLErrorcheck("Sprite Shader", true);
 
 
-		/*
+		
 		//UI Shader.
 		glUseProgram(uiShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
@@ -293,12 +300,13 @@ int main() {
 		glBindVertexArray(0);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		utils::GLErrorcheck("UI Shader", true);
-		*/
+		
 
 
 		//Display Shader and update screen.
 		glUseProgram(displayShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);

@@ -48,23 +48,22 @@ struct Light {
 layout(std140, binding = 4) uniform lightUBO {
 	Light lights[32];
 };
-layout(std430, binding = 5) buffer depthBuffer {
-	float depths[];
-};
 
 
 vec2 fragPosition;
 ivec2 screenDimentions;
 vec4 fragColour;
 float fragDepth;
+float spriteAngle;
 
 
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 spriteDimentions) {
 	//xUV calculation.
-	float relativeX = fragPosition.x - centrePixelX + (spriteDimentions.x/2);
-	if (relativeX < 0.0f || relativeX >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Outside of sprite horizontal bounds */}
+	float halfWidth = screenDimentions.x/2.0f;
+	float relativeX = ((fragPosition.x - halfWidth) / halfWidth) + centrePixelX;
+	//if (relativeX < 0.0f || relativeX >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Outside of sprite horizontal bounds */}
 	float xUV = fract(relativeX / spriteDimentions.x);
-	if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Horizontally out of sprite bounds */}
+	//if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Horizontally out of sprite bounds */}
 
 
 	//yUV calculation.
@@ -84,19 +83,17 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 sprite
 
 
 
-float getSpriteScreenX(Sprite thisSprite, float rayAngle, vec2 spriteDimentions) {
-	vec2 sectorStart = vec2(sin(radians(maxRayAngle + playerViewAngle)), cos(radians(maxRayAngle + playerViewAngle)));
-	vec2 sectorEnd = vec2(-sectorStart.x, sectorStart.y);
-	vec2 spriteRelativePosition = thisSprite.position - playerPosition;
+float getSpriteScreenX(Sprite sprite, float spriteDistance, float rayAngle, vec2 spriteDimentions) {
+	//Make sure to return a VERY offscreen x coordinate to be interpreted as "Invalid" (-1e3f)
+	vec2 spriteDirection = normalize(sprite.position - playerPosition); //Direction from player to sprite.
+	vec2 playerDirection = normalize(vec2(sin(radians(playerViewAngle)), cos(radians(playerViewAngle)))); //View direction.
 
-	float dotProd = 1.0f - dot(normalize(sectorEnd), normalize(spriteRelativePosition));
-	float range = 1.0f - dot(normalize(sectorEnd), normalize(sectorStart));
-	float angle = dotProd / range;
-	float screenX = angle * screenDimentions.x;
-	if (screenX + spriteDimentions.x/2.0f < 0.0f || screenX - spriteDimentions.x/2.0f > screenDimentions.x) {
-		return -1e3f;
-	}
-	return screenX;
+	float crossProd = spriteDirection.x * playerDirection.y - spriteDirection.y * playerDirection.x;
+	float spriteAngle = atan(spriteDirection.y, spriteDirection.x) - radians(playerViewAngle);
+	float normX = spriteAngle / radians(rayAngle);
+	float centrePixelX = (normX * (screenDimentions.x / 2.0)) + (screenDimentions.x / 2.0);
+
+	return centrePixelX;
 }
 
 
@@ -104,16 +101,11 @@ float getSpriteScreenX(Sprite thisSprite, float rayAngle, vec2 spriteDimentions)
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	screenDimentions = imageSize(renderedFrame);
-	ivec2 framePosition = ivec2(fragPosition);	
+	ivec2 framePosition = ivec2(fragPosition);
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
-
-	return;
-
 
 	vec2 closestUV = vec2(1e30f, 1e30f);
 	Sprite closestSprite;
-	bool spriteHit = false;
-	vec3 fragColour = vec3(0.0f, 0.0f, 0.0f);
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
 
@@ -124,7 +116,7 @@ void main() {
 
 		float spriteDistance = length(playerPosition - thisSprite.position);
 
-		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
+		if (spriteDistance > maxRayDistance || spriteDistance >= fragDepth) {continue; /* Too far to see onscreen. */}
 
 
 		float spriteMaxHeight = 1.0f;
@@ -133,37 +125,37 @@ void main() {
 		float viewAngleOffset = atan(spriteMaxHeight/spriteDistance);
 		float spriteHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
 
-		float spriteWidth = thisSprite.width * spriteHeight;
+		float spriteWidth = thisSprite.width * spriteHeight * cos(spriteAngle);
 
 		spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
 		spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
 		vec2 spriteDimentions = vec2(spriteWidth, spriteHeight);
 
 
-		float centrePixelX = getSpriteScreenX(thisSprite, rayAngle, spriteDimentions);
-		if (centrePixelX == -1e3f) {continue; /* Invalid position, from getSpriteScreenX() */}
+		float centrePixelX = getSpriteScreenX(thisSprite, spriteDistance, rayAngle, spriteDimentions);
+		if (abs(fragPosition.x - centrePixelX) < 2) {imageStore(renderedFrame, framePosition, vec4(1,0,1,1));return;}
+		//if (centrePixelX < -(spriteWidth/2.0f) || centrePixelX >= screenDimentions.x + (spriteWidth/2.0f)) {continue; /* Offscreen, horizontally. */}
 
 
 		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance, spriteDimentions);
-		if (spriteUV == vec2(1e30f, 1e30f)) {continue; /* Invalid UV, from getSpriteUV() */}
-		
-		if (drawUV == 1) {
-			fragColour = vec3(spriteUV.xy, thisSprite.textureID/16);
-		} else {
-			vec4 alphaTexture = texture(textureArray, vec3(spriteUV.xy, float(thisSprite.textureID)));
-			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
-			fragColour = alphaTexture.rgb;
-			spriteHit = true;
-		}
-
+		if (spriteUV == vec2(1e30f, 1e30f)) {continue;}
+		closestUV = spriteUV;
+		closestSprite = thisSprite;
 		fragDepth = spriteDistance;
 	}
 
 
 
-	if (!spriteHit) {return; /* fragment does not intersect with a valid point on a sprite. */}
-	//Only write the final pixel to the frame.
+	if (closestUV == vec2(1e30f, 1e30f)) {return;}
 
-	vec4 finalFragColour = vec4(fragColour, fragDepth);
+
+	//Only write the final pixel to the frame.
+	vec3 finalColour;
+	if (drawUV == 1) {
+		finalColour = vec3(closestUV.xy, closestSprite.textureID/16);
+	} else {
+		finalColour = texture(textureArray, vec3(closestUV.xy, float(closestSprite.textureID))).rgb;
+	}
+	vec4 finalFragColour = vec4(finalColour, fragDepth);
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }

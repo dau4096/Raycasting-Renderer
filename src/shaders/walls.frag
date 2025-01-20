@@ -23,6 +23,9 @@ layout(std140, binding = 1) uniform constUBO {
 
 	float padding[3];
 };
+layout(std430, binding = 5) buffer depthBuffer {
+	float depths[];
+};
 
 
 struct Wall {
@@ -152,6 +155,37 @@ vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight) {
 }
 
 
+vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint, float minDistance) {
+	vec4 INVALID = vec4(1e30f, 1e30f, 1e30f, 1e30f);
+	if (minDistance == maxRayDistance) {return INVALID; /* No collision was detected. */}
+
+
+	float wallMaxHeight = 1.0f;
+
+	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
+	float viewAngleOffset = atan(wallMaxHeight/minDistance);
+	float wallHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
+
+	
+	vec2 wallVec = normalize(closestWall.start - closestWall.end);
+	float angleMultiplier = dot(wallVec, vec2(0.0f, 1.0f)) * 0.2f + 0.8f;
+	float distanceMultiplier = 1.0f - (minDistance / maxRayDistance);
+	float multiplier = angleMultiplier * distanceMultiplier;
+
+	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallHeight);
+	if (wallUV == INVALID.xy) {return INVALID; /* Invalid UV coordinates. */}
+
+	vec4 thisFragColour;
+	if (drawUV == 1) {
+		thisFragColour = vec4(wallUV.xy, closestWall.textureID / 32.0f, maxRayDistance);
+	} else {
+		thisFragColour = texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID))) * multiplier;
+	}
+
+	return thisFragColour
+}
+
+
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	screenDimentions = imageSize(renderedFrame);
@@ -166,9 +200,9 @@ void main() {
 	Ray fragRay = createRay(playerPosition, rayDirection);
 
 
-	float minDistance = maxRayDistance;
-	Wall closestWall;
-	vec2 closestIntersectPoint;
+	float minDistance = maxRayDistance, secondMinDistance = maxRayDistance;
+	Wall closestWall, secondClosestWall;
+	vec2 closestIntersectPoint, secondClosestIntersectPoint;
 
 	//Iterate through all the walls.
 	int i=0;
@@ -185,40 +219,31 @@ void main() {
 		if (wallDistance >= minDistance) {continue;}
 		
 		//Set closest.
+		secondMinDistance = minDistance;
 		minDistance = wallDistance;
+		secondClosestWall = closestWall;
 		closestWall = thisWall;
+		secondClosestIntersectPoint = closestIntersectPoint;
 		closestIntersectPoint = intersectPoint;
+
+		vec4 wallColour = getWallColour(rayAngle, closestWall, closestIntersectPoint, minDistance);
+		if (wallColour.a < 0.5 && secondClosestIntersectPoint != maxRayDistance) { //Simple alpha, if another wall is behind, blend.
+			vec4 secondWallColour = getWallColour(rayAngle, secondClosestWall, secondClosestIntersectPoint, secondMinDistance);
+			fragColour = vec4((wallColour.a * wallColour.rgb) + ((1.0f - secondWallColour.a) * secondWallColour.rgb), minDistance);
+		} else {
+			fragColour = vec4(wallColour.a * wallColour.rgb, minDistance);
+		} 
 	}
 
 
 
-	if (minDistance == maxRayDistance) {return; /* No collision was detected. */}
 
 
-	float wallMaxHeight = 1.0f;
-
-	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
-	float viewAngleOffset = atan(wallMaxHeight/minDistance);
-	float wallHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
-
-	
-	vec2 wallVec = normalize(closestWall.start - closestWall.end);
-	float angleMultiplier = dot(wallVec, vec2(0.0f, 1.0f)) * 0.2f + 0.8f;
-	float distanceMultiplier = 1.0f - (minDistance / maxRayDistance);
-	float multiplier = angleMultiplier * distanceMultiplier;
-
-	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallHeight);
-	if (wallUV == vec2(1e30f, 1e30f)) {return; /* Invalid UV coordinates. */}
-
-	if (drawUV == 1) {
-		fragColour = vec4(wallUV.xy, closestWall.textureID / 32.0f, maxRayDistance);
-	} else {
-		fragColour = texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID))) * multiplier;
-	}
 
 
 	//Save to texture.
 	ivec2 framePosition = ivec2(fragPosition);
 	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+	depths[framePosition.x] = minDistance;
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }
