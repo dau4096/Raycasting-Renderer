@@ -1,241 +1,131 @@
-#include "includes.h"
+extern "C" {
+    #include "C:\Users\User\Documents\code\.cpp\PrizmSDK-win-0.6\include\fxcg/display.h"
+    #include "C:\Users\User\Documents\code\.cpp\PrizmSDK-win-0.6\include\fxcg/keyboard.h"
+	#include "C:\Users\User\Documents\code\.cpp\PrizmSDK-win-0.6\include\fxcg/rtc.h"
+}
 #include "utils.h"
 using namespace std;
-using namespace glm;
 
 
 namespace utils {
 
-void print(std::string value) {
-	std::cout << value << std::endl;
+
+unsigned short createColour(unsigned char r, unsigned char g, unsigned char b) {
+    return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
 }
 
 
-void printVec2(glm::vec2 vector) {
-	std::cout << "<" << vector.x << ", " << vector.y << ">" << std::endl;
+
+void drawPixel(int x, int y, unsigned short colour) {
+    if (x >= 0 && x < LCD_WIDTH_PX && y >= 0 && y < LCD_HEIGHT_PX) {
+        Bdisp_SetPoint_VRAM(x, y+24, colour);
+    }
 }
 
 
-void raise(string err) {
-	std::cerr << err << std::endl;
-	std::string end;
-	std::cin >> end;
-}
-
-void pause() {
-	string pause;
-	std::cin >> pause;
-}
-
-void GLErrorcheck(std::string location, bool shouldPause) {
-	GLenum GLError;
-	GLError = glGetError();
-	if (GLError != GL_NO_ERROR) {
-		std::cerr << location << " | OpenGL error; " << GLError << std::endl;
-		if (shouldPause) {pause();}
-	}
-}
-
-
-float determinant(glm::vec2 vecA, glm::vec2 vecB) {
-	return vecA.x * vecB.y - vecA.y * vecB.x;
-}
-
-
-float angleClamp(float value) {
-	if (value < 0.0f) {
-		return 360.0f + value;
-	}
-	return fmod(value, 360.0f);
-}
-
-
-// FrameBuffer Class method implementations
-FrameBuffer::FrameBuffer(int width, int height) : width(width), height(height) {
-	data.resize(width * height * 3);
-	depths.resize(width*height, display::maxRayDistance);
-	
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			int i = (y * width + x) * 3;
-			glm::vec3 colour = (y > height / 2) ? display::topColour : display::lowColour;
-			setPixel(i, colour);
-		}
-	}
-}
-
-unsigned char* FrameBuffer::operator[](int y) {
-	if (y < 0 || y >= height) {return nullptr;}
-	return &data[y * width * 3]; // Return a pointer to the start of the row
-}
-
-int FrameBuffer::getWidth() {return width;};
-int FrameBuffer::getHeight() {return height;};
-
-void FrameBuffer::setDepth(int index, float depth) {
-	if (index < 0 || index >= this->width * this->height) {return;}
-	depths[index] = depth;
-}
-float FrameBuffer::getDepth(int index) {
-	if (index < 0 || index >= this->width * this->height) {return display::maxRayDistance;}
-	return depths[index];
-}
-unsigned char* FrameBuffer::getData() {
-	return data.data(); // Return a pointer to the raw data
-}
-
-void FrameBuffer::clearBuffer() {
-	std::fill(depths.begin(), depths.end(), display::maxRayDistance);
-    for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			int i = 3*(y * width + x);
-			glm::vec3 colour = (y > height / 2) ? display::topColour : display::lowColour;
-			setPixel(i, colour);
-		}
-	}
-}
-
-
-void FrameBuffer::drawWallLine(int xCoord, int lineHeight, utils::Wall wall, glm::vec2 position, float depth, utils::Texture texture, float multiplier) {
-	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
-		return;
-	}
-
-	int midPointY = this->height / 2;
-
-	float repeatInterval = 1.0f;
-
-	glm::vec2 wallDirection = wall.end - wall.start;
-	glm::vec2 wallPosition = position - wall.start;
-	float wallLength = glm::length(wallDirection);
-	float projection = glm::dot(wallPosition, glm::normalize(wallDirection));
-	float xUV = fmod(projection / repeatInterval, 1.0f);
-	if (xUV < 0.0f) xUV += 1.0f;
-
-
-	for (int yOffset = -lineHeight / 2; yOffset <= lineHeight / 2; yOffset++) {
-		int yCoord = midPointY + yOffset;
-		if (yCoord < 0 || yCoord >= height) {
-			continue;
-		}
-
-
-		float yUV = (yCoord - (midPointY - lineHeight / 2.0f)) / lineHeight;
-		yUV = glm::clamp(yUV, 0.0f, 1.0f);
-
-		glm::vec3 pixelColour;
-		if (dev::drawUV) {
-			pixelColour = glm::vec3(xUV*255, yUV*255, 0.0f);
+void drawLine(int x, int height, unsigned short colour) {
+	unsigned short finalColour;
+	for (int yOffset = 0; yOffset < LCD_HEIGHT_PX; yOffset++) {
+		if (yOffset > (LCD_HEIGHT_PX+height)/2) {
+			finalColour = 33808; //GroundColour (128, 128, 128)
+		} else if (yOffset <= (LCD_HEIGHT_PX-height)/2) {
+			finalColour = 34429; //SkyColour (135, 206, 235)
 		} else {
-			pixelColour = getPixelData(xUV, yUV, texture) * multiplier;
+			finalColour = colour; //Wall Colour
 		}
-
-		if (pixelColour == glm::vec3(-1.0f)) {
-			continue; //Pixel is transparent.
-		}
-
-		int pixelIndex = getIndex(xCoord, yCoord);
-		setDepth(pixelIndex, depth);
-		setPixel(pixelIndex*3, pixelColour);
+		drawPixel(x, yOffset, finalColour);
 	}
 }
 
 
-void FrameBuffer::drawSpriteLine(int xCoord, int lineHeight, utils::Sprite sprite, int spriteX, float spriteWidth, float depth, utils::Texture texture) {
-	if (xCoord < 0 || xCoord >= width || lineHeight < 1) {
-		return;
-	}
+float sqrtApprox(float value) {
+    float guess = value * 0.5f;  //x0 = x/2
+    const float epsilon = 0.01f; //1-hundreths of precision. Should be accurate enough.
 
+    //Iterate until the guess is sufficiently accurate
+    while (true) {
+        float newGuess = 0.5f * (guess + value / guess);  //Update guess using Newton's method
+        if (utils::abs(newGuess - guess) < epsilon) {
+            break;  //Stop when the guess is sufficiently accurate
+        }
+        guess = newGuess;
+    }
 
-	int midPointY = this->height/2;
-	float xUV = spriteX / spriteWidth;
+    return guess;
+}
 
-	float distanceMultiplier = 1.0f - (2.0f * depth) / display::maxRayDistance;
+float dot(vec2 A, vec2 B) {
+	return A.x * B.x + A.y * B.y;
+}
 
+float determinant(vec2 A, vec2 B) {
+	return A.x * B.y - A.y * B.x;
+}
 
-	for (int yOffset = -lineHeight/2; yOffset <= lineHeight/2; yOffset++) {
-		int yCoord = midPointY + yOffset;
-		if (yCoord < 0 || yCoord > this->height) {
-			continue;
-		}
+float length(vec2 vector) {
+	return sqrtApprox((vector.x * vector.x) + (vector.y * vector.y));
+}
 
-		float yUV = (yCoord - (midPointY - lineHeight / 2.0f)) / lineHeight;
-		yUV = glm::clamp(yUV, 0.0f, 1.0f);
+vec2 normalise(vec2 vector) {
+	float len = length(vector);
+	if (len == 0) return vec2(0, 0);
+	return DIV(vector, len);
+}
 
+vec2 ADD(vec2 A, vec2 B) {
+	return vec2(A.x + B.x, A.y + B.y);
+}
 
+vec2 SUB(vec2 A, vec2 B) {
+	return vec2(A.x - B.x, A.y - B.y);
+}
 
-		int pixelIndex = getIndex(xCoord, yCoord);
-		float savedDepth = getDepth(pixelIndex);
-		if (savedDepth < depth) {continue;} //Pixel is covered.
+vec2 MUL(vec2 A, float scalar) {
+	return vec2(A.x * scalar, A.y * scalar);
+}
 
-		glm::vec3 pixelColour;
-		if (dev::drawUV) {
-			pixelColour = glm::vec3(255.0f, 0.0f, 255.0f);
-		} else {
-			pixelColour = getPixelData(xUV, yUV, texture) * distanceMultiplier;
-		}
-
-		if (pixelColour == glm::vec3(-1.0f)) {continue;} //Pixel is transparent.
-
-
-		setDepth(pixelIndex, depth);
-		setPixel(pixelIndex*3, pixelColour);
-	}
-
+vec2 DIV(vec2 A, float scalar) {
+	return vec2(A.x / scalar, A.y / scalar);
 }
 
 
-void FrameBuffer::setPixel(int index, glm::vec3 colour) {
-	data[index + 0] = colour.x;
-	data[index + 1] = colour.y;
-	data[index + 2] = colour.z;	
+float min(float A, float B) {
+	if (A < B) return A;
+	return B;
+}
+float max(float A, float B) {
+	if (A < B) return B;
+	return A;
 }
 
-int FrameBuffer::getIndex(int xCoord, int yCoord) {
-	return xCoord + (yCoord * width);
+float clamp(float value, float minV, float maxV) {
+	return max(minV, min(value, maxV));
 }
 
-
-
-
-void printFramebuffer(FrameBuffer frameBuffer) {
-	int width = frameBuffer.getWidth();
-	int height = frameBuffer.getHeight();
-	unsigned char* data = frameBuffer.getData();
-
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			int index = (y * width + x) * 3;
-			unsigned char r = data[index];	 // Red component
-			unsigned char g = data[index + 1]; // Green component
-			unsigned char b = data[index + 2]; // Blue component
-			
-			// Print each pixel in the format (R, G, B)
-			cout << "(" 
-					  << hex << static_cast<int>(r) << "," 
-					  << hex << static_cast<int>(g) << "," 
-					  << hex << static_cast<int>(b) << ") ";
-		}
-		cout << endl;
-	}
+float angleClamp(float angle) {
+	while (angle < -180.0f) angle += 360.0f;
+	while (angle > 180.0f) angle -= 360.0f;
+    return angle;
 }
 
+float abs(float value) {
+	if (value < 0.0f) return -value;
+	return value;
+}
 
-glm::vec3 getPixelData(float xUV, float yUV, utils::Texture texture) {
-	int texX = static_cast<int>(xUV * (constants::textureWidth - 1));
-	int texY = static_cast<int>((1.0f - yUV) * (constants::textureHeight - 1));
-	int pixelIndex = (texY * constants::textureWidth + texX) * texture.channels;
-	int red = texture.data[pixelIndex];
-	int green = texture.data[pixelIndex + 1];
-	int blue = texture.data[pixelIndex + 2];
+int scaleAngleInt(float angle) {
+    int scaledAngle = static_cast<int>((angle + 2.5f) / 5);
+    return (scaledAngle % 72 + 72) % 72;
+}
 
-	if (texture.channels == 4) {
-		if (texture.data[pixelIndex + 3] < 128) {
-			return glm::vec3(-1.0f); //Pixel is transparent.
-		}
-	}
-	
-	return glm::vec3(red, green, blue);
+float sin(float angle) {
+	int scaledAngle = scaleAngleInt(angle);
+	return sinLUT[scaledAngle];
+}
+
+float cos(float angle) {
+	int scaledAngle = scaleAngleInt(angle);
+	return cosLUT[scaledAngle];	
 }
 
 }

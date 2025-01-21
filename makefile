@@ -1,22 +1,41 @@
-CC = g++
-CFLAGS = -std=c++20 \
-         -IC:/Users/User/Documents/code/.cpp/glew-2.1.0/include \
-         -IC:/Users/User/Documents/code/.cpp/glm \
-         -IC:/Users/User/Documents/code/.cpp/glfw-3.4.bin.WIN64/include \
-         -IC:/Users/User/Documents/code/.cpp
-LIBS = -LC:/Users/User/Documents/code/.cpp/glew-2.1.0/lib/Release/x64 \
-       -LC:/Users/User/Documents/code/.cpp/glfw-3.4.bin.WIN64/lib-mingw-w64 \
-       -lglew32 -lglfw3 -lopengl32 -lglu32 -luser32 -lgdi32
-SOURCES = main.cpp src/render.cpp src/raycasting.cpp src/physics.cpp src/utils.cpp
-OBJECTS = $(SOURCES:.cpp=.o)
+PREFIX=C:/Users/User/Documents/code/.cpp/PrizmSDK-win-0.6/
+CC=$(PREFIX)bin/sh3eb-elf-g++.exe
+MKG3A=$(PREFIX)bin/mkg3a.exe
+OUTDIR=.
+RM=del
+CFLAGS=-m4-nofpu -mb -Os -mhitachi -Wall -nostdlib -I$(PREFIX)include -lfxcg -lgcc -L$(PREFIX)lib
+LDFLAGS=$(CFLAGS) -T$(PREFIX)/toolchain/prizm.x -Wl,-static -Wl,-gc-sections
 
-all: app
+# Specify your source files here
+CSOURCES=main.cpp src/physics.cpp src/utils.cpp src/raycasting.cpp
+SHSOURCES=
+OBJECTS=$(SHSOURCES:.s=.o) $(CSOURCES:.cpp=.o)
 
-app: $(OBJECTS)
-	$(CC) $(OBJECTS) $(LIBS) -o app
+# Specify output binary and G3A files
+BIN=$(OUTDIR)/RayRenderer.bin
+ADDIN=$(BIN:.bin=.g3a)
+
+all: $(ADDIN)
+
+$(BIN): $(OBJECTS)
+	$(CC) $(addprefix $(OUTDIR)/,$^) $(LDFLAGS) -o $@
+
+
+$(ADDIN): $(BIN)
+	$(MKG3A) -n "Raycaster" $< $@
 
 %.o: %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
+
+%.o: src/%.cpp
+	$(CC) -c $(CFLAGS) $< -o $@
 
 clean:
-	del $(OBJECTS) app.exe
+	del /Q "main.o"
+	del /Q "src\\physics.o"
+	del /Q "src\\utils.o"
+	del /Q "src\\raycasting.o"
+	del /Q "RayRenderer.bin"
+	del /Q "RayRenderer.g3a"
+
+

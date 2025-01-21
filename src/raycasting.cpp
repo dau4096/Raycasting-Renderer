@@ -1,8 +1,11 @@
-#include "includes.h"
+extern "C" {
+    #include "C:\Users\User\Documents\code\.cpp\PrizmSDK-win-0.6\include\fxcg/display.h"
+    #include "C:\Users\User\Documents\code\.cpp\PrizmSDK-win-0.6\include\fxcg/keyboard.h"
+	#include "C:\Users\User\Documents\code\.cpp\PrizmSDK-win-0.6\include\fxcg/rtc.h"
+}
+
 #include "utils.h"
-#include <array>
 using namespace std;
-using namespace utils;
 
 /*
 --Notes;
@@ -25,143 +28,94 @@ https://stackoverflow.com/questions/14307158/how-do-you-check-for-intersection-b
 namespace raycasting {
 
 
-glm::vec2 castRay(utils::Ray ray, utils::Wall wall) {
-	glm::vec2 xDiff = glm::vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
-	glm::vec2 yDiff = glm::vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
+vec2 castRay(Ray ray, Wall wall) {
+	vec2 xDiff = vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
+	vec2 yDiff = vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
 
 	float divisor = utils::determinant(xDiff, yDiff);
-	if (abs(divisor) < 1e-7) {
+	if (utils::abs(divisor) < 1e-7) {
 		//Lines do not intersect
-		return glm::vec2(1e30);
+		return INVALID;
 	}
 
-	glm::vec2 dets = glm::vec2(utils::determinant(ray.position, ray.end), utils::determinant(wall.start, wall.end));
+	vec2 dets = vec2(utils::determinant(ray.position, ray.end), utils::determinant(wall.start, wall.end));
 	float xCoord = utils::determinant(dets, xDiff) / divisor;
 	float yCoord = utils::determinant(dets, yDiff) / divisor;
 
-	glm::vec2 intersectPoint = glm::vec2(xCoord, yCoord);
+	vec2 intersectPoint = vec2(xCoord, yCoord);
 
 	// Check if the intersection is within the wall segment
-	if (intersectPoint.x < std::min(wall.start.x, wall.end.x) || intersectPoint.x > std::max(wall.start.x, wall.end.x) ||
-		intersectPoint.y < std::min(wall.start.y, wall.end.y) || intersectPoint.y > std::max(wall.start.y, wall.end.y)) {
-		return glm::vec2(1e30); // Intersection is outside the wall segment
+	if (intersectPoint.x < utils::min(wall.start.x, wall.end.x) || intersectPoint.x > utils::max(wall.start.x, wall.end.x) ||
+		intersectPoint.y < utils::min(wall.start.y, wall.end.y) || intersectPoint.y > utils::max(wall.start.y, wall.end.y)) {
+		return INVALID; //Intersection is outside the wall segment
 	}
 
-	glm::vec2 intersectDirection = glm::normalize(intersectPoint - ray.position);
-	glm::vec2 directionDifference = ray.direction - intersectDirection;
+	vec2 intersectDirection = utils::normalise(utils::SUB(intersectPoint, ray.position));
+	vec2 directionDifference = utils::SUB(ray.direction, intersectDirection);
 
-	if (abs(directionDifference.x) < 0.1 && abs(directionDifference.y) < 0.1) {
+	if (utils::abs(directionDifference.x) < 0.1 && utils::abs(directionDifference.y) < 0.1) {
 		//Wrong way, behind camera.
-		return glm::vec2(1e30);
+		return INVALID;
 	}
 
 	return intersectPoint;	
 }
 
 
-void checkRays(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Wall, 128>* wallData, std::array<utils::Texture, 16> textureArray, float rayAngle) {
-	for (int xCoord = 0; xCoord < display::screenWidth; xCoord++) {
-		float rayOffset = -rayAngle + (xCoord / (float)display::screenWidth) * 2 * rayAngle;
-		float angle = utils::angleClamp(player.viewAngle + 180 + rayOffset);
+void renderScene(Player player, const Wall (*wallData)[64], int maxWalls) {
+	const float rayAngle = 35.0f;
+	const float maxRayDistance = 64.0f;
+
+	for (int xCoord = 0; xCoord < LCD_WIDTH_PX; xCoord++) {
+		float rayOffset = -rayAngle + (xCoord / (float)LCD_WIDTH_PX) * 2 * rayAngle;
+		float angle = utils::angleClamp(player.viewAngle + 180 + rayOffset); //Rough re-implemenation of fmod()
 
 
-		glm::vec2 dirVec = glm::normalize(glm::vec2(sin(angle * constants::toRad), cos(angle * constants::toRad)));
-		utils::Ray ray = Ray(player.position, dirVec);
-		ray.end = ray.position + (ray.direction * display::maxRayDistance);
+		vec2 dirVec = utils::normalise(vec2(utils::sin(angle), utils::cos(angle)));
+		Ray ray = Ray(player.position, dirVec);
+		ray.end = utils::ADD(ray.position, utils::MUL(ray.direction, maxRayDistance));
 
-		float lowestDistance = display::maxRayDistance;
+		float lowestDistance = maxRayDistance;
 		//Invalid wall colour that will get overridden.
 		float savedMultiplier = 0.0;
-		glm::vec2 closeIntersectPoint;
-		utils::Wall closestWall;
+		vec2 closeIntersectPoint;
+		Wall closestWall;
 
 
-		for (const utils::Wall& wall : *wallData) {
-			if (!wall.valid) {continue;}
-			glm::vec2 intersectPoint = raycasting::castRay(ray, wall);
+		for (int idx = 0; idx < maxWalls; idx++) {
+			const Wall& thisWall = *wallData[idx];
+			if (!thisWall.valid) {continue; /* Re-Check the wall is valid. */}
+			vec2 intersectPoint = castRay(ray, thisWall);
 
-			if (intersectPoint == glm::vec2(1e30)) {continue;}
+			if (intersectPoint.x == INVALID.x && intersectPoint.y == INVALID.y) {continue;}
 
-			float intersectDistance = glm::length(intersectPoint - ray.position);
+			float intersectDistance = utils::length(utils::SUB(intersectPoint, ray.position));
 
 
 			if (intersectDistance < lowestDistance) {
 				lowestDistance = intersectDistance;
 
-				glm::vec2 wallVec = glm::normalize(wall.start - wall.end);
-				float angleMultiplier = glm::dot(wallVec, glm::vec2(0, 1))* 0.2 + 0.8;
-				float distanceMultiplier = 1.0f - (2.0f * intersectDistance) / display::maxRayDistance;
+				vec2 wallVec = utils::normalise(utils::SUB(thisWall.start, thisWall.end));
+				float angleMultiplier = utils::dot(wallVec, vec2(0, 1))* 0.2 + 0.8; //Apply shading based off of angle.
+				float distanceMultiplier = 1.0f - (2.0f * intersectDistance) / maxRayDistance;
 				float multiplier = angleMultiplier * distanceMultiplier;
 				savedMultiplier = multiplier;
 				closeIntersectPoint = intersectPoint;
-				closestWall = wall;
+				closestWall = thisWall;
 			}
 		}
 
 		if (savedMultiplier != 0.0) {
 			float correctionFactor = 0.25f; //Multiplies by amount of correction.
-			float adjustedDistance = (1.0f - correctionFactor) * lowestDistance + correctionFactor * (lowestDistance * cos(rayOffset * constants::toRad));
-			float wallHeight = (display::screenHeight / (adjustedDistance + 0.0001f)) * (display::maxRayAngle/rayAngle);
+			float adjustedDistance = (1.0f - correctionFactor) * lowestDistance + correctionFactor * (lowestDistance * utils::cos(rayOffset));
+			float wallHeight = (LCD_HEIGHT_PX / (adjustedDistance + 0.0001f));
 
-			utils::Texture texture = textureArray[closestWall.textureID];
-
-			frameBuffer->drawWallLine(xCoord, wallHeight, closestWall, closeIntersectPoint, lowestDistance, texture, savedMultiplier);
+			vec3 baseColour(255, 0, 255);
+			unsigned short finalColour = utils::createColour(baseColour.x * savedMultiplier, baseColour.y * savedMultiplier, baseColour.z * savedMultiplier);
+			utils::drawLine(xCoord, wallHeight, finalColour);
+		} else {
+			utils::drawLine(xCoord, 0.0f, 0x0000); //No Wall.
 		}
-	}
-}
-
-
-
-int getSpriteScreenX(utils::Sprite sprite, utils::Player player, float onScreenWidth, bool zoom) {
-	//Make sure to return a VERY offscreen x coordinate to be interpreted as "Invalid"
-	glm::vec2 spriteDirection = glm::normalize(sprite.position - player.position);
-	glm::vec2 playerDirection = glm::normalize(glm::vec2(sin(player.viewAngle * constants::toRad), cos(player.viewAngle * constants::toRad)));
-
-	float dot = glm::dot(spriteDirection, playerDirection);
-	float angleBetween = acos(glm::clamp(dot, -1.0f, 1.0f)) * constants::toDeg;
-	if (angleBetween > 180.0f) { return -1e3; }
-
-	float dotDegrees = (1.0f - dot) * 180.0f;
-
-	float cross = spriteDirection.x * playerDirection.y - spriteDirection.y * playerDirection.x; // 2D cross product
-	int dotDirection = (cross >= 0) ? 1 : -1;
-
-
-	float screenXRelative = tan(angleBetween * constants::toRad) / tan(display::maxRayAngle * constants::toRad);
-	screenXRelative = (zoom) ? screenXRelative*display::zoomFactor : screenXRelative;
-	int centrePixelX = (display::screenWidth / 2) + (dotDirection * screenXRelative * (display::screenWidth / 2));
-
-	if (centrePixelX + onScreenWidth/2 < 0 || centrePixelX - onScreenWidth/2 > display::screenWidth) {return -1e3;} //Also offscreen.
-
-	return centrePixelX;
-}
-
-
-
-void drawSprites(utils::FrameBuffer* frameBuffer, utils::Player player, const std::array<utils::Sprite, 128>* spriteData, std::array<utils::Texture, 16> textureArray, bool zoom) {
-	for (const utils::Sprite& sprite : *spriteData) {
-		if (!sprite.valid) {continue;}
-		float spriteDistance = glm::length(player.position - sprite.position);
-
-		if (spriteDistance > display::maxRayDistance) {continue;} //Too far to see onscreen.
-
-		float correctionFactor = 0.25f; //Multiplies by amount of correction.
-		float adjustedDistance = (1.0f - correctionFactor) * spriteDistance + correctionFactor * spriteDistance;
-		float spriteHeight = display::screenHeight / (adjustedDistance + 0.0001f);
-		float spriteWidth = (sprite.width / adjustedDistance) * (display::screenWidth / (2 * tan(display::maxRayAngle * constants::toRad)));
-
-		spriteWidth = (zoom) ? spriteWidth * display::zoomFactor : spriteWidth;
-		spriteHeight = (zoom) ? spriteHeight * display::zoomFactor : spriteHeight;
-
-
-		int centrePixelX = getSpriteScreenX(sprite, player, spriteWidth, zoom);
-		if (centrePixelX < -(spriteWidth/2) || centrePixelX >= display::screenWidth + (spriteWidth/2)) {continue;} //Offscreen, horizontally.
-
-		utils::Texture texture = textureArray[sprite.textureID];
-
-		for (int xCoord = -spriteWidth/2; xCoord < spriteWidth/2; xCoord++) {
-			frameBuffer->drawSpriteLine(xCoord + centrePixelX, spriteHeight, sprite, xCoord + spriteWidth/2, spriteWidth, spriteDistance, texture);
-		}		
 	}
 }
 
