@@ -182,7 +182,7 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 		thisFragColour = texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID))) * multiplier;
 	}
 
-	return thisFragColour
+	return thisFragColour;
 }
 
 
