@@ -62,7 +62,7 @@ float fragDepth;
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 spriteDimentions) {
 	//xUV calculation.
 	float relativeX = fragPosition.x - centrePixelX + (spriteDimentions.x/2);
-	if (relativeX < 0.0f || relativeX >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Outside of sprite horizontal bounds */}
+	//if (relativeX < 0.0f || relativeX >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Outside of sprite horizontal bounds */}
 	float xUV = fract(relativeX / spriteDimentions.x);
 	if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Horizontally out of sprite bounds */}
 
@@ -84,19 +84,31 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 sprite
 
 
 
-float getSpriteScreenX(Sprite thisSprite, float rayAngle, vec2 spriteDimentions) {
-	vec2 sectorStart = vec2(sin(radians(maxRayAngle + playerViewAngle)), cos(radians(maxRayAngle + playerViewAngle)));
-	vec2 sectorEnd = vec2(-sectorStart.x, sectorStart.y);
-	vec2 spriteRelativePosition = thisSprite.position - playerPosition;
-
-	float dotProd = 1.0f - dot(normalize(sectorEnd), normalize(spriteRelativePosition));
-	float range = 1.0f - dot(normalize(sectorEnd), normalize(sectorStart));
-	float angle = dotProd / range;
-	float screenX = angle * screenDimentions.x;
-	if (screenX + spriteDimentions.x/2.0f < 0.0f || screenX - spriteDimentions.x/2.0f > screenDimentions.x) {
-		return -1e3f;
+float angleClamp(float value) {
+	if (value < 0.0f) {
+		return 360.0f + value;
 	}
-	return screenX;
+	return mod(value, 360.0f);
+}
+
+
+float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
+	float f = tan(radians(rayAngle)); //tan(FOV/2)
+	float a = radians(playerViewAngle);
+
+	vec2 dir = vec2(sin(a), cos(a));
+	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
+	vec2 spriteDir = thisSprite.position - playerPosition;
+
+	if (dot(dir, normalize(spriteDir)) < 0.0f) {return 1e30f;}
+
+
+	float invDet = 1.0f / (plane.x * dir.y - dir.x * plane.y);
+
+	float transformX = invDet * (dir.y * spriteDir.x - dir.x * spriteDir.y);
+	float transformY = invDet * (-plane.y * spriteDir.x + plane.x * spriteDir.y);
+
+	return (screenDimentions.x / 2.0f) * (1.0f - transformX / transformY);
 }
 
 
@@ -106,8 +118,6 @@ void main() {
 	screenDimentions = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);	
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
-
-	return;
 
 
 	vec2 closestUV = vec2(1e30f, 1e30f);
@@ -119,7 +129,6 @@ void main() {
 
 	for (int index = 0; index < 32; index++) {
 		Sprite thisSprite = sprites[index];
-		thisSprite.padding[0] = 0.0f; thisSprite.padding[1] = 0.0f;
 		if (thisSprite.valid == 0) {continue; /* Sprite is empty */}
 
 		float spriteDistance = length(playerPosition - thisSprite.position);
@@ -127,11 +136,11 @@ void main() {
 		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
-		float spriteMaxHeight = 1.0f;
+		float spriteMaxHeight = 0.8f;
 
 		float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
 		float viewAngleOffset = atan(spriteMaxHeight/spriteDistance);
-		float spriteHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
+		float spriteHeight = (screenDimentions.y * 2 * viewAngleOffset) / (verticalFOV * ((zoom) ? zoomFactor : 1.0f));
 
 		float spriteWidth = thisSprite.width * spriteHeight;
 
@@ -139,9 +148,8 @@ void main() {
 		spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
 		vec2 spriteDimentions = vec2(spriteWidth, spriteHeight);
 
-
-		float centrePixelX = getSpriteScreenX(thisSprite, rayAngle, spriteDimentions);
-		if (centrePixelX == -1e3f) {continue; /* Invalid position, from getSpriteScreenX() */}
+		float centrePixelX = getSpriteScreenX(thisSprite, rayAngle);
+		if (centrePixelX == 1e30f) {continue; /* Invalid cpX, probably offscreen. */}
 
 
 		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance, spriteDimentions);

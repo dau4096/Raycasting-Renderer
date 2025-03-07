@@ -46,9 +46,10 @@ namespace playerConfig {
 }
 
 namespace dev {
-	constexpr float drawUV = 0;
-	constexpr float noCollis = 0;
-	constexpr float printFPS = 0;
+	constexpr int drawUV = 0;
+	constexpr int noCollis = 0;
+	constexpr int printFPS = 0;
+	constexpr int noUI = 1;
 }
 
 #endif // CONSTANTS_H

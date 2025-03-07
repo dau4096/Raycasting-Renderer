@@ -19,5 +19,5 @@ layout(std140, binding = 1) uniform constUBO {
 
 
 void main() {
-    fragColour = imageLoad(renderedFrame, ivec2(gl_FragCoord.xy));
+    fragColour = vec4(imageLoad(renderedFrame, ivec2(gl_FragCoord.xy)).rgb, 1.0f);
 }

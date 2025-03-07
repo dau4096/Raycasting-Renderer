@@ -15,11 +15,11 @@ const double wait_time = 1.0f / display::maxFPS;
 unordered_map<int, bool> keyMap = {};
 
 std::array<std::string, 32> textureNames = {
-	"a",
-	"b",
-	"c",
+	"a", "b", "c",
 	"s_t_a_r_e",
 	"tabs=fish",
+	"piloten",
+	"mus2", "osa"
 };
 
 // Keyboard presses to monitor.
@@ -59,7 +59,8 @@ std::array<utils::Wall, 256> prepWalls() {
 std::array<utils::Sprite, 32> prepSprites() {
 	std::array<utils::Sprite, 32> spriteData;
 
-	spriteData[0] = Sprite(glm::vec2(5, 5), 1.0f, 3);
+	spriteData[0] = Sprite(glm::vec2(5, 5), 1.0f, 5);
+	spriteData[2] = Sprite(glm::vec2(-5, 5), 1.0f, 7);
 
 	return spriteData;
 
@@ -192,10 +193,10 @@ int main() {
 		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::maxRayAngle/display::zoomFactor : display::maxRayAngle;
 
 		cursorXDelta = cursorXPos - cursorXPosPrev;
-		player.viewAngle += cursorXDelta * (playerConfig::turnSpeedCursor * (rayAngle/display::maxRayAngle));
+		player.viewAngle += cursorXDelta * (playerConfig::turnSpeedCursor / display::zoomFactor);
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
-		player = physics::playerMove(player, keyMap, &wallData);
+		player = physics::playerMove(player, keyMap, &wallData, &spriteData);
 
 
 
@@ -281,25 +282,27 @@ int main() {
 
 		
 		//UI Shader.
-		glUseProgram(uiShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
+		if (false) {
+			glUseProgram(uiShader);
+			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
-		glBindTextureUnit(0, textureArray);
+			glBindTextureUnit(0, textureArray);
 
-		playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
-		zoomLocation = glGetUniformLocation(uiShader, "zoom");
-		
-		glUniform2f(playerPosLocation, player.position.x, player.position.y);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
+			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
+			zoomLocation = glGetUniformLocation(uiShader, "zoom");
+			
+			glUniform2f(playerPosLocation, player.position.x, player.position.y);
+			glUniform1f(playerAngleLocation, player.viewAngle);
+			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("UI Shader", true);
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+			glBindVertexArray(0);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			utils::GLErrorcheck("UI Shader", true);
+		}
 		
 
 

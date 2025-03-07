@@ -19,7 +19,7 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 }
 
 
-utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData) {
+utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, const std::array<utils::Sprite, 32>* spriteData) {
 	float newX = 0.0f;
 	float newY = 0.0f;
 
@@ -39,12 +39,12 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 		newY -= playerSpeed * cos(player.viewAngle * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_A]) {
-		newX -= playerSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
-		newY -= playerSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
+		newX -= playerSpeed * cos((player.viewAngle) * constants::toRad);
+		newY -= playerSpeed * -sin((player.viewAngle) * constants::toRad);
 	}
 	if (keyMap[GLFW_KEY_D]) {
-		newX += playerSpeed * sin((player.viewAngle + 90.0f) * constants::toRad);
-		newY += playerSpeed * cos((player.viewAngle + 90.0f) * constants::toRad);
+		newX += playerSpeed * cos((player.viewAngle) * constants::toRad);
+		newY += playerSpeed * -sin((player.viewAngle) * constants::toRad);
 	}
 
 	glm::vec2 movementVector = glm::vec2(newX, newY);
@@ -64,17 +64,19 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 
 
 	float maxAllowedDistance = glm::length(movementVector);
-	bool collided = false;
 	for (const utils::Wall& wall : *wallData) {
 		if (circleLineIntersect(wall, player.position + movementVector, playerConfig::minCollisionDist)) {
-			collided = true;
+			glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
+			movementVector = wallDir * glm::dot(glm::normalize(movementVector), wallDir) * playerSpeed;
 		}
 	}
 
-
-	if (!collided) {
-		player.position += movementVector;
+	for (const utils::Sprite& sprite : *spriteData) {
+		if (glm::length(sprite.position - (player.position + movementVector)) < playerConfig::minCollisionDist + sprite.width) {movementVector = glm::vec2(0.0f, 0.0f);}
 	}
+
+
+	player.position += movementVector;
 
 	return player;
 };

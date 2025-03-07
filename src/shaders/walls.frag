@@ -189,7 +189,8 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	screenDimentions = imageSize(renderedFrame);
-	fragColour = vec4(1.0f, 0.0f, 1.0f, maxRayDistance);
+	ivec2 framePosition = ivec2(fragPosition);
+	fragColour = imageLoad(renderedFrame, framePosition);
 
 
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
@@ -212,7 +213,7 @@ void main() {
 		if (thisWall.valid == 0) {continue; /* Wall is empty */}
 
 		vec2 intersectPoint = rayIntersectCheck(fragRay, thisWall);
-		if (intersectPoint == vec2(1e30f, 1e30f)) {continue;}
+		if (intersectPoint == vec2(1e30f, 1e30f)) {continue; /* Invalid intersect point */}
 		float wallDistance = length(playerPosition - intersectPoint);
 
 
@@ -227,12 +228,9 @@ void main() {
 		closestIntersectPoint = intersectPoint;
 
 		vec4 wallColour = getWallColour(rayAngle, closestWall, closestIntersectPoint, minDistance);
-		if (wallColour.a < 0.5 && secondClosestIntersectPoint != maxRayDistance) { //Simple alpha, if another wall is behind, blend.
-			vec4 secondWallColour = getWallColour(rayAngle, secondClosestWall, secondClosestIntersectPoint, secondMinDistance);
-			fragColour = vec4((wallColour.a * wallColour.rgb) + ((1.0f - secondWallColour.a) * secondWallColour.rgb), minDistance);
-		} else {
+		if (wallColour != vec4(1e30f, 1e30f, 1e30f, 1e30f)) {
 			fragColour = vec4(wallColour.a * wallColour.rgb, minDistance);
-		} 
+		}
 	}
 
 
@@ -242,7 +240,6 @@ void main() {
 
 
 	//Save to texture.
-	ivec2 framePosition = ivec2(fragPosition);
 	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
 	depths[framePosition.x] = minDistance;
 	imageStore(renderedFrame, framePosition, finalFragColour);
