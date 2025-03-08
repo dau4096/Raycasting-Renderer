@@ -25,16 +25,16 @@ layout(std140, binding = 1) uniform constUBO {
 };
 
 
-struct Sprite {
-	vec2 position;		//Sprite Position.
-	float width;		//Sprite Width.
-	int textureID;		//Sprite Texture.
-	int valid;			//Sprite Validity.
-	float padding[2];	//Sprite Padding.
-};
 
-layout(std140, binding = 3) uniform spriteUBO {
-	Sprite sprites[32];
+struct Sprite {
+	vec2 position;	//Sprite Position.
+	float width;	//Sprite Width.
+	int textureID;	//Sprite Texture ID.
+	int valid;		//Sprite Validity.
+	float _padding; //Memory padding.
+};
+layout(std140, binding = 3) uniform spriteSSBO {
+	Sprite sprites[128];
 };
 
 
@@ -43,7 +43,7 @@ struct Light {
 	vec3 colour;		//Light Colour.
 	float intensity;	//Light Intensity.
 	int valid;			//Light Validity.
-	float padding[2];   //Light Padding.
+	float padding[3];   //Light Padding.
 };
 layout(std140, binding = 4) uniform lightUBO {
 	Light lights[32];
@@ -62,7 +62,6 @@ float fragDepth;
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 spriteDimentions) {
 	//xUV calculation.
 	float relativeX = fragPosition.x - centrePixelX + (spriteDimentions.x/2);
-	//if (relativeX < 0.0f || relativeX >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Outside of sprite horizontal bounds */}
 	float xUV = fract(relativeX / spriteDimentions.x);
 	if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Horizontally out of sprite bounds */}
 
@@ -86,7 +85,7 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 sprite
 
 float angleClamp(float value) {
 	if (value < 0.0f) {
-		return 360.0f + value;
+		return angleClamp(360.0f + value);
 	}
 	return mod(value, 360.0f);
 }
@@ -126,10 +125,10 @@ void main() {
 	vec3 fragColour = vec3(0.0f, 0.0f, 0.0f);
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
-
 	for (int index = 0; index < 32; index++) {
 		Sprite thisSprite = sprites[index];
-		if (thisSprite.valid == 0) {continue; /* Sprite is empty */}
+		if (thisSprite.valid <= 0) {continue; /* Sprite is empty */}
+
 
 		float spriteDistance = length(playerPosition - thisSprite.position);
 

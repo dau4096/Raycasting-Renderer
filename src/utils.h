@@ -48,23 +48,23 @@ namespace utils {
 	};
 
 	struct Sprite {
-		glm::vec2 position;
-		float width;
-		int textureID;
-		int valid;
-		float padding[2];
+		alignas(16) glm::vec2 position;
+		alignas(4) float width;
+		alignas(4) int textureID;
+		alignas(4) int valid;
+	    alignas(4) float _padding;
 
-		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(0), padding{0.0f, 0.0f} {}
+		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(0), _padding(0.0f) {}
 
 		Sprite(glm::vec2 position, float width, int textureID)
-			: position(position), width(width), textureID(textureID), valid(1), padding{0.0f, 0.0f} {}
+			: position(position), width(width), textureID(textureID), valid(1), _padding(0.0f) {}
 	};
 
 	struct Light {
 		glm::vec3 position, colour;
 		float intensity;
 		int valid;
-		float padding[2];
+		float padding[3];
 
 		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), padding{0.0f, 0.0f} {}
 

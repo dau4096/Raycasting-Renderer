@@ -7,7 +7,7 @@
 //I.e. int add(int a, int b);
 namespace physics {
 
-	utils::Player playerMove(utils::Player player, std::unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, const std::array<utils::Sprite, 32>* spriteData);
+	utils::Player playerMove(utils::Player player, std::unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, std::vector<utils::Sprite>* spriteData);
 
 }
 

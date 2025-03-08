@@ -26,11 +26,8 @@ namespace display {
 	constexpr float maxRayAngle = 35.0f;
 	constexpr float maxRayDistance = 64.0f;
 
-	//Framebuffer roof/floor colours.
 	constexpr int topIndex = 3;
 	constexpr int lowIndex = 1;
-	constexpr glm::vec3 topColour(135, 206, 235);
-	constexpr glm::vec3 lowColour(128, 128, 128);
 	constexpr float dimmingStrength = 1.0f;
 }
 

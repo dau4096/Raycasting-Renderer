@@ -32,7 +32,7 @@ struct Light {
 	vec3 colour;		//Light Colour.
 	float intensity;	//Light Intensity.
 	int valid;			//Light Validity.
-	float padding[2];	//Light Padding.
+	float padding[3];	//Light Padding.
 };
 layout(std140, binding = 4) uniform lightUBO {
 	Light lights[32];

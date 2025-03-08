@@ -182,8 +182,8 @@ GLuint createSpriteUBO() {
 }
 
 
-void updateSpriteUBO(GLuint* spriteUBO, const std::array<utils::Sprite, 32>* dataSet) {
-	glBindBuffer(GL_UNIFORM_BUFFER, *spriteUBO);
+void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet) {
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
@@ -192,7 +192,6 @@ void updateSpriteUBO(GLuint* spriteUBO, const std::array<utils::Sprite, 32>* dat
 	} else {
 		raise("Failed to write data to spriteUBO.");
 	}
-
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -242,60 +241,60 @@ GLuint createDepthSSBO(int width) {
 
 
 GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
-    const int maxTextureArrayLayers = 32;
+	const int maxTextureArrayLayers = 32;
 
-    // Texture array ID
-    GLuint sheetArrayID;
-    glGenTextures(1, &sheetArrayID);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
+	// Texture array ID
+	GLuint sheetArrayID;
+	glGenTextures(1, &sheetArrayID);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
 
-    // Allocate storage for the texture array
-    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::textureWidth, constants::textureHeight, maxTextureArrayLayers, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	// Allocate storage for the texture array
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::textureWidth, constants::textureHeight, maxTextureArrayLayers, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	// Set texture parameters
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    // Load textures and populate the array
-    int width, height, channels;
-    int layerIndex = 0;
+	// Load textures and populate the array
+	int width, height, channels;
+	int layerIndex = 0;
 
-    for (const std::string& textureName : textureNames) {
-        if (textureName.empty()) continue;
+	for (const std::string& textureName : textureNames) {
+		if (textureName.empty()) continue;
 
-        std::string texturePath = "src/textures/" + textureName + ".bmp";
-        unsigned char* textureData = stbi_load(texturePath.c_str(), &width, &height, &channels, 4); // Force RGBA (4 channels)
+		std::string texturePath = "src/textures/" + textureName + ".bmp";
+		unsigned char* textureData = stbi_load(texturePath.c_str(), &width, &height, &channels, 4); // Force RGBA (4 channels)
 
-        if (!textureData) {
-            std::cerr << "Failed to load image " << texturePath << ": " << stbi_failure_reason() << std::endl;
-            glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-            glDeleteTextures(1, &sheetArrayID);
-            return 0; // Indicate failure
-        }
+		if (!textureData) {
+			std::cerr << "Failed to load image " << texturePath << ": " << stbi_failure_reason() << std::endl;
+			glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+			glDeleteTextures(1, &sheetArrayID);
+			return 0; // Indicate failure
+		}
 
-        // Ensure all textures match the expected dimensions
-        if (width != constants::textureWidth || height != constants::textureHeight) {
-            std::cerr << "Texture " << textureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
-                      << constants::textureWidth << "x" << constants::textureHeight << "." << std::endl;
-            stbi_image_free(textureData);
-            continue;
-        }
+		// Ensure all textures match the expected dimensions
+		if (width != constants::textureWidth || height != constants::textureHeight) {
+			std::cerr << "Texture " << textureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
+					  << constants::textureWidth << "x" << constants::textureHeight << "." << std::endl;
+			stbi_image_free(textureData);
+			continue;
+		}
 
-        // Upload texture to the correct layer of the 2D array
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::textureWidth, constants::textureHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+		// Upload texture to the correct layer of the 2D array
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::textureWidth, constants::textureHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 
-        // Free the texture data after uploading
-        stbi_image_free(textureData);
+		// Free the texture data after uploading
+		stbi_image_free(textureData);
 
-        layerIndex++;
-        if (layerIndex >= maxTextureArrayLayers) break; // Prevent exceeding maximum layers
-    }
+		layerIndex++;
+		if (layerIndex >= maxTextureArrayLayers) break; // Prevent exceeding maximum layers
+	}
 
-    glBindTexture(GL_TEXTURE_2D_ARRAY, 0); // Unbind texture array
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0); // Unbind texture array
 
-    return sheetArrayID;
+	return sheetArrayID;
 }
 
 

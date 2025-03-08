@@ -56,11 +56,11 @@ std::array<utils::Wall, 256> prepWalls() {
 }
 
 
-std::array<utils::Sprite, 32> prepSprites() {
-	std::array<utils::Sprite, 32> spriteData;
+std::vector<utils::Sprite> prepSprites() {
+	std::vector<utils::Sprite> spriteData;
 
-	spriteData[0] = Sprite(glm::vec2(5, 5), 1.0f, 5);
-	spriteData[2] = Sprite(glm::vec2(-5, 5), 1.0f, 7);
+	spriteData.push_back(Sprite(glm::vec2( 5,  5), 1.0f, 5));
+	spriteData.push_back(Sprite(glm::vec2(-5, -5), 1.0f, 3));
 
 	return spriteData;
 
@@ -70,7 +70,7 @@ std::array<utils::Sprite, 32> prepSprites() {
 std::array<utils::Light, 32> prepLights() {
 	std::array<utils::Light, 32> lightData;
 
-	lightData[0] = Light(glm::vec3(0, 0, 0), glm::vec3(255, 0, 255), 1.0f);
+	lightData[0] = Light(glm::vec3(0, 0, 0), glm::vec3(1, 0, 1), 1.0f);
 
 	return lightData;
 }
@@ -95,7 +95,7 @@ int main() {
 	try { //Catch exceptions
 
 	std::array<utils::Wall, 256> wallData = prepWalls();
-	std::array<utils::Sprite, 32> spriteData = prepSprites();
+	std::vector<utils::Sprite> spriteData = prepSprites();
 	std::array<utils::Light, 32> lightData = prepLights();
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
@@ -158,7 +158,6 @@ int main() {
 
 	while (!glfwWindowShouldClose(Window)) {
 		frame_start = glfwGetTime();
-		//glClear(GL_COLOR_BUFFER_BIT);
 		glfwPollEvents();
 
 		// Get inputs for this frame
@@ -199,9 +198,9 @@ int main() {
 		player = physics::playerMove(player, keyMap, &wallData, &spriteData);
 
 
-
 		//Update Sprites UBO.
-		render::updateSpriteUBO(&spriteUBO, &spriteData);
+		render::updateSpriteUBO(spriteUBO, &spriteData);
+		utils::GLErrorcheck("Sprite UBO Update", true);
 
 
 		//Visplanes Shader.
@@ -278,7 +277,6 @@ int main() {
 		glBindVertexArray(0);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		utils::GLErrorcheck("Sprite Shader", true);
-
 
 		
 		//UI Shader.

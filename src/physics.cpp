@@ -19,7 +19,16 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 }
 
 
-utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, const std::array<utils::Sprite, 32>* spriteData) {
+
+float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
+	float sign = (positiveSolution) ? 1.0f : -1.0f;
+	// (-b +/- sqrt(b^2 - 4ac)) / 2a
+	return (-b + (sign * sqrt(determinant))) / 2*a;
+}
+
+
+
+utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, std::vector<utils::Sprite>* spriteData) {
 	float newX = 0.0f;
 	float newY = 0.0f;
 
@@ -72,7 +81,39 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	}
 
 	for (const utils::Sprite& sprite : *spriteData) {
-		if (glm::length(sprite.position - (player.position + movementVector)) < playerConfig::minCollisionDist + sprite.width) {movementVector = glm::vec2(0.0f, 0.0f);}
+		glm::vec2 dir = sprite.position - player.position;
+		float radius = playerConfig::minCollisionDist + sprite.width;
+
+		if (glm::length(dir) > radius) {continue;}
+
+		//Uses b^2 - 4ac and compares to 0.
+		float a = (movementVector.x*movementVector.x) + (movementVector.y*movementVector.y);
+		float b = 2 * glm::dot(dir, movementVector);
+		float c = dir.x*dir.x + dir.y*dir.y - radius*radius;
+
+		float determinant = b*b - 4*a*c;
+		float Mu;
+
+		if (determinant > 0.0f) { //2 intersect points
+			float positive = quadraticFormula(a, b, determinant);
+			float negative = quadraticFormula(a, b, determinant, false);
+			Mu = min(positive, negative);
+
+		} else if (determinant == 0) { //1 intersect point
+			Mu = quadraticFormula(a, b, determinant); //Take the positive root.
+
+		} else { //No intersects; no collision.
+			Mu = 0.0f;
+		}
+
+		glm::vec2 intersectPoint = player.position + movementVector * Mu;
+		glm::vec2 normal = glm::normalize(intersectPoint - sprite.position);
+		glm::vec2 movementAlongNormal = glm::dot(movementVector, normal) * normal;
+		movementVector -= movementAlongNormal;
+
+		if (glm::length(movementVector) > playerSpeed) {
+			movementVector = glm::normalize(movementVector) * playerSpeed;
+		}
 	}
 
 
