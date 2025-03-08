@@ -8,23 +8,18 @@ uniform sampler2DArray textureArray;
 uniform int drawUV;
 
 
-layout(rgba32f, binding=0) uniform image2D renderedFrame;
-
+layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-	float zoomFactor;
-	float maxRayAngle;
-	float maxRayDistance;
+    float zoomFactor;
+    float maxRayAngle;
+    float maxRayDistance;
 
-	float topIndex;
-	float lowIndex;
+    float topIndex;
+    float lowIndex;
 
-	vec2 textureSize;
+    vec2 textureSize;
 
-	float padding[3];
-};
-
-layout(std430, binding = 5) buffer depthBuffer {
-	float depths[];
+    float padding[2];
 };
 
 struct Light {
@@ -38,10 +33,14 @@ layout(std140, binding = 4) uniform lightUBO {
 	Light lights[32];
 };
 
+layout(std430, binding = 5) buffer depthBuffer {
+	float depths[];
+};
+
 
 
 vec2 fragPosition;
-ivec2 screenDimentions;
+ivec2 renderResolution;
 vec4 fragColour;
 float actualDistance;
 
@@ -56,19 +55,19 @@ float angleClamp(float value) {
 
 vec3 getUVCoords() {
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	bool topHalf = fragPosition.y > screenDimentions.y/2;
-	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
+	bool topHalf = fragPosition.y > renderResolution.y/2;
+	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 
 	float ceilingHeight = 1.0f;
 
-	float normY = (2.0 * fragPosition.y / screenDimentions.y) - 1.0; // Normalized screen Y [-1, 1]
+	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0; // Normalized screen Y [-1, 1]
 	float viewAngleOffset = normY * (verticalFOV/2);
 	float linearDistance = ceilingHeight / abs(tan(viewAngleOffset));
 	actualDistance = clamp(linearDistance, 0.0f, maxRayDistance);
 
 
 
-	float offset = -rayAngle + (fragPosition.x / screenDimentions.x) * 2 * rayAngle; //0 being screen centre collumn, -/+ maxRayAngle at the left and right edge respectively.
+	float offset = -rayAngle + (fragPosition.x / renderResolution.x) * 2 * rayAngle; //0 being screen centre collumn, -/+ maxRayAngle at the left and right edge respectively.
 	float angle = angleClamp(playerViewAngle + offset); //Actual angle, taking into account player view angle.
 	vec2 direction = normalize(vec2(sin(radians(angle)), cos(radians(angle)))); //Direction vector from said angle.
 	vec2 realPosition = playerPosition + (direction * actualDistance); //position ahead of the player, at the distance calculated from screen Y. (centre is maxRayDistance, top/bottom are both 0. Linear.)
@@ -91,7 +90,7 @@ vec3 getUVCoords() {
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	screenDimentions = imageSize(renderedFrame);
+	renderResolution = imageSize(renderedFrame);
 
 	vec3 UVcoords = getUVCoords();
 

@@ -8,7 +8,7 @@ uniform vec2 playerPosition;
 uniform bool zoom;
 
 vec2 fragPosition;
-ivec2 screenDimentions;
+ivec2 renderResolution;
 vec3 fragColour;
 float fragDepth;
 float fragDepths[1920];
@@ -16,17 +16,16 @@ float fragDepths[1920];
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-	float zoomFactor;
-	float maxRayAngle;
-	float maxRayDistance;
-	float dimmingStrength;
+    float zoomFactor;
+    float maxRayAngle;
+    float maxRayDistance;
 
-	float toRad;
+    float topIndex;
+    float lowIndex;
 
-	vec3 topColour;
-	vec3 lowColour;
+    vec2 textureSize;
 
-	float padding[3];
+    float padding[2];
 };
 layout(std430, binding = 5) buffer depthBuffer {
 	float depths[];
@@ -39,8 +38,8 @@ bool isClockwise(vec2 point, vec2 vector) {
 
 
 vec3 viewMap(float rayAngle) {
-	vec2 centre = vec2(screenDimentions.x * 0.875f, screenDimentions.y * 0.5f);
-	const float radius = screenDimentions.y / 32.5f;
+	vec2 centre = vec2(renderResolution.x * 0.875f, renderResolution.y * 0.5f);
+	const float radius = renderResolution.y / 32.5f;
 	float radiusSquared = radius * radius;
 
 	vec2 sectorStart = vec2(sin(radians(rayAngle)), cos(radians(rayAngle)));
@@ -57,8 +56,8 @@ vec3 viewMap(float rayAngle) {
 		float dotProd = 1.0f - dot(normalize(sectorEnd), normalize(fragRelativePosition));
 		float range = 1.0f - dot(normalize(sectorEnd), normalize(sectorStart));
 		float angle = dotProd / range;
-	    int index = int(angle * float(screenDimentions.x));
-	    index = clamp(index, 0, screenDimentions.x - 1);
+	    int index = int(angle * float(renderResolution.x));
+	    index = clamp(index, 0, renderResolution.x - 1);
 	    float thisFragDistance = depths[index] / (maxRayDistance / 4.0f);
 	    float fragUIDistanceScaled = fragUIDistance/radiusSquared;
 	    
@@ -73,7 +72,7 @@ vec3 viewMap(float rayAngle) {
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	screenDimentions = imageSize(renderedFrame);
+	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);
 	vec4 imageColour = imageLoad(renderedFrame, framePosition);
 	fragColour = imageColour.rgb;

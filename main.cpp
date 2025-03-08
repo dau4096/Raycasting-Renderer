@@ -77,17 +77,16 @@ std::array<utils::Light, 32> prepLights() {
 
 
 GLuint frameTextureID, depthSSBO;
+glm::ivec2 currentScreenRes;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 	glDisable(GL_DEPTH_TEST);
 
-    GLuint newFrameTextureID = render::createTexture(width, height);
+	currentScreenRes = glm::ivec2(width, height);
 
-    glDeleteTextures(1, &frameTextureID);
-    frameTextureID = newFrameTextureID;
-	depthSSBO = render::createDepthSSBO(display::screenWidth);
+	depthSSBO = render::createDepthSSBO(display::renderResolution.x);
 }
 
 
@@ -101,9 +100,10 @@ int main() {
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
+	currentScreenRes = display::screenResolution;
 
 
-	GLFWwindow* Window = render::initializeWindow(display::screenWidth, display::screenHeight, "Raycasting-Renderer");
+	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer");
 	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 
@@ -114,13 +114,13 @@ int main() {
 
 
 
-	frameTextureID = render::createTexture(display::screenWidth, display::screenHeight);
+	frameTextureID = render::createTexture(display::renderResolution.x, display::renderResolution.y);
 	GLuint textureArray = render::createTextureArray(textureNames);
 	render::createConstUBO();
 	render::createWallUBO(&wallData);
 	render::createLightUBO(&lightData);
 	GLuint spriteUBO = render::createSpriteUBO();
-	depthSSBO = render::createDepthSSBO(display::screenWidth);
+	depthSSBO = render::createDepthSSBO(display::renderResolution.x);
 
 
 	//Visplane Shader (Roof and Floor).
@@ -140,7 +140,7 @@ int main() {
 
 
 
-	glViewport(0, 0, display::screenWidth, display::screenHeight);
+	glViewport(0, 0, currentScreenRes.x, currentScreenRes.y);
 	glDisable(GL_DEPTH_TEST);
 	GLuint VAO = render::getVAO();
 
@@ -175,12 +175,16 @@ int main() {
 		if (keyMap[GLFW_KEY_ESCAPE]) {
 			break; //Quit
 		}
+
+		/*
+		//Old pre-mouse keybinds. Useless.
 		if (keyMap[GLFW_KEY_Q]) {
 			player.viewAngle -= playerConfig::turnSpeedKB;
 		}
 		if (keyMap[GLFW_KEY_E]) {
 			player.viewAngle += playerConfig::turnSpeedKB;
 		}
+		*/
 
 		if (keyMap[GLFW_KEY_1]) {
 			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			
@@ -308,6 +312,10 @@ int main() {
 		glUseProgram(displayShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
+
+		GLuint screenResLoc = glGetUniformLocation(displayShader, "screenResolution");
+		glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
+
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);

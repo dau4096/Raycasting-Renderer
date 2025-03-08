@@ -17,8 +17,8 @@ namespace constants {
 }
 
 namespace display {
-	constexpr int screenWidth = 640;
-	constexpr int screenHeight = 360;
+	constexpr glm::ivec2 screenResolution = glm::ivec2(640, 400);
+	constexpr glm::ivec2 renderResolution = glm::ivec2(480, 270);
 
 	constexpr int maxFPS = 75;
 

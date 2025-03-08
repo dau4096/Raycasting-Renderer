@@ -11,17 +11,16 @@ uniform int drawUV;
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-	float zoomFactor;
-	float maxRayAngle;
-	float maxRayDistance;
-	float dimmingStrength;
+    float zoomFactor;
+    float maxRayAngle;
+    float maxRayDistance;
 
-	float toRad;
+    float topIndex;
+    float lowIndex;
 
-	vec3 topColour;
-	vec3 lowColour;
+    vec2 textureSize;
 
-	float padding[3];
+    float padding[2];
 };
 layout(std430, binding = 5) buffer depthBuffer {
 	float depths[];
@@ -69,7 +68,7 @@ Ray createRay(vec2 position, vec2 direction) {
 
 
 vec2 fragPosition;
-ivec2 screenDimentions;
+ivec2 renderResolution;
 vec4 fragColour;
 
 
@@ -140,7 +139,7 @@ vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight) {
 
 
 	//yUV calculation.
-	int midPointY = screenDimentions.y / 2;
+	int midPointY = renderResolution.y / 2;
 	float yCoordScreen = midPointY + fragPosition.y;
 	float wallTop = midPointY - wallHeight / 2.0f;
 	float wallBottom = midPointY + wallHeight / 2.0f;
@@ -162,9 +161,9 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 
 	float wallMaxHeight = 1.0f;
 
-	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
+	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 	float viewAngleOffset = atan(wallMaxHeight/minDistance);
-	float wallHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
+	float wallHeight = (renderResolution.y * 2 * viewAngleOffset) / verticalFOV;
 
 	
 	vec2 wallVec = normalize(closestWall.start - closestWall.end);
@@ -188,13 +187,13 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	screenDimentions = imageSize(renderedFrame);
+	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = imageLoad(renderedFrame, framePosition);
 
 
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	float rayOffset = -rayAngle + (fragPosition.x / screenDimentions.x) * 2.0f * rayAngle;
+	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
 	float angle = radians(angleClamp(playerViewAngle + 180.0f + rayOffset));
 
 	vec2 rayDirection = vec2(sin(angle), cos(angle));

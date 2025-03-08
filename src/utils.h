@@ -20,6 +20,11 @@ namespace utils {
 	float angleClamp(float value);
 
 
+	int RNGc(); //Client
+	int RNGw(); //World
+	void clearRNG(); //Reset both
+
+
 	struct Texture {
 		glm::vec2 dimentions;
 		int channels;
