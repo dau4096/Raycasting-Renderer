@@ -24,16 +24,27 @@ layout(std140, binding = 1) uniform constUBO {
 };
 
 
+struct Wall {
+	vec2 start;			//Wall Start.
+	vec2 end;			//Wall End.
+	int textureID;		//Wall Texture.
+	int valid;			//Wall Validity.
+	float padding[2];	//Wall Padding.
+};
+layout(std140, binding = 2) uniform wallUBO {
+	Wall walls[256];
+};
+
 
 struct Sprite {
 	vec2 position;	//Sprite Position.
 	float width;	//Sprite Width.
 	int textureID;	//Sprite Texture ID.
 	int valid;		//Sprite Validity.
-	float _padding; //Memory padding.
+	float _padding;	//Memory padding.
 };
 layout(std140, binding = 3) uniform spriteSSBO {
-	Sprite sprites[128];
+	Sprite sprites[32];
 };
 
 
@@ -42,13 +53,26 @@ struct Light {
 	vec3 colour;		//Light Colour.
 	float intensity;	//Light Intensity.
 	int valid;			//Light Validity.
-	float padding[3];   //Light Padding.
+	float _padding;		//Light Padding.
 };
 layout(std140, binding = 4) uniform lightUBO {
-	Light lights[32];
+	Light lights[64];
 };
 layout(std430, binding = 5) buffer depthBuffer {
 	float depths[];
+};
+
+
+struct Ray {
+	vec2 position, direction, end;
+};
+
+Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
+	Ray ray;
+	ray.position = position;
+	ray.direction = direction;
+	ray.end = ray.position + (ray.direction * maxDist);
+	return ray;
 };
 
 
@@ -56,13 +80,63 @@ vec2 fragPosition;
 ivec2 renderResolution;
 vec4 fragColour;
 float fragDepth;
+const float EPSILON = 1e-4f;
+const float EPSILON_ALT = 1e-3f;
+const float DEFAULT_BRIGHTNESS = 0.25f;
+const vec2 INVALID = vec2(1e30f, 1e30f);
+
+
+float determinant(vec2 vecA, vec2 vecB) {
+	return (vecA.x * vecB.y) - (vecA.y * vecB.x);
+}
+
+
+vec2 rayIntersectCheck(Ray ray, Wall wall) {
+	vec2 xDiff = vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
+	vec2 yDiff = vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
+
+
+	double divisor = determinant(xDiff, yDiff);
+	//If less than some Epsilon value.
+	if (abs(divisor) < 1e-5f) {
+		//Lines do not intersect, as they are nearly parrallel.
+		return INVALID;
+	}
+
+
+	vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wall.start, wall.end));
+	double xCoord = determinant(dets, xDiff) / divisor;
+	double yCoord = determinant(dets, yDiff) / divisor;
+
+	vec2 intersectPoint = vec2(xCoord, yCoord);
+
+
+	//Check if the intersection is within the wall segment.
+	if (intersectPoint.x < min(wall.start.x, wall.end.x) || intersectPoint.x > max(wall.start.x, wall.end.x) ||
+		intersectPoint.y < min(wall.start.y, wall.end.y) || intersectPoint.y > max(wall.start.y, wall.end.y)) {
+		return INVALID; // Intersection is outside the wall segment
+	}
+
+
+	vec2 intersectDirection = normalize(intersectPoint - ray.position);
+	vec2 directionDifference = ray.direction - intersectDirection;
+
+	
+	if (length(directionDifference) < EPSILON_ALT) {
+		//Wrong way, behind camera.
+		return INVALID;
+	}
+	
+
+	return intersectPoint;  
+}
 
 
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 spriteDimentions) {
 	//xUV calculation.
 	float relativeX = fragPosition.x - centrePixelX + (spriteDimentions.x/2);
 	float xUV = fract(relativeX / spriteDimentions.x);
-	if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return vec2(1e30f, 1e30f); /* Horizontally out of sprite bounds */}
+	if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return INVALID; /* Horizontally out of sprite bounds */}
 
 
 	//yUV calculation.
@@ -73,7 +147,7 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 sprite
 
 
 	//Don't allow drawing above/below wall top/bottom respectively.
-	if (fragPosition.y < spriteTop || fragPosition.y > spriteBottom) {return vec2(1e30f, 1e30f); /* Vertically out of sprite bounds */}
+	if (fragPosition.y < spriteTop || fragPosition.y > spriteBottom) {return INVALID; /* Vertically out of sprite bounds */}
 	float yUV = (fragPosition.y - (midPointY - spriteDimentions.y / 2.0f)) / spriteDimentions.y;
 
 
@@ -87,6 +161,23 @@ float angleClamp(float value) {
 		return angleClamp(360.0f + value);
 	}
 	return mod(value, 360.0f);
+}
+
+
+bool checkLOS(vec2 pointA, vec2 pointB, int thisIndex=-1, float maxDist=maxRayDistance) {
+	Ray LOSRay = createRay(pointA, normalize(pointA-pointB), maxDist);
+
+	for (int index = 0; index < 256; index++) {
+		Wall thisWall = walls[index];
+		if (thisWall.valid <= 0 || index == thisIndex) {continue; /* Wall is empty, or the wall calling LOS. */}
+
+		vec2 thisIntersectPoint = rayIntersectCheck(LOSRay, thisWall);
+		if (thisIntersectPoint == INVALID) {continue; /* Invalid intersect point */}
+		if (length(thisIntersectPoint - pointA) + EPSILON >= length(pointA-pointB)) {continue; /* Intersection is beyond the target, ignore it. */}
+		return true; //Intersect found.
+	}
+
+	return false;
 }
 
 
@@ -118,10 +209,11 @@ void main() {
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
 
 
-	vec2 closestUV = vec2(1e30f, 1e30f);
+	vec2 closestUV = INVALID;
 	Sprite closestSprite;
 	bool spriteHit = false;
 	vec3 fragColour = vec3(0.0f, 0.0f, 0.0f);
+	vec3 albedo;
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
 	for (int index = 0; index < 32; index++) {
@@ -151,15 +243,17 @@ void main() {
 
 
 		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance, spriteDimentions);
-		if (spriteUV == vec2(1e30f, 1e30f)) {continue; /* Invalid UV, from getSpriteUV() */}
+		if (spriteUV == INVALID) {continue; /* Invalid UV, from getSpriteUV() */}
 		
 		if (drawUV == 1) {
-			fragColour = vec3(spriteUV.xy, thisSprite.textureID/16);
+			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
+			closestSprite = thisSprite;
 		} else {
 			vec4 alphaTexture = texture(textureArray, vec3(spriteUV.xy, float(thisSprite.textureID)));
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
-			fragColour = alphaTexture.rgb;
+			albedo = alphaTexture.rgb;
 			spriteHit = true;
+			closestSprite = thisSprite;
 		}
 
 		fragDepth = spriteDistance;
@@ -167,9 +261,30 @@ void main() {
 
 
 
-	if (!spriteHit) {return; /* fragment does not intersect with a valid point on a sprite. */}
-	//Only write the final pixel to the frame.
 
-	vec4 finalFragColour = vec4(fragColour, fragDepth);
-	imageStore(renderedFrame, framePosition, finalFragColour);
+
+	if (spriteHit) {
+		for (int idx=0; idx<64; idx++) {
+			Light thisLight = lights[idx];
+			if (thisLight.valid <= 0) {continue; /* Light is not valid. */}
+
+			bool shadow = checkLOS(thisLight.position.xy, closestSprite.position);
+			if (shadow) {
+				fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f));
+			} else {
+				vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
+				float distance = length(realPosition3D - thisLight.position);
+				float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
+				float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS/2.0f, 2.5);
+
+				vec3 lightContribution = thisLight.colour * brightness;
+				vec3 litColor = albedo.rgb * lightContribution;
+
+				fragColour = min(fragColour + litColor, vec3(1.0f, 1.0f, 1.0f));
+			}
+		}
+
+		vec4 finalFragColour = vec4(fragColour, fragDepth);
+		imageStore(renderedFrame, framePosition, finalFragColour);
+	}
 }

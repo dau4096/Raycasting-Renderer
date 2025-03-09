@@ -34,6 +34,9 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 };
 
 
+
+
+//TEMPORARY DATA SETUP. REPLACE WITH FILE LOADING.
 std::array<utils::Wall, 256> prepWalls() {
 	std::array<utils::Wall, 256> wallData;
 
@@ -56,24 +59,29 @@ std::array<utils::Wall, 256> prepWalls() {
 }
 
 
+std::vector<utils::Light> prepLights() {
+	std::vector<utils::Light> lightData;
+
+	lightData.push_back(Light(glm::vec3(-5, 0, -5), glm::vec3(1.0f, 1.0f, 1.0f), 10.0f));
+	lightData.push_back(Light(glm::vec3( 5, 0,  5), glm::vec3(1.0f, 0.0f, 1.0f), 5.0f));
+
+	return lightData;
+}
+
+
 std::vector<utils::Sprite> prepSprites() {
 	std::vector<utils::Sprite> spriteData;
 
 	spriteData.push_back(Sprite(glm::vec2( 5,  5), 1.0f, 5));
-	spriteData.push_back(Sprite(glm::vec2(-5, -5), 1.0f, 3));
+	spriteData.push_back(Sprite(glm::vec2(-4,  4), 1.0f, 4));
 
 	return spriteData;
 
 }
 
 
-std::array<utils::Light, 32> prepLights() {
-	std::array<utils::Light, 32> lightData;
 
-	lightData[0] = Light(glm::vec3(0, 0, 0), glm::vec3(1, 0, 1), 1.0f);
 
-	return lightData;
-}
 
 
 GLuint frameTextureID, depthSSBO;
@@ -94,8 +102,8 @@ int main() {
 	try { //Catch exceptions
 
 	std::array<utils::Wall, 256> wallData = prepWalls();
+	std::vector<utils::Light> lightData = prepLights();
 	std::vector<utils::Sprite> spriteData = prepSprites();
-	std::array<utils::Light, 32> lightData = prepLights();
 	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
 
 
@@ -118,7 +126,7 @@ int main() {
 	GLuint textureArray = render::createTextureArray(textureNames);
 	render::createConstUBO();
 	render::createWallUBO(&wallData);
-	render::createLightUBO(&lightData);
+	GLuint lightUBO = render::createLightUBO();
 	GLuint spriteUBO = render::createSpriteUBO();
 	depthSSBO = render::createDepthSSBO(display::renderResolution.x);
 
@@ -175,12 +183,16 @@ int main() {
 		if (keyMap[GLFW_KEY_ESCAPE]) {
 			break; //Quit
 		}
+
+		/*
+		//Old pre-mouse keybinds. Useless.
 		if (keyMap[GLFW_KEY_Q]) {
 			player.position.z -= playerConfig::moveSpeed;
 		}
 		if (keyMap[GLFW_KEY_E]) {
 			player.position.z += playerConfig::moveSpeed;
 		}
+		*/
 
 		if (keyMap[GLFW_KEY_1]) {
 			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			
@@ -189,18 +201,23 @@ int main() {
 			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 		}
 
+
+
 		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::maxRayAngle/display::zoomFactor : display::maxRayAngle;
 
 		cursorXDelta = cursorXPos - cursorXPosPrev;
 		player.viewAngle += cursorXDelta * (playerConfig::turnSpeedCursor / display::zoomFactor);
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
+
 		player = physics::playerMove(player, keyMap, &wallData, &spriteData);
 
 
+
 		//Update Sprites UBO.
+		render::updateLightUBO(lightUBO, &lightData);
 		render::updateSpriteUBO(spriteUBO, &spriteData);
-		utils::GLErrorcheck("Sprite UBO Update", true);
+		utils::GLErrorcheck("Sprite & Light UBOs Update", true);
 
 
 		//Visplanes Shader.

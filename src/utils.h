@@ -25,6 +25,11 @@ namespace utils {
 	void clearRNG(); //Reset both
 
 
+	int RNGc(); //Client
+	int RNGw(); //World
+	void clearRNG(); //Reset both
+
+
 	struct Texture {
 		glm::vec2 dimentions;
 		int channels;
@@ -66,15 +71,16 @@ namespace utils {
 	};
 
 	struct Light {
-		glm::vec3 position, colour;
-		float intensity;
-		int valid;
-		float padding[3];
+		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 colour;
+		alignas(4) float intensity;
+		alignas(4) int valid;
+	    alignas(4) float _padding;
 
-		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), padding{0.0f, 0.0f} {}
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), _padding{0.0f} {}
 
 		Light(glm::vec3 position, glm::vec3 colour, float intensity)
-			: position(position), colour(colour), intensity(intensity), valid(1), padding{0.0f, 0.0f} {}
+			: position(position), colour(colour), intensity(intensity), valid(1), _padding{0.0f} {}
 	};
 
 
