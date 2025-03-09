@@ -62,8 +62,8 @@ std::array<utils::Wall, 256> prepWalls() {
 std::vector<utils::Light> prepLights() {
 	std::vector<utils::Light> lightData;
 
-	lightData.push_back(Light(glm::vec3(-4, 0, 4), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f));
-	//lightData.push_back(Light(glm::vec3( 5, 0, 0), glm::vec3(1.0f, 0.0f, 0.0f), 2.5f));
+	lightData.push_back(Light(glm::vec3(-5, 0, -5), glm::vec3(1.0f, 1.0f, 1.0f), 10.0f));
+	lightData.push_back(Light(glm::vec3( 5, 0,  5), glm::vec3(1.0f, 0.0f, 1.0f), 5.0f));
 
 	return lightData;
 }
@@ -211,11 +211,6 @@ int main() {
 
 
 		player = physics::playerMove(player, keyMap, &wallData, &spriteData);
-
-
-
-		spriteData[0].position.x -= 0.01;
-		lightData[0].position = glm::vec3(spriteData[0].position.x+0.01f, spriteData[0].position.y, 0.0f);
 
 
 

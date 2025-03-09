@@ -270,17 +270,17 @@ void main() {
 
 			bool shadow = checkLOS(thisLight.position.xy, closestSprite.position);
 			if (shadow) {
-				fragColour = albedo * DEFAULT_BRIGHTNESS;
+				fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f));
 			} else {
 				vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
 				float distance = length(realPosition3D - thisLight.position);
 				float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
-				float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
+				float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS/2.0f, 2.5);
 
 				vec3 lightContribution = thisLight.colour * brightness;
 				vec3 litColor = albedo.rgb * lightContribution;
 
-				fragColour = min(litColor, vec3(1.0f, 1.0f, 1.0f));
+				fragColour = min(fragColour + litColor, vec3(1.0f, 1.0f, 1.0f));
 			}
 		}
 

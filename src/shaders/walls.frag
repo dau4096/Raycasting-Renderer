@@ -262,7 +262,7 @@ void main() {
 				bool normalCheckPass = dot(wallNormal, lightDir) > 0.0f; //Dot of dir of player-wallIntersect, and intersect-light.
 
 				if (shadow || !normalCheckPass) {
-					fragColour = albedo * DEFAULT_BRIGHTNESS;
+					fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
 				} else {
 					vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 					float distance = length(intersect3D - thisLight.position);

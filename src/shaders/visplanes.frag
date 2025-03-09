@@ -199,7 +199,7 @@ void main() {
 
 			bool shadow = checkLOS(thisLight.position.xy, realPosition.xy);
 			if (shadow) {
-				fragColour = albedo * DEFAULT_BRIGHTNESS;
+				fragColour = vec4(min(fragColour.rgb + (albedo.rgb * DEFAULT_BRIGHTNESS * distanceFade), vec3(1.0f, 1.0f, 1.0f)), 1.0f);
 			} else {
 				vec3 realPosition3D = vec3(realPosition.xy, 1.0f);
 				float distance = length(realPosition3D - thisLight.position);
