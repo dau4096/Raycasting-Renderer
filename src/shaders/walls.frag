@@ -4,7 +4,7 @@
 
 uniform sampler2DArray textureArray;
 uniform float playerViewAngle;
-uniform vec2 playerPosition;
+uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
 
@@ -66,11 +66,14 @@ Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
 vec2 fragPosition;
 ivec2 renderResolution;
 vec4 fragColour;
+float verticalFOV;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float DEFAULT_BRIGHTNESS = 0.1f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
 const vec4 INVALIDv4 = vec4(1e30f, 1e30f, 1e30f, 1e30f);
+
+const bool noLighting = true;
 
 
 float determinant(vec2 vecA, vec2 vecB) {
@@ -128,57 +131,48 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 }
 
 
-vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight) {
-	float textureRepeatInterval = 1.0f;
+vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallLowZ, float wallTopZ) {
+	const float textureRepeatInterval = 2.0f;
 
 	//xUV calculation.
 	vec2 wallDirection = thisWall.end - thisWall.start;
 	vec2 wallPosition = intersectPoint - thisWall.start;
 	float wallLength = length(wallDirection);
 	float projection = dot(wallPosition, normalize(wallDirection));
-	float xUV = fract((projection) / textureRepeatInterval);
+	float xUV = fract(projection / textureRepeatInterval);
 
 
 	//yUV calculation.
-	int midPointY = renderResolution.y / 2;
-	float yCoordScreen = midPointY + fragPosition.y;
-	float wallTop = midPointY - wallHeight / 2.0f;
-	float wallBottom = midPointY + wallHeight / 2.0f;
+	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
+	float distance = length(playerPosition.xy - intersectPoint) / zoomEffect;
+	float projectedYLow = (playerPosition.z - wallLowZ) / distance;
+	float projectedYTop = (playerPosition.z - wallTopZ) / distance;
+
+	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
+	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
+
+	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALID;}
+
+	float a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
+	float actualZ = mix(wallLowZ, wallTopZ, a);
+	float yUV = 1.0f - fract(actualZ / textureRepeatInterval);
 
 
-	//Don't allow drawing above/below wall top/bottom respectively.
-	if (fragPosition.y < wallTop || fragPosition.y > wallBottom) {return INVALID; /* Outside of wall bounds. */}
-	float yUV = (fragPosition.y - (midPointY - wallHeight / 2.0f)) / wallHeight;
-
-
-	return vec2(xUV, 1.0f - yUV);
+	return vec2(xUV, yUV);
 }
 
 
-vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint, float minDistance) {
-	if (minDistance == maxRayDistance) {return INVALIDv4; /* No collision was detected. */}
+vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint) {
+	const float wallLowZ = -1.0f, wallTopZ = 1.0f;
 
-
-	float wallMaxHeight = 1.0f;
-
-	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
-	float viewAngleOffset = atan(wallMaxHeight/minDistance);
-	float wallHeight = (renderResolution.y * 2 * viewAngleOffset) / verticalFOV;
-
-	
-	vec2 wallVec = normalize(closestWall.start - closestWall.end);
-	float angleMultiplier = dot(wallVec, vec2(0.0f, 1.0f)) * 0.2f + 0.8f;
-	float distanceMultiplier = 1.0f - (minDistance / maxRayDistance);
-	float multiplier = angleMultiplier * distanceMultiplier;
-
-	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallHeight);
-	if (wallUV == INVALIDv4.xy) {return INVALIDv4; /* Invalid UV coordinates. */}
+	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallLowZ, wallTopZ);
+	if (wallUV == INVALID) {return INVALIDv4;}
 
 	vec4 thisFragColour;
-	if (drawUV == 1) {
+	if (drawUV > 0) { //DrawUV
 		thisFragColour = vec4(wallUV.xy, closestWall.textureID / 32.0f, maxRayDistance);
 	} else {
-		thisFragColour = texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID))) * multiplier;
+		thisFragColour = texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID)));
 	}
 
 	return thisFragColour;
@@ -214,7 +208,7 @@ void main() {
 	float angle = radians(angleClamp(playerViewAngle + 180.0f + rayOffset));
 
 	vec2 rayDirection = vec2(sin(angle), cos(angle));
-	Ray fragRay = createRay(playerPosition, rayDirection);
+	Ray fragRay = createRay(playerPosition.xy, rayDirection);
 
 
 	float minDistance = maxRayDistance;
@@ -228,7 +222,7 @@ void main() {
 
 		vec2 thisIntersectPoint = rayIntersectCheck(fragRay, thisWall);
 		if (thisIntersectPoint == INVALID) {continue; /* Invalid intersect point */}
-		float wallDistance = length(playerPosition - thisIntersectPoint);
+		float wallDistance = length(playerPosition.xy - thisIntersectPoint);
 
 
 		if (wallDistance >= minDistance) {continue;}
@@ -244,35 +238,40 @@ void main() {
 
 	if (minDistance < maxRayDistance) {
 		Wall closestWall = walls[closestIndex];
-		vec4 albedo = getWallColour(rayAngle, closestWall, closestIntersectPoint, minDistance);
+		vec4 albedo = getWallColour(rayAngle, closestWall, closestIntersectPoint);
 		if (albedo != INVALIDv4) {
-			for (int idx=0; idx<64; idx++) {
-				//Iterate through all lights.
-				Light thisLight = lights[idx];
-				if (thisLight.valid <= 0) {continue; /* Light is empty */}
-				
-				//Shadow Checks
-				bool shadow = checkLOS(thisLight.position.xy, closestIntersectPoint, closestIndex, thisLight.intensity);
-				vec2 wallDirection = normalize(closestWall.end - closestWall.start);
-				vec2 wallNormal = vec2(wallDirection.y, -wallDirection.x); // Default normal
-				if (dot(wallNormal, playerPosition - closestIntersectPoint) < 0.0) {
-					wallNormal = -wallNormal; // Flip the normal if needed
-				}
-				vec2 lightDir = normalize(thisLight.position.xy-closestIntersectPoint);
-				bool normalCheckPass = dot(wallNormal, lightDir) > 0.0f; //Dot of dir of player-wallIntersect, and intersect-light.
+			if (noLighting) {
+				fragColour = albedo;
 
-				if (shadow || !normalCheckPass) {
-					fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
-				} else {
-					vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
-					float distance = length(intersect3D - thisLight.position);
-					float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
-					float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
+			} else {
+				for (int idx=0; idx<64; idx++) {
+					//Iterate through all lights.
+					Light thisLight = lights[idx];
+					if (thisLight.valid <= 0) {continue; /* Light is empty */}
+					
+					//Shadow Checks
+					bool shadow = checkLOS(thisLight.position.xy, closestIntersectPoint, closestIndex, thisLight.intensity);
+					vec2 wallDirection = normalize(closestWall.end - closestWall.start);
+					vec2 wallNormal = vec2(wallDirection.y, -wallDirection.x); // Default normal
+					if (dot(wallNormal, playerPosition.xy - closestIntersectPoint) < 0.0) {
+						wallNormal = -wallNormal; // Flip the normal if needed
+					}
+					vec2 lightDir = normalize(thisLight.position.xy-closestIntersectPoint);
+					bool normalCheckPass = dot(wallNormal, lightDir) > 0.0f; //Dot of dir of player-wallIntersect, and intersect-light.
 
-					vec3 lightContribution = thisLight.colour * brightness;
-					vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
+					if (shadow || !normalCheckPass) {
+						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
+					} else {
+						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
+						float distance = length(intersect3D - thisLight.position);
+						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
+						float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
 
-					fragColour = min(litColor, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+						vec3 lightContribution = thisLight.colour * brightness;
+						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
+
+						fragColour = min(litColor, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+					}
 				}
 			}
 		}

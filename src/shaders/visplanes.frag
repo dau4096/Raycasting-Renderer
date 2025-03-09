@@ -3,7 +3,7 @@
 
 uniform bool zoom;
 uniform float playerViewAngle;
-uniform vec2 playerPosition;
+uniform vec3 playerPosition;
 uniform sampler2DArray textureArray;
 uniform int drawUV;
 
@@ -65,12 +65,15 @@ Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
 vec2 fragPosition;
 ivec2 renderResolution;
 vec4 fragColour;
-float actualDistance;
+float actualDistance, t;
 vec2 realPosition;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float DEFAULT_BRIGHTNESS = 0.1f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
+const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
+
+const bool noLighting = true;
 
 
 float determinant(vec2 vecA, vec2 vecB) {
@@ -144,32 +147,47 @@ bool checkLOS(vec2 pointA, vec2 pointB, int thisIndex=-1, float maxDist=maxRayDi
 }
 
 
-vec3 getUVCoords() {
+vec3 getUVCoords(float floorZ, float ceilingZ) {
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
+	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
+
 	bool topHalf = fragPosition.y > renderResolution.y/2;
 	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 
-	float ceilingHeight = 1.0f;
-
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0; // Normalized screen Y [-1, 1]
-	float viewAngleOffset = normY * (verticalFOV/2);
-	float linearDistance = ceilingHeight / abs(tan(viewAngleOffset));
-	actualDistance = clamp(linearDistance, 0.0f, maxRayDistance);
+	float vAO = normY * (verticalFOV/2);
+	float theta = radians(playerViewAngle + rayOffset);
 
 
+	const vec3 planeNormal = vec3(0.0f, 0.0f, 1.0f);
+	vec3 rayDirection = normalize(vec3(
+		sin(theta), cos(theta),
+		tan(radians(vAO))
+	));
 
-	float offset = -rayAngle + (fragPosition.x / renderResolution.x) * 2 * rayAngle; //0 being screen centre collumn, -/+ maxRayAngle at the left and right edge respectively.
-	float angle = angleClamp(playerViewAngle + offset); //Actual angle, taking into account player view angle.
-	vec2 direction = normalize(vec2(sin(radians(angle)), cos(radians(angle)))); //Direction vector from said angle.
-	realPosition = playerPosition + (direction * actualDistance); //position ahead of the player, at the distance calculated from screen Y. (centre is maxRayDistance, top/bottom are both 0. Linear.)
+
+	float denom = dot(planeNormal, rayDirection);
+	if (abs(denom) < EPSILON) {return INVALIDv3; /* Nearly parallel. */}
+
+	float planeHeight = (topHalf) ? ceilingZ : floorZ;
+
+	vec3 planeOrigin = vec3(0.0f, 0.0f, planeHeight);
+	vec3 planeDir = planeOrigin - playerPosition;
+
+
+	t = (planeHeight - playerPosition.z) / (rayDirection.z * 50.0f);
+	if (t <= 0.0f) {return INVALIDv3; /* Behind Ray origin. */}
+
+	vec3 intersectPoint = playerPosition + vec3(rayDirection.xy * t, 0.0f);
+	vec2 realPosition = intersectPoint.xy;
+	float distance = length(realPosition - playerPosition.xy);
+	//Compare against some XY bounds maybe.
 
 
 	//Take the fractional parts of the position (texture tiles every unit square)
-	float xUV;
+	float xUV = fract(abs(realPosition.x));
 	if (!topHalf) {
-		xUV = 1.0f - fract(abs(realPosition.x));
-	} else {
-		xUV = fract(abs(realPosition.x));
+		xUV = 1.0f - xUV;
 	}
 	float yUV = fract(abs(realPosition.y));
 	//Texture index depends on top (ceiling) or bottom (floor) half.
@@ -184,12 +202,24 @@ void main() {
 	renderResolution = imageSize(renderedFrame);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
-	vec3 UVcoords = getUVCoords();
 
-	if (drawUV == 1) {
+	const float floorZ = -1.0f;
+	const float ceilingZ = 1.0f;
+
+
+
+	vec3 UVcoords = getUVCoords(floorZ, ceilingZ);
+
+	if (UVcoords == INVALIDv3) {
+		fragColour = vec4(0.0f, 0.0f, 0.0f, 1.0f);		
+	} else if (false) {
 		fragColour = vec4(UVcoords.xy, UVcoords.z/2, 1.0); // Visualize UV coords
+	} else if (noLighting) {
+		float distanceFade = 1.0f - (t / (maxRayDistance * maxRayDistance));
+		vec4 albedo = texture(textureArray, UVcoords) * distanceFade;
+		fragColour = albedo;
 	} else {
-		float distanceFade = 1.0f - (actualDistance / maxRayDistance);
+		float distanceFade = 1.0f - (t / (maxRayDistance * maxRayDistance));
 		vec4 albedo = texture(textureArray, UVcoords);
 
 		for (int idx=0; idx<64; idx++) {

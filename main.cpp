@@ -184,15 +184,12 @@ int main() {
 			break; //Quit
 		}
 
-		/*
-		//Old pre-mouse keybinds. Useless.
 		if (keyMap[GLFW_KEY_Q]) {
 			player.position.z -= playerConfig::moveSpeed;
 		}
 		if (keyMap[GLFW_KEY_E]) {
 			player.position.z += playerConfig::moveSpeed;
 		}
-		*/
 
 		if (keyMap[GLFW_KEY_1]) {
 			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			

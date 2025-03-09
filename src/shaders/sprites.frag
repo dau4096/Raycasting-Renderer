@@ -85,6 +85,8 @@ const float EPSILON_ALT = 1e-3f;
 const float DEFAULT_BRIGHTNESS = 0.25f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
 
+const bool noLighting = true;
+
 
 float determinant(vec2 vecA, vec2 vecB) {
 	return (vecA.x * vecB.y) - (vecA.y * vecB.x);
@@ -132,23 +134,34 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 }
 
 
-vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 spriteDimentions) {
+vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
+	const float spriteFootZ = -1.0f, spriteHeadZ = 0.8f;
+
+	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
+	float distance = length(playerPosition.xy - thisSprite.position.xy) / zoomEffect;
+	float projectedYLow = (playerPosition.z - spriteFootZ) / distance;
+	float projectedYTop = (playerPosition.z - spriteHeadZ) / distance;
+
+	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
+	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
+
+
+	float spriteHeight = screenYTop - screenYLow;
+	float spriteWidth = thisSprite.width * spriteHeight;
+	spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
+	spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
+
+
+
 	//xUV calculation.
-	float relativeX = fragPosition.x - centrePixelX + (spriteDimentions.x/2);
-	float xUV = fract(relativeX / spriteDimentions.x);
-	if (fragPosition.x < centrePixelX - (spriteDimentions.x/2) || fragPosition.x >= centrePixelX + (spriteDimentions.x/2)) {return INVALID; /* Horizontally out of sprite bounds */}
+	float relativeX = fragPosition.x - centrePixelX + (spriteWidth/2);
+	float xUV = fract(relativeX / spriteWidth);
+	if (fragPosition.x < centrePixelX - (spriteWidth/2) || fragPosition.x >= centrePixelX + (spriteWidth/2)) {return INVALID; /* Horizontally out of sprite bounds */}
 
 
 	//yUV calculation.
-	int midPointY = renderResolution.y / 2;
-	float yCoordScreen = midPointY + fragPosition.y;
-	float spriteTop = midPointY - spriteDimentions.y / 2.0f;
-	float spriteBottom = midPointY + spriteDimentions.y / 2.0f;
-
-
-	//Don't allow drawing above/below wall top/bottom respectively.
-	if (fragPosition.y < spriteTop || fragPosition.y > spriteBottom) {return INVALID; /* Vertically out of sprite bounds */}
-	float yUV = (fragPosition.y - (midPointY - spriteDimentions.y / 2.0f)) / spriteDimentions.y;
+	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALID; /* Vertically out of sprite bounds */}
+	float yUV = (fragPosition.y - screenYLow) / (screenYTop - screenYLow);
 
 
 	return vec2(xUV, 1.0f - yUV);
@@ -226,23 +239,12 @@ void main() {
 		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
-		float spriteMaxHeight = 0.8f;
-
-		float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
-		float viewAngleOffset = atan(spriteMaxHeight/spriteDistance);
-		float spriteHeight = (renderResolution.y * 2 * viewAngleOffset) / (verticalFOV * ((zoom) ? zoomFactor : 1.0f));
-
-		float spriteWidth = thisSprite.width * spriteHeight;
-
-		spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
-		spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
-		vec2 spriteDimentions = vec2(spriteWidth, spriteHeight);
 
 		float centrePixelX = getSpriteScreenX(thisSprite, rayAngle);
 		if (centrePixelX == 1e30f) {continue; /* Invalid cpX, probably offscreen. */}
 
 
-		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance, spriteDimentions);
+		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance);
 		if (spriteUV == INVALID) {continue; /* Invalid UV, from getSpriteUV() */}
 		
 		if (drawUV == 1) {
@@ -264,23 +266,28 @@ void main() {
 
 
 	if (spriteHit) {
-		for (int idx=0; idx<64; idx++) {
-			Light thisLight = lights[idx];
-			if (thisLight.valid <= 0) {continue; /* Light is not valid. */}
+		if (noLighting) {
+			fragColour = albedo.rgb;
 
-			bool shadow = checkLOS(thisLight.position.xy, closestSprite.position);
-			if (shadow) {
-				fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f));
-			} else {
-				vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
-				float distance = length(realPosition3D - thisLight.position);
-				float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
-				float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS/2.0f, 2.5);
+		} else {
+			for (int idx=0; idx<64; idx++) {
+				Light thisLight = lights[idx];
+				if (thisLight.valid <= 0) {continue; /* Light is not valid. */}
 
-				vec3 lightContribution = thisLight.colour * brightness;
-				vec3 litColor = albedo.rgb * lightContribution;
+				bool shadow = checkLOS(thisLight.position.xy, closestSprite.position);
+				if (shadow) {
+					fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f));
+				} else {
+					vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
+					float distance = length(realPosition3D - thisLight.position);
+					float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
+					float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS/2.0f, 2.5);
 
-				fragColour = min(fragColour + litColor, vec3(1.0f, 1.0f, 1.0f));
+					vec3 lightContribution = thisLight.colour * brightness;
+					vec3 litColor = albedo.rgb * lightContribution;
+
+					fragColour = min(fragColour + litColor, vec3(1.0f, 1.0f, 1.0f));
+				}
 			}
 		}
 
