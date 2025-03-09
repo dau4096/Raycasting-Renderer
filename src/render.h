@@ -11,8 +11,9 @@ namespace render {
     void createConstUBO();
     void createWallUBO(const std::array<utils::Wall, 256>* dataSet);
     GLuint createSpriteUBO();
-    void updateSpriteUBO(GLuint spriteSSBO, std::vector<utils::Sprite>* dataSet);
-    void createLightUBO(const std::array<utils::Light, 32>* dataSet);
+    void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet);
+    GLuint createLightUBO();
+    void updateLightUBO(GLuint lightUBO, std::vector<utils::Light>* dataSet);
     GLuint createDepthSSBO(int width);
     GLuint createTexture(int width, int height);
     GLuint createTextureArray(const std::array<std::string, 32>& textureNames);

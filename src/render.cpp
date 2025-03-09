@@ -192,14 +192,30 @@ void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet) {
 }
 
 
-void createLightUBO(const std::array<utils::Light, 32>* dataSet) {
+GLuint createLightUBO() {
 	GLuint lightUBO;
 	glGenBuffers(1, &lightUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
 
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * dataSet->size(), dataSet->data(), GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * 64, nullptr, GL_DYNAMIC_DRAW);
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 4, lightUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	return lightUBO;
+}
+
+
+void updateLightUBO(GLuint lightUBO, std::vector<utils::Light>* dataSet) {
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, dataSet->data(), sizeof(utils::Light) * dataSet->size());
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to lightUBO.");
+	}
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
