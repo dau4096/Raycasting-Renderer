@@ -23,7 +23,7 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
 	float sign = (positiveSolution) ? 1.0f : -1.0f;
 	// (-b +/- sqrt(b^2 - 4ac)) / 2a
-	return (-b + (sign * sqrt(determinant))) / 2*a;
+	return (-b + (sign * sqrt(determinant))) / (2*a);
 }
 
 
@@ -31,6 +31,7 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, std::vector<utils::Sprite>* spriteData) {
 	float newX = 0.0f;
 	float newY = 0.0f;
+	float newZ = 0.0f;
 
 	float playerSpeed = playerConfig::moveSpeed;
 
@@ -64,24 +65,24 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 
 
 	if (dev::noCollis == 1.0f) {
-		player.position += movementVector;
+		player.position += glm::vec3(movementVector.x, movementVector.y, newZ);
 		return player;
 	}
 
 
 
 
-
-	float maxAllowedDistance = glm::length(movementVector);
+	//Horizontal Calculations;
+	glm::vec2 playerPosV2 = glm::vec2(player.position.x, player.position.y);
 	for (const utils::Wall& wall : *wallData) {
-		if (circleLineIntersect(wall, player.position + movementVector, playerConfig::minCollisionDist)) {
+		if (circleLineIntersect(wall, playerPosV2 + movementVector, playerConfig::minCollisionDist)) {
 			glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
 			movementVector = wallDir * glm::dot(glm::normalize(movementVector), wallDir) * playerSpeed;
 		}
 	}
 
 	for (const utils::Sprite& sprite : *spriteData) {
-		glm::vec2 dir = sprite.position - player.position;
+		glm::vec2 dir = sprite.position - playerPosV2;
 		float radius = playerConfig::minCollisionDist + sprite.width;
 
 		if (glm::length(dir) > radius) {continue;}
@@ -92,24 +93,25 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 		float c = dir.x*dir.x + dir.y*dir.y - radius*radius;
 
 		float determinant = b*b - 4*a*c;
-		float Mu;
+		float Mu = std::numeric_limits<float>::max();
 
 		if (determinant > 0.0f) { //2 intersect points
-			float positive = quadraticFormula(a, b, determinant);
-			float negative = quadraticFormula(a, b, determinant, false);
-			Mu = min(positive, negative);
+			float root1 = quadraticFormula(a, b, determinant);
+			float root2 = quadraticFormula(a, b, determinant, false);
 
-		} else if (determinant == 0) { //1 intersect point
-			Mu = quadraticFormula(a, b, determinant); //Take the positive root.
+			if (root1 > 0.0f && root1 < 1.0f) Mu = root1;
+			if (root2 > 0.0f && root2 < 1.0f) Mu = std::min(Mu, root2);
 
-		} else { //No intersects; no collision.
+			if (Mu == std::numeric_limits<float>::max()) Mu = 0.0f;
+
+		} else { //1 or 0 intersects; no collision.
 			Mu = 0.0f;
 		}
 
-		glm::vec2 intersectPoint = player.position + movementVector * Mu;
+		glm::vec2 intersectPoint = playerPosV2 + movementVector * Mu;
 		glm::vec2 normal = glm::normalize(intersectPoint - sprite.position);
 		glm::vec2 movementAlongNormal = glm::dot(movementVector, normal) * normal;
-		movementVector -= movementAlongNormal;
+		movementVector -= movementAlongNormal*0.75f;
 
 		if (glm::length(movementVector) > playerSpeed) {
 			movementVector = glm::normalize(movementVector) * playerSpeed;
@@ -117,7 +119,11 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	}
 
 
-	player.position += movementVector;
+	//Vertical Calculations; (N/A for now.)
+	float vMove = newZ;
+
+
+	player.position += glm::vec3(movementVector.x, movementVector.y, vMove);
 
 	return player;
 };

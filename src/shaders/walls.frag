@@ -4,24 +4,23 @@
 
 uniform sampler2DArray textureArray;
 uniform float playerViewAngle;
-uniform vec2 playerPosition;
+uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-	float zoomFactor;
-	float maxRayAngle;
-	float maxRayDistance;
-	float dimmingStrength;
+    float zoomFactor;
+    float maxRayAngle;
+    float maxRayDistance;
 
-	float toRad;
+    float topIndex;
+    float lowIndex;
 
-	vec3 topColour;
-	vec3 lowColour;
+    vec2 textureSize;
 
-	float padding[3];
+    float padding[2];
 };
 layout(std430, binding = 5) buffer depthBuffer {
 	float depths[];
@@ -69,8 +68,9 @@ Ray createRay(vec2 position, vec2 direction) {
 
 
 vec2 fragPosition;
-ivec2 screenDimentions;
+ivec2 renderResolution;
 vec4 fragColour;
+float verticalFOV;
 
 
 float determinant(vec2 vecA, vec2 vecB) {
@@ -128,7 +128,14 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 }
 
 
-vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight) {
+float calculateZOffset(float minDistance) {
+	float viewAngleOffset = atan(playerPosition.z/minDistance);
+	float ZOffset = (renderResolution.y * 2 * viewAngleOffset) / verticalFOV;
+	return ZOffset;
+}
+
+
+vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight, float minDistance) {
 	float textureRepeatInterval = 1.0f;
 
 	//xUV calculation.
@@ -140,15 +147,16 @@ vec2 getWallUV(Wall thisWall, vec2 intersectPoint, float wallHeight) {
 
 
 	//yUV calculation.
-	int midPointY = screenDimentions.y / 2;
+	int midPointY = (renderResolution.y / 2);
 	float yCoordScreen = midPointY + fragPosition.y;
-	float wallTop = midPointY - wallHeight / 2.0f;
-	float wallBottom = midPointY + wallHeight / 2.0f;
+	float ZOffset = calculateZOffset(minDistance);
+	float wallTop = midPointY - ZOffset - wallHeight / 2.0f;
+	float wallBottom = midPointY - ZOffset + wallHeight / 2.0f;
 
 
 	//Don't allow drawing above/below wall top/bottom respectively.
 	if (fragPosition.y < wallTop || fragPosition.y > wallBottom) {return vec2(1e30f, 1e30f); /* Outside of wall bounds. */}
-	float yUV = (fragPosition.y - (midPointY - wallHeight / 2.0f)) / wallHeight;
+	float yUV = (fragPosition.y - (midPointY - ZOffset - wallHeight / 2.0f)) / wallHeight;
 
 
 	return vec2(xUV, 1.0f - yUV);
@@ -162,9 +170,9 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 
 	float wallMaxHeight = 1.0f;
 
-	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
+	verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 	float viewAngleOffset = atan(wallMaxHeight/minDistance);
-	float wallHeight = (screenDimentions.y * 2 * viewAngleOffset) / verticalFOV;
+	float wallHeight = (renderResolution.y * 2 * viewAngleOffset) / verticalFOV;
 
 	
 	vec2 wallVec = normalize(closestWall.start - closestWall.end);
@@ -172,7 +180,7 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 	float distanceMultiplier = 1.0f - (minDistance / maxRayDistance);
 	float multiplier = angleMultiplier * distanceMultiplier;
 
-	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallHeight);
+	vec2 wallUV = getWallUV(closestWall, closestIntersectPoint, wallHeight, minDistance);
 	if (wallUV == INVALID.xy) {return INVALID; /* Invalid UV coordinates. */}
 
 	vec4 thisFragColour;
@@ -188,22 +196,22 @@ vec4 getWallColour(float rayAngle, Wall closestWall, vec2 closestIntersectPoint,
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	screenDimentions = imageSize(renderedFrame);
+	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = imageLoad(renderedFrame, framePosition);
 
 
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	float rayOffset = -rayAngle + (fragPosition.x / screenDimentions.x) * 2.0f * rayAngle;
+	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
 	float angle = radians(angleClamp(playerViewAngle + 180.0f + rayOffset));
 
 	vec2 rayDirection = vec2(sin(angle), cos(angle));
-	Ray fragRay = createRay(playerPosition, rayDirection);
+	Ray fragRay = createRay(playerPosition.xy, rayDirection);
 
 
-	float minDistance = maxRayDistance, secondMinDistance = maxRayDistance;
-	Wall closestWall, secondClosestWall;
-	vec2 closestIntersectPoint, secondClosestIntersectPoint;
+	float minDistance = maxRayDistance;
+	Wall closestWall;
+	vec2 closestIntersectPoint;
 
 	//Iterate through all the walls.
 	int i=0;
@@ -214,33 +222,29 @@ void main() {
 
 		vec2 intersectPoint = rayIntersectCheck(fragRay, thisWall);
 		if (intersectPoint == vec2(1e30f, 1e30f)) {continue; /* Invalid intersect point */}
-		float wallDistance = length(playerPosition - intersectPoint);
+		float wallDistance = length(playerPosition.xy - intersectPoint);
 
 
 		if (wallDistance >= minDistance) {continue;}
 		
 		//Set closest.
-		secondMinDistance = minDistance;
 		minDistance = wallDistance;
-		secondClosestWall = closestWall;
 		closestWall = thisWall;
-		secondClosestIntersectPoint = closestIntersectPoint;
 		closestIntersectPoint = intersectPoint;
-
-		vec4 wallColour = getWallColour(rayAngle, closestWall, closestIntersectPoint, minDistance);
-		if (wallColour != vec4(1e30f, 1e30f, 1e30f, 1e30f)) {
-			fragColour = vec4(wallColour.a * wallColour.rgb, minDistance);
-		}
 	}
 
 
 
 
+	if (minDistance < maxRayDistance) {
+		vec4 wallColour = getWallColour(rayAngle, closestWall, closestIntersectPoint, minDistance);
+		if (wallColour != vec4(1e30f, 1e30f, 1e30f, 1e30f)) {
+			fragColour = vec4(wallColour.a * wallColour.rgb, minDistance);
+		}
 
-
-
-	//Save to texture.
-	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
-	depths[framePosition.x] = minDistance;
-	imageStore(renderedFrame, framePosition, finalFragColour);
+		//Save to texture.
+		vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+		depths[framePosition.x] = minDistance;
+		imageStore(renderedFrame, framePosition, finalFragColour);
+	}
 }

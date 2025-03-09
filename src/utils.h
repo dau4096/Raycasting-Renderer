@@ -17,7 +17,12 @@ namespace utils {
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
-	float angleClamp(float value);
+	float angleClamp(float value); //Degrees
+
+
+	int RNGc(); //Client
+	int RNGw(); //World
+	void clearRNG(); //Reset both
 
 
 	struct Texture {
@@ -82,10 +87,10 @@ namespace utils {
 
 
 	struct Player {
-		glm::vec2 position;
+		glm::vec3 position;
 		float viewAngle;
 
-		Player(glm::vec2 position, float angle)
+		Player(glm::vec3 position, float angle)
 			: position(position), viewAngle(angle) {}
 	};
 

@@ -4,24 +4,23 @@
 
 uniform sampler2DArray textureArray;
 uniform float playerViewAngle;
-uniform vec2 playerPosition;
+uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-	float zoomFactor;
-	float maxRayAngle;
-	float maxRayDistance;
-	float dimmingStrength;
+    float zoomFactor;
+    float maxRayAngle;
+    float maxRayDistance;
 
-	float toRad;
+    float topIndex;
+    float lowIndex;
 
-	vec3 topColour;
-	vec3 lowColour;
+    vec2 textureSize;
 
-	float padding[3];
+    float padding[2];
 };
 
 
@@ -54,7 +53,7 @@ layout(std430, binding = 5) buffer depthBuffer {
 
 
 vec2 fragPosition;
-ivec2 screenDimentions;
+ivec2 renderResolution;
 vec4 fragColour;
 float fragDepth;
 
@@ -67,7 +66,7 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth, vec2 sprite
 
 
 	//yUV calculation.
-	int midPointY = screenDimentions.y / 2;
+	int midPointY = renderResolution.y / 2;
 	float yCoordScreen = midPointY + fragPosition.y;
 	float spriteTop = midPointY - spriteDimentions.y / 2.0f;
 	float spriteBottom = midPointY + spriteDimentions.y / 2.0f;
@@ -97,7 +96,7 @@ float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
 
 	vec2 dir = vec2(sin(a), cos(a));
 	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
-	vec2 spriteDir = thisSprite.position - playerPosition;
+	vec2 spriteDir = thisSprite.position - playerPosition.xy;
 
 	if (dot(dir, normalize(spriteDir)) < 0.0f) {return 1e30f;}
 
@@ -107,14 +106,14 @@ float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
 	float transformX = invDet * (dir.y * spriteDir.x - dir.x * spriteDir.y);
 	float transformY = invDet * (-plane.y * spriteDir.x + plane.x * spriteDir.y);
 
-	return (screenDimentions.x / 2.0f) * (1.0f - transformX / transformY);
+	return (renderResolution.x / 2.0f) * (1.0f - transformX / transformY);
 }
 
 
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	screenDimentions = imageSize(renderedFrame);
+	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);	
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
 
@@ -130,16 +129,16 @@ void main() {
 		if (thisSprite.valid <= 0) {continue; /* Sprite is empty */}
 
 
-		float spriteDistance = length(playerPosition - thisSprite.position);
+		float spriteDistance = length(playerPosition.xy - thisSprite.position);
 
 		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
 		float spriteMaxHeight = 0.8f;
 
-		float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (screenDimentions.x / screenDimentions.y));
+		float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 		float viewAngleOffset = atan(spriteMaxHeight/spriteDistance);
-		float spriteHeight = (screenDimentions.y * 2 * viewAngleOffset) / (verticalFOV * ((zoom) ? zoomFactor : 1.0f));
+		float spriteHeight = (renderResolution.y * 2 * viewAngleOffset) / (verticalFOV * ((zoom) ? zoomFactor : 1.0f));
 
 		float spriteWidth = thisSprite.width * spriteHeight;
 

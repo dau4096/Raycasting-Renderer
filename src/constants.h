@@ -17,8 +17,8 @@ namespace constants {
 }
 
 namespace display {
-	constexpr int screenWidth = 640;
-	constexpr int screenHeight = 360;
+	constexpr glm::ivec2 screenResolution = glm::ivec2(640, 400);
+	constexpr glm::ivec2 renderResolution = glm::ivec2(480, 270);
 
 	constexpr int maxFPS = 75;
 
@@ -38,7 +38,7 @@ namespace playerConfig {
 	constexpr float runMultiplier = 2.0f;
 	constexpr float minCollisionDist = 0.125f;
 
-	constexpr glm::vec2 playerStartPos = glm::vec2(-2.5f, -2.5f);
+	constexpr glm::vec3 playerStartPos = glm::vec3(-2.5f, -2.5f, 0.0f);
 	constexpr float playerStartAngle = -45.0f;
 }
 

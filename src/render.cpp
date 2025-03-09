@@ -124,8 +124,6 @@ void createConstUBO() {
 
 		glm::vec2 textureSize;
 
-		float drawUV;
-
 		float padding[2];
 	};
 
@@ -138,8 +136,6 @@ void createConstUBO() {
 		display::lowIndex,
 
 		{constants::textureWidth, constants::textureHeight},
-
-		static_cast<float>(dev::drawUV),
 
 		{0.0f, 0.0f},
 	};
