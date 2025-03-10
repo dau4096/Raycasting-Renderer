@@ -13,16 +13,16 @@ namespace render {
     void createConstUBO();
 
     GLuint createVisplaneUBO();
-    void updateVisplaneUBO(GLuint visplaneUBO, std::vector<utils::Visplane>* dataSet);
+    void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants::MAX_VISPLANES>* dataSet);
 
     GLuint createWallUBO();
-    void updateWallUBO(GLuint wallUBO, std::vector<utils::Wall>* dataSet);
+    void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet);
 
-    GLuint createSpriteUBO();
-    void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet);
+    GLuint createSpriteSSBO();
+    void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet);
 
-    GLuint createLightUBO();
-    void updateLightUBO(GLuint lightUBO, std::vector<utils::Light>* dataSet);
+    GLuint createLightSSBO();
+    void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet);
 
     GLuint createDepthSSBO(int width);
 

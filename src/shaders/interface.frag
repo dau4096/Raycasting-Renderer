@@ -15,17 +15,14 @@ float fragDepths[1920];
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
-layout(std140, binding = 1) uniform constUBO {
+layout(std140, binding = 10) uniform constUBO {
 	float zoomFactor;
 	float maxRayAngle;
 	float maxRayDistance;
 
-	float topIndex;
-	float lowIndex;
-
 	vec2 textureSize;
 
-	float padding[2];
+	float padding[4];
 };
 
 struct Visplane {
@@ -36,7 +33,7 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std140, binding = 2) uniform visplaneUBO {
+layout(std430, binding = 2) buffer visplaneUBO {
 	Visplane visplanes[64];
 };
 

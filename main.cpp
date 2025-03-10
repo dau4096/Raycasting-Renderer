@@ -35,60 +35,61 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 
 
 //TEMPORARY DATA SETUP. REPLACE WITH FILE LOADING.
-std::vector<utils::Visplane> prepVisplanes() {
-	std::vector<utils::Visplane> visplaneData;
+std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
+	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
 
-	visplaneData.push_back(Visplane(vec2(-10, -10), vec2(10, 10), -1.0f, 2));
+	visplaneData[0] = Visplane(vec2(-10, -10), vec2(10, 10), -1.0f, 2);
+	visplaneData[1] = Visplane(vec2(-8, -8), vec2( 8, -12), 1.8f, 3);
 
 	return visplaneData;
 }
 
 
-std::vector<utils::Wall> prepWalls() {
-	std::vector<utils::Wall> wallData;
+std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
+	std::array<utils::Wall, constants::MAX_WALLS> wallData;
 
-	wallData.push_back(Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), -1.0f, 3.0f, 4));
-	wallData.push_back(Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), -1.0f, 2.0f, 4));
+	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), -1.0f, 3.0f, 4);
+	wallData[1] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), -1.0f, 2.0f, 4);
 
-	wallData.push_back(Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), -1.0f, 2.0f, 2));
-	wallData.push_back(Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), -1.0f, 2.0f, 2));
+	wallData[2] = Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), -1.0f, 2.0f, 2);
+	wallData[3] = Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), -1.0f, 2.0f, 2);
 
-	wallData.push_back(Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), -1.0f, 1.0f, 0));
-	wallData.push_back(Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), -1.0f, 1.0f, 0));
+	wallData[4] = Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), -1.0f, 1.0f, 0);
+	wallData[5] = Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), -1.0f, 1.0f, 0);
 
-	wallData.push_back(Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), -1.0f, 1.0f, 0));
-	wallData.push_back(Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), -1.0f, 1.0f, 0));
+	wallData[6] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), -1.0f, 1.0f, 0);
+	wallData[7] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), -1.0f, 1.0f, 0);
 
-	wallData.push_back(Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), -1.0f, 1.0f, 0));
-	wallData.push_back(Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), -1.0f, 1.0f, 0));
+	wallData[8] = Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), -1.0f, 1.0f, 0);
+	wallData[9] = Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), -1.0f, 1.0f, 0);
 
 
-	wallData.push_back(Wall(glm::vec2(-8, -8), glm::vec2(-8, -12), -1.0f, 2.0f, 2));
-	wallData.push_back(Wall(glm::vec2( 8, -8), glm::vec2( 8, -12), -1.0f, 2.0f, 2));
+	wallData[10] = Wall(glm::vec2(-8, -8), glm::vec2(-8, -12), -1.0f, 2.0f, 2);
+	wallData[11] = Wall(glm::vec2( 8, -8), glm::vec2( 8, -12), -1.0f, 2.0f, 2);
 
 
 	return wallData;
 }
 
 
-std::vector<utils::Light> prepLights() {
-	std::vector<utils::Light> lightData;
+std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
+	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
 
-	lightData.push_back(Light(glm::vec3(-5, 0, -5), glm::vec3(1.0f, 1.0f, 1.0f), 10.0f));
-	lightData.push_back(Light(glm::vec3( 5, 0,  5), glm::vec3(1.0f, 0.0f, 1.0f), 5.0f));
-
-	return lightData;
-}
-
-
-std::vector<utils::Sprite> prepSprites() {
-	std::vector<utils::Sprite> spriteData;
-
-	spriteData.push_back(Sprite(glm::vec2( 5,  5), 1.0f, 5));
-	spriteData.push_back(Sprite(glm::vec2(-4,  4), 1.0f, 4));
+	spriteData[0] = Sprite(glm::vec2( 5,  5), 1.0f, 5);
+	spriteData[1] = Sprite(glm::vec2(-4,  4), 1.0f, 4);
 
 	return spriteData;
 
+}
+
+
+std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
+	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
+
+	lightData[0] = Light(glm::vec3(-5, 0, -5), glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
+	lightData[1] = Light(glm::vec3( 5, 0,  5), glm::vec3(1.0f, 0.0f, 1.0f), 5.0f);
+
+	return lightData;
 }
 
 
@@ -110,10 +111,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 int main() {
 	try { //Catch exceptions
 
-	std::vector<utils::Visplane> visplaneData = prepVisplanes();
-	std::vector<utils::Wall> wallData = prepWalls();
-	std::vector<utils::Light> lightData = prepLights();
-	std::vector<utils::Sprite> spriteData = prepSprites();
+	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData = prepVisplanes();
+	std::array<utils::Wall, constants::MAX_WALLS> wallData = prepWalls();
+	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData = prepSprites();
+	std::array<utils::Light, constants::MAX_LIGHTS> lightData = prepLights();
 	Player player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
 
 
@@ -139,8 +140,8 @@ int main() {
 
 	GLuint visplaneUBO = render::createVisplaneUBO();
 	GLuint wallUBO = render::createWallUBO();
-	GLuint lightUBO = render::createLightUBO();
-	GLuint spriteUBO = render::createSpriteUBO();
+	GLuint lightSSBO = render::createLightSSBO();
+	GLuint spriteSSBO = render::createSpriteSSBO();
 
 	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
 
@@ -225,14 +226,12 @@ int main() {
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
 
-		player = physics::playerMove(player, keyMap, &wallData, &spriteData);
-
-
+		player = physics::playerMove(player, keyMap, &wallData, &spriteData, &visplaneData);
 
 
 		//Update Dynamic UBOs.
-		render::updateSpriteUBO(spriteUBO, &spriteData);
-		render::updateLightUBO(lightUBO, &lightData);
+		render::updateSpriteSSBO(spriteSSBO, &spriteData);
+		render::updateLightSSBO(lightSSBO, &lightData);
 		utils::GLErrorcheck("Updating UBOs", true);
 
 
@@ -259,7 +258,7 @@ int main() {
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("Walls Shader", true);
+		utils::GLErrorcheck("Environment Shader", true);
 
 
 		//Sprite Shader.

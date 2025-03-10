@@ -115,13 +115,11 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 
 void createConstUBO() {
 	struct ConstData {
-		alignas(4) float ZOOM_MULT;
-		alignas(4) float MAX_RAY_ANGLE;
-		alignas(4) float MAX_RAY_DIST;
+		float ZOOM_MULT;
+		float MAX_RAY_ANGLE;
+		float MAX_RAY_DIST;
 
-		alignas(8) glm::vec2 TEXTURE_RESOLUTION;
-
-		alignas(16) float _padding[4];
+		glm::vec2 TEXTURE_RESOLUTION;
 	};
 
 	ConstData constData = {
@@ -129,9 +127,7 @@ void createConstUBO() {
 		display::MAX_RAY_ANGLE,
 		display::MAX_RAY_DIST,
 
-		{constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y},
-
-		{0.0f, 0.0f, 0.0f, 0.0f},
+		{constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y}
 	};
 
 	GLuint constUBO;
@@ -140,7 +136,7 @@ void createConstUBO() {
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(ConstData), &constData, GL_STATIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 1, constUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 10, constUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -148,63 +144,18 @@ void createConstUBO() {
 GLuint createVisplaneUBO() {
 	GLuint visplaneUBO;
 	glGenBuffers(1, &visplaneUBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visplaneUBO);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::Visplane) * 64, nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, visplaneUBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Visplane) * constants::MAX_VISPLANES, nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 7, visplaneUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	return visplaneUBO;
 }
 
-void updateVisplaneUBO(GLuint visplaneUBO, std::vector<utils::Visplane>* dataSet) {
-	//Debugging contents; looks like a spoiled mess.
-	for (uint i=0; i<64; i++) {
-		utils::Visplane plane = (*dataSet)[i];
-		cout << plane.start.x << "," << plane.start.y << " / "<< plane.end.x << "," << plane.end.y << " / " << plane.height << " / " << plane.textureID << " / " << plane.valid << endl;
-	}
-	//Excerpt;
-	/*
-	-10,-10 / 10,10 / -1 / 2 / 1
-	0,0 / 34761.6,6.38992e-43 / 34765.3 / 456 / 1191693520
-	3.22299e-44,0 / 3.78351e-44,0 / 9.82125e-39 / -1879036416 / 7077986
-	8.90819e-39,9.27552e-39 / 9.27553e-39,1.01939e-38 / 9.18369e-39 / 115 / 0
-	34756.6,6.38992e-43 / 34490,6.38992e-43 / 0 / 0 / 15
-	5.1848e-44,0 / 1.4013e-45,0 / 2.1971e+15 / 32765 / 1191694176
-	0,0 / 0,0 / 2.84177e-39 / -1879035648 / 1
-	34760.9,6.38992e-43 / 0,0 / 0 / 0 / 0
-	34713.1,6.38992e-43 / 34549.2,6.38992e-43 / 0 / 0 / 32
-	4.34403e-44,0 / 1.4013e-45,0 / 2.19754e+15 / 32765 / 1191891536
-	0,0 / 0,0 / 2.69856e-40 / -1879034880 / 7143529
-	1.04694e-38,1.05612e-38 / 9.27555e-39,1.59748e-43 / 0 / 0 / 0
-	3.56709e+12,4.59135e-41 / 0,1.4013e-45 / 0 / 1 / 1414534912
-	0,0 / 34768.6,6.38992e-43 / 1.43867e+38 / 0 / 0
-	0,0 / 1.43867e+38,0 / 5.04532e-39 / -2013251840 / 5505102
-	9.64289e-39,1.11123e-38 / 1.01939e-38,9.82656e-39 / 9.2755e-39 / 7733362 / 6488169
-	4.25995e-43,0 / 3.67413e-40,2.8026e-45 / 4.2039e-43 / 0 / 1543109224
-	0,0 / nan,nan / nan / 0 / 0
-	9.4062e-38,0 / 0,0 / 5.41268e-39 / -1879033344 / 6619236
-	8.9082e-39,9.64286e-39 / 8.90818e-39,9.27554e-39 / 8.9082e-39 / 0 / 0
-	7.71429e-39,5.96935e-39 / 6.70411e-39,8.17348e-39 / 6.97963e-39 / 4390991 / 4980801
-	6.33674e-39,0 / 34712.9,6.38992e-43 / 34762.6 / 456 / 1191665552
-	3.36312e-44,0 / 4.90454e-44,0 / 4.31067e-39 / -2013250304 / 1191691600
-	34759.3,6.38992e-43 / 2.52234e-44,0 / 3.22299e-44 / 0 / 25
-	0,0 / 0,0 / 0 / 0 / 0
-	*/
-	//Probably misaligned bits somewhere.
-
-
-
-	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
-	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	
-	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Visplane) * dataSet->size());
-		glUnmapBuffer(GL_UNIFORM_BUFFER);
-	} else {
-		raise("Failed to write data to visplaneUBO.");
-	}
-
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants::MAX_VISPLANES>* dataSet) {
+    glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::Visplane) * constants::MAX_VISPLANES, dataSet->data());
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 
@@ -213,48 +164,48 @@ GLuint createWallUBO() {
 	GLuint wallUBO;
 	glGenBuffers(1, &wallUBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::Wall) * 256, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::Wall) * constants::MAX_WALLS, nullptr, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, wallUBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return wallUBO;
 }
 
-void updateWallUBO(GLuint wallUBO, std::vector<utils::Wall>* dataSet) {
-	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
-	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet) {
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
+	void* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Wall) * dataSet->size());
-		glUnmapBuffer(GL_UNIFORM_BUFFER);
+		memcpy(ptr, dataSet->data(), sizeof(utils::Wall) * constants::MAX_WALLS);
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	} else {
 		raise("Failed to write data to wallUBO.");
 	}
 
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 
 
-GLuint createSpriteUBO() {
-	GLuint spriteUBO;
-	glGenBuffers(1, &spriteUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
+GLuint createSpriteSSBO() {
+	GLuint spriteSSBO;
+	glGenBuffers(1, &spriteSSBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
 
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Sprite) * 32, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Sprite) * constants::MAX_SPRITES, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteSSBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	return spriteUBO;
+	return spriteSSBO;
 }
 
-void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet) {
-	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
+void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Sprite) * dataSet->size());
+		memcpy(ptr, dataSet->data(), sizeof(utils::Sprite) * constants::MAX_SPRITES);
 		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	} else {
 		raise("Failed to write data to spriteUBO.");
@@ -264,25 +215,25 @@ void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet) {
 
 
 
-GLuint createLightUBO() {
-	GLuint lightUBO;
-	glGenBuffers(1, &lightUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+GLuint createLightSSBO() {
+	GLuint lightSSBO;
+	glGenBuffers(1, &lightSSBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
 
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * 64, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * constants::MAX_LIGHTS, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightSSBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	return lightUBO;
+	return lightSSBO;
 }
 
-void updateLightUBO(GLuint lightUBO, std::vector<utils::Light>* dataSet) {
-	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
+	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Light) * dataSet->size());
+		memcpy(ptr, dataSet->data(), sizeof(utils::Light) * constants::MAX_LIGHTS);
 		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	} else {
 		raise("Failed to write data to lightUBO.");
@@ -312,14 +263,11 @@ GLuint createTexture(int width, int height) {
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
-	// Allocate storage for the texture with a suitable format
 	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, width, height);
 
-	// Set filtering (optional, doesn't matter much for image load/store)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	// Unbind the texture
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return textureID;

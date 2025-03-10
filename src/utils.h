@@ -40,12 +40,12 @@ namespace utils {
 
 
 	struct Visplane {
-		alignas(16) glm::vec2 start;
-		alignas(16) glm::vec2 end;
-		alignas(4) float height;
-		alignas(4) int textureID;
-		alignas(4) int valid;
-		alignas(4) float _padding;
+		glm::vec2 start;
+		glm::vec2 end;
+		float height;
+		int textureID;
+		int valid;
+		float _padding;
 
 		Visplane()
 			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), valid(0), _padding{0.0f} {}

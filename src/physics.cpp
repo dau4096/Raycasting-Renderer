@@ -31,7 +31,13 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 
 
 
-utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, std::vector<utils::Wall>* wallData, std::vector<utils::Sprite>* spriteData) {
+utils::Player playerMove(
+		utils::Player player,
+		unordered_map<int, bool> keyMap,
+		std::array<utils::Wall, constants::MAX_WALLS>*wallData,
+		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
+		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
+	) {
 	const float EPSILON = 1e-5f;
 
 	float newX = 0.0f;

@@ -8,17 +8,14 @@ uniform ivec2 screenResolution;
 ivec2 renderResolution;
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
-layout(std140, binding = 1) uniform constUBO {
+layout(std140, binding = 10) uniform constUBO {
 	float zoomFactor;
 	float maxRayAngle;
 	float maxRayDistance;
 
-	float topIndex;
-	float lowIndex;
-
 	vec2 textureSize;
 
-	float padding[2];
+	float padding[4];
 };
 
 

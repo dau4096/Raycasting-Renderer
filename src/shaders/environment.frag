@@ -10,17 +10,14 @@ uniform int drawUV;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
-layout(std140, binding = 1) uniform constUBO {
+layout(std140, binding = 10) uniform constUBO {
 	float zoomFactor;
 	float maxRayAngle;
 	float maxRayDistance;
 
-	float topIndex;
-	float lowIndex;
-
 	vec2 textureSize;
 
-	float padding[2];
+	float padding[4];
 };
 
 struct Visplane {
@@ -31,7 +28,7 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std430, binding = 2) buffer visplaneUBO {
+layout(std140, binding = 7) uniform visplaneUBO {
 	Visplane visplanes[64];
 };
 
@@ -64,7 +61,7 @@ struct Light {
 	int valid;			//Light Validity.
 	float _padding;		//Light Padding.
 };
-layout(std140, binding = 5) uniform lightUBO {
+layout(std140, binding = 5) uniform lightSSBO {
 	Light lights[64];
 };
 
@@ -205,18 +202,17 @@ vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
 
 
 
-vec3 getVisplaneIntersect(float planeHeight) {
+vec3 getPlaneIntersect(vec3 planeOrigin, vec3 planeNormal) {
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
 
 	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 
-	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0; // Normalized screen Y [-1, 1]
+	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
 	float vAO = normY * (verticalFOV/2);
 	float theta = radians(playerViewAngle + rayOffset);
 
 
-	const vec3 planeNormal = vec3(0.0f, 0.0f, 1.0f);
 	vec3 rayDirection = normalize(vec3(
 		sin(theta), cos(theta),
 		tan(radians(vAO))
@@ -227,11 +223,10 @@ vec3 getVisplaneIntersect(float planeHeight) {
 	if (abs(denom) < EPSILON) {return INVALIDv3; /* Nearly parallel. */}
 
 
-	vec3 planeOrigin = vec3(0.0f, 0.0f, planeHeight);
 	vec3 planeDir = planeOrigin - playerPosition;
 
 
-	t = (planeHeight - playerPosition.z) / (rayDirection.z * 50.0f);
+	t = (planeOrigin.z - playerPosition.z) / (rayDirection.z * 50.0f);
 	if (t <= 0.0f) {return INVALIDv3; /* Behind Ray origin. */}
 
 	vec3 intersectPoint = playerPosition + vec3(rayDirection.xy * t, 0.0f);
@@ -261,15 +256,49 @@ vec2 getVisplaneUV(vec3 position3D) {
 bool checkLOS(vec2 pointA, vec2 pointB, int thisIndex=-1, float maxDist=maxRayDistance) {
 	//2D Checking : not ideal. Change later.
 	Ray LOSRay = createRay(pointA, normalize(pointA-pointB), maxDist);
+	vec3 pointAv3 = vec3(pointA.xy, 0.0f);
 
+	vec3 closestIntersectPoint, closestUV;
+	float minDistance = maxRayDistance;
+	int closestIndex, foundType = 0;
+
+	//Iterate through all the walls. (2D)
 	for (int index = 0; index < 256; index++) {
 		Wall thisWall = walls[index];
-		if (thisWall.valid <= 0 || index == thisIndex) {continue; /* Wall is empty, or the wall calling LOS. */}
+		if (thisWall.valid <= 0) {continue; /* Wall is empty */}
 
 		vec2 thisIntersectPoint = rayIntersectCheck(LOSRay, thisWall);
 		if (thisIntersectPoint == INVALID) {continue; /* Invalid intersect point */}
-		if (length(thisIntersectPoint - pointA) + EPSILON >= length(pointA-pointB)) {continue; /* Intersection is beyond the target, ignore it. */}
-		return true; //Intersect found.
+		vec3 thisIntersectPointv3 = vec3(thisIntersectPoint.xy, 0.0f);
+		float wallDistanceSQ = dot(pointAv3 - thisIntersectPointv3, pointAv3 - thisIntersectPointv3); //Cheaper length() call
+
+		vec2 wallUV = getWallUV(thisWall, thisIntersectPoint); //Check if inside wall (Valid UV)
+
+
+		if (wallUV != INVALID && wallDistanceSQ < minDistance*minDistance) {
+			return true;
+		}
+		
+	}
+
+	//Iterate through all visplanes. (3D)
+	for (int idx=0; idx<64; idx++) {
+		Visplane thisPlane = visplanes[idx];
+		if (thisPlane.valid <= 0) {continue; /* Visplane is not valid. */}
+		
+
+		vec3 intersectPoint = getPlaneIntersect(vec3(0.0f, 0.0f, thisPlane.height), vec3(0.0f, 0.0f, 1.0f));
+		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
+		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
+			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
+			//Out of the range of the Visplane.
+			continue;
+		}
+
+		float distance = length(intersectPoint - pointAv3);
+		if (distance < minDistance) {
+			return true;
+		}
 	}
 
 	return false;
@@ -280,7 +309,7 @@ void main() {
 	fragPosition = gl_FragCoord.xy;
 	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);
-	fragColour = imageLoad(renderedFrame, framePosition);
+	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 
 
@@ -330,7 +359,7 @@ void main() {
 		if (thisPlane.valid <= 0) {continue; /* Visplane is not valid. */}
 
 
-		vec3 intersectPoint = getVisplaneIntersect(thisPlane.height);
+		vec3 intersectPoint = getPlaneIntersect(vec3(0.0f, 0.0f, thisPlane.height), vec3(0.0f, 0.0f, 1.0f));
 		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
 		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
 			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
@@ -361,7 +390,8 @@ void main() {
 			vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
 			vec2 normalv2 = vec2(wallDirection.y, -wallDirection.x);
 			if (dot(normalv2, playerPosition.xy - closestIntersectPoint.xy) < 0.0) {
-				normalv2 = -normalv2;
+				normalv2 *= -1;
+				closestUV.x *= -1;
 			}
 			normal = vec3(normalv2.xy, 0.0f);
 

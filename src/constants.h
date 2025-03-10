@@ -19,7 +19,7 @@ namespace constants {
 
 
 	//Physics/Rendering Frequency/dt
-	constexpr int HZ = 30;
+	constexpr int HZ = 20;
 	constexpr float DT = 1/HZ;
 
 
@@ -28,6 +28,13 @@ namespace constants {
 	constexpr glm::vec2 INVALIDv2 = glm::vec2(INVALID, INVALID);
 	constexpr glm::vec3 INVALIDv3 = glm::vec3(INVALID, INVALID, INVALID);
 	constexpr glm::vec4 INVALIDv4 = glm::vec4(INVALID, INVALID, INVALID, INVALID);
+
+
+	//Maximum quantities of each type.
+	constexpr int MAX_VISPLANES = 64;
+	constexpr int MAX_WALLS = 256;
+	constexpr int MAX_SPRITES = 32;
+	constexpr int MAX_LIGHTS = 64;
 }
 
 namespace display {
