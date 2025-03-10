@@ -10,26 +10,50 @@ uniform int drawUV;
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-    float zoomFactor;
-    float maxRayAngle;
-    float maxRayDistance;
+	float zoomFactor;
+	float maxRayAngle;
+	float maxRayDistance;
 
-    float topIndex;
-    float lowIndex;
+	float topIndex;
+	float lowIndex;
 
-    vec2 textureSize;
+	vec2 textureSize;
 
-    float padding[2];
+	float padding[2];
 };
+
+struct Visplane {
+	vec2 start;			//Visplane Start.
+	vec2 end;			//Visplane End.
+	float height;		//Visplane Height.
+	int textureID;		//Visplane Texture.
+	int valid;			//Visplane Validity.
+	float _padding;		//Visplane Padding
+};
+layout(std140, binding = 2) uniform visplaneUBO {
+	Visplane visplanes[64];
+};
+
 struct Wall {
-    vec2 start;			//Wall Start.
-    vec2 end;			//Wall End.
-    int textureID;		//Wall Texture.
-    int valid;			//Wall Validity.
-    float padding[2];	//Wall Padding.
+	vec3 start;			//Wall Start.
+	vec3 end;			//Wall End.
+	int textureID;		//Wall Texture.
+	int valid;			//Wall Validity.
+	float _padding[2];	//Wall Padding.
 };
-layout(std140, binding = 2) uniform wallUBO {
+layout(std430, binding = 3) buffer wallUBO {
 	Wall walls[256];
+};
+
+struct Sprite {
+	vec2 position;	//Sprite Position.
+	float width;	//Sprite Width.
+	int textureID;	//Sprite Texture ID.
+	int valid;		//Sprite Validity.
+	float _padding;	//Memory padding.
+};
+layout(std140, binding = 4) uniform spriteSSBO {
+	Sprite sprites[32];
 };
 
 struct Light {
@@ -39,11 +63,11 @@ struct Light {
 	int valid;			//Light Validity.
 	float _padding;		//Light Padding.
 };
-layout(std140, binding = 4) uniform lightUBO {
+layout(std140, binding = 5) uniform lightUBO {
 	Light lights[64];
 };
 
-layout(std430, binding = 5) buffer depthBuffer {
+layout(std430, binding = 6) buffer depthBuffer {
 	float depths[];
 };
 
@@ -90,6 +114,9 @@ float angleClamp(float value) {
 
 
 vec2 rayIntersectCheck(Ray ray, Wall wall) {
+	vec2 wallStartV2 = vec2(wall.start.x, wall.start.y);
+	vec2 wallEndV2 = vec2(wall.end.x, wall.end.y);
+
 	vec2 xDiff = vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
 	vec2 yDiff = vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
 
@@ -102,7 +129,7 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 	}
 
 
-	vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wall.start, wall.end));
+	vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wallStartV2, wallEndV2));
 	double xCoord = determinant(dets, xDiff) / divisor;
 	double yCoord = determinant(dets, yDiff) / divisor;
 
@@ -147,11 +174,10 @@ bool checkLOS(vec2 pointA, vec2 pointB, int thisIndex=-1, float maxDist=maxRayDi
 }
 
 
-vec3 getUVCoords(float floorZ, float ceilingZ) {
+vec3 getVisplaneIntersect(float planeHeight) {
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
 
-	bool topHalf = fragPosition.y > renderResolution.y/2;
 	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
 
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0; // Normalized screen Y [-1, 1]
@@ -169,7 +195,6 @@ vec3 getUVCoords(float floorZ, float ceilingZ) {
 	float denom = dot(planeNormal, rayDirection);
 	if (abs(denom) < EPSILON) {return INVALIDv3; /* Nearly parallel. */}
 
-	float planeHeight = (topHalf) ? ceilingZ : floorZ;
 
 	vec3 planeOrigin = vec3(0.0f, 0.0f, planeHeight);
 	vec3 planeDir = planeOrigin - playerPosition;
@@ -179,7 +204,13 @@ vec3 getUVCoords(float floorZ, float ceilingZ) {
 	if (t <= 0.0f) {return INVALIDv3; /* Behind Ray origin. */}
 
 	vec3 intersectPoint = playerPosition + vec3(rayDirection.xy * t, 0.0f);
-	vec2 realPosition = intersectPoint.xy;
+	return intersectPoint;
+}
+
+
+vec2 getVisplaneUV(vec3 position3D) {
+	bool topHalf = fragPosition.y > renderResolution.y/2;
+	vec2 realPosition = position3D.xy;
 	float distance = length(realPosition - playerPosition.xy);
 	//Compare against some XY bounds maybe.
 
@@ -191,9 +222,8 @@ vec3 getUVCoords(float floorZ, float ceilingZ) {
 	}
 	float yUV = fract(abs(realPosition.y));
 	//Texture index depends on top (ceiling) or bottom (floor) half.
-	float index = (topHalf) ? topIndex : lowIndex;
 
-	return vec3(xUV, yUV, index);
+	return vec2(xUV, yUV);
 }
 
 
@@ -203,24 +233,49 @@ void main() {
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 
-	const float floorZ = -1.0f;
-	const float ceilingZ = 1.0f;
+	vec3 planeUV = INVALIDv3;
+	float minDistance = maxRayDistance;
+
+	for (int idx=0; idx<64; idx++) {
+		//Visplane thisPlane = visplanes[idx];
+		Visplane thisPlane;
+		if (idx == 0) {
+			thisPlane.start = vec2(-10, -10);
+			thisPlane.end = vec2(10, 10);
+			thisPlane.height = -1.0f;
+			thisPlane.textureID = 3;
+			thisPlane.valid = 1;
+		}
+
+		if (thisPlane.valid <= 0) {continue; /* Visplane is not valid. */}
 
 
+		vec3 intersectPoint = getVisplaneIntersect(thisPlane.height);
+		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
+		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
+			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
+			//Out of the range of the Visplane.
+			continue;
+		}
 
-	vec3 UVcoords = getUVCoords(floorZ, ceilingZ);
+		float distance = length(realPosition - playerPosition.xy);
+		if (distance >= minDistance) {continue; /* Visplane is obstructed. */}
+		minDistance = distance;
+		planeUV = vec3(getVisplaneUV(intersectPoint), thisPlane.textureID);
+	}
 
-	if (UVcoords == INVALIDv3) {
+
+	if (planeUV == INVALIDv3) { //No Visplanes Intersected with.
 		fragColour = vec4(0.0f, 0.0f, 0.0f, 1.0f);		
-	} else if (false) {
-		fragColour = vec4(UVcoords.xy, UVcoords.z/2, 1.0); // Visualize UV coords
+	} else if (drawUV > 0) {
+		fragColour = vec4(planeUV.xy, planeUV.z/2, 1.0); // Visualize UV coords
 	} else if (noLighting) {
 		float distanceFade = 1.0f - (t / (maxRayDistance * maxRayDistance));
-		vec4 albedo = texture(textureArray, UVcoords) * distanceFade;
+		vec4 albedo = texture(textureArray, planeUV) * distanceFade;
 		fragColour = albedo;
 	} else {
 		float distanceFade = 1.0f - (t / (maxRayDistance * maxRayDistance));
-		vec4 albedo = texture(textureArray, UVcoords);
+		vec4 albedo = texture(textureArray, planeUV);
 
 		for (int idx=0; idx<64; idx++) {
 			//Iterate through all lights.
@@ -246,7 +301,7 @@ void main() {
 
 	//Write the colour to the frame.
 	ivec2 framePosition = ivec2(fragPosition);
-	vec4 finalFragColour = vec4(fragColour.rgb, maxRayDistance);
-	depths[framePosition.x] = maxRayDistance;
+	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+	depths[framePosition.x] = minDistance;
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }

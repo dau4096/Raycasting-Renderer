@@ -84,7 +84,7 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 }
 
 
-GLuint createShaderProgram(std::string name, bool hasVertexSource) {
+GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 	GLuint vertexShader;
 	if (hasVertexSource) {
 		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\"+ name +".vert");
@@ -115,29 +115,23 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource) {
 
 void createConstUBO() {
 	struct ConstData {
-		float zoomFactor;
-		float maxRayAngle;
-		float maxRayDistance;
+		alignas(4) float ZOOM_MULT;
+		alignas(4) float MAX_RAY_ANGLE;
+		alignas(4) float MAX_RAY_DIST;
 
-		float topIndex;
-		float lowIndex;
+		alignas(8) glm::vec2 TEXTURE_RESOLUTION;
 
-		glm::vec2 textureSize;
-
-		float padding[2];
+		alignas(16) float _padding[4];
 	};
 
 	ConstData constData = {
-		display::zoomFactor,
-		display::maxRayAngle,
-		display::maxRayDistance,
+		display::ZOOM_MULT,
+		display::MAX_RAY_ANGLE,
+		display::MAX_RAY_DIST,
 
-		display::topIndex,
-		display::lowIndex,
+		{constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y},
 
-		{constants::textureWidth, constants::textureHeight},
-
-		{0.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f, 0.0f},
 	};
 
 	GLuint constUBO;
@@ -151,17 +145,95 @@ void createConstUBO() {
 }
 
 
+GLuint createVisplaneUBO() {
+	GLuint visplaneUBO;
+	glGenBuffers(1, &visplaneUBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visplaneUBO);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::Visplane) * 64, nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, visplaneUBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-void createWallUBO(const std::array<utils::Wall, 256>* dataSet) {
-	GLuint wallUBO;
-	glGenBuffers(1, &wallUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
+	return visplaneUBO;
+}
 
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Wall) * dataSet->size(), dataSet->data(), GL_STATIC_DRAW);
+void updateVisplaneUBO(GLuint visplaneUBO, std::vector<utils::Visplane>* dataSet) {
+	//Debugging contents; looks like a spoiled mess.
+	for (uint i=0; i<64; i++) {
+		utils::Visplane plane = (*dataSet)[i];
+		cout << plane.start.x << "," << plane.start.y << " / "<< plane.end.x << "," << plane.end.y << " / " << plane.height << " / " << plane.textureID << " / " << plane.valid << endl;
+	}
+	//Excerpt;
+	/*
+	-10,-10 / 10,10 / -1 / 2 / 1
+	0,0 / 34761.6,6.38992e-43 / 34765.3 / 456 / 1191693520
+	3.22299e-44,0 / 3.78351e-44,0 / 9.82125e-39 / -1879036416 / 7077986
+	8.90819e-39,9.27552e-39 / 9.27553e-39,1.01939e-38 / 9.18369e-39 / 115 / 0
+	34756.6,6.38992e-43 / 34490,6.38992e-43 / 0 / 0 / 15
+	5.1848e-44,0 / 1.4013e-45,0 / 2.1971e+15 / 32765 / 1191694176
+	0,0 / 0,0 / 2.84177e-39 / -1879035648 / 1
+	34760.9,6.38992e-43 / 0,0 / 0 / 0 / 0
+	34713.1,6.38992e-43 / 34549.2,6.38992e-43 / 0 / 0 / 32
+	4.34403e-44,0 / 1.4013e-45,0 / 2.19754e+15 / 32765 / 1191891536
+	0,0 / 0,0 / 2.69856e-40 / -1879034880 / 7143529
+	1.04694e-38,1.05612e-38 / 9.27555e-39,1.59748e-43 / 0 / 0 / 0
+	3.56709e+12,4.59135e-41 / 0,1.4013e-45 / 0 / 1 / 1414534912
+	0,0 / 34768.6,6.38992e-43 / 1.43867e+38 / 0 / 0
+	0,0 / 1.43867e+38,0 / 5.04532e-39 / -2013251840 / 5505102
+	9.64289e-39,1.11123e-38 / 1.01939e-38,9.82656e-39 / 9.2755e-39 / 7733362 / 6488169
+	4.25995e-43,0 / 3.67413e-40,2.8026e-45 / 4.2039e-43 / 0 / 1543109224
+	0,0 / nan,nan / nan / 0 / 0
+	9.4062e-38,0 / 0,0 / 5.41268e-39 / -1879033344 / 6619236
+	8.9082e-39,9.64286e-39 / 8.90818e-39,9.27554e-39 / 8.9082e-39 / 0 / 0
+	7.71429e-39,5.96935e-39 / 6.70411e-39,8.17348e-39 / 6.97963e-39 / 4390991 / 4980801
+	6.33674e-39,0 / 34712.9,6.38992e-43 / 34762.6 / 456 / 1191665552
+	3.36312e-44,0 / 4.90454e-44,0 / 4.31067e-39 / -2013250304 / 1191691600
+	34759.3,6.38992e-43 / 2.52234e-44,0 / 3.22299e-44 / 0 / 25
+	0,0 / 0,0 / 0 / 0 / 0
+	*/
+	//Probably misaligned bits somewhere.
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 2, wallUBO);
+
+
+	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, dataSet->data(), sizeof(utils::Visplane) * dataSet->size());
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to visplaneUBO.");
+	}
+
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
+
+
+
+GLuint createWallUBO() {
+	GLuint wallUBO;
+	glGenBuffers(1, &wallUBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::Wall) * 256, nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, wallUBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	return wallUBO;
+}
+
+void updateWallUBO(GLuint wallUBO, std::vector<utils::Wall>* dataSet) {
+	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, dataSet->data(), sizeof(utils::Wall) * dataSet->size());
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to wallUBO.");
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
 
 
 GLuint createSpriteUBO() {
@@ -171,12 +243,11 @@ GLuint createSpriteUBO() {
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Sprite) * 32, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 3, spriteUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	return spriteUBO;
 }
-
 
 void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet) {
 	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
@@ -192,6 +263,7 @@ void updateSpriteUBO(GLuint spriteUBO, std::vector<utils::Sprite>* dataSet) {
 }
 
 
+
 GLuint createLightUBO() {
 	GLuint lightUBO;
 	glGenBuffers(1, &lightUBO);
@@ -199,12 +271,11 @@ GLuint createLightUBO() {
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * 64, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 4, lightUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	return lightUBO;
 }
-
 
 void updateLightUBO(GLuint lightUBO, std::vector<utils::Light>* dataSet) {
 	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
@@ -218,6 +289,22 @@ void updateLightUBO(GLuint lightUBO, std::vector<utils::Light>* dataSet) {
 	}
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
+
+
+
+GLuint createDepthSSBO(int width) {
+	GLuint SSBO;
+
+	glGenBuffers(1, &SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+
+	glBufferData(GL_SHADER_STORAGE_BUFFER, width * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	return SSBO;
+}
+
 
 
 GLuint createTexture(int width, int height) {
@@ -238,38 +325,22 @@ GLuint createTexture(int width, int height) {
 	return textureID;
 }
 
-GLuint createDepthSSBO(int width) {
-	GLuint SSBO;
-
-	glGenBuffers(1, &SSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
-
-	glBufferData(GL_SHADER_STORAGE_BUFFER, width * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, SSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-	return SSBO;
-}
-
 
 GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
-	const int maxTextureArrayLayers = 32;
-
-	// Texture array ID
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
 
-	// Allocate storage for the texture array
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::textureWidth, constants::textureHeight, maxTextureArrayLayers, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-	// Set texture parameters
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y, constants::TEXTURE_ARRAY_MAX_LAYERS, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	// Load textures and populate the array
+
 	int width, height, channels;
 	int layerIndex = 0;
 
@@ -286,25 +357,25 @@ GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
 			return 0; // Indicate failure
 		}
 
-		// Ensure all textures match the expected dimensions
-		if (width != constants::textureWidth || height != constants::textureHeight) {
+
+		if (width != constants::TEXTURE_RESOLUTION.x || height != constants::TEXTURE_RESOLUTION.y) {
 			std::cerr << "Texture " << textureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
-					  << constants::textureWidth << "x" << constants::textureHeight << "." << std::endl;
+					  << constants::TEXTURE_RESOLUTION.x << "x" << constants::TEXTURE_RESOLUTION.y << "." << std::endl;
 			stbi_image_free(textureData);
 			continue;
 		}
 
-		// Upload texture to the correct layer of the 2D array
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::textureWidth, constants::textureHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 
-		// Free the texture data after uploading
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
+
 		stbi_image_free(textureData);
 
 		layerIndex++;
-		if (layerIndex >= maxTextureArrayLayers) break; // Prevent exceeding maximum layers
+		if (layerIndex >= constants::TEXTURE_ARRAY_MAX_LAYERS) break;
 	}
 
-	glBindTexture(GL_TEXTURE_2D_ARRAY, 0); // Unbind texture array
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
 	return sheetArrayID;
 }

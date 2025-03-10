@@ -8,7 +8,7 @@
 namespace physics {
 
 	bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius);
-	utils::Player playerMove(utils::Player player, std::unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, std::vector<utils::Sprite>* spriteData);
+	utils::Player playerMove(utils::Player player, std::unordered_map<int, bool> keyMap, std::vector<utils::Wall>* wallData, std::vector<utils::Sprite>* spriteData);
 
 }
 

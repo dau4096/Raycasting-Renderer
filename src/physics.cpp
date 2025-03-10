@@ -6,13 +6,16 @@ using namespace utils;
 namespace physics {
 
 bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius) {
-	glm::vec2 lineDir = line.end - line.start;
-	glm::vec2 lineToCircle = circlePosition - line.start;
+	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
+	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
+
+	glm::vec2 lineDir = lineEndV2 - lineStartV2;
+	glm::vec2 lineToCircle = circlePosition - lineStartV2;
 
 	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
 	t = glm::clamp(t, 0.0f, 1.0f);
 
-	glm::vec2 closestPoint = line.start + t * lineDir;
+	glm::vec2 closestPoint = lineStartV2 + t * lineDir;
 	float distToCircle = glm::length(circlePosition - closestPoint);
 
 	return distToCircle <= radius;
@@ -22,49 +25,53 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 
 float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
 	float sign = (positiveSolution) ? 1.0f : -1.0f;
-	// (-b +/- sqrt(b^2 - 4ac)) / 2a
+	//(-b +/- sqrt(b^2 - 4ac)) / (2a)
 	return (-b + (sign * sqrt(determinant))) / (2*a);
 }
 
 
 
-utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, const std::array<utils::Wall, 256>* wallData, std::vector<utils::Sprite>* spriteData) {
+utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, std::vector<utils::Wall>* wallData, std::vector<utils::Sprite>* spriteData) {
+	const float EPSILON = 1e-5f;
+
 	float newX = 0.0f;
 	float newY = 0.0f;
 	float newZ = 0.0f;
 
-	float playerSpeed = playerConfig::moveSpeed;
+	float playerSpeed = playerConfig::MOVE_SPEED_BASE;
 
 	if (keyMap[GLFW_KEY_LEFT_SHIFT]) {
-		playerSpeed *= playerConfig::runMultiplier;
+		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
 	// Determine the movement vector based on key presses
 	if (keyMap[GLFW_KEY_W]) {
-		newX += playerSpeed * sin(player.viewAngle * constants::toRad);
-		newY += playerSpeed * cos(player.viewAngle * constants::toRad);
+		newX += playerSpeed * sin(player.viewAngle * constants::TO_RAD);
+		newY += playerSpeed * cos(player.viewAngle * constants::TO_RAD);
 	}
 	if (keyMap[GLFW_KEY_S]) {
-		newX -= playerSpeed * sin(player.viewAngle * constants::toRad);
-		newY -= playerSpeed * cos(player.viewAngle * constants::toRad);
+		newX -= playerSpeed * sin(player.viewAngle * constants::TO_RAD);
+		newY -= playerSpeed * cos(player.viewAngle * constants::TO_RAD);
 	}
 	if (keyMap[GLFW_KEY_A]) {
-		newX -= playerSpeed * cos((player.viewAngle) * constants::toRad);
-		newY -= playerSpeed * -sin((player.viewAngle) * constants::toRad);
+		newX -= playerSpeed * cos((player.viewAngle) * constants::TO_RAD);
+		newY -= playerSpeed * -sin((player.viewAngle) * constants::TO_RAD);
 	}
 	if (keyMap[GLFW_KEY_D]) {
-		newX += playerSpeed * cos((player.viewAngle) * constants::toRad);
-		newY += playerSpeed * -sin((player.viewAngle) * constants::toRad);
+		newX += playerSpeed * cos((player.viewAngle) * constants::TO_RAD);
+		newY += playerSpeed * -sin((player.viewAngle) * constants::TO_RAD);
 	}
 
+
 	glm::vec2 movementVector = glm::vec2(newX, newY);
-	if (glm::length(movementVector) < 1e-5) {
+	if (glm::length(movementVector) < EPSILON) {
 		return player;
 	}
 	movementVector = glm::normalize(movementVector) * playerSpeed;
 
 
-	if (dev::noCollis == 1.0f) {
+
+	if (dev::NO_COLLIDE > 0) {
 		player.position += glm::vec3(movementVector.x, movementVector.y, newZ);
 		return player;
 	}
@@ -75,7 +82,7 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 	//Horizontal Calculations;
 	glm::vec2 playerPosV2 = glm::vec2(player.position.x, player.position.y);
 	for (const utils::Wall& wall : *wallData) {
-		if (circleLineIntersect(wall, playerPosV2 + movementVector, playerConfig::minCollisionDist)) {
+		if (circleLineIntersect(wall, playerPosV2 + movementVector, playerConfig::PLAYER_COLLISION_RADIUS)) {
 			glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
 			movementVector = wallDir * glm::dot(glm::normalize(movementVector), wallDir) * playerSpeed;
 		}
@@ -83,7 +90,7 @@ utils::Player playerMove(utils::Player player, unordered_map<int, bool> keyMap, 
 
 	for (const utils::Sprite& sprite : *spriteData) {
 		glm::vec2 dir = sprite.position - playerPosV2;
-		float radius = playerConfig::minCollisionDist + sprite.width;
+		float radius = playerConfig::PLAYER_COLLISION_RADIUS + sprite.width;
 
 		if (glm::length(dir) > radius) {continue;}
 

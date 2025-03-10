@@ -16,18 +16,64 @@ float fragDepths[1920];
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-    float zoomFactor;
-    float maxRayAngle;
-    float maxRayDistance;
+	float zoomFactor;
+	float maxRayAngle;
+	float maxRayDistance;
 
-    float topIndex;
-    float lowIndex;
+	float topIndex;
+	float lowIndex;
 
-    vec2 textureSize;
+	vec2 textureSize;
 
-    float padding[2];
+	float padding[2];
 };
-layout(std430, binding = 5) buffer depthBuffer {
+
+struct Visplane {
+	vec2 start;			//Visplane Start.
+	vec2 end;			//Visplane End.
+	float height;		//Visplane Height.
+	int textureID;		//Visplane Texture.
+	int valid;			//Visplane Validity.
+	float _padding;		//Visplane Padding
+};
+layout(std140, binding = 2) uniform visplaneUBO {
+	Visplane visplanes[64];
+};
+
+struct Wall {
+	vec3 start;			//Wall Start.
+	vec3 end;			//Wall End.
+	int textureID;		//Wall Texture.
+	int valid;			//Wall Validity.
+	float _padding[2];	//Wall Padding.
+};
+layout(std430, binding = 3) buffer wallUBO {
+	Wall walls[256];
+};
+
+struct Sprite {
+	vec2 position;	//Sprite Position.
+	float width;	//Sprite Width.
+	int textureID;	//Sprite Texture ID.
+	int valid;		//Sprite Validity.
+	float _padding;	//Memory padding.
+};
+layout(std140, binding = 4) uniform spriteSSBO {
+	Sprite sprites[32];
+};
+
+struct Light {
+	vec3 position;		//Light Position.
+	vec3 colour;		//Light Colour.
+	float intensity;	//Light Intensity.
+	int valid;			//Light Validity.
+	float _padding;		//Light Padding.
+};
+layout(std140, binding = 5) uniform lightUBO {
+	Light lights[64];
+};
+
+layout(std430, binding = 6) buffer depthBuffer {
 	float depths[];
 };
 
@@ -56,11 +102,11 @@ vec3 viewMap(float rayAngle) {
 		float dotProd = 1.0f - dot(normalize(sectorEnd), normalize(fragRelativePosition));
 		float range = 1.0f - dot(normalize(sectorEnd), normalize(sectorStart));
 		float angle = dotProd / range;
-	    int index = int(angle * float(renderResolution.x));
-	    index = clamp(index, 0, renderResolution.x - 1);
-	    float thisFragDistance = depths[index] / (maxRayDistance / 4.0f);
-	    float fragUIDistanceScaled = fragUIDistance/radiusSquared;
-	    
+		int index = int(angle * float(renderResolution.x));
+		index = clamp(index, 0, renderResolution.x - 1);
+		float thisFragDistance = depths[index] / (maxRayDistance / 4.0f);
+		float fragUIDistanceScaled = fragUIDistance/radiusSquared;
+		
 		vec3 partialColour = (fragUIDistanceScaled < thisFragDistance) ? vec3(0.75f, 0.75f, 0.75f) : vec3(0.75f-(0.5*(fragUIDistanceScaled-thisFragDistance)), 0.25f, 0.25f);
 		return (abs(thisFragDistance - fragUIDistanceScaled) <= 0.05) ? vec3(0.0f, 0.0f, 0.0f) : partialColour; //If close enough to a wall, show as black.
 	}

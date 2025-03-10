@@ -1,4 +1,4 @@
-/* walls.frag */
+/* environment.frag */
 #version 460 core
 
 
@@ -31,7 +31,7 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std140, binding = 2) uniform visplaneUBO {
+layout(std430, binding = 2) buffer visplaneUBO {
 	Visplane visplanes[64];
 };
 
@@ -91,12 +91,13 @@ Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
 vec2 fragPosition;
 ivec2 renderResolution;
 vec4 fragColour;
-float verticalFOV;
+float verticalFOV, t;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float MIN_WALL_DIST = 0.125f;
 const float DEFAULT_BRIGHTNESS = 0.1f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
+const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 const vec4 INVALIDv4 = vec4(1e30f, 1e30f, 1e30f, 1e30f);
 
 const bool noLighting = true;
@@ -194,12 +195,66 @@ vec2 getWallUV(Wall thisWall, vec2 intersectPoint) {
 }
 
 
-vec4 getWallColour(Wall closestWall, vec2 wallUV, bool fetchTexture=true) {
+vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
 	if (drawUV > 0) {
-		return vec4(wallUV.xy, closestWall.textureID / 32.0f, maxRayDistance);
+		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
 	if (!fetchTexture) return vec4(0.0f, 0.0f, 0.0f, 0.0f);
-	return texture(textureArray, vec3(wallUV.xy, float(closestWall.textureID)));
+	return texture(textureArray, UV);
+}
+
+
+
+vec3 getVisplaneIntersect(float planeHeight) {
+	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
+	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
+
+	float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
+
+	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0; // Normalized screen Y [-1, 1]
+	float vAO = normY * (verticalFOV/2);
+	float theta = radians(playerViewAngle + rayOffset);
+
+
+	const vec3 planeNormal = vec3(0.0f, 0.0f, 1.0f);
+	vec3 rayDirection = normalize(vec3(
+		sin(theta), cos(theta),
+		tan(radians(vAO))
+	));
+
+
+	float denom = dot(planeNormal, rayDirection);
+	if (abs(denom) < EPSILON) {return INVALIDv3; /* Nearly parallel. */}
+
+
+	vec3 planeOrigin = vec3(0.0f, 0.0f, planeHeight);
+	vec3 planeDir = planeOrigin - playerPosition;
+
+
+	t = (planeHeight - playerPosition.z) / (rayDirection.z * 50.0f);
+	if (t <= 0.0f) {return INVALIDv3; /* Behind Ray origin. */}
+
+	vec3 intersectPoint = playerPosition + vec3(rayDirection.xy * t, 0.0f);
+	return intersectPoint;
+}
+
+
+vec2 getVisplaneUV(vec3 position3D) {
+	bool topHalf = fragPosition.y > renderResolution.y/2;
+	vec2 realPosition = position3D.xy;
+	float distance = length(realPosition - playerPosition.xy);
+	//Compare against some XY bounds maybe.
+
+
+	//Take the fractional parts of the position (texture tiles every unit square)
+	float xUV = fract(abs(realPosition.x));
+	if (!topHalf) {
+		xUV = 1.0f - xUV;
+	}
+	float yUV = fract(abs(realPosition.y));
+	//Texture index depends on top (ceiling) or bottom (floor) half.
+
+	return vec2(xUV, yUV);
 }
 
 
@@ -237,19 +292,19 @@ void main() {
 	Ray fragRay = createRay(playerPosition.xy, rayDirection);
 
 
-	vec2 closestIntersectPoint, closestUV;
-	float minDistance = maxRayDistance;//fragColour.a; //Does not seem to work correctly.
-	bool intersectFound = false;
-	int closestIndex;
+	vec3 closestIntersectPoint, closestUV;
+	float minDistance = maxRayDistance;
+	int closestIndex, foundType = 0;
 
-	//Iterate through all the walls.
+	//Iterate through all the walls. (2D)
 	for (int index = 0; index < 256; index++) {
 		Wall thisWall = walls[index];
 		if (thisWall.valid <= 0) {continue; /* Wall is empty */}
 
 		vec2 thisIntersectPoint = rayIntersectCheck(fragRay, thisWall);
 		if (thisIntersectPoint == INVALID) {continue; /* Invalid intersect point */}
-		float wallDistanceSQ = dot(playerPosition.xy - thisIntersectPoint, playerPosition.xy - thisIntersectPoint); //Cheaper length() call
+		vec3 thisIntersectPointv3 = vec3(thisIntersectPoint.xy, playerPosition.z);
+		float wallDistanceSQ = dot(playerPosition - thisIntersectPointv3, playerPosition - thisIntersectPointv3); //Cheaper length() call
 
 		vec2 wallUV = getWallUV(thisWall, thisIntersectPoint); //Check if inside wall (Valid UV)
 
@@ -258,9 +313,9 @@ void main() {
 			//Set closest.
 			minDistance = sqrt(wallDistanceSQ);
 			closestIndex = index;
-			closestIntersectPoint = thisIntersectPoint;
-			closestUV = wallUV;
-			intersectFound = true;
+			closestIntersectPoint = vec3(thisIntersectPoint.xy, playerPosition.z);
+			closestUV = vec3(wallUV.xy, thisWall.textureID);
+			foundType = 1;
 
 			if (minDistance <= MIN_WALL_DIST) {
 				break; //No closer walls will be found.
@@ -269,38 +324,80 @@ void main() {
 		
 	}
 
+	//Iterate through all visplanes. (3D)
+	for (int idx=0; idx<64; idx++) {
+		Visplane thisPlane = visplanes[idx];
+		if (thisPlane.valid <= 0) {continue; /* Visplane is not valid. */}
+
+
+		vec3 intersectPoint = getVisplaneIntersect(thisPlane.height);
+		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
+		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
+			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
+			//Out of the range of the Visplane.
+			continue;
+		}
+
+		float distance = length(intersectPoint - playerPosition);
+		if (distance < minDistance) {
+			minDistance = distance;
+			closestIntersectPoint = intersectPoint;
+			closestIndex = idx;
+			foundType = 2;
+			closestUV = vec3(getVisplaneUV(intersectPoint), thisPlane.textureID);
+		}
+	}
 
 
 
-	if (intersectFound) { //An intersect was found.
-		Wall closestWall = walls[closestIndex];
-		vec4 albedo = getWallColour(closestWall, closestUV);
+
+	if (foundType > 0) { //An intersect was found.
+		Wall closestWall;
+		Visplane closestPlane;
+		vec3 normal;
+		if (foundType == 1) { //Wall
+			closestWall = walls[closestIndex];
+
+			vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
+			vec2 normalv2 = vec2(wallDirection.y, -wallDirection.x);
+			if (dot(normalv2, playerPosition.xy - closestIntersectPoint.xy) < 0.0) {
+				normalv2 = -normalv2;
+			}
+			normal = vec3(normalv2.xy, 0.0f);
+
+		} else if (foundType == 2) { //Visplane
+			closestPlane = visplanes[closestIndex];
+
+			if (closestPlane.height > playerPosition.z) {
+				normal = vec3(0.0f, 0.0f, -1.0f);
+			} else {
+				normal = vec3(0.0f, 0.0f, 1.0f);
+			}
+		}
+
+		vec4 albedo = fetchUV(closestUV);
+
 		if (albedo != INVALIDv4) {
-			if (noLighting) {
+			if (noLighting || drawUV > 0) {
 				fragColour = albedo;
 
 			} else {
-				vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
-				vec2 wallNormal = vec2(wallDirection.y, -wallDirection.x); // Default normal
-				if (dot(wallNormal, playerPosition.xy - closestIntersectPoint) < 0.0) {
-					wallNormal = -wallNormal; // Flip the normal if needed
-				}
 				for (int idx=0; idx<64; idx++) {
 					//Iterate through all lights.
 					Light thisLight = lights[idx];
 					if (thisLight.valid <= 0) {continue; /* Light is empty */}
 					
 					//Shadow Checks
-					bool inShadow = checkLOS(thisLight.position.xy, closestIntersectPoint, closestIndex, thisLight.intensity);
-					vec2 lightDir = normalize(thisLight.position.xy-closestIntersectPoint);
-					bool normalCheckPass = dot(wallNormal, lightDir) > 0.0f; //Dot of dir of player-wallIntersect, and intersect-light.
+					bool inShadow = checkLOS(thisLight.position.xy, closestIntersectPoint.xy, closestIndex, thisLight.intensity);
+					vec3 lightDir = normalize(thisLight.position-closestIntersectPoint);
+					bool normalCheckPass = dot(normal, lightDir) > 0.0f; //Dot of dir of player-wallIntersect, and intersect-light.
 
 					if (inShadow || !normalCheckPass) {
 						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
 					} else {
 						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 						float distance = length(intersect3D - thisLight.position);
-						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
+						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
 						float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
 
 						vec3 lightContribution = thisLight.colour * brightness;

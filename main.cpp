@@ -9,8 +9,6 @@ using namespace utils;
 using namespace glm;
 
 
-const double wait_time = 1.0f / display::maxFPS;
-
 
 unordered_map<int, bool> keyMap = {};
 
@@ -37,23 +35,37 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 
 
 //TEMPORARY DATA SETUP. REPLACE WITH FILE LOADING.
-std::array<utils::Wall, 256> prepWalls() {
-	std::array<utils::Wall, 256> wallData;
+std::vector<utils::Visplane> prepVisplanes() {
+	std::vector<utils::Visplane> visplaneData;
 
-	wallData[0*2] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), 4);
-	wallData[1*2] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), 4);
+	visplaneData.push_back(Visplane(vec2(-10, -10), vec2(10, 10), -1.0f, 2));
 
-	wallData[2*2] = Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), 0);
-	wallData[3*2] = Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), 0);
+	return visplaneData;
+}
 
-	wallData[4*2] = Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), 0);
-	wallData[5*2] = Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), 0);
 
-	wallData[6*2] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), 0);
-	wallData[7*2] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), 0);
+std::vector<utils::Wall> prepWalls() {
+	std::vector<utils::Wall> wallData;
 
-	wallData[8*2] = Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), 0);
-	wallData[9*2] = Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), 0);
+	wallData.push_back(Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), -1.0f, 3.0f, 4));
+	wallData.push_back(Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), -1.0f, 2.0f, 4));
+
+	wallData.push_back(Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), -1.0f, 2.0f, 2));
+	wallData.push_back(Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), -1.0f, 2.0f, 2));
+
+	wallData.push_back(Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), -1.0f, 1.0f, 0));
+	wallData.push_back(Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), -1.0f, 1.0f, 0));
+
+	wallData.push_back(Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), -1.0f, 1.0f, 0));
+	wallData.push_back(Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), -1.0f, 1.0f, 0));
+
+	wallData.push_back(Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), -1.0f, 1.0f, 0));
+	wallData.push_back(Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), -1.0f, 1.0f, 0));
+
+
+	wallData.push_back(Wall(glm::vec2(-8, -8), glm::vec2(-8, -12), -1.0f, 2.0f, 2));
+	wallData.push_back(Wall(glm::vec2( 8, -8), glm::vec2( 8, -12), -1.0f, 2.0f, 2));
+
 
 	return wallData;
 }
@@ -81,9 +93,6 @@ std::vector<utils::Sprite> prepSprites() {
 
 
 
-
-
-
 GLuint frameTextureID, depthSSBO;
 glm::ivec2 currentScreenRes;
 
@@ -94,21 +103,22 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 	currentScreenRes = glm::ivec2(width, height);
 
-	depthSSBO = render::createDepthSSBO(display::renderResolution.x);
+	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
 }
 
 
 int main() {
 	try { //Catch exceptions
 
-	std::array<utils::Wall, 256> wallData = prepWalls();
+	std::vector<utils::Visplane> visplaneData = prepVisplanes();
+	std::vector<utils::Wall> wallData = prepWalls();
 	std::vector<utils::Light> lightData = prepLights();
 	std::vector<utils::Sprite> spriteData = prepSprites();
-	Player player = Player(playerConfig::playerStartPos, playerConfig::playerStartAngle);
+	Player player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
-	currentScreenRes = display::screenResolution;
+	currentScreenRes = display::SCREEN_RESOLUTION;
 
 
 	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer");
@@ -122,20 +132,21 @@ int main() {
 
 
 
-	frameTextureID = render::createTexture(display::renderResolution.x, display::renderResolution.y);
+	frameTextureID = render::createTexture(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
 	GLuint textureArray = render::createTextureArray(textureNames);
+
 	render::createConstUBO();
-	render::createWallUBO(&wallData);
+
+	GLuint visplaneUBO = render::createVisplaneUBO();
+	GLuint wallUBO = render::createWallUBO();
 	GLuint lightUBO = render::createLightUBO();
 	GLuint spriteUBO = render::createSpriteUBO();
-	depthSSBO = render::createDepthSSBO(display::renderResolution.x);
+
+	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
 
 
-	//Visplane Shader (Roof and Floor).
-	GLuint visplaneShader = render::createShaderProgram("visplanes", false);
-
-	//Wall Shader
-	GLuint wallShader = render::createShaderProgram("walls", false);
+	//Environment shader
+	GLuint envShader = render::createShaderProgram("environment", false);
 
 	//Sprite Shader
 	GLuint spriteShader = render::createShaderProgram("sprites", false);
@@ -144,7 +155,7 @@ int main() {
 	GLuint uiShader = render::createShaderProgram("interface", false);
 
 	//Display Shader
-	GLuint displayShader = render::createShaderProgram("display", true);
+	GLuint displayShader = render::createShaderProgram("display");
 
 
 
@@ -152,11 +163,18 @@ int main() {
 	glDisable(GL_DEPTH_TEST);
 	GLuint VAO = render::getVAO();
 
+
+	//Update Visplane and Wall UBOs
+	//Will be made dynamic later when moving environment objects are added.
+	render::updateVisplaneUBO(visplaneUBO, &visplaneData);
+	render::updateWallUBO(wallUBO, &wallData);
+
+
 	utils::GLErrorcheck("Initialisation", true);
 
 
 
-	double frame_start, cursorXDelta;
+	double frameStart, cursorXDelta;
 	GLint topIndexLocation, lowIndexLocation, zoomLocation, uvLocation, playerPosLocation, playerAngleLocation;
 
 	// Initialize keyMap for input tracking
@@ -165,7 +183,7 @@ int main() {
 	}
 
 	while (!glfwWindowShouldClose(Window)) {
-		frame_start = glfwGetTime();
+		frameStart = glfwGetTime();
 		glfwPollEvents();
 
 		// Get inputs for this frame
@@ -185,10 +203,10 @@ int main() {
 		}
 
 		if (keyMap[GLFW_KEY_Q]) {
-			player.position.z -= playerConfig::moveSpeed;
+			player.position.z -= playerConfig::MOVE_SPEED_BASE;
 		}
 		if (keyMap[GLFW_KEY_E]) {
-			player.position.z += playerConfig::moveSpeed;
+			player.position.z += playerConfig::MOVE_SPEED_BASE;
 		}
 
 		if (keyMap[GLFW_KEY_1]) {
@@ -200,10 +218,10 @@ int main() {
 
 
 
-		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::maxRayAngle/display::zoomFactor : display::maxRayAngle;
+		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
 
 		cursorXDelta = cursorXPos - cursorXPosPrev;
-		player.viewAngle += cursorXDelta * (playerConfig::turnSpeedCursor / display::zoomFactor);
+		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
 
@@ -211,56 +229,31 @@ int main() {
 
 
 
-		//Update Sprites UBO.
-		render::updateLightUBO(lightUBO, &lightData);
+
+		//Update Dynamic UBOs.
 		render::updateSpriteUBO(spriteUBO, &spriteData);
-		utils::GLErrorcheck("Sprite & Light UBOs Update", true);
+		render::updateLightUBO(lightUBO, &lightData);
+		utils::GLErrorcheck("Updating UBOs", true);
 
 
-		//Visplanes Shader.
-		glUseProgram(visplaneShader);
+
+
+		//Environment Shader.
+		glUseProgram(envShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
-		topIndexLocation = glGetUniformLocation(visplaneShader, "topIndex");
-		lowIndexLocation = glGetUniformLocation(visplaneShader, "lowIndex");
-		playerPosLocation = glGetUniformLocation(visplaneShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(visplaneShader, "playerViewAngle");
-		zoomLocation = glGetUniformLocation(visplaneShader, "zoom");
-		uvLocation = glGetUniformLocation(visplaneShader, "drawUV");
-		
-		glUniform1i(topIndexLocation, display::topIndex);
-		glUniform1i(lowIndexLocation, display::lowIndex);
-		glUniform3f(playerPosLocation, player.position.x, player.position.y, player.position.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
-		glUniform1i(uvLocation, dev::drawUV);
-
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("Visplane Shader", true);
-
-
-		//Wall Shader.
-		glUseProgram(wallShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
-
-		glBindTextureUnit(0, textureArray);
-
-		playerPosLocation = glGetUniformLocation(wallShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(wallShader, "playerViewAngle");
-		zoomLocation = glGetUniformLocation(wallShader, "zoom");
-		uvLocation = glGetUniformLocation(wallShader, "drawUV");
+		playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
+		playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
+		zoomLocation = glGetUniformLocation(envShader, "zoom");
+		uvLocation = glGetUniformLocation(envShader, "drawUV");
 		
 		glUniform3f(playerPosLocation, player.position.x, player.position.y, player.position.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
-		glUniform1i(uvLocation, dev::drawUV);
+		glUniform1i(uvLocation, dev::DRAW_UV);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -284,7 +277,7 @@ int main() {
 		glUniform3f(playerPosLocation, player.position.x, player.position.y, player.position.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
-		glUniform1i(uvLocation, dev::drawUV);
+		glUniform1i(uvLocation, dev::DRAW_UV);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -294,7 +287,7 @@ int main() {
 
 		
 		//UI Shader.
-		if (false) {
+		if (dev::NO_INTERFACE <= 0) {
 			glUseProgram(uiShader);
 			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
@@ -335,8 +328,8 @@ int main() {
 		utils::GLErrorcheck("Display Shader", true);
 
 
-		while (glfwGetTime() - frame_start < wait_time) {}
-		if (dev::printFPS == 1) {double totalTime = (glfwGetTime() - frame_start);std::cout << "FPS " << 1/totalTime << endl;}
+		while (glfwGetTime() - frameStart < static_cast<double>(constants::DT)) {}
+		if (dev::SHOW_FREQ > 0) {double totalTime = (glfwGetTime() - frameStart);std::cout << "FPS " << 1/totalTime << endl;}
 
 
 		cursorXPosPrev = cursorXPos;

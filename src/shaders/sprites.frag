@@ -11,30 +11,40 @@ uniform int drawUV;
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(std140, binding = 1) uniform constUBO {
-    float zoomFactor;
-    float maxRayAngle;
-    float maxRayDistance;
+	float zoomFactor;
+	float maxRayAngle;
+	float maxRayDistance;
 
-    float topIndex;
-    float lowIndex;
+	float topIndex;
+	float lowIndex;
 
-    vec2 textureSize;
+	vec2 textureSize;
 
-    float padding[2];
+	float padding[2];
 };
 
+struct Visplane {
+	vec2 start;			//Visplane Start.
+	vec2 end;			//Visplane End.
+	float height;		//Visplane Height.
+	int textureID;		//Visplane Texture.
+	int valid;			//Visplane Validity.
+	float _padding;		//Visplane Padding
+};
+layout(std140, binding = 2) uniform visplaneUBO {
+	Visplane visplanes[64];
+};
 
 struct Wall {
-	vec2 start;			//Wall Start.
-	vec2 end;			//Wall End.
+	vec3 start;			//Wall Start.
+	vec3 end;			//Wall End.
 	int textureID;		//Wall Texture.
 	int valid;			//Wall Validity.
-	float padding[2];	//Wall Padding.
+	float _padding[2];	//Wall Padding.
 };
-layout(std140, binding = 2) uniform wallUBO {
+layout(std430, binding = 3) buffer wallUBO {
 	Wall walls[256];
 };
-
 
 struct Sprite {
 	vec2 position;	//Sprite Position.
@@ -43,10 +53,9 @@ struct Sprite {
 	int valid;		//Sprite Validity.
 	float _padding;	//Memory padding.
 };
-layout(std140, binding = 3) uniform spriteSSBO {
+layout(std140, binding = 4) uniform spriteSSBO {
 	Sprite sprites[32];
 };
-
 
 struct Light {
 	vec3 position;		//Light Position.
@@ -55,10 +64,11 @@ struct Light {
 	int valid;			//Light Validity.
 	float _padding;		//Light Padding.
 };
-layout(std140, binding = 4) uniform lightUBO {
+layout(std140, binding = 5) uniform lightUBO {
 	Light lights[64];
 };
-layout(std430, binding = 5) buffer depthBuffer {
+
+layout(std430, binding = 6) buffer depthBuffer {
 	float depths[];
 };
 
@@ -94,6 +104,9 @@ float determinant(vec2 vecA, vec2 vecB) {
 
 
 vec2 rayIntersectCheck(Ray ray, Wall wall) {
+	vec2 wallStartV2 = vec2(wall.start.x, wall.start.y);
+	vec2 wallEndV2 = vec2(wall.end.x, wall.end.y);
+
 	vec2 xDiff = vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
 	vec2 yDiff = vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
 
@@ -106,7 +119,7 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 	}
 
 
-	vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wall.start, wall.end));
+	vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wallStartV2, wallEndV2));
 	double xCoord = determinant(dets, xDiff) / divisor;
 	double yCoord = determinant(dets, yDiff) / divisor;
 
