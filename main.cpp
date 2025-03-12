@@ -39,7 +39,7 @@ std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
 
 	visplaneData[0] = Visplane(vec2(-10, -10), vec2(10, 10), -1.0f, 2);
-	visplaneData[1] = Visplane(vec2(-8, -8), vec2( 8, -12), 1.8f, 3);
+	visplaneData[1] = Visplane(vec2(-8, -8), vec2( 8, -12), 2.0f, 3);
 
 	return visplaneData;
 }
