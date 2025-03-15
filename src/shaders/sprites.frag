@@ -44,7 +44,7 @@ layout(std430, binding = 3) buffer wallUBO {
 };
 
 struct Sprite {
-	vec2 position;	//Sprite Position.
+	vec3 position;	//Sprite Position.
 	float width;	//Sprite Width.
 	int textureID;	//Sprite Texture ID.
 	int valid;		//Sprite Validity.
@@ -91,8 +91,9 @@ const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float DEFAULT_BRIGHTNESS = 0.25f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
+const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 
-const bool noLighting = true;
+const bool noLighting = false;
 
 
 float determinant(vec2 vecA, vec2 vecB) {
@@ -143,9 +144,50 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 	return intersectPoint;  
 }
 
+vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, bool isLOSCheck=false, vec3 LOSDirection=vec3(0.0f, 0.0f, 0.0f)) {
+	float targetZ = originPos.z - plane.height;
+	vec2 position2D;
+
+	if (isLOSCheck) { //Used in checkLOS().
+		if (abs(LOSDirection.z) < EPSILON) {return INVALIDv3; /* Avoids DivZero error */}
+		float t = targetZ / LOSDirection.z;
+		if (t < 0.0f) {return INVALIDv3; /* Behind origin */}
+		position2D = originPos.xy + LOSDirection.xy * t;
+
+
+	} else { //Used within the main Visplane loop of main() for rendering.
+		float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
+		float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
+
+		float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
+
+		float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
+		float vAO = normY * (verticalFOV/2);
+		float theta = radians(playerViewAngle + rayOffset);
+		vec3 rayDirection = vec3(sin(theta), cos(theta), tan(vAO));
+
+
+		/*
+		//Original from getWallUV()
+		float projectedYTop = (originPos.z - wallTopZ) / distance;
+		float screenYLow = renderResolution.y * (0.5 - projectedYLow);
+		*/
+
+		float antiProjection = 0.5f - (fragPosition.y/renderResolution.y);
+		if (abs(antiProjection) < EPSILON) {return INVALIDv3; /* Avoids DivZero error */}
+		float t = targetZ / antiProjection;
+		if (t < 0.0f) {return INVALIDv3; /* Behind origin */}
+		position2D = originPos.xy + rayDirection.xy * t;
+	}
+
+	return vec3(position2D.xy, plane.height);
+}
+
 
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
-	const float spriteFootZ = -1.0f, spriteHeadZ = 0.8f;
+	const float spriteHeightUnits = 1.75f;
+	float spriteFootZ = thisSprite.position.z - spriteHeightUnits/2.0f;
+	float spriteHeadZ = thisSprite.position.z + spriteHeightUnits/2.0f;
 
 	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float distance = length(playerPosition.xy - thisSprite.position.xy) / zoomEffect;
@@ -187,17 +229,48 @@ float angleClamp(float value) {
 }
 
 
-bool checkLOS(vec2 pointA, vec2 pointB, int thisIndex=-1, float maxDist=maxRayDistance) {
-	Ray LOSRay = createRay(pointA, normalize(pointA-pointB), maxDist);
+bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
+	vec3 LOSDelta = pointA - pointB;
+	float distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
+	float distToTarget = sqrt(distToTargetSQ);
+	vec3 LOSDirection = normalize(LOSDelta);
+	Ray LOSRay = createRay(pointA.xy, normalize(LOSDelta.xy), distToTarget);
 
-	for (int index = 0; index < 256; index++) {
-		Wall thisWall = walls[index];
-		if (thisWall.valid <= 0 || index == thisIndex) {continue; /* Wall is empty, or the wall calling LOS. */}
 
-		vec2 thisIntersectPoint = rayIntersectCheck(LOSRay, thisWall);
-		if (thisIntersectPoint == INVALID) {continue; /* Invalid intersect point */}
-		if (length(thisIntersectPoint - pointA) + EPSILON >= length(pointA-pointB)) {continue; /* Intersection is beyond the target, ignore it. */}
-		return true; //Intersect found.
+	//Iterate through all the walls. (2D)
+	for (int idx = 0; idx < 256; idx++) {
+		Wall thisWall = walls[idx];
+		if (thisWall.valid <= 0 || (idx == thisIndex && foundType == 1)) {continue; /* Wall is empty or is the index calling the LOS check. */}
+
+		vec2 intersectPoint = rayIntersectCheck(LOSRay, thisWall);
+		if (intersectPoint == INVALID) {continue; /* Invalid intersect point */}
+
+		float distToIntersectSQ = dot(pointA.xy - intersectPoint, pointA.xy - intersectPoint);
+		if (distToIntersectSQ > distToTargetSQ) {continue; /* Not within the range of the LOScheck. */}
+
+		float a = sqrt(distToIntersectSQ) / distToTarget;
+		float actualZ = mix(pointA.z, pointB.z, a);
+
+		if ((actualZ > min(thisWall.start.z, thisWall.end.z)) && (actualZ < max(thisWall.start.z, thisWall.end.z))) {
+			return true;
+		}
+	}
+
+
+	//Iterate through all visplanes. (3D)
+	for (int idx=0; idx<64; idx++) {
+		Visplane thisPlane = visplanes[idx];
+		if (thisPlane.valid <= 0 || (idx == thisIndex && foundType == 2)) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
+		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
+
+
+		vec3 intersectPoint = getVisplaneIntersect(thisPlane, pointB, true, LOSDirection);
+		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
+		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
+			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
+			continue;
+		}
+		return true;
 	}
 
 	return false;
@@ -210,7 +283,7 @@ float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
 
 	vec2 dir = vec2(sin(a), cos(a));
 	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
-	vec2 spriteDir = thisSprite.position - playerPosition.xy;
+	vec2 spriteDir = thisSprite.position.xy - playerPosition.xy;
 
 	if (dot(dir, normalize(spriteDir)) < 0.0f) {return 1e30f;}
 
@@ -244,7 +317,7 @@ void main() {
 		if (thisSprite.valid <= 0) {continue; /* Sprite is empty */}
 
 
-		float spriteDistance = length(playerPosition.xy - thisSprite.position);
+		float spriteDistance = length(playerPosition.xy - thisSprite.position.xy);
 
 		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
 
@@ -284,14 +357,19 @@ void main() {
 				Light thisLight = lights[idx];
 				if (thisLight.valid <= 0) {continue; /* Light is not valid. */}
 
-				bool shadow = checkLOS(thisLight.position.xy, closestSprite.position);
+				bool shadow = checkLOS(thisLight.position, closestSprite.position);
 				if (shadow) {
 					fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f));
 				} else {
 					vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
 					float distance = length(realPosition3D - thisLight.position);
-					float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
-					float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS/2.0f, 2.5);
+					float brightness;
+					if (distance < EPSILON) { //Sprite is on the light; probably serving as a visual marker for it.
+						brightness = 1.0f;
+					} else {
+						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance.
+						brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
+					}
 
 					vec3 lightContribution = thisLight.colour * brightness;
 					vec3 litColor = albedo.rgb * lightContribution;

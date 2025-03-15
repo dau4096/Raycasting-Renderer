@@ -42,7 +42,7 @@ utils::Player playerMove(
 
 	float newX = 0.0f;
 	float newY = 0.0f;
-	float newZ = 0.0f;
+	float newZ = 0.0f; //If ΔZ < 0.42857u then allow player to climb up (stairs)
 
 	float playerSpeed = playerConfig::MOVE_SPEED_BASE;
 
@@ -95,7 +95,8 @@ utils::Player playerMove(
 	}
 
 	for (const utils::Sprite& sprite : *spriteData) {
-		glm::vec2 dir = sprite.position - playerPosV2;
+		glm::vec2 spritePosV2 = glm::vec2(sprite.position.x, sprite.position.y);
+		glm::vec2 dir = spritePosV2 - playerPosV2;
 		float radius = playerConfig::PLAYER_COLLISION_RADIUS + sprite.width;
 
 		if (glm::length(dir) > radius) {continue;}
@@ -122,7 +123,7 @@ utils::Player playerMove(
 		}
 
 		glm::vec2 intersectPoint = playerPosV2 + movementVector * Mu;
-		glm::vec2 normal = glm::normalize(intersectPoint - sprite.position);
+		glm::vec2 normal = glm::normalize(intersectPoint - spritePosV2);
 		glm::vec2 movementAlongNormal = glm::dot(movementVector, normal) * normal;
 		movementVector -= movementAlongNormal*0.75f;
 

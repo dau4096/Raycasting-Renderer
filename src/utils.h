@@ -70,15 +70,15 @@ namespace utils {
 	};
 
 	struct Sprite {
-		alignas(16) glm::vec2 position;
+		alignas(16) glm::vec3 position;
 		alignas(4) float width;
 		alignas(4) int textureID;
 		alignas(4) int valid;
 		alignas(4) float _padding;
 
-		Sprite() : position(0.0f, 0.0f), width(0.0f), textureID(0), valid(0), _padding(0.0f) {}
+		Sprite() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), valid(0), _padding(0.0f) {}
 
-		Sprite(glm::vec2 position, float width, int textureID)
+		Sprite(glm::vec3 position, float width, int textureID)
 			: position(position), width(width), textureID(textureID), valid(1), _padding(0.0f) {}
 	};
 

@@ -17,7 +17,8 @@ std::array<std::string, 32> textureNames = {
 	"s_t_a_r_e",
 	"tabs=fish",
 	"piloten",
-	"mus2", "osa"
+	"mus2", "osa",
+	"lamp"
 };
 
 // Keyboard presses to monitor.
@@ -48,8 +49,8 @@ std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 	std::array<utils::Wall, constants::MAX_WALLS> wallData;
 
-	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), -1.0f, 3.0f, 4);
-	wallData[1] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), -1.0f, 2.0f, 4);
+	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), -1.0f, 2.0f, 4);
+	wallData[1] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), -1.0f, 0.0f, 4);
 
 	wallData[2] = Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), -1.0f, 2.0f, 2);
 	wallData[3] = Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), -1.0f, 2.0f, 2);
@@ -75,8 +76,8 @@ std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
 	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
 
-	spriteData[0] = Sprite(glm::vec2( 5,  5), 1.0f, 5);
-	spriteData[1] = Sprite(glm::vec2(-4,  4), 1.0f, 4);
+	spriteData[0] = Sprite(glm::vec3( 5,  5, 0.0f), 1.0f, 5);
+	spriteData[1] = Sprite(glm::vec3(-5,  2.5f, 0.0f), 1.0f, 8); //Light Marker
 
 	return spriteData;
 
@@ -86,8 +87,7 @@ std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
 std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
 	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
 
-	lightData[0] = Light(glm::vec3(-5, 0, -5), glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
-	lightData[1] = Light(glm::vec3( 5, 0,  5), glm::vec3(1.0f, 0.0f, 1.0f), 5.0f);
+	lightData[0] = Light(glm::vec3(-5, 2.5f, 0), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
 
 	return lightData;
 }
