@@ -7,6 +7,7 @@ uniform float playerViewAngle;
 uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
+uniform bool headLampEnabled;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
@@ -359,7 +360,7 @@ void main() {
 
 				bool shadow = checkLOS(thisLight.position, closestSprite.position);
 				if (shadow) {
-					fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f));
+					fragColour = min(albedo.rgb * DEFAULT_BRIGHTNESS + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f));
 				} else {
 					vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
 					float distance = length(realPosition3D - thisLight.position);
@@ -376,6 +377,25 @@ void main() {
 
 					fragColour = min(fragColour + litColor, vec3(1.0f, 1.0f, 1.0f));
 				}
+			}
+
+			if (headLampEnabled) {
+				Light headLamp;
+				headLamp.position = playerPosition;
+				headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
+				headLamp.intensity = 3.0f;
+				headLamp.valid = 1;
+
+
+				vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
+				float distance = length(realPosition3D - headLamp.position);
+				float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
+				float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
+
+				vec3 lightContribution = headLamp.colour * brightness;
+				vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
+
+				fragColour = min(litColor.rgb + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f));
 			}
 		}
 

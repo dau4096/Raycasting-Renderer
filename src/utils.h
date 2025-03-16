@@ -105,11 +105,12 @@ namespace utils {
 
 
 	struct Player {
-		glm::vec3 position;
+		glm::vec3 position, velocity, cameraPosition;
 		float viewAngle;
+		bool touchingFloor;
 
 		Player(glm::vec3 position, float angle)
-			: position(position), viewAngle(angle) {}
+			: position(position), cameraPosition(position + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT/3.0f)), velocity(0.0f, 0.0f, 0.0f), viewAngle(angle), touchingFloor(false) {}
 	};
 
 }

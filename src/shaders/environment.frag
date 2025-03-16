@@ -7,6 +7,7 @@ uniform float playerViewAngle;
 uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
+uniform bool headLampEnabled;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
@@ -427,7 +428,7 @@ void main() {
 					float normalEffect = normalDot * 0.6 + 0.4; //Dot of dir of player-wallIntersect, and intersect-light.
 
 					if (inShadow || normalDot < 0.0f) {
-						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
+						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
 					} else {
 						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 						float distance = length(intersect3D - thisLight.position);
@@ -437,7 +438,34 @@ void main() {
 						vec3 lightContribution = thisLight.colour * brightness;
 						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
 
-						fragColour = min(litColor, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+						fragColour = min(litColor + fragColour, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+					}
+				}
+
+				if (headLampEnabled) {
+					Light headLamp;
+					headLamp.position = playerPosition;
+					headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
+					headLamp.intensity = 3.0f;
+					headLamp.valid = 1;
+
+
+					vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
+					float normalDot = dot(normal, lightDir);
+					float normalEffect = normalDot * 0.6 + 0.4; //Dot of dir of player-wallIntersect, and intersect-light.
+
+					if (normalDot < 0.0f) {
+						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
+					} else {
+						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
+						float distance = length(intersect3D - headLamp.position);
+						float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
+						float brightness = clamp(attenuation * normalEffect, DEFAULT_BRIGHTNESS, 2.5);
+
+						vec3 lightContribution = headLamp.colour * brightness;
+						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
+
+						fragColour = min(litColor + fragColour, vec4(1.0f, 1.0f, 1.0f, 1.0f));
 					}
 				}
 			}

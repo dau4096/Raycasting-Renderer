@@ -10,9 +10,7 @@ using namespace glm;
 
 
 
-unordered_map<int, bool> keyMap = {};
-
-std::array<std::string, 32> textureNames = {
+const std::array<std::string, 32> textureNames = {
 	"a", "b", "c",
 	"s_t_a_r_e",
 	"tabs=fish",
@@ -25,7 +23,7 @@ std::array<std::string, 32> textureNames = {
 const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added later, without having to change that value.
 	GLFW_KEY_W, GLFW_KEY_S,
 	GLFW_KEY_A, GLFW_KEY_D,
-	GLFW_KEY_E, GLFW_KEY_Q,
+	GLFW_KEY_E, GLFW_KEY_F,
 	GLFW_KEY_SPACE,
 	GLFW_KEY_LEFT_SHIFT,
 	GLFW_KEY_1, GLFW_KEY_C,
@@ -39,8 +37,17 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
 
-	visplaneData[0] = Visplane(vec2(-10, -10), vec2(10, 10), -1.0f, 2);
-	visplaneData[1] = Visplane(vec2(-8, -8), vec2( 8, -12), 2.0f, 3);
+	visplaneData[0] = Visplane(vec2(-10.0f, -14.0f), vec2(10.0f, 10.0f), 0.0f, 2);
+	visplaneData[1] = Visplane(vec2(-8.0f, -8.0f), vec2( 8.0f, -12.0f), 3.0f, 3);
+
+	//Stairs (0.42857u each);
+	visplaneData[2] = Visplane(vec2(6.0f, -7.0f), vec2(8.0f, -8.0f), 3.00000f, 7);
+	visplaneData[3] = Visplane(vec2(6.0f, -6.0f), vec2(8.0f, -7.0f), 2.57143f, 7);
+	visplaneData[4] = Visplane(vec2(6.0f, -5.0f), vec2(8.0f, -6.0f), 2.14286f, 7);
+	visplaneData[5] = Visplane(vec2(6.0f, -4.0f), vec2(8.0f, -5.0f), 1.71429f, 7);
+	visplaneData[6] = Visplane(vec2(6.0f, -3.0f), vec2(8.0f, -4.0f), 1.28572f, 7);
+	visplaneData[7] = Visplane(vec2(6.0f, -2.0f), vec2(8.0f, -3.0f), 0.85715f, 7);
+	visplaneData[8] = Visplane(vec2(6.0f, -1.0f), vec2(8.0f, -2.0f), 0.42858f, 7);
 
 	return visplaneData;
 }
@@ -49,24 +56,26 @@ std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 	std::array<utils::Wall, constants::MAX_WALLS> wallData;
 
-	wallData[0] = Wall(glm::vec2(-1, -1), glm::vec2( 1, -1), -1.0f, 2.0f, 4);
-	wallData[1] = Wall(glm::vec2( 1,  1), glm::vec2(-1, -1), -1.0f, 0.0f, 4);
+	//Walls
+	wallData[0] = Wall(glm::vec2(-1.0f, -1.0f), glm::vec2( 1.0f, -1.0f), 0.0f, 3.0f, 4);
+	wallData[1] = Wall(glm::vec2( 1.0f,  1.0f), glm::vec2(-1.0f, -1.0f), 0.0f, 1.0f, 4);
 
-	wallData[2] = Wall(glm::vec2( 0, -8), glm::vec2(-8, -8), -1.0f, 2.0f, 2);
-	wallData[3] = Wall(glm::vec2( 8, -8), glm::vec2( 0, -8), -1.0f, 2.0f, 2);
+	wallData[2] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2(-8.0f, -8.0f), 0.0f, 3.0f, 2);
+	wallData[3] = Wall(glm::vec2( 8.0f, -8.0f), glm::vec2( 0.5f, -8.0f), 0.0f, 3.0f, 2);
 
-	wallData[4] = Wall(glm::vec2(-8, -8), glm::vec2(-8,  0), -1.0f, 1.0f, 0);
-	wallData[5] = Wall(glm::vec2(-8,  0), glm::vec2(-8,  8), -1.0f, 1.0f, 0);
+	wallData[4] = Wall(glm::vec2(-8.0f, -8.0f), glm::vec2(-8.0f,  0.0f), 0.0f, 2.0f, 0);
+	wallData[5] = Wall(glm::vec2(-8.0f,  0.0f), glm::vec2(-8.0f,  8.0f), 0.0f, 2.0f, 0);
 
-	wallData[6] = Wall(glm::vec2(-8,  8), glm::vec2( 0,  8), -1.0f, 1.0f, 0);
-	wallData[7] = Wall(glm::vec2( 0,  8), glm::vec2( 8,  8), -1.0f, 1.0f, 0);
+	wallData[6] = Wall(glm::vec2(-8.0f,  8.0f), glm::vec2( 0.0f,  8.0f), 0.0f, 2.0f, 0);
+	wallData[7] = Wall(glm::vec2( 0.0f,  8.0f), glm::vec2( 8.0f,  8.0f), 0.0f, 2.0f, 0);
 
-	wallData[8] = Wall(glm::vec2( 8, -0.5), glm::vec2( 8, -8), -1.0f, 1.0f, 0);
-	wallData[9] = Wall(glm::vec2( 8,  8), glm::vec2( 8,  0.5), -1.0f, 1.0f, 0);
+	wallData[8] = Wall(glm::vec2( 8.0f, -0.5f), glm::vec2( 8.0f, -8.0f), 0.0f, 2.0f, 0);
+	wallData[9] = Wall(glm::vec2( 8.0f,  8.0f), glm::vec2( 8.0f,  0.5f), 0.0f, 2.0f, 0);
 
+	wallData[10] = Wall(glm::vec2(-8.0f, -8.0f), glm::vec2(-8.0f, -12.0f), 0.0f, 3.0f, 2);
+	wallData[11] = Wall(glm::vec2( 8.0f, -8.0f), glm::vec2( 8.0f, -12.0f), 0.0f, 3.0f, 2);
 
-	wallData[10] = Wall(glm::vec2(-8, -8), glm::vec2(-8, -12), -1.0f, 2.0f, 2);
-	wallData[11] = Wall(glm::vec2( 8, -8), glm::vec2( 8, -12), -1.0f, 2.0f, 2);
+	wallData[12] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2( 0.5f, -8.0f),  1.8f, 3.0f, 2);
 
 
 	return wallData;
@@ -76,8 +85,9 @@ std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
 	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
 
-	spriteData[0] = Sprite(glm::vec3( 5,  5, 0.0f), 1.0f, 5);
-	spriteData[1] = Sprite(glm::vec3(-5,  2.5f, 0.0f), 1.0f, 8); //Light Marker
+	spriteData[0] = Sprite(glm::vec3( 5.0f,  5.0f, 1.0f), 1.0f, 5);
+	spriteData[1] = Sprite(glm::vec3(-5.0f,  2.5f, 1.0f), 1.0f, 8); //Light Marker
+	spriteData[2] = Sprite(glm::vec3(-5.0f, -10.0f, 1.0f), 1.0f, 8); //Light Marker
 
 	return spriteData;
 
@@ -87,7 +97,8 @@ std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
 std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
 	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
 
-	lightData[0] = Light(glm::vec3(-5, 2.5f, 0), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
+	lightData[0] = Light(glm::vec3(-5.0f,  2.5f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
+	lightData[1] = Light(glm::vec3(-5.0f, -10.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
 
 	return lightData;
 }
@@ -96,6 +107,9 @@ std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
 
 GLuint frameTextureID, depthSSBO;
 glm::ivec2 currentScreenRes;
+unordered_map<int, bool> keyMap = {};
+bool headLampEnabled = false;
+int tick = 0;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -176,7 +190,7 @@ int main() {
 
 
 	double frameStart, cursorXDelta;
-	GLint topIndexLocation, lowIndexLocation, zoomLocation, uvLocation, playerPosLocation, playerAngleLocation;
+	GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation;
 
 	// Initialize keyMap for input tracking
 	for (int key : monitoredKeys) {
@@ -184,6 +198,7 @@ int main() {
 	}
 
 	while (!glfwWindowShouldClose(Window)) {
+		tick++;
 		frameStart = glfwGetTime();
 		glfwPollEvents();
 
@@ -191,7 +206,12 @@ int main() {
 		for (int key : monitoredKeys) {
 			int keyState = glfwGetKey(Window, key);
 			if (keyState == GLFW_PRESS) {
+				if (key == GLFW_KEY_F && !keyMap[GLFW_KEY_F]) {
+					headLampEnabled = !headLampEnabled;
+				}
+
 				keyMap[key] = true;
+
 
 			} else if (keyState == GLFW_RELEASE) {
 				keyMap[key] = false;
@@ -201,13 +221,6 @@ int main() {
 
 		if (keyMap[GLFW_KEY_ESCAPE]) {
 			break; //Quit
-		}
-
-		if (keyMap[GLFW_KEY_Q]) {
-			player.position.z -= playerConfig::MOVE_SPEED_BASE;
-		}
-		if (keyMap[GLFW_KEY_E]) {
-			player.position.z += playerConfig::MOVE_SPEED_BASE;
 		}
 
 		if (keyMap[GLFW_KEY_1]) {
@@ -227,7 +240,16 @@ int main() {
 
 
 		player = physics::playerMove(player, keyMap, &wallData, &spriteData, &visplaneData);
+		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
+		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (playerConfig::PLAYER_COLLISION_HEIGHT/3.0f) + viewBob);
 
+		//Sprite Moving Test
+		/*
+		glm::vec2 dir = glm::vec2(player.position.x, player.position.y) - glm::vec2(spriteData[0].position.x, spriteData[0].position.y);
+		if (length(dir) > 2.0f) {
+			spriteData[0].position += vec3(normalize(dir) * 0.01f, 0.0f);
+		}
+		*/
 
 		//Update Dynamic UBOs.
 		render::updateSpriteSSBO(spriteSSBO, &spriteData);
@@ -248,11 +270,13 @@ int main() {
 		playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
 		zoomLocation = glGetUniformLocation(envShader, "zoom");
 		uvLocation = glGetUniformLocation(envShader, "drawUV");
+		lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
 		
-		glUniform3f(playerPosLocation, player.position.x, player.position.y, player.position.z);
+		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 		glUniform1i(uvLocation, dev::DRAW_UV);
+		glUniform1i(lightLocation, headLampEnabled);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -272,11 +296,13 @@ int main() {
 		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
 		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
 		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
+		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
 		
-		glUniform3f(playerPosLocation, player.position.x, player.position.y, player.position.z);
+		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 		glUniform1i(uvLocation, dev::DRAW_UV);
+		glUniform1i(lightLocation, headLampEnabled);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -297,7 +323,7 @@ int main() {
 			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
 			
-			glUniform3f(playerPosLocation, player.position.x, player.position.y, player.position.z);
+			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
 			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 
@@ -326,8 +352,7 @@ int main() {
 		glfwSwapBuffers(Window);
 		utils::GLErrorcheck("Display Shader", true);
 
-
-		while (glfwGetTime() - frameStart < static_cast<double>(constants::DT)) {}
+		while (glfwGetTime() - frameStart < constants::DT) {}
 		if (dev::SHOW_FREQ > 0) {double totalTime = (glfwGetTime() - frameStart);std::cout << "FPS " << 1/totalTime << endl;}
 
 

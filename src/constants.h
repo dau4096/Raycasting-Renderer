@@ -19,8 +19,15 @@ namespace constants {
 
 
 	//Physics/Rendering Frequency/dt
-	constexpr int HZ = 20;
-	constexpr float DT = 1/HZ;
+	constexpr int HZ = 45;
+	constexpr double DT = 1.0d/HZ;
+
+
+	//Sim Constants
+	constexpr float GRAVITY_ACCEL = 2.5e-4f;
+	constexpr float FLOOR_FRICT_COEFF = 0.75f;
+	constexpr float AIR_FRICT_COEFF = 0.975f;
+	constexpr float KILL_PLANE_HEIGHT = -16.0f;
 
 
 	//Invalid returns for vectors and floats.
@@ -57,15 +64,17 @@ namespace playerConfig {
 
 	constexpr float MOVE_SPEED_BASE = 0.05f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
+	constexpr float JUMP_INIT_SPEED = 0.25f;
+	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.0f;
 
 
 	//Physics Collision Values
 	constexpr float PLAYER_COLLISION_RADIUS = 0.125f;
-	constexpr float PLAYER_COLLISION_HEIGHT = 1.8f;
+	constexpr float PLAYER_COLLISION_HEIGHT = 1.75f;
 
 
 	//Player Initial Values
-	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(-2.5f, -2.5f, 0.0f);
+	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(-2.5f, -2.5f, 1.0f);
 	constexpr float PLAYER_START_ANGLE = -45.0f;
 }
 
@@ -75,6 +84,7 @@ namespace dev {
 	constexpr int NO_COLLIDE = 0;
 	constexpr int SHOW_FREQ = 0;
 	constexpr int NO_INTERFACE = 1;
+	constexpr int VIEW_BOB_DISABLE = 0;
 }
 
 #endif // CONSTANTS_H

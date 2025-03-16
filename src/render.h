@@ -32,6 +32,8 @@ namespace render {
 
 
     GLuint getVAO();
+
+    float viewBob(float tick, utils::Player player);
 }
 
 #endif

@@ -3,6 +3,12 @@
 using namespace std;
 using namespace utils;
 
+
+bool prevJump = false;
+bool touchingFloorCheck = false;
+const float EPSILON = 1e-5f;
+
+
 namespace physics {
 
 bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius) {
@@ -38,73 +44,155 @@ utils::Player playerMove(
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
 	) {
-	const float EPSILON = 1e-5f;
+
+	if (player.position.z <= constants::KILL_PLANE_HEIGHT) {
+		player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
+	}
 
 	float newX = 0.0f;
 	float newY = 0.0f;
-	float newZ = 0.0f; //If ΔZ < 0.42857u then allow player to climb up (stairs)
 
 	float playerSpeed = playerConfig::MOVE_SPEED_BASE;
+	float maxV = playerConfig::MOVE_SPEED_BASE;
 
 	if (keyMap[GLFW_KEY_LEFT_SHIFT]) {
 		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
+		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
+
+	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
 
 	// Determine the movement vector based on key presses
 	if (keyMap[GLFW_KEY_W]) {
-		newX += playerSpeed * sin(player.viewAngle * constants::TO_RAD);
-		newY += playerSpeed * cos(player.viewAngle * constants::TO_RAD);
+		float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
+		newX += playerSpeed * sin(player.viewAngle * constants::TO_RAD) * reduction;
+		newY += playerSpeed * cos(player.viewAngle * constants::TO_RAD) * reduction;
 	}
 	if (keyMap[GLFW_KEY_S]) {
-		newX -= playerSpeed * sin(player.viewAngle * constants::TO_RAD);
-		newY -= playerSpeed * cos(player.viewAngle * constants::TO_RAD);
+		float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
+		newX -= playerSpeed * sin(player.viewAngle * constants::TO_RAD) * reduction;
+		newY -= playerSpeed * cos(player.viewAngle * constants::TO_RAD) * reduction;
 	}
 	if (keyMap[GLFW_KEY_A]) {
-		newX -= playerSpeed * cos((player.viewAngle) * constants::TO_RAD);
-		newY -= playerSpeed * -sin((player.viewAngle) * constants::TO_RAD);
+		float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
+		newX -= playerSpeed * cos((player.viewAngle) * constants::TO_RAD) * reduction;
+		newY -= playerSpeed * -sin((player.viewAngle) * constants::TO_RAD) * reduction;
 	}
 	if (keyMap[GLFW_KEY_D]) {
-		newX += playerSpeed * cos((player.viewAngle) * constants::TO_RAD);
-		newY += playerSpeed * -sin((player.viewAngle) * constants::TO_RAD);
+		float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
+		newX += playerSpeed * cos((player.viewAngle) * constants::TO_RAD) * reduction;
+		newY += playerSpeed * -sin((player.viewAngle) * constants::TO_RAD) * reduction;
+	}
+	if (keyMap[GLFW_KEY_SPACE] && !prevJump && touchingFloorCheck) {
+		player.velocity.z += playerConfig::JUMP_INIT_SPEED;
+		player.position.z += 0.025;
 	}
 
 
-	glm::vec2 movementVector = glm::vec2(newX, newY);
-	if (glm::length(movementVector) < EPSILON) {
-		return player;
+	glm::vec2 vAddition = glm::vec2(newX, newY);
+	if (length(vAddition) > playerSpeed) {
+		vAddition = normalize(vAddition) * playerSpeed;
 	}
-	movementVector = glm::normalize(movementVector) * playerSpeed;
+	
 
-
-
-	if (dev::NO_COLLIDE > 0) {
-		player.position += glm::vec3(movementVector.x, movementVector.y, newZ);
-		return player;
+	//Occasionally returns NaN somehow.
+	glm::vec2 curVelocity = glm::vec2(player.velocity.x, player.velocity.y);
+	if (length(curVelocity) > playerConfig::MAX_AIR_SPEED_XY && length(vAddition) > EPSILON) {
+		glm::vec2 vRight = glm::normalize(glm::vec2(player.velocity.y, -player.velocity.x));
+		vAddition = vRight * glm::dot(glm::normalize(vAddition), vRight) * playerSpeed;
 	}
+	player.velocity.x += vAddition.x; player.velocity.y += vAddition.y;
 
+
+
+	prevJump = keyMap[GLFW_KEY_SPACE];
+	touchingFloorCheck = false;
+
+
+
+
+	float playerFootZ = player.position.z - (playerConfig::PLAYER_COLLISION_HEIGHT/2.0f);
+	float playerHeadZ = player.position.z + (playerConfig::PLAYER_COLLISION_HEIGHT/2.0f);
+
+
+	//Vertical Calculations;
+	const float maxStepHeight = 0.42857f;
+	for (const utils::Visplane& plane : *visplaneData) {
+		if (plane.valid < 1) {continue;}
+
+		bool inPlaneXYRange = !(
+			(player.position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.x, plane.end.x))
+			|| (player.position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(plane.start.x, plane.end.x))
+			|| (player.position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.y, plane.end.y))
+			|| (player.position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(plane.start.y, plane.end.y))
+		); // !outOfRange.
+		bool abovePlane = player.position.z >= plane.height;
+
+		if (inPlaneXYRange) {
+			//If ΔZ < 0.42857u then allow player to climb up (stairs, ledge)
+			float stepUpZ = plane.height - playerFootZ;
+			if (stepUpZ <= maxStepHeight && stepUpZ >= 0.0f) {
+				player.position.z += stepUpZ;
+				player.velocity.z = 0.0f;
+				touchingFloorCheck = true;
+			} else if (abovePlane && playerFootZ < plane.height) {
+				player.position.z = plane.height + (playerConfig::PLAYER_COLLISION_HEIGHT/2.0f);
+				player.velocity.z = 0.0f;
+				touchingFloorCheck = true;
+			} else if (!abovePlane && playerHeadZ > plane.height) {
+				player.position.z = plane.height - (playerConfig::PLAYER_COLLISION_HEIGHT/2.0f);
+				player.velocity.z = 0.0f;
+			}
+		}
+	}
+	player.touchingFloor = touchingFloorCheck;
 
 
 
 	//Horizontal Calculations;
+	if (glm::length(player.velocity) < EPSILON) {
+		return player;
+	}
+
+
+	if (dev::NO_COLLIDE > 0) {
+		player.position += glm::vec3(player.velocity.x, player.velocity.y, 0.0f);
+		return player;
+	}
+
+
 	glm::vec2 playerPosV2 = glm::vec2(player.position.x, player.position.y);
 	for (const utils::Wall& wall : *wallData) {
-		if (circleLineIntersect(wall, playerPosV2 + movementVector, playerConfig::PLAYER_COLLISION_RADIUS)) {
+		bool playerZCheckWall = !(
+			(playerHeadZ < min(wall.start.z, wall.end.z))
+			 || (playerFootZ + maxStepHeight > max(wall.start.z, wall.end.z))
+		); //!aboveOrBelow.
+
+		if (circleLineIntersect(wall, playerPosV2 + glm::vec2(player.velocity.x, player.velocity.y), playerConfig::PLAYER_COLLISION_RADIUS) && playerZCheckWall) {
 			glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
-			movementVector = wallDir * glm::dot(glm::normalize(movementVector), wallDir) * playerSpeed;
+			glm::vec2 correctedV = wallDir * glm::dot(glm::normalize(glm::vec2(player.velocity.x, player.velocity.y)), wallDir) * playerSpeed;
+			player.velocity.x = correctedV.x; player.velocity.y = correctedV.y;
 		}
 	}
 
 	for (const utils::Sprite& sprite : *spriteData) {
+		const float spriteHeightTMP = 1.8f;
+		float spriteHeadZ = sprite.position.z + (spriteHeightTMP/2.0f);
+		float spriteFootZ = sprite.position.z - (spriteHeightTMP/2.0f);
+
+		if (playerFootZ > spriteHeadZ || playerHeadZ < spriteFootZ) {continue; /* Above/Below sprite. */}
+
+
 		glm::vec2 spritePosV2 = glm::vec2(sprite.position.x, sprite.position.y);
-		glm::vec2 dir = spritePosV2 - playerPosV2;
+		glm::vec2 spriteDir = spritePosV2 - playerPosV2;
 		float radius = playerConfig::PLAYER_COLLISION_RADIUS + sprite.width;
 
-		if (glm::length(dir) > radius) {continue;}
+		if (glm::length(spriteDir) > radius) {continue;}
 
 		//Uses b^2 - 4ac and compares to 0.
-		float a = (movementVector.x*movementVector.x) + (movementVector.y*movementVector.y);
-		float b = 2 * glm::dot(dir, movementVector);
-		float c = dir.x*dir.x + dir.y*dir.y - radius*radius;
+		float a = (player.velocity.x*player.velocity.x) + (player.velocity.y*player.velocity.y);
+		float b = 2 * glm::dot(spriteDir, glm::vec2(player.velocity.x, player.velocity.y));
+		float c = spriteDir.x*spriteDir.x + spriteDir.y*spriteDir.y - radius*radius;
 
 		float determinant = b*b - 4*a*c;
 		float Mu = std::numeric_limits<float>::max();
@@ -122,22 +210,18 @@ utils::Player playerMove(
 			Mu = 0.0f;
 		}
 
-		glm::vec2 intersectPoint = playerPosV2 + movementVector * Mu;
+		glm::vec2 intersectPoint = playerPosV2 + glm::vec2(player.velocity.x, player.velocity.y) * Mu;
 		glm::vec2 normal = glm::normalize(intersectPoint - spritePosV2);
-		glm::vec2 movementAlongNormal = glm::dot(movementVector, normal) * normal;
-		movementVector -= movementAlongNormal*0.75f;
-
-		if (glm::length(movementVector) > playerSpeed) {
-			movementVector = glm::normalize(movementVector) * playerSpeed;
-		}
+		glm::vec2 movementAlongNormal = glm::dot(glm::vec2(player.velocity.x, player.velocity.y), normal) * normal;
+		glm::vec2 correctedV = glm::vec2(player.velocity.x, player.velocity.y) - movementAlongNormal*0.75f;
+		player.velocity.x = correctedV.x; player.velocity.y = correctedV.y;
 	}
 
 
-	//Vertical Calculations; (N/A for now.)
-	float vMove = newZ;
-
-
-	player.position += glm::vec3(movementVector.x, movementVector.y, vMove);
+	if (touchingFloorCheck) {player.velocity.x *= constants::FLOOR_FRICT_COEFF; player.velocity.y *= constants::FLOOR_FRICT_COEFF;}
+	else {player.velocity *= constants::AIR_FRICT_COEFF;}
+	player.velocity.z -= constants::GRAVITY_ACCEL / static_cast<float>(constants::DT);
+	player.position += player.velocity;
 
 	return player;
 };
