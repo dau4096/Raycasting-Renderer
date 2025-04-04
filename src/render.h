@@ -34,6 +34,7 @@ namespace render {
     GLuint getVAO();
 
     float viewBob(float tick, utils::Player player);
+    glm::vec4 manageScreenTint(glm::uint newDuration=0, glm::uint event=utils::E_NONE);
 }
 
 #endif

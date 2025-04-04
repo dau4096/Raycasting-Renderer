@@ -203,7 +203,8 @@ vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
 
 
 vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, bool isLOSCheck=false, vec3 LOSDirection=vec3(0.0f, 0.0f, 0.0f)) {
-	float targetZ = originPos.z - plane.height;
+	float zoomEffect = ((zoom) ? zoomFactor : 1.0f);
+	float targetZ = (originPos.z - plane.height) * zoomEffect;
 	vec2 position2D;
 
 	if (isLOSCheck) { //Used in checkLOS().

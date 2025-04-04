@@ -201,7 +201,7 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 
 	float spriteHeight = screenYTop - screenYLow;
 	float spriteWidth = thisSprite.width * spriteHeight;
-	spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
+	//spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
 	spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
 
 

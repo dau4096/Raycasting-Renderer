@@ -115,6 +115,7 @@ int tick = 0;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
 
 	currentScreenRes = glm::ivec2(width, height);
 
@@ -139,6 +140,7 @@ int main() {
 	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer");
 	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
+	glEnable(GL_BLEND);
 
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
@@ -189,9 +191,6 @@ int main() {
 
 
 
-	double frameStart, cursorXDelta;
-	GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation;
-
 	// Initialize keyMap for input tracking
 	for (int key : monitoredKeys) {
 		keyMap[key] = false;
@@ -199,7 +198,7 @@ int main() {
 
 	while (!glfwWindowShouldClose(Window)) {
 		tick++;
-		frameStart = glfwGetTime();
+		double frameStart = glfwGetTime();
 		glfwPollEvents();
 
 		// Get inputs for this frame
@@ -234,7 +233,7 @@ int main() {
 
 		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
 
-		cursorXDelta = cursorXPos - cursorXPosPrev;
+		double cursorXDelta = cursorXPos - cursorXPosPrev;
 		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
@@ -242,6 +241,8 @@ int main() {
 		player = physics::playerMove(player, keyMap, &wallData, &spriteData, &visplaneData);
 		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (playerConfig::PLAYER_COLLISION_HEIGHT/3.0f) + viewBob);
+
+		glm::vec4 tintData = render::manageScreenTint(0, utils::E_NONE);
 
 		//Sprite Moving Test
 		/*
@@ -259,6 +260,7 @@ int main() {
 
 
 
+		GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation, vignetteColourLocation;
 		//Environment Shader.
 		glUseProgram(envShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -312,7 +314,7 @@ int main() {
 
 		
 		//UI Shader.
-		if (dev::NO_INTERFACE <= 0) {
+		if (!(dev::NO_INTERFACE > 0)) {
 			glUseProgram(uiShader);
 			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
@@ -322,10 +324,12 @@ int main() {
 			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
 			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
+			vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
 			
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
 			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+			glUniform4f(vignetteColourLocation, tintData.x, tintData.y, tintData.z, tintData.w);
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);

@@ -6,8 +6,16 @@
 #include <stdexcept>
 #include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
 
+
 //Utility functions
 namespace utils {
+	enum Event {
+		E_NONE,
+		E_PAIN,
+		E_HEAL
+	};
+
+
 	void print(std::string str);
 	void printVec2(glm::vec2 vector);
 	void printVec3(glm::vec3 vector);

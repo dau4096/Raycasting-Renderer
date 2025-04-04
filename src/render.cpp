@@ -295,7 +295,7 @@ GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
 	for (const std::string& textureName : textureNames) {
 		if (textureName.empty()) continue;
 
-		std::string texturePath = "src/textures/" + textureName + ".bmp";
+		std::string texturePath = "src/textures/" + textureName + ".png";
 		unsigned char* textureData = stbi_load(texturePath.c_str(), &width, &height, &channels, 4); // Force RGBA (4 channels)
 
 		if (!textureData) {
@@ -388,6 +388,39 @@ float viewBob(float tick, utils::Player player) {
 		return offset;
 	}
 	return 0.0f;
+}
+
+
+glm::uint tickCounter = 0, duration = 0;
+glm::vec3 screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec4 manageScreenTint(glm::uint newDuration=0, glm::uint event=E_NONE) {
+	if (newDuration > 0) {
+		tickCounter = newDuration;
+		duration = newDuration;
+		switch (event) {
+			case E_NONE:
+				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
+				break;
+			case E_PAIN:
+				screenTintRGB = glm::vec3(1.0f, 0.0f, 0.0f);
+				break;
+			case E_HEAL:
+				screenTintRGB = glm::vec3(0.0f, 1.0f, 0.0f);
+				break;
+			default:
+				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+	} else if (tickCounter != 0) {
+		tickCounter--;
+	}
+
+	float intensity;
+	if (duration > 0 && tickCounter > 0) {
+		intensity = static_cast<float>(tickCounter) / static_cast<float>(duration);
+	} else {
+		intensity = 0;
+	}
+	return glm::vec4(screenTintRGB.x, screenTintRGB.y, screenTintRGB.z, intensity);
 }
 
 }

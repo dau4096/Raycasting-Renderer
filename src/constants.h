@@ -83,7 +83,7 @@ namespace dev {
 	constexpr int DRAW_UV = 0;
 	constexpr int NO_COLLIDE = 0;
 	constexpr int SHOW_FREQ = 0;
-	constexpr int NO_INTERFACE = 1;
+	constexpr int NO_INTERFACE = 0;
 	constexpr int VIEW_BOB_DISABLE = 0;
 }
 
