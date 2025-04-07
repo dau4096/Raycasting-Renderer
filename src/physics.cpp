@@ -283,11 +283,14 @@ void playerMove(
 void updateSpecials(
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		utils::Player *player, std::unordered_map<int, bool> keyMap
+		utils::Player *player, std::unordered_map<int, bool> keyMap,
+		bool interactKey
 	) {
 
 
+	int wIndex = -1;
 	for (utils::Wall& wall : *wallData) {
+		wIndex++;
 		if ((wall.specialType == W_INVALID) || (wall.specialType == W_NORMAL)) {continue;}
 		bool enabled = *(wall.IOPtr) == 1;
 
@@ -312,8 +315,32 @@ void updateSpecials(
 			case W_SWITCH: { //Check for interaction with wall.
 				glm::vec2 dir = glm::vec2(sin((player->viewAngle + 180.0f) * constants::TO_RAD), cos((player->viewAngle + 180.0f) * constants::TO_RAD));
 				utils::Ray ray = utils::Ray(player->position, dir, playerConfig::PLAYER_INTERACT_RAY_DIST);
-				if (keyMap[GLFW_KEY_E] && (raycast(ray, wall) != constants::INVALIDv2)) {
-					wall.internal = (wall.internal == 1) ? 0 : 1;
+				glm::vec2 playerPosV2 = glm::vec2(player->position.x, player->position.y);
+				float playerFootZ = player->position.z - (playerConfig::PLAYER_COLLISION_HEIGHT/2.0f);
+				float playerHeadZ = player->position.z + (playerConfig::PLAYER_COLLISION_HEIGHT/2.0f);
+
+				glm::vec2 buttonIntersect = raycast(ray, wall);
+				if (
+					interactKey && 
+					(buttonIntersect != constants::INVALIDv2) && 
+					((playerFootZ <= wall.end.z) || (playerHeadZ >= wall.start.z))) {
+					float distSQ = glm::dot((buttonIntersect-playerPosV2), (buttonIntersect-playerPosV2));
+					int rIndex = -1;
+					bool LOSBlocked = false;
+
+					for (utils::Wall& thisWall : *wallData) { //Check for LOS to button. Only occurs when valid click is found, so should not impact performance much.
+						rIndex++;
+						if ((rIndex == wIndex) || (thisWall.specialType == W_INVALID)) {continue;}
+						glm::vec2 LOSintersect = raycast(ray, thisWall);
+						float thisDistSQ = glm::dot((LOSintersect-playerPosV2), (LOSintersect-playerPosV2));
+						if (thisDistSQ < distSQ) {
+							LOSBlocked = true;
+							break;
+						}
+					}
+					if (!LOSBlocked && (sqrt(distSQ) < playerConfig::PLAYER_INTERACT_RAY_DIST)) {
+						wall.internal = (wall.internal == 1) ? 0 : 1;
+					}
 				}
 				*(wall.IOPtr) = wall.internal;
 				break;

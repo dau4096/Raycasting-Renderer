@@ -18,7 +18,8 @@ namespace physics {
 	void updateSpecials(
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		utils::Player *player, std::unordered_map<int, bool> keyMap
+		utils::Player *player, std::unordered_map<int, bool> keyMap,
+		bool interactKey
 	);
 }
 

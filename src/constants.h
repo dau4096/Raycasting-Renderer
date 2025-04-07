@@ -138,7 +138,7 @@ namespace playerConfig {
 	//Physics Collision Values
 	constexpr float PLAYER_COLLISION_RADIUS = 0.125f;
 	constexpr float PLAYER_COLLISION_HEIGHT = 1.75f;
-	constexpr float PLAYER_INTERACT_RAY_DIST = 1.0f;
+	constexpr float PLAYER_INTERACT_RAY_DIST = 2.0f;
 
 
 	//Player Initial Values

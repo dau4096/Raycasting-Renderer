@@ -204,6 +204,7 @@ int main() {
 	for (int key : monitoredKeys) {
 		keyMap[key] = false;
 	}
+	bool interactKey = false;
 
 	while (!glfwWindowShouldClose(Window)) {
 		tick++;
@@ -217,6 +218,7 @@ int main() {
 				if (key == GLFW_KEY_F && !keyMap[GLFW_KEY_F]) {
 					headLampEnabled = !headLampEnabled;
 				}
+				interactKey = (key == GLFW_KEY_E) && (!keyMap[GLFW_KEY_E]);
 
 				keyMap[key] = true;
 
@@ -254,7 +256,7 @@ int main() {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, keyMap);
+		physics::updateSpecials(&wallData, &visplaneData, &player, keyMap, interactKey);
 
 
 		physics::playerMove(&player, keyMap, &wallData, &spriteData, &visplaneData);
