@@ -67,9 +67,6 @@ layout(std140, binding = 5) uniform lightSSBO {
 	Light lights[64];
 };
 
-layout(std430, binding = 6) buffer depthBuffer {
-	float depths[];
-};
 
 
 
@@ -472,9 +469,9 @@ void main() {
 				}
 			}
 		}
-		//Save to texture.
-		depths[framePosition.x] = minDistance;
 	}
+
+	
 	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }

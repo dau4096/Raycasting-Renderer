@@ -67,10 +67,6 @@ layout(std140, binding = 5) uniform lightUBO {
 	Light lights[64];
 };
 
-layout(std430, binding = 6) buffer depthBuffer {
-	float depths[];
-};
-
 
 struct Ray {
 	vec2 position, direction, end;

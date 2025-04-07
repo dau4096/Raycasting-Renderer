@@ -170,8 +170,6 @@ int main() {
 	GLuint lightSSBO = render::createLightSSBO();
 	GLuint spriteSSBO = render::createSpriteSSBO();
 
-	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
-
 
 	//Environment shader
 	GLuint envShader = render::createShaderProgram("environment", false);
@@ -266,13 +264,8 @@ int main() {
 
 		glm::vec4 tintData = render::manageScreenTint(0, player.state);
 
-		//Sprite Moving Test
-		/*
-		glm::vec2 dir = glm::vec2(player.position.x, player.position.y) - glm::vec2(spriteData[0].position.x, spriteData[0].position.y);
-		if (length(dir) > 2.0f) {
-			spriteData[0].position += vec3(normalize(dir) * 0.01f, 0.0f);
-		}
-		*/
+
+
 
 		//Update Dynamic UBOs.
 		render::updateSpriteSSBO(spriteSSBO, &spriteData);
@@ -287,7 +280,6 @@ int main() {
 		//Environment Shader.
 		glUseProgram(envShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
@@ -315,7 +307,6 @@ int main() {
 		//Sprite Shader.
 		glUseProgram(spriteShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		glBindTextureUnit(0, textureArray);
 
@@ -344,7 +335,6 @@ int main() {
 		if (!(dev::NO_INTERFACE > 0)) {
 			glUseProgram(uiShader);
 			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 			glBindTextureUnit(0, textureArray);
 
@@ -370,7 +360,6 @@ int main() {
 		//Display Shader and update screen.
 		glUseProgram(displayShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, depthSSBO);
 
 		GLuint screenResLoc = glGetUniformLocation(displayShader, "screenResolution");
 		glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
