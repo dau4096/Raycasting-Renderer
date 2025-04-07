@@ -40,24 +40,23 @@ enum VisplaneType {
 	V_HURT
 };
 
-//Only used for W_SWITCH, W_TRIGGER and V_TRIGGER.
-enum LogicInputType {
+enum LogicInput {
+	L_FALSE = 0,
+	L_TRUE = 1,
+
+	//Only used for W_SWITCH, W_TRIGGER and V_TRIGGER.
 	L_TOGGLE, //Successive presses turn it on, then off, then on etc.
 	L_PERMA, //Pressed once, stays on permanently after.
 	L_PUSH //Only on while being pressed.
 };
 
-enum BaseLogicInputs {
-	L_FALSE = 0,
-	L_TRUE = 1
-};
 
 enum GateType {
 	G_AND,			// &
 	G_OR, 			// |
 	G_NOT,			// ~
 	G_XOR,			// ^
-	G_JK,			// 2 inputs, turns on with input A and off with input B.
+	G_LATCH,		// 2 inputs, turns on with input A and off with input B.
 	G_PULSE,		// 1 input, turns on for 1 frame of the input, then off after.
 	G_TOGGLE,		// 1 input, turns on and off with that input.
 	G_PASSTHROUGH,	// =

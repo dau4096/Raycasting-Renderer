@@ -16,7 +16,7 @@ namespace logicFunctions {
 	static void NOT(int* A, int* B, int* Q, int* internalState) {*Q = ~(*A);}
 	static void XOR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) ^ (*B);}
 
-	static void JKFlipFlop(int* A, int* B, int* Q, int* internalState) { //Swap between 1 and 0 with A and B.
+	static void LATCH(int* A, int* B, int* Q, int* internalState) { //Swap between 1 and 0 with A and B.
 		if (((*A) & (*B)) > 0) {
 			//internalState remains unchanged; both inputs counteract each other's change.
 		} else if ((*A) > 0) {
@@ -27,20 +27,20 @@ namespace logicFunctions {
 		*Q = *internalState;
 	}
 
-	static void pulse(int* A, int* B, int* Q, int* internalState) { //If A is 1, return 1 for a single frame.
+	static void PULSE(int* A, int* B, int* Q, int* internalState) { //If A is 1, return 1 for a single frame.
 		if (((*internalState) < 1) && ((*A) == 1)) {*Q = 1;}
 		else {*Q = 0;}
 		*internalState = *A;
 	}
 
-	static void toggle(int* A, int* B, int* Q, int* internalState) { //Toggles between 1 and 0 if A is 1.
+	static void TOGGLE(int* A, int* B, int* Q, int* internalState) { //Toggles between 1 and 0 if A is 1.
 		if ((*A) == 1) {
 			*internalState = ((*internalState) < 1) ? 1 : 0;
 		}
 		*Q = *internalState;
 	}
 
-	static void passThrough(int* A, int* B, int* Q, int* internalState) {*Q = *A;}
+	static void PASSTHROUGH(int* A, int* B, int* Q, int* internalState) {*Q = *A;}
 }
 
 
@@ -52,6 +52,10 @@ namespace utils {
 	void raise(std::string str);
 	void pause();
 	void GLErrorcheck(std::string location = "", bool shouldPause = false);
+
+
+	static inline bool logicToBool(int A) {return (A > 0);}
+	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
@@ -77,10 +81,10 @@ namespace utils {
 					case G_OR: evalGate = logicFunctions::OR; break;
 					case G_NOT: evalGate = logicFunctions::NOT; break;
 					case G_XOR: evalGate = logicFunctions::XOR; break;
-					case G_JK: evalGate = logicFunctions::JKFlipFlop; break;
-					case G_PULSE: evalGate = logicFunctions::pulse; break;
-					case G_TOGGLE: evalGate = logicFunctions::toggle; break;
-					default: evalGate = logicFunctions::passThrough; break;
+					case G_LATCH: evalGate = logicFunctions::LATCH; break;
+					case G_PULSE: evalGate = logicFunctions::PULSE; break;
+					case G_TOGGLE: evalGate = logicFunctions::TOGGLE; break;
+					default: evalGate = logicFunctions::PASSTHROUGH; break;
 				}
 			}
 
@@ -90,7 +94,7 @@ namespace utils {
 
 			LogicGate() {
 				this->gateType = G_INVALID;
-				this->evalGate = logicFunctions::passThrough;
+				this->evalGate = logicFunctions::PASSTHROUGH;
 
 				this->inputA = nullptr;
 				this->inputB = nullptr;

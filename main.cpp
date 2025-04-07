@@ -97,7 +97,7 @@ std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 
 
 	//Trigger
-	wallData[13] = Wall(glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, -1.0f), 0.0f, 1.0f, 0, W_TRIGGER, &(flags[0]));
+	wallData[13] = Wall(glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, -1.0f), 0.0f, 1.0f, 0, W_SWITCH, &(flags[0]));
 
 	return wallData;
 }
@@ -139,15 +139,16 @@ int main() {
 	auto lightData = prepLights();
 	auto logicGates = prepLogic();
 	
-	logicGates[0] = LogicGate(GateType::G_PULSE, &(flags[1]), &(flags[0])); //Changes whether light is enabled or not.
-	logicGates[1] = LogicGate(GateType::G_TOGGLE, &(lightData[0].enabled), &(flags[1]));
+	logicGates[0] = LogicGate(GateType::G_PASSTHROUGH, &(flags[2]), &(flags[0]), &(flags[1])); //Changes whether light is enabled or not.
+	logicGates[1] = LogicGate(GateType::G_PASSTHROUGH, &(lightData[0].enabled), &(flags[2]));
+	logicGates[2] = LogicGate(GateType::G_PASSTHROUGH, &(spriteData[1].valid), &(flags[2]));
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 	currentScreenRes = display::SCREEN_RESOLUTION;
 
 
-	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer");
+	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer/GPU/With-Verticality");
 	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);

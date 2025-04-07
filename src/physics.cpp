@@ -310,7 +310,7 @@ void updateSpecials(
 			}
 
 			case W_SWITCH: { //Check for interaction with wall.
-				glm::vec2 dir = glm::vec2(sin(player->viewAngle), cos(player->viewAngle));
+				glm::vec2 dir = glm::vec2(sin((player->viewAngle + 180.0f) * constants::TO_RAD), cos((player->viewAngle + 180.0f) * constants::TO_RAD));
 				utils::Ray ray = utils::Ray(player->position, dir, playerConfig::PLAYER_INTERACT_RAY_DIST);
 				if (keyMap[GLFW_KEY_E] && (raycast(ray, wall) != constants::INVALIDv2)) {
 					wall.internal = (wall.internal == 1) ? 0 : 1;
