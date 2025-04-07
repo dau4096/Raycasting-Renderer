@@ -4,6 +4,68 @@
 #include "includes.h"
 #include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
 
+enum Event {
+	E_NONE, E_DEAD,
+	E_HURT, E_HEAL,
+	E_NEW_IH, E_ENERGY
+};
+
+enum ItemFloor {
+	IF_HEALTH_SMALL, IF_HEALTH_LARGE,
+	IF_ENERGY_SMALL, IF_ENERGY_LARGE,
+	IF_WEAPON
+};
+
+enum ItemHeld {
+	IH_NONE
+};
+
+enum SpriteType {
+	SPR_INVALID,
+	SPR_DECO,
+	SPR_LIGHT
+};
+
+enum WallType {
+	W_INVALID, W_NORMAL,
+	W_TRIGGER, W_SWITCH,
+	W_MOVEV_SLOW, W_MOVEV_FAST,
+	W_MOVEH_SLOW, W_MOVEH_FAST,
+};
+
+enum VisplaneType {
+	V_INVALID, V_NORMAL,
+	V_TRIGGER,
+	V_MOVEV_SLOW, V_MOVEV_FAST,
+	V_HURT
+};
+
+//Only used for W_SWITCH, W_TRIGGER and V_TRIGGER.
+enum LogicInputType {
+	L_TOGGLE, //Successive presses turn it on, then off, then on etc.
+	L_PERMA, //Pressed once, stays on permanently after.
+	L_PUSH //Only on while being pressed.
+};
+
+enum BaseLogicInputs {
+	L_FALSE = 0,
+	L_TRUE = 1
+};
+
+enum GateType {
+	G_AND,			// &
+	G_OR, 			// |
+	G_NOT,			// ~
+	G_XOR,			// ^
+	G_JK,			// 2 inputs, turns on with input A and off with input B.
+	G_PULSE,		// 1 input, turns on for 1 frame of the input, then off after.
+	G_TOGGLE,		// 1 input, turns on and off with that input.
+	G_PASSTHROUGH,	// =
+	G_INVALID		// N/A
+};
+
+
+
 namespace constants {
 	//Mathematical Constants
 	constexpr float PI = 3.14159265358979f;
@@ -28,6 +90,7 @@ namespace constants {
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
 	constexpr float AIR_FRICT_COEFF = 0.975f;
 	constexpr float KILL_PLANE_HEIGHT = -16.0f;
+	constexpr float MAX_STEP_HEIGHT = 0.42857f;
 
 
 	//Invalid returns for vectors and floats.
@@ -42,6 +105,11 @@ namespace constants {
 	constexpr int MAX_WALLS = 256;
 	constexpr int MAX_SPRITES = 32;
 	constexpr int MAX_LIGHTS = 64;
+	constexpr int MAX_GATES = 32;
+	constexpr int MAX_FLAGS = 128;
+
+	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.05;
+	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.15;
 }
 
 namespace display {
@@ -71,11 +139,19 @@ namespace playerConfig {
 	//Physics Collision Values
 	constexpr float PLAYER_COLLISION_RADIUS = 0.125f;
 	constexpr float PLAYER_COLLISION_HEIGHT = 1.75f;
+	constexpr float PLAYER_INTERACT_RAY_DIST = 1.0f;
 
 
 	//Player Initial Values
 	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(-2.5f, -2.5f, 1.0f);
 	constexpr float PLAYER_START_ANGLE = -45.0f;
+	constexpr int PLAYER_MAX_HEALTH = 128;
+	constexpr int PLAYER_MAX_ENERGY = 64;
+
+	constexpr int HEAL_SMALL = 32;
+	constexpr int HEAL_LARGE = 96;
+	constexpr int ENERGY_SMALL = 16;
+	constexpr int ENERGY_LARGE = 32;
 }
 
 namespace dev {

@@ -1,8 +1,6 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
-//Include project-wide constants header file.
-#include "constants.h"
 
 //Include GLEW.
 #include <C:/Users/User/Documents/code/.cpp/glew-2.1.0/include/GL/glew.h>
@@ -17,7 +15,6 @@
 //Include GLFW.
 #include <C:/Users/User/Documents/code/.cpp/glfw-3.4.bin.WIN64/include/GLFW/glfw3.h>
 
-//Include STB.
 
 //Include std subheaders.
 #include <iostream>
@@ -28,5 +25,7 @@
 #include <vector>
 #include <array>
 #include <unordered_map>
+#include <functional>
+#include <algorithm>
 
 #endif

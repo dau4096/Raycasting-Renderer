@@ -33,7 +33,27 @@ const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added 
 
 
 
+GLuint frameTextureID, depthSSBO;
+glm::ivec2 currentScreenRes;
+unordered_map<int, bool> keyMap = {};
+bool headLampEnabled = false;
+int tick = 0;
+
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+
+	currentScreenRes = glm::ivec2(width, height);
+
+	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
+}
+
+
+
 //TEMPORARY DATA SETUP. REPLACE WITH FILE LOADING.
+std::array<int, constants::MAX_FLAGS> flags;
 std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
 
@@ -52,11 +72,9 @@ std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 	return visplaneData;
 }
 
-
 std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 	std::array<utils::Wall, constants::MAX_WALLS> wallData;
 
-	//Walls
 	wallData[0] = Wall(glm::vec2(-1.0f, -1.0f), glm::vec2( 1.0f, -1.0f), 0.0f, 3.0f, 4);
 	wallData[1] = Wall(glm::vec2( 1.0f,  1.0f), glm::vec2(-1.0f, -1.0f), 0.0f, 1.0f, 4);
 
@@ -78,9 +96,11 @@ std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 	wallData[12] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2( 0.5f, -8.0f),  1.8f, 3.0f, 2);
 
 
+	//Trigger
+	wallData[13] = Wall(glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, -1.0f), 0.0f, 1.0f, 0, W_TRIGGER, &(flags[0]));
+
 	return wallData;
 }
-
 
 std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
 	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
@@ -90,9 +110,7 @@ std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
 	spriteData[2] = Sprite(glm::vec3(-5.0f, -10.0f, 1.0f), 1.0f, 8); //Light Marker
 
 	return spriteData;
-
 }
-
 
 std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
 	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
@@ -103,34 +121,26 @@ std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
 	return lightData;
 }
 
+std::array<utils::LogicGate, constants::MAX_GATES> prepLogic() {
+	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
 
 
-GLuint frameTextureID, depthSSBO;
-glm::ivec2 currentScreenRes;
-unordered_map<int, bool> keyMap = {};
-bool headLampEnabled = false;
-int tick = 0;
-
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-
-	currentScreenRes = glm::ivec2(width, height);
-
-	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
+	return logicGates;
 }
+
 
 
 int main() {
 	try { //Catch exceptions
-
-	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData = prepVisplanes();
-	std::array<utils::Wall, constants::MAX_WALLS> wallData = prepWalls();
-	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData = prepSprites();
-	std::array<utils::Light, constants::MAX_LIGHTS> lightData = prepLights();
 	Player player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
+	auto visplaneData = prepVisplanes();
+	auto wallData = prepWalls();
+	auto spriteData = prepSprites();
+	auto lightData = prepLights();
+	auto logicGates = prepLogic();
+	
+	logicGates[0] = LogicGate(GateType::G_PULSE, &(flags[1]), &(flags[0])); //Changes whether light is enabled or not.
+	logicGates[1] = LogicGate(GateType::G_TOGGLE, &(lightData[0].enabled), &(flags[1]));
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
@@ -238,11 +248,22 @@ int main() {
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
 
-		player = physics::playerMove(player, keyMap, &wallData, &spriteData, &visplaneData);
+		//Update logic states.
+		for (int index=0; index<constants::MAX_GATES; index++) {
+			LogicGate gate = logicGates[index];
+			if (gate.gateType == G_INVALID) {continue;}
+			gate.evaluateState();
+			logicGates[index] = gate;
+		}
+		physics::updateSpecials(&wallData, &visplaneData, &player, keyMap);
+
+
+		physics::playerMove(&player, keyMap, &wallData, &spriteData, &visplaneData);
 		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (playerConfig::PLAYER_COLLISION_HEIGHT/3.0f) + viewBob);
 
-		glm::vec4 tintData = render::manageScreenTint(0, utils::E_NONE);
+
+		glm::vec4 tintData = render::manageScreenTint(0, player.state);
 
 		//Sprite Moving Test
 		/*
@@ -258,9 +279,10 @@ int main() {
 		utils::GLErrorcheck("Updating UBOs", true);
 
 
+		int lightFlickerRNG = utils::RNGc();
 
 
-		GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation, vignetteColourLocation;
+		GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation, vignetteColourLocation, lightFlickerLocation;
 		//Environment Shader.
 		glUseProgram(envShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -273,12 +295,14 @@ int main() {
 		zoomLocation = glGetUniformLocation(envShader, "zoom");
 		uvLocation = glGetUniformLocation(envShader, "drawUV");
 		lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
+		lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
 		
 		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 		glUniform1i(uvLocation, dev::DRAW_UV);
 		glUniform1i(lightLocation, headLampEnabled);
+		glUniform1i(lightFlickerLocation, lightFlickerRNG);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -299,12 +323,14 @@ int main() {
 		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
 		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
 		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
+		lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
 		
 		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 		glUniform1i(uvLocation, dev::DRAW_UV);
 		glUniform1i(lightLocation, headLampEnabled);
+		glUniform1i(lightFlickerLocation, lightFlickerRNG);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);

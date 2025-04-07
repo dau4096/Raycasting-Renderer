@@ -8,6 +8,7 @@ uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
 uniform bool headLampEnabled;
+uniform int headLampFlicker;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
@@ -447,7 +448,7 @@ void main() {
 					Light headLamp;
 					headLamp.position = playerPosition;
 					headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
-					headLamp.intensity = 3.0f;
+					headLamp.intensity = 2.0f + (headLampFlicker / 128); //headLampFlicker is 0-255.
 					headLamp.valid = 1;
 
 

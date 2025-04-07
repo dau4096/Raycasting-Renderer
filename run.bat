@@ -15,12 +15,13 @@ IF EXIST "render.o" (
 IF EXIST "utils.o" (
     DEL /Q "utils.o"
 )
-IF EXIST "global.o" (
-    DEL /Q "global.o"
-)
 
 
 CD C:\Users\User\Documents\GitHub\Raycasting-Renderer
+IF EXIST "main.o" (
+    DEL /Q "main.o"
+)
+
 REM Compile.
 mingw32-make
 REM Wait for user, then start app.exe.

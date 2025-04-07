@@ -145,7 +145,7 @@ GLuint createVisplaneUBO() {
 	GLuint visplaneUBO;
 	glGenBuffers(1, &visplaneUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Visplane) * constants::MAX_VISPLANES, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, nullptr, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 7, visplaneUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -153,8 +153,13 @@ GLuint createVisplaneUBO() {
 }
 
 void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants::MAX_VISPLANES>* dataSet) {
+	std::array<utils::VisplaneGPU, constants::MAX_VISPLANES> visplaneBuffer;
+	for (int index=0; index<constants::MAX_VISPLANES; index++) {
+		visplaneBuffer[index] = VisplaneGPU(&(dataSet->at(index)));
+	}
+
     glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::Visplane) * constants::MAX_VISPLANES, dataSet->data());
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, visplaneBuffer.data());
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -164,7 +169,7 @@ GLuint createWallUBO() {
 	GLuint wallUBO;
 	glGenBuffers(1, &wallUBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::Wall) * constants::MAX_WALLS, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::WallGPU) * constants::MAX_WALLS, nullptr, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, wallUBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -172,11 +177,16 @@ GLuint createWallUBO() {
 }
 
 void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet) {
+	std::array<utils::WallGPU, constants::MAX_WALLS> wallBuffer;
+	for (int index=0; index<constants::MAX_WALLS; index++) {
+		wallBuffer[index] = WallGPU(&(dataSet->at(index)));
+	}
+
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
 	void* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Wall) * constants::MAX_WALLS);
+		memcpy(ptr, wallBuffer.data(), sizeof(utils::WallGPU) * constants::MAX_WALLS);
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	} else {
 		raise("Failed to write data to wallUBO.");
@@ -192,7 +202,7 @@ GLuint createSpriteSSBO() {
 	glGenBuffers(1, &spriteSSBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
 
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Sprite) * constants::MAX_SPRITES, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::SpriteGPU) * constants::MAX_SPRITES, nullptr, GL_DYNAMIC_DRAW);
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteSSBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -201,11 +211,16 @@ GLuint createSpriteSSBO() {
 }
 
 void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
+	std::array<utils::SpriteGPU, constants::MAX_SPRITES> spriteBuffer;
+	for (int index=0; index<constants::MAX_SPRITES; index++) {
+		spriteBuffer[index] = SpriteGPU(&(dataSet->at(index)));
+	}
+
 	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Sprite) * constants::MAX_SPRITES);
+		memcpy(ptr, spriteBuffer.data(), sizeof(utils::SpriteGPU) * constants::MAX_SPRITES);
 		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	} else {
 		raise("Failed to write data to spriteUBO.");
@@ -220,7 +235,7 @@ GLuint createLightSSBO() {
 	glGenBuffers(1, &lightSSBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
 
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::Light) * constants::MAX_LIGHTS, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::LightGPU) * constants::MAX_LIGHTS, nullptr, GL_DYNAMIC_DRAW);
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightSSBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -229,11 +244,16 @@ GLuint createLightSSBO() {
 }
 
 void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
+	std::array<utils::LightGPU, constants::MAX_LIGHTS> lightBuffer;
+	for (int index=0; index<constants::MAX_LIGHTS; index++) {
+		lightBuffer[index] = LightGPU(&(dataSet->at(index)));
+	}
+
 	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
-		memcpy(ptr, dataSet->data(), sizeof(utils::Light) * constants::MAX_LIGHTS);
+		memcpy(ptr, lightBuffer.data(), sizeof(utils::LightGPU) * constants::MAX_LIGHTS);
 		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	} else {
 		raise("Failed to write data to lightUBO.");
@@ -391,9 +411,9 @@ float viewBob(float tick, utils::Player player) {
 }
 
 
-glm::uint tickCounter = 0, duration = 0;
+int tickCounter = 0, duration = 0;
 glm::vec3 screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec4 manageScreenTint(glm::uint newDuration=0, glm::uint event=E_NONE) {
+glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE) {
 	if (newDuration > 0) {
 		tickCounter = newDuration;
 		duration = newDuration;
@@ -401,11 +421,17 @@ glm::vec4 manageScreenTint(glm::uint newDuration=0, glm::uint event=E_NONE) {
 			case E_NONE:
 				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
 				break;
-			case E_PAIN:
+			case E_HURT:
 				screenTintRGB = glm::vec3(1.0f, 0.0f, 0.0f);
 				break;
 			case E_HEAL:
 				screenTintRGB = glm::vec3(0.0f, 1.0f, 0.0f);
+				break;
+			case E_ENERGY:
+				screenTintRGB = glm::vec3(1.0f, 1.0f, 0.0f);
+				break;
+			case E_NEW_IH:
+				screenTintRGB = glm::vec3(0.125f, 0.125f, 0.125f);
 				break;
 			default:
 				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
