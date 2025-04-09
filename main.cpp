@@ -27,7 +27,8 @@ const std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
 	GLFW_KEY_SPACE,
 	GLFW_KEY_LEFT_SHIFT, GLFW_KEY_LEFT_CONTROL,
 	GLFW_KEY_1, GLFW_KEY_C,
-	GLFW_KEY_ESCAPE
+	GLFW_KEY_ESCAPE,
+	GLFW_KEY_LEFT, GLFW_KEY_RIGHT
 };
 
 
@@ -35,12 +36,14 @@ const std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
 
 GLuint frameTextureID, depthSSBO;
 glm::ivec2 currentScreenRes;
-unordered_map<int, bool> keyMap = {};
+unordered_map<int, bool> keyMap;
+GLFWgamepadstate joystickInput;
 bool headLampEnabled = false;
+bool hasJoystickActive = false;
 int tick = 0;
 
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -48,6 +51,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	currentScreenRes = glm::ivec2(width, height);
 
 	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
+}
+
+void joystickCallback(int joystickID, int event) {
+	if ((event == GLFW_CONNECTED) && glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) {
+		hasJoystickActive = true;
+	} else if (event == GLFW_RELEASE) {
+		hasJoystickActive = false;
+	}
 }
 
 
@@ -160,9 +171,14 @@ int main() {
 
 
 	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer/GPU");
-	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
+	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
+
+	const char* mappings = render::readFile("src/data/exct/gamecontrollerdb.txt").c_str();
+	glfwSetJoystickCallback(joystickCallback);
+	glfwUpdateGamepadMappings(mappings);
+	hasJoystickActive = glfwJoystickIsGamepad(GLFW_JOYSTICK_1);
 
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
@@ -216,6 +232,7 @@ int main() {
 		tick++;
 		double frameStart = glfwGetTime();
 		glfwPollEvents();
+		glfwGetGamepadState(GLFW_JOYSTICK_1, &joystickInput);
 
 		// Get inputs for this frame
 		for (int key : monitoredKeys) {
@@ -235,7 +252,7 @@ int main() {
 		}
 
 
-		if (keyMap[GLFW_KEY_ESCAPE]) {
+		if (keyMap[GLFW_KEY_ESCAPE] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_B]) {
 			break; //Quit
 		}
 
@@ -246,7 +263,7 @@ int main() {
 			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 		}
 
-		if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
+		if (keyMap[GLFW_KEY_LEFT_CONTROL] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB]) {
 			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
 		} else {
 			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_STAND;
@@ -257,7 +274,12 @@ int main() {
 		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
 
 		double cursorXDelta = cursorXPos - cursorXPosPrev;
-		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
+		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURSOR / display::ZOOM_MULT);
+		if (keyMap[GLFW_KEY_LEFT]) {player.viewAngle -= (playerConfig::TURN_SPEED_KEYBOARD / display::ZOOM_MULT);}
+		if (keyMap[GLFW_KEY_RIGHT]) {player.viewAngle += (playerConfig::TURN_SPEED_KEYBOARD / display::ZOOM_MULT);}
+		if (abs(joystickInput.axes[GLFW_GAMEPAD_AXIS_RIGHT_X]) > playerConfig::CONTROLLER_MIN_MOVEMENT) {
+			player.viewAngle += joystickInput.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] * (playerConfig::TURN_SPEED_CONTROLLER / display::ZOOM_MULT);
+		}
 		player.viewAngle = utils::angleClamp(player.viewAngle);
 
 
@@ -268,10 +290,10 @@ int main() {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, keyMap, interactKey);
+		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
 
 
-		physics::playerMove(&player, keyMap, &wallData, &spriteData, &visplaneData);
+		physics::playerMove(&player, keyMap, joystickInput, hasJoystickActive, &wallData, &spriteData, &visplaneData);
 		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 

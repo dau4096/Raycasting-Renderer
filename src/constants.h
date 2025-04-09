@@ -126,8 +126,10 @@ namespace display {
 
 namespace playerConfig {
 	//Preference Speeds
-	constexpr float TURN_SPEED_KEYB = 1.0f;
-	constexpr float TURN_SPEED_CURS = 0.25f;
+	constexpr float TURN_SPEED_KEYBOARD = 5.0f;
+	constexpr float TURN_SPEED_CURSOR = 0.25f;
+	constexpr float TURN_SPEED_CONTROLLER = 10.0f;
+	constexpr float CONTROLLER_MIN_MOVEMENT = 0.05f;
 
 	constexpr float MOVE_SPEED_BASE = 0.05f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;

@@ -7,6 +7,7 @@
 
 namespace render {
     GLFWwindow* initializeWindow(int width, int height, const char* title);
+    std::string readFile(const std::string& filePath);
     GLuint createShaderProgram(std::string name, bool hasVertexSource=true);
 
 

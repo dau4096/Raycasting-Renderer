@@ -403,6 +403,7 @@ float viewBob(float tick, utils::Player player) {
 	if (player.touchingFloor) {
 		float seconds = tick / static_cast<float>(constants::HZ);
 		float playerSpeed = length(glm::vec2(player.velocity.x, player.velocity.y));
+		if (playerSpeed < 0.1f) {return 0.0f;}
 		float speedMultiplier = glm::clamp(playerSpeed / playerConfig::MAX_AIR_SPEED_XY, 0.0f, 1.0f);
 		float offset = sin(seconds * 6.0f) * 0.25f * speedMultiplier;
 		return offset;

@@ -81,9 +81,10 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 
 
 void playerMove(
-		utils::Player *player,
+		utils::Player* player,
 		unordered_map<int, bool> keyMap,
-		std::array<utils::Wall, constants::MAX_WALLS>*wallData,
+		GLFWgamepadstate joystickInput, bool hasJoystickActive,
+		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
 	) {
@@ -105,42 +106,64 @@ void playerMove(
 	float playerSpeed = playerConfig::MOVE_SPEED_BASE;
 	float maxV = playerConfig::MOVE_SPEED_BASE;
 
-	if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
+	if (keyMap[GLFW_KEY_LEFT_CONTROL] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB]) {
 		playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
-	} else if (keyMap[GLFW_KEY_LEFT_SHIFT]) {
+	} else if (keyMap[GLFW_KEY_LEFT_SHIFT] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB]) {
 		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
 	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
 
-	// Determine the movement vector based on key presses
-	if (keyMap[GLFW_KEY_W]) {
-		float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX += playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
-		newY += playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
+	//Determine the movement vector based off of inputs.
+	if (hasJoystickActive) { //GamePad;
+		float reduction = (player->touchingFloor) ? 1.0f : 0.5f;
+		glm::vec2 controllerMove = glm::normalize(glm::vec2(
+			floor(joystickInput.axes[GLFW_GAMEPAD_AXIS_LEFT_X])/10.0f,
+			floor(joystickInput.axes[GLFW_GAMEPAD_AXIS_LEFT_Y])/10.0f
+		)) * playerSpeed * reduction;
+		//U/D
+		newX += controllerMove.y * sin((player->viewAngle+180.0f) * constants::TO_RAD);
+		newY += controllerMove.y * cos((player->viewAngle+180.0f) * constants::TO_RAD);
+		//L/R
+		newX += controllerMove.x * cos(player->viewAngle * constants::TO_RAD);
+		newY += controllerMove.x * -sin(player->viewAngle * constants::TO_RAD);
+
+		cout << newX << " " << newY << endl;
+		printVec2(controllerMove);
+
+
+
+	} else { //Keyboard/Mouse
+		if (keyMap[GLFW_KEY_W]) {
+			float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX += playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
+			newY += playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
+		}
+		if (keyMap[GLFW_KEY_S]) {
+			float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX -= playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
+			newY -= playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
+		}
+		if (keyMap[GLFW_KEY_A]) {
+			float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX -= playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
+			newY -= playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
+		}
+		if (keyMap[GLFW_KEY_D]) {
+			float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
+			newY += playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
+		}
 	}
-	if (keyMap[GLFW_KEY_S]) {
-		float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX -= playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
-		newY -= playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
-	}
-	if (keyMap[GLFW_KEY_A]) {
-		float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX -= playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
-		newY -= playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
-	}
-	if (keyMap[GLFW_KEY_D]) {
-		float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
-		newY += playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
-	}
-	if (keyMap[GLFW_KEY_SPACE] && !prevJump && touchingFloorCheck) {
+	if (std::isnan(newX) || std::isnan(newY)) {return;}
+
+	if ((keyMap[GLFW_KEY_SPACE] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_A]) && !prevJump && touchingFloorCheck) {
 		player->velocity.z += playerConfig::JUMP_INIT_SPEED;
 		player->position.z += 0.025;
 	}
@@ -336,16 +359,16 @@ void applyWallHorizontalMovement(utils::Wall& wall, float speed, bool enabled) {
 	if (abs(wall.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
 		return;
 
-	} else if (wall.data < 0) { //Movement toward wall.start.
-		if (enabled && (wall.internal > wall.data)) { //Turned on; move toward start.
-			float newInternal = std::max(wall.internal - speed, wall.data);
+	} else if (wall.data/2.0f < 0) { //Movement toward wall.start.
+		if (enabled && (wall.internal > wall.data/2.0f)) { //Turned on; move toward start.
+			float newInternal = std::max(wall.internal - (speed/2.0f), wall.data/2.0f);
 			float delta = wall.internal - newInternal;
 			wall.start -= wallDir * delta;
 			wall.end -= wallDir * delta;
 			wall.internal = newInternal;
 
 		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall.internal + speed, 0.0f);
+			float newInternal = std::min(wall.internal + (speed/2.0f), 0.0f);
 			float delta = newInternal - wall.internal;
 			wall.start += wallDir * delta;
 			wall.end += wallDir * delta;
@@ -353,15 +376,15 @@ void applyWallHorizontalMovement(utils::Wall& wall, float speed, bool enabled) {
 		}
 
 	} else { //Movement toward wall.end.
-		if (enabled && (wall.internal < wall.data)) { //Turned on; move toward end.
-			float newInternal = std::min(wall.internal + speed, wall.data);
+		if (enabled && (wall.internal < wall.data/2.0f)) { //Turned on; move toward end.
+			float newInternal = std::min(wall.internal + (speed/2.0f), wall.data/2.0f);
 			float delta = newInternal - wall.internal;
 			wall.start += wallDir * delta;
 			wall.end += wallDir * delta;
 			wall.internal = newInternal;
 
 		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall.internal - speed, 0.0f);
+			float newInternal = std::max(wall.internal - (speed/2.0f), 0.0f);
 			float delta = wall.internal - newInternal;
 			wall.start -= wallDir * delta;
 			wall.end -= wallDir * delta;
@@ -410,7 +433,7 @@ void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool ena
 void updateSpecials(
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		utils::Player *player, std::unordered_map<int, bool> keyMap,
+		utils::Player *player,
 		bool interactKey
 	) {
 
