@@ -87,6 +87,7 @@ void playerMove(
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
 	) {
+	Player playerCopy = *player;
 
 	if (player->position.z <= constants::KILL_PLANE_HEIGHT) {
 		//Reset player.
@@ -212,7 +213,9 @@ void playerMove(
 
 
 	if (dev::NO_COLLIDE > 0) {
-		player->position += glm::vec3(player->velocity.x, player->velocity.y, 0.0f);
+		glm::vec3 newPos = player->position + glm::vec3(player->velocity.x, player->velocity.y, 0.0f);
+		if (isVec3NaN(newPos)) {return;}
+		player->position = newPos;
 		return;
 	}
 
@@ -286,6 +289,10 @@ void playerMove(
 
 	player->velocity.z -= constants::GRAVITY_ACCEL / static_cast<float>(constants::DT);
 	player->position += player->velocity;
+
+	if (isVec3NaN(player->position) || isVec3NaN(player->velocity)) {
+		*player = playerCopy; //Revert back.
+	}
 
 	return;
 };

@@ -56,6 +56,8 @@ namespace utils {
 
 	static inline bool logicToBool(int A) {return (A > 0);}
 	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}
+	static inline bool isVec2NaN(glm::vec2 v) {return (std::isnan(v.x) || std::isnan(v.y));}
+	static inline bool isVec3NaN(glm::vec3 v) {return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z));}
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
