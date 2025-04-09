@@ -88,6 +88,7 @@ float fragDepth;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float DEFAULT_BRIGHTNESS = 0.25f;
+const float HEADLAMP_MIN_LIGHT = 0.1f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
 const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 
@@ -380,14 +381,14 @@ void main() {
 				Light headLamp;
 				headLamp.position = playerPosition;
 				headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
-				headLamp.intensity = 2.0f + (headLampFlicker / 128); //headLampFlicker is 0-255.
+				headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
 				headLamp.valid = 1;
 
 
 				vec3 realPosition3D = vec3(closestSprite.position.xy, 1.0f);
 				float distance = length(realPosition3D - headLamp.position);
 				float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-				float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
+				float brightness = clamp(attenuation, HEADLAMP_MIN_LIGHT, 2.5);
 
 				vec3 lightContribution = headLamp.colour * brightness;
 				vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);

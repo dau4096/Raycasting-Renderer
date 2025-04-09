@@ -92,6 +92,7 @@ const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float MIN_WALL_DIST = 0.125f;
 const float DEFAULT_BRIGHTNESS = 0.1f;
+const float HEADLAMP_MIN_LIGHT = 0.025f;
 const vec2 INVALID = vec2(1e30f, 1e30f);
 const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 const vec4 INVALIDv4 = vec4(1e30f, 1e30f, 1e30f, 1e30f);
@@ -445,7 +446,7 @@ void main() {
 					Light headLamp;
 					headLamp.position = playerPosition;
 					headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
-					headLamp.intensity = 2.0f + (headLampFlicker / 128); //headLampFlicker is 0-255.
+					headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
 					headLamp.valid = 1;
 
 
@@ -454,12 +455,12 @@ void main() {
 					float normalEffect = normalDot * 0.6 + 0.4; //Dot of dir of player-wallIntersect, and intersect-light.
 
 					if (normalDot < 0.0f) {
-						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
+						fragColour = vec4(min(albedo.rgb * HEADLAMP_MIN_LIGHT + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
 					} else {
 						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 						float distance = length(intersect3D - headLamp.position);
 						float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation * normalEffect, DEFAULT_BRIGHTNESS, 2.5);
+						float brightness = clamp(attenuation * normalEffect, HEADLAMP_MIN_LIGHT, 2.5);
 
 						vec3 lightContribution = headLamp.colour * brightness;
 						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);

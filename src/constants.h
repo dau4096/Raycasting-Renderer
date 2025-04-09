@@ -107,8 +107,8 @@ namespace constants {
 	constexpr int MAX_GATES = 32;
 	constexpr int MAX_FLAGS = 128;
 
-	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.05;
-	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.15;
+	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
+	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
 }
 
 namespace display {
@@ -130,6 +130,7 @@ namespace playerConfig {
 	constexpr float TURN_SPEED_CURS = 0.25f;
 
 	constexpr float MOVE_SPEED_BASE = 0.05f;
+	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
 	constexpr float JUMP_INIT_SPEED = 0.25f;
 	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.0f;
@@ -137,7 +138,8 @@ namespace playerConfig {
 
 	//Physics Collision Values
 	constexpr float PLAYER_COLLISION_RADIUS = 0.125f;
-	constexpr float PLAYER_COLLISION_HEIGHT = 1.75f;
+	constexpr float PLAYER_COLLISION_HEIGHT_STAND = 1.75f;
+	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 1.0f;
 	constexpr float PLAYER_INTERACT_RAY_DIST = 2.0f;
 
 

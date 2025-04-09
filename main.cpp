@@ -20,14 +20,14 @@ const std::array<std::string, 32> textureNames = {
 };
 
 // Keyboard presses to monitor.
-const std::array<int, 16> monitoredKeys = { // 16 long to cover more keys added later, without having to change that value.
+const std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
 	GLFW_KEY_W, GLFW_KEY_S,
 	GLFW_KEY_A, GLFW_KEY_D,
 	GLFW_KEY_E, GLFW_KEY_F,
 	GLFW_KEY_SPACE,
-	GLFW_KEY_LEFT_SHIFT,
+	GLFW_KEY_LEFT_SHIFT, GLFW_KEY_LEFT_CONTROL,
 	GLFW_KEY_1, GLFW_KEY_C,
-	GLFW_KEY_ESCAPE,
+	GLFW_KEY_ESCAPE
 };
 
 
@@ -69,6 +69,14 @@ std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
 	visplaneData[7] = Visplane(vec2(6.0f, -2.0f), vec2(8.0f, -3.0f), 0.85715f, 7);
 	visplaneData[8] = Visplane(vec2(6.0f, -1.0f), vec2(8.0f, -2.0f), 0.42858f, 7);
 
+
+	//Trigger;
+	visplaneData[9] = Visplane(vec2(-0.5f, -10.0f), vec2(0.5f, -11.0f), 0.25f, 4, V_TRIGGER, &(flags[3]));
+
+	//Moving surface;
+	visplaneData[10] = Visplane(vec2(-2.0f, -7.0f), vec2(-4.0f, -5.0f), 0.1f, 5, V_MOVEV_SLOW, &(flags[0]), 1.0f);
+	visplaneData[11] = Visplane(vec2(-5.0f, -5.0f), vec2(-3.0f, -3.0f), 0.25f, 4, V_TRIGGER, &(flags[3]));
+
 	return visplaneData;
 }
 
@@ -96,8 +104,11 @@ std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
 	wallData[12] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2( 0.5f, -8.0f),  1.8f, 3.0f, 2);
 
 
-	//Trigger
+	//Switch;
 	wallData[13] = Wall(glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, -1.0f), 0.0f, 1.0f, 0, W_SWITCH, &(flags[0]));
+
+	//"Door";
+	wallData[14] = Wall(glm::vec2(0.5f, -8.0f), glm::vec2(-0.5f, -8.0f), 0.0f, 1.8f, 1, W_MOVEH_SLOW, &(flags[0]), -1.8f);
 
 	return wallData;
 }
@@ -140,8 +151,8 @@ int main() {
 	auto logicGates = prepLogic();
 	
 	logicGates[0] = LogicGate(GateType::G_PASSTHROUGH, &(flags[2]), &(flags[0]), &(flags[1])); //Changes whether light is enabled or not.
-	logicGates[1] = LogicGate(GateType::G_PASSTHROUGH, &(lightData[0].enabled), &(flags[2]));
-	logicGates[2] = LogicGate(GateType::G_PASSTHROUGH, &(spriteData[1].valid), &(flags[2]));
+	logicGates[1] = LogicGate(GateType::G_PASSTHROUGH, &(lightData[0].enabled), &(flags[0]));
+	logicGates[2] = LogicGate(GateType::G_PASSTHROUGH, &(spriteData[1].valid), &(flags[0]));
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
@@ -190,12 +201,6 @@ int main() {
 	GLuint VAO = render::getVAO();
 
 
-	//Update Visplane and Wall UBOs
-	//Will be made dynamic later when moving environment objects are added.
-	render::updateVisplaneUBO(visplaneUBO, &visplaneData);
-	render::updateWallUBO(wallUBO, &wallData);
-
-
 	utils::GLErrorcheck("Initialisation", true);
 
 
@@ -205,6 +210,7 @@ int main() {
 		keyMap[key] = false;
 	}
 	bool interactKey = false;
+	int lightFlickerRNG;
 
 	while (!glfwWindowShouldClose(Window)) {
 		tick++;
@@ -240,6 +246,12 @@ int main() {
 			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 		}
 
+		if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
+			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
+		} else {
+			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_STAND;
+		}
+
 
 
 		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
@@ -261,7 +273,7 @@ int main() {
 
 		physics::playerMove(&player, keyMap, &wallData, &spriteData, &visplaneData);
 		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
-		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (playerConfig::PLAYER_COLLISION_HEIGHT/3.0f) + viewBob);
+		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
 		glm::vec4 tintData = render::manageScreenTint(0, player.state);
@@ -270,12 +282,16 @@ int main() {
 
 
 		//Update Dynamic UBOs.
+		render::updateVisplaneUBO(visplaneUBO, &visplaneData);
+		render::updateWallUBO(wallUBO, &wallData);
 		render::updateSpriteSSBO(spriteSSBO, &spriteData);
 		render::updateLightSSBO(lightSSBO, &lightData);
 		utils::GLErrorcheck("Updating UBOs", true);
 
 
-		int lightFlickerRNG = utils::RNGc();
+		if (headLampEnabled) {
+			lightFlickerRNG = utils::RNGc();
+		}
 
 
 		GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation, vignetteColourLocation, lightFlickerLocation;

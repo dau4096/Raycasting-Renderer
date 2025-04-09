@@ -77,12 +77,12 @@ const unsigned char RNGtbl[256] = {
 };
 
 int RNGc() {
-	RNGcIdx = (RNGcIdx++)&0xFF;
+	RNGcIdx = (RNGcIdx+1)&0xFF;
 	return RNGtbl[RNGcIdx];
 }
 
 int RNGw() {
-	RNGwIdx = (RNGwIdx++)&0xFF;
+	RNGwIdx = (RNGwIdx+1)&0xFF;
 	return RNGtbl[RNGwIdx];
 }
 
