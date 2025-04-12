@@ -15,6 +15,9 @@ IF EXIST "render.o" (
 IF EXIST "utils.o" (
     DEL /Q "utils.o"
 )
+IF EXIST "stageLoader.o" (
+    DEL /Q "stageLoader.o"
+)
 
 
 CD C:\Users\User\Documents\GitHub\Raycasting-Renderer

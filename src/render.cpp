@@ -41,21 +41,9 @@ GLFWwindow* initializeWindow(int width, int height, const char* title) {
 }
 
 
-std::string readFile(const std::string& filePath) {
-	std::ifstream fileStream(filePath);
-	if (!fileStream.is_open()) {
-		raise("Error: Could not open file: " + string(filePath));
-		return "";
-	}
-
-	std::stringstream buffer;
-	buffer << fileStream.rdbuf();
-	return buffer.str();
-}
-
 
 GLuint compileShader(GLenum shaderType, string filePath) {
-	std::string source = readFile(filePath);
+	std::string source = utils::readFile(filePath);
 	const char* src = source.c_str();
 
 	// Create a shader object
@@ -246,6 +234,7 @@ GLuint createLightSSBO() {
 void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
 	std::array<utils::LightGPU, constants::MAX_LIGHTS> lightBuffer;
 	for (int index=0; index<constants::MAX_LIGHTS; index++) {
+		if (dataSet->at(index).valid <= 0) {continue;}
 		lightBuffer[index] = LightGPU(&(dataSet->at(index)));
 	}
 
@@ -259,21 +248,6 @@ void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_L
 		raise("Failed to write data to lightUBO.");
 	}
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
-
-
-GLuint createDepthSSBO(int width) {
-	GLuint SSBO;
-
-	glGenBuffers(1, &SSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
-
-	glBufferData(GL_SHADER_STORAGE_BUFFER, width * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, SSBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-	return SSBO;
 }
 
 

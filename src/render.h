@@ -3,7 +3,7 @@
 
 #include "includes.h"
 #include "utils.h"
-#include <array>  // Include this header for std::array
+#include <array>
 
 namespace render {
     GLFWwindow* initializeWindow(int width, int height, const char* title);

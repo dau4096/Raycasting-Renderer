@@ -1,6 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 #include "src/includes.h"
+#include "src/stageLoader.h"
 #include "src/physics.h"
 #include "src/render.h"
 #include "src/utils.h"
@@ -46,113 +47,30 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glEnable(GL_BLEND);
 
 	currentScreenRes = glm::ivec2(width, height);
-
-	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
 }
 
 
-
-//TEMPORARY DATA SETUP. REPLACE WITH FILE LOADING.
-std::array<int, constants::MAX_FLAGS> flags;
-std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
-	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
-
-	visplaneData[0] = Visplane(vec2(-10.0f, -14.0f), vec2(10.0f, 10.0f), 0.0f, 2);
-	visplaneData[1] = Visplane(vec2(-8.0f, -8.0f), vec2( 8.0f, -12.0f), 3.0f, 3);
-
-	//Stairs (0.42857u each);
-	visplaneData[2] = Visplane(vec2(6.0f, -7.0f), vec2(8.0f, -8.0f), 3.00000f, 7);
-	visplaneData[3] = Visplane(vec2(6.0f, -6.0f), vec2(8.0f, -7.0f), 2.57143f, 7);
-	visplaneData[4] = Visplane(vec2(6.0f, -5.0f), vec2(8.0f, -6.0f), 2.14286f, 7);
-	visplaneData[5] = Visplane(vec2(6.0f, -4.0f), vec2(8.0f, -5.0f), 1.71429f, 7);
-	visplaneData[6] = Visplane(vec2(6.0f, -3.0f), vec2(8.0f, -4.0f), 1.28572f, 7);
-	visplaneData[7] = Visplane(vec2(6.0f, -2.0f), vec2(8.0f, -3.0f), 0.85715f, 7);
-	visplaneData[8] = Visplane(vec2(6.0f, -1.0f), vec2(8.0f, -2.0f), 0.42858f, 7);
-
-
-	//Trigger;
-	visplaneData[9] = Visplane(vec2(-0.5f, -10.0f), vec2(0.5f, -11.0f), 0.25f, 4, V_TRIGGER, &(flags[3]));
-
-	//Moving surface;
-	visplaneData[10] = Visplane(vec2(-2.0f, -7.0f), vec2(-4.0f, -5.0f), 0.1f, 5, V_MOVEV_SLOW, &(flags[0]), 1.0f);
-	visplaneData[11] = Visplane(vec2(-5.0f, -5.0f), vec2(-3.0f, -3.0f), 0.25f, 4, V_TRIGGER, &(flags[3]));
-
-	return visplaneData;
-}
-
-std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
-	std::array<utils::Wall, constants::MAX_WALLS> wallData;
-
-	wallData[0] = Wall(glm::vec2(-1.0f, -1.0f), glm::vec2( 1.0f, -1.0f), 0.0f, 3.0f, 4);
-	wallData[1] = Wall(glm::vec2( 1.0f,  1.0f), glm::vec2(-1.0f, -1.0f), 0.0f, 1.0f, 4);
-
-	wallData[2] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2(-8.0f, -8.0f), 0.0f, 3.0f, 2);
-	wallData[3] = Wall(glm::vec2( 8.0f, -8.0f), glm::vec2( 0.5f, -8.0f), 0.0f, 3.0f, 2);
-
-	wallData[4] = Wall(glm::vec2(-8.0f, -8.0f), glm::vec2(-8.0f,  0.0f), 0.0f, 2.0f, 0);
-	wallData[5] = Wall(glm::vec2(-8.0f,  0.0f), glm::vec2(-8.0f,  8.0f), 0.0f, 2.0f, 0);
-
-	wallData[6] = Wall(glm::vec2(-8.0f,  8.0f), glm::vec2( 0.0f,  8.0f), 0.0f, 2.0f, 0);
-	wallData[7] = Wall(glm::vec2( 0.0f,  8.0f), glm::vec2( 8.0f,  8.0f), 0.0f, 2.0f, 0);
-
-	wallData[8] = Wall(glm::vec2( 8.0f, -0.5f), glm::vec2( 8.0f, -8.0f), 0.0f, 2.0f, 0);
-	wallData[9] = Wall(glm::vec2( 8.0f,  8.0f), glm::vec2( 8.0f,  0.5f), 0.0f, 2.0f, 0);
-
-	wallData[10] = Wall(glm::vec2(-8.0f, -8.0f), glm::vec2(-8.0f, -12.0f), 0.0f, 3.0f, 2);
-	wallData[11] = Wall(glm::vec2( 8.0f, -8.0f), glm::vec2( 8.0f, -12.0f), 0.0f, 3.0f, 2);
-
-	wallData[12] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2( 0.5f, -8.0f),  1.8f, 3.0f, 2);
-
-
-	//Switch;
-	wallData[13] = Wall(glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, -1.0f), 0.0f, 1.0f, 0, W_SWITCH, &(flags[0]));
-
-	//"Door";
-	wallData[14] = Wall(glm::vec2(0.5f, -8.0f), glm::vec2(-0.5f, -8.0f), 0.0f, 1.8f, 1, W_MOVEH_SLOW, &(flags[0]), -1.8f);
-
-	return wallData;
-}
-
-std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
-	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
-
-	spriteData[0] = Sprite(glm::vec3( 5.0f,  5.0f, 1.0f), 1.0f, 5);
-	spriteData[1] = Sprite(glm::vec3(-5.0f,  2.5f, 1.0f), 1.0f, 8); //Light Marker
-	spriteData[2] = Sprite(glm::vec3(-5.0f, -10.0f, 1.0f), 1.0f, 8); //Light Marker
-
-	return spriteData;
-}
-
-std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
-	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
-
-	lightData[0] = Light(glm::vec3(-5.0f,  2.5f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
-	lightData[1] = Light(glm::vec3(-5.0f, -10.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
-
-	return lightData;
-}
-
-std::array<utils::LogicGate, constants::MAX_GATES> prepLogic() {
-	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
-
-
-	return logicGates;
-}
 
 
 
 int main() {
 	try { //Catch exceptions
 	Player player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
-	auto visplaneData = prepVisplanes();
-	auto wallData = prepWalls();
-	auto spriteData = prepSprites();
-	auto lightData = prepLights();
-	auto logicGates = prepLogic();
-	
-	logicGates[0] = LogicGate(GateType::G_PASSTHROUGH, &(flags[2]), &(flags[0]), &(flags[1])); //Changes whether light is enabled or not.
-	logicGates[1] = LogicGate(GateType::G_PASSTHROUGH, &(lightData[0].enabled), &(flags[0]));
-	logicGates[2] = LogicGate(GateType::G_PASSTHROUGH, &(spriteData[1].valid), &(flags[0]));
+	std::array<int, constants::MAX_FLAGS> flags;
+	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
+	std::array<utils::Wall, constants::MAX_WALLS> wallData;
+	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
+	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
+	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
+
+	stageLoader::loadStage(
+		playerConfig::STAGE_NAME,
+		&visplaneData, &wallData,
+		&spriteData, &lightData,
+		&logicGates, &flags
+	);
+
+
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
@@ -274,6 +192,7 @@ int main() {
 		physics::playerMove(&player, keyMap, &wallData, &spriteData, &visplaneData);
 		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
+
 
 
 		glm::vec4 tintData = render::manageScreenTint(0, player.state);

@@ -53,11 +53,27 @@ namespace utils {
 	void pause();
 	void GLErrorcheck(std::string location = "", bool shouldPause = false);
 
+    std::string readFile(const std::string& filePath);
+
 
 	static inline bool logicToBool(int A) {return (A > 0);}
 	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}
 	static inline bool isVec2NaN(glm::vec2 v) {return (std::isnan(v.x) || std::isnan(v.y));}
 	static inline bool isVec3NaN(glm::vec3 v) {return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z));}
+
+
+
+	static inline std::string strToLower(const std::string& input) {
+		std::string result = input;
+		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c){return std::tolower(c);});
+		return result;
+	}
+
+	static inline std::string strToUpper(const std::string& input) {
+		std::string result = input;
+		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c){return std::toupper(c);});
+		return result;
+	}
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
@@ -206,6 +222,13 @@ namespace utils {
 			  specialType(specialType), 
 			  IOPtr(IOPtr), data(data), 
 			  internal(0.0f) {}
+
+		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
+			: start(start), end(end), 
+			  textureID(textureID), valid(1), 
+			  specialType(specialType), 
+			  IOPtr(IOPtr), data(data), 
+			  internal(0.0f) {}
 	};
 
 	struct WallGPU {
@@ -232,12 +255,12 @@ namespace utils {
 		float width;
 		int textureID;
 		int valid;
-		bool collision;
+		int collision;
 		SpriteType type;
 
 		Sprite() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), valid(0), type(SPR_INVALID), collision(false) {}
 
-		Sprite(glm::vec3 position, float width, int textureID, SpriteType type=SPR_DECO, bool collision=true)
+		Sprite(glm::vec3 position, float width, int textureID, SpriteType type=SPR_DECO, int collision=1)
 			: position(position), width(width), textureID(textureID), valid(1), type(type), collision(collision) {}
 	};
 
@@ -261,12 +284,13 @@ namespace utils {
 		glm::vec3 position;
 		glm::vec3 colour;
 		float intensity;
-		int valid, enabled;
+		int valid;
+		int* inputPTR;
 
-		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), enabled(0) {}
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), inputPTR(nullptr) {}
 
-		Light(glm::vec3 position, glm::vec3 colour, float intensity, int enabled=1)
-			: position(position), colour(colour), intensity(intensity), valid(1), enabled(enabled) {}
+		Light(glm::vec3 position, glm::vec3 colour, float intensity, int* inputPTR=nullptr)
+			: position(position), colour(colour), intensity(intensity), valid(1), inputPTR(inputPTR) {}
 	};
 
 	struct LightGPU {
@@ -281,7 +305,7 @@ namespace utils {
 		LightGPU(Light* light)
 			: position(light->position), colour(light->colour),
 			  intensity(light->intensity),
-			  valid((light->valid) & (light->enabled)),
+			  valid((light->valid) & ((light->inputPTR == nullptr) ? 1 : *(light->inputPTR))),
 			  _padding{0.0f} {}
 	};
 

@@ -43,6 +43,19 @@ void GLErrorcheck(std::string location, bool shouldPause) {
 }
 
 
+std::string readFile(const std::string& filePath) {
+	std::ifstream fileStream(filePath);
+	if (!fileStream.is_open()) {
+		raise("Error: Could not open file: " + string(filePath));
+		return "";
+	}
+
+	std::stringstream buffer;
+	buffer << fileStream.rdbuf();
+	return buffer.str();
+}
+
+
 float determinant(glm::vec2 vecA, glm::vec2 vecB) {
 	return vecA.x * vecB.y - vecA.y * vecB.x;
 }

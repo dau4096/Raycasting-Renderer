@@ -28,15 +28,16 @@ enum SpriteType {
 
 enum WallType {
 	W_INVALID, W_NORMAL,
-	W_TRIGGER, W_SWITCH,
-	W_MOVEV_SLOW, W_MOVEV_FAST,
-	W_MOVEH_SLOW, W_MOVEH_FAST,
+	W_TRIGGER,
+	W_MOVEV_FAST, W_MOVEV_SLOW,
+	W_MOVEH_FAST, W_MOVEH_SLOW,
+	W_SWITCH
 };
 
 enum VisplaneType {
 	V_INVALID, V_NORMAL,
 	V_TRIGGER,
-	V_MOVEV_SLOW, V_MOVEV_FAST,
+	V_MOVEV_FAST, V_MOVEV_SLOW,
 	V_HURT
 };
 
@@ -52,20 +53,24 @@ enum LogicInput {
 
 
 enum GateType {
+	G_INVALID,		// N/A
+	G_PASSTHROUGH,	// =
 	G_AND,			// &
 	G_OR, 			// |
 	G_NOT,			// ~
 	G_XOR,			// ^
 	G_LATCH,		// 2 inputs, turns on with input A and off with input B.
 	G_PULSE,		// 1 input, turns on for 1 frame of the input, then off after.
-	G_TOGGLE,		// 1 input, turns on and off with that input.
-	G_PASSTHROUGH,	// =
-	G_INVALID		// N/A
+	G_TOGGLE		// 1 input, turns on and off with that input.
 };
 
 
 
 namespace constants {
+	static int CONSTANT_TRUE = 1;
+	static int CONSTANT_FALSE = 0;
+
+
 	//Mathematical Constants
 	constexpr float PI = 3.14159265358979f;
 	constexpr float EXP = 2.71828182845905f;
@@ -125,6 +130,8 @@ namespace display {
 }
 
 namespace playerConfig {
+	constexpr std::string STAGE_NAME = "dev";
+
 	//Preference Speeds
 	constexpr float TURN_SPEED_KEYB = 1.0f;
 	constexpr float TURN_SPEED_CURS = 0.25f;
