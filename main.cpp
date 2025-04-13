@@ -138,7 +138,7 @@ int main() {
 		keyMap[key] = false;
 	}
 	bool interactKey = false;
-	int lightFlickerRNG;
+	int lightFlickerRNG, FPS = 0;
 
 	while (!glfwWindowShouldClose(Window)) {
 		tick++;
@@ -294,6 +294,8 @@ int main() {
 			GLuint healthLocation = glGetUniformLocation(uiShader, "health");
 			GLuint energyLocation = glGetUniformLocation(uiShader, "energy");
 			GLuint screenResLoc = glGetUniformLocation(uiShader, "screenResolution");
+			GLuint freqLocation = glGetUniformLocation(uiShader, "FPS");
+			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
 			
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
@@ -302,6 +304,8 @@ int main() {
 			glUniform1i(healthLocation, player.health);
 			glUniform1i(energyLocation, player.energy);
 			glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
+			glUniform1i(freqLocation, FPS);
+			glUniform1i(showFreqLocation, dev::SHOW_FREQ);
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -328,7 +332,10 @@ int main() {
 		utils::GLErrorcheck("Display Shader", true);
 
 		while (glfwGetTime() - frameStart < constants::DT) {}
-		if (dev::SHOW_FREQ > 0) {double totalTime = (glfwGetTime() - frameStart);std::cout << "FPS " << 1/totalTime << endl;}
+		if (dev::SHOW_FREQ > 0) {
+			double totalTime = (glfwGetTime() - frameStart);
+			FPS = floor(1/totalTime);
+		}
 
 
 		cursorXPosPrev = cursorXPos;

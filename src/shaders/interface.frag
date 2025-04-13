@@ -13,6 +13,8 @@ uniform vec4 screenTint;
 uniform int health;
 uniform int energy;
 uniform ivec2 screenResolution;
+uniform int FPS;
+uniform int showFreq;
 
 vec2 fragPosition;
 ivec2 renderResolution, framePosition;
@@ -170,8 +172,10 @@ void main() {
 	addVignetteShading();
 
 
-	//Draw viewAngle for testing.
-	drawInt(vec2(0, 245), 25, int(floor(playerViewAngle)));
+	//Show FPS.
+	if (showFreq > 0) {
+		drawInt(vec2(0, 245), 25, FPS);
+	}
 
 
 	//Render stats.
