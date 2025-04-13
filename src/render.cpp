@@ -268,7 +268,7 @@ GLuint createTexture(int width, int height) {
 }
 
 
-GLuint createTextureArray(const std::array<std::string, 32>& textureNames) {
+GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>& textureNames) {
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);

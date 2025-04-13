@@ -10,18 +10,23 @@ using namespace utils;
 using namespace glm;
 
 
+//Images to be used in the UI.
+std::array<std::string, 32> UIImageNames = {
+	"ui-health", "ui-energy"
+};
 
-const std::array<std::string, 32> textureNames = {
-	"a", "b", "c",
-	"s_t_a_r_e",
-	"tabs=fish",
-	"piloten",
-	"mus2", "osa",
-	"lamp"
+//Symbols to be used in the UI.
+std::array<std::string, 32> symbolNames = {
+	"symbol_0", "symbol_1",
+	"symbol_2", "symbol_3",
+	"symbol_4", "symbol_5",
+	"symbol_6", "symbol_7",
+	"symbol_8", "symbol_9",
+	"symbol_-"
 };
 
 // Keyboard presses to monitor.
-const std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
+std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
 	GLFW_KEY_W, GLFW_KEY_S,
 	GLFW_KEY_A, GLFW_KEY_D,
 	GLFW_KEY_E, GLFW_KEY_F,
@@ -63,11 +68,14 @@ int main() {
 	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
 	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
 
+	std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
+
 	stageLoader::loadStage(
 		playerConfig::STAGE_NAME,
 		&visplaneData, &wallData,
 		&spriteData, &lightData,
-		&logicGates, &flags
+		&logicGates, &flags,
+		&textureNames
 	);
 
 
@@ -90,7 +98,9 @@ int main() {
 
 
 	frameTextureID = render::createTexture(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
-	GLuint textureArray = render::createTextureArray(textureNames);
+	GLuint textureArrayEnvironment = render::createTextureArray(textureNames);
+	GLuint textureArrayUI = render::createTextureArray(UIImageNames);
+	GLuint textureArrayNumeric = render::createTextureArray(symbolNames);
 
 	render::createConstUBO();
 
@@ -218,7 +228,7 @@ int main() {
 		glUseProgram(envShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-		glBindTextureUnit(0, textureArray);
+		glBindTextureUnit(0, textureArrayEnvironment);
 
 		playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
 		playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
@@ -245,7 +255,7 @@ int main() {
 		glUseProgram(spriteShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-		glBindTextureUnit(0, textureArray);
+		glBindTextureUnit(0, textureArrayEnvironment);
 
 		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
 		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
@@ -273,17 +283,25 @@ int main() {
 			glUseProgram(uiShader);
 			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-			glBindTextureUnit(0, textureArray);
+			glBindTextureUnit(0, textureArrayEnvironment);
+			glBindTextureUnit(1, textureArrayUI);
+			glBindTextureUnit(2, textureArrayNumeric);
 
 			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
 			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
 			vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
+			GLuint healthLocation = glGetUniformLocation(uiShader, "health");
+			GLuint energyLocation = glGetUniformLocation(uiShader, "energy");
+			GLuint screenResLoc = glGetUniformLocation(uiShader, "screenResolution");
 			
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
 			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 			glUniform4f(vignetteColourLocation, tintData.x, tintData.y, tintData.z, tintData.w);
+			glUniform1i(healthLocation, player.health);
+			glUniform1i(energyLocation, player.energy);
+			glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);

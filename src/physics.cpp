@@ -114,6 +114,7 @@ void playerMove(
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
+	maxV *= 1.1f;
 	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
 
 	// Determine the movement vector based on key presses
