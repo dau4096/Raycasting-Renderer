@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -std=c++20 \
+CFLAGS = -std=c++20 -O2 \
          -IC:/Users/User/Documents/code/.cpp/glew-2.1.0/include \
          -IC:/Users/User/Documents/code/.cpp/glm \
          -IC:/Users/User/Documents/code/.cpp/glfw-3.4.bin.WIN64/include \

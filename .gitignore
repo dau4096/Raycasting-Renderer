@@ -1,2 +1,7 @@
 *.sublime-workspace
 *.sublime-project
+
+*.exe
+*.o
+*.bat
+*.dll
