@@ -161,18 +161,18 @@ namespace utils {
 		float height;
 		int textureID;
 		int valid;
-		VisplaneType specialType;
+		VisplaneType type;
 		int* IOPtr;
 		float data;
 		float internal;
 
 		Visplane()
-			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), valid(0), specialType(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
+			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), valid(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
 
-		Visplane(glm::vec2 start, glm::vec2 end, float heightZ, int textureID, VisplaneType specialType=V_NORMAL, int* IOPtr=nullptr, float data=0)
+		Visplane(glm::vec2 start, glm::vec2 end, float heightZ, int textureID, VisplaneType type=V_NORMAL, int* IOPtr=nullptr, float data=0)
 			: start(start), end(end), height(heightZ), 
 			  textureID(textureID), valid(1),
-			  specialType(specialType),
+			  type(type),
 			  IOPtr(IOPtr), data(data),
 			  internal(0.0f) {}
 	};
@@ -202,7 +202,7 @@ namespace utils {
 		glm::vec3 end;
 		int textureID;
 		int valid;
-		WallType specialType;
+		WallType type;
 		int* IOPtr;
 		float data;
 		float internal;
@@ -211,22 +211,22 @@ namespace utils {
 			: start(0.0f, 0.0f, 0.0f),
 			  end(0.0f, 0.0f, 0.0f),
 			  textureID(0), valid(0),
-			  specialType(W_INVALID),
+			  type(W_INVALID),
 			  IOPtr(nullptr), data(0.0f),
 			  internal(0.0f) {}
 
-		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
+		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType type=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
 			: start(glm::vec3(start.x, start.y, lowZ)),
 			  end(glm::vec3(end.x, end.y, topZ)), 
 			  textureID(textureID), valid(1), 
-			  specialType(specialType), 
+			  type(type), 
 			  IOPtr(IOPtr), data(data), 
 			  internal(0.0f) {}
 
-		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
+		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType type=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
 			: start(start), end(end), 
 			  textureID(textureID), valid(1), 
-			  specialType(specialType), 
+			  type(type), 
 			  IOPtr(IOPtr), data(data), 
 			  internal(0.0f) {}
 	};
@@ -235,18 +235,21 @@ namespace utils {
 		alignas(16) glm::vec3 start;
 		alignas(16) glm::vec3 end;
 		alignas(4) int textureID;
+		alignas(4) int type;
+		alignas(4) float extra;
 		alignas(4) int valid;
-		alignas(8) float _padding[2];
 
 		WallGPU()
 			: start(glm::vec3(0.0f, 0.0f, 0.0f)), end(glm::vec3(0.0f, 0.0f, 0.0f)),
-			  textureID(0), valid(0), 
-			  _padding{0.0f, 0.0f} {}
+			  textureID(0),
+			  type(0), extra(0.0f),
+			  valid(0) {}
 
 		WallGPU(Wall *wall)
 			: start(wall->start), end(wall->end),
-			  textureID(wall->textureID), valid(wall->valid),
-			  _padding{0.0f, 0.0f} {}
+			  textureID(wall->textureID),
+			  type(static_cast<int>(wall->type)), extra(wall->data),
+			  valid(wall->valid) {}
 	};
 
 

@@ -223,7 +223,7 @@ void playerMove(
 
 	glm::vec2 playerPosV2 = glm::vec2(player->position.x, player->position.y);
 	for (const utils::Wall& wall : *wallData) {
-		if ((wall.valid < 1) || (wall.specialType == W_TRIGGER)) {continue;}
+		if ((wall.valid < 1) || (wall.type == W_TRIGGER)) {continue;}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
@@ -426,10 +426,10 @@ void updateSpecials(
 	int wIndex = -1;
 	for (utils::Wall& wall : *wallData) {
 		wIndex++;
-		if ((wall.specialType == W_INVALID) || (wall.specialType == W_NORMAL)) {continue;}
+		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL)) {continue;}
 		bool enabled = *(wall.IOPtr) == 1;
 
-		switch(wall.specialType) {
+		switch(wall.type) {
 			case W_TRIGGER:{
 				float playerFootZ = player->position.z - (player->height/2.0f);
 				float playerHeadZ = player->position.z + (player->height/2.0f);
@@ -466,7 +466,7 @@ void updateSpecials(
 
 					for (utils::Wall& thisWall : *wallData) { //Check for LOS to button. Only occurs when valid click is found, so should not impact performance much.
 						rIndex++;
-						if ((rIndex == wIndex) || (thisWall.specialType == W_INVALID)) {continue;}
+						if ((rIndex == wIndex) || (thisWall.type == W_INVALID)) {continue;}
 						glm::vec2 LOSintersect = raycast(ray, thisWall);
 						float thisDistSQ = glm::dot((LOSintersect-playerPosV2), (LOSintersect-playerPosV2));
 						if (thisDistSQ < distSQ) {
@@ -511,7 +511,7 @@ void updateSpecials(
 	int vIndex = -1;
 	for (utils::Visplane& plane : *visplaneData) {
 		vIndex++;
-		if ((plane.specialType == V_INVALID) || (plane.specialType == V_NORMAL)) {continue;}
+		if ((plane.type == V_INVALID) || (plane.type == V_NORMAL)) {continue;}
 		bool enabled = logicToBool(*(plane.IOPtr));
 
 
@@ -540,7 +540,7 @@ void updateSpecials(
 		}
 
 
-		switch(plane.specialType) {
+		switch(plane.type) {
 			case V_TRIGGER: {
 				if (planeTouch) {
 					*(plane.IOPtr) = 1;

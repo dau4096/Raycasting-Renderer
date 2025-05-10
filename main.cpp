@@ -336,6 +336,9 @@ int main() {
 			double totalTime = (glfwGetTime() - frameStart);
 			FPS = floor(1/totalTime);
 		}
+		if (dev::SHOW_POSITION > 0) {
+			printVec3(player.position);
+		}
 
 
 		cursorXPosPrev = cursorXPos;

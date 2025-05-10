@@ -31,7 +31,8 @@ enum WallType {
 	W_TRIGGER,
 	W_MOVEV_FAST, W_MOVEV_SLOW,
 	W_MOVEH_FAST, W_MOVEH_SLOW,
-	W_SWITCH
+	W_SWITCH,
+	W_PORTAL
 };
 
 enum VisplaneType {
@@ -169,6 +170,7 @@ namespace dev {
 	constexpr int SHOW_FREQ = 1;
 	constexpr int NO_INTERFACE = 0;
 	constexpr int VIEW_BOB_DISABLE = 0;
+	constexpr int SHOW_POSITION = 1;
 }
 
 #endif // CONSTANTS_H
