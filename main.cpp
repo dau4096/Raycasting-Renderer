@@ -207,7 +207,6 @@ int main() {
 
 
 
-
 		//Update Dynamic UBOs.
 		render::updateVisplaneUBO(visplaneUBO, &visplaneData);
 		render::updateWallUBO(wallUBO, &wallData);
@@ -221,22 +220,25 @@ int main() {
 		}
 
 
-		GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation, vignetteColourLocation, lightFlickerLocation;
 		//Environment Shader.
 		glUseProgram(envShader);
 		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		glBindTextureUnit(0, textureArrayEnvironment);
 
-		playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
-		zoomLocation = glGetUniformLocation(envShader, "zoom");
-		uvLocation = glGetUniformLocation(envShader, "drawUV");
-		lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
+		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
+		GLuint playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
+		GLuint playerRollLocation = glGetUniformLocation(envShader, "playerViewRoll");
+		GLuint playerPitchLocation = glGetUniformLocation(envShader, "playerViewPitch");
+		GLuint zoomLocation = glGetUniformLocation(envShader, "zoom");
+		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
+		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
+		GLuint lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
 		
 		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
+		glUniform1f(playerRollLocation, player.viewRoll);
+		glUniform1f(playerPitchLocation, player.viewPitch);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 		glUniform1i(uvLocation, dev::DRAW_UV);
 		glUniform1i(lightLocation, headLampEnabled);
@@ -257,13 +259,17 @@ int main() {
 
 		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
 		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
+		playerRollLocation = glGetUniformLocation(spriteShader, "playerViewRoll");
+		playerPitchLocation = glGetUniformLocation(spriteShader, "playerViewPitch");
 		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
 		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
 		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
+		lightFlickerLocation = glGetUniformLocation(spriteShader, "headLampFlicker");
 		
 		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
+		glUniform1f(playerRollLocation, player.viewRoll);
+		glUniform1f(playerPitchLocation, player.viewPitch);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 		glUniform1i(uvLocation, dev::DRAW_UV);
 		glUniform1i(lightLocation, headLampEnabled);
@@ -288,7 +294,7 @@ int main() {
 			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
 			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
-			vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
+			GLuint vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
 			GLuint healthLocation = glGetUniformLocation(uiShader, "health");
 			GLuint energyLocation = glGetUniformLocation(uiShader, "energy");
 			GLuint screenResLoc = glGetUniformLocation(uiShader, "screenResolution");

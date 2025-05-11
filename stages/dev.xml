@@ -47,7 +47,7 @@
 <lights>
     <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="15.0" inputPTR="always" />
     <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="15.0" inputPTR="always" />
-    <light position="0.0, 0.0, 64.0" colour="1.0 1.0 0.9" intensity="64.0" inputPTR="always" />
+    <light position="0.0, 20.0, 16.0" colour="1.0 1.0 0.9" intensity="32.0" inputPTR="always" />
 </lights>
 
 <!-- Logic Gates -->

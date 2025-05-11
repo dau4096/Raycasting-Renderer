@@ -158,6 +158,7 @@ namespace playerConfig {
 	//Player Initial Values
 	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(-2.5f, -2.5f, 1.0f);
 	constexpr float PLAYER_START_ANGLE = -45.0f;
+	constexpr float LATERAL_VIEW_LEAN = 2.5f;
 	constexpr int PLAYER_MAX_HEALTH = 128;
 	constexpr int PLAYER_MAX_ENERGY = 64;
 
@@ -174,6 +175,7 @@ namespace dev {
 	constexpr int SHOW_FREQ = 1;
 	constexpr int NO_INTERFACE = 0;
 	constexpr int VIEW_BOB_DISABLE = 1;
+	constexpr int VIEW_LEAN_DISABLE = 0;
 }
 
 #endif // CONSTANTS_H

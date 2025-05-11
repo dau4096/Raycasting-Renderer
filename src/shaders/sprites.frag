@@ -4,6 +4,8 @@
 
 uniform sampler2DArray textureArray;
 uniform float playerViewAngle;
+uniform float playerViewRoll;
+uniform float playerViewPitch;
 uniform vec3 playerPosition;
 uniform bool zoom;
 uniform int drawUV;
@@ -302,6 +304,13 @@ void main() {
 	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);	
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
+
+
+	//Negative is upward; so subtract.
+	float rollDecimal = playerViewRoll / 45.0f;
+	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
+	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
+	fragPosition.y -= pitchDecimal * 10.0f; //10x scaling.
 
 
 	vec2 closestUV = INVALID;

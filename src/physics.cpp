@@ -7,6 +7,8 @@ using namespace utils;
 bool prevJump = false, prevSlide = false;
 bool touchingFloorCheck = false;
 const float EPSILON = 1e-5f;
+float desiredLeanLR = 0.0f;
+float desiredLeanFB = 0.0f;
 
 
 namespace physics {
@@ -102,6 +104,7 @@ void playerMove(
 
 	float newX = 0.0f;
 	float newY = 0.0f;
+	glm::vec2 lateralMovement = glm::vec2(0.0f, 0.0f);
 
 	float playerSpeed = playerConfig::MOVE_SPEED_BASE;
 	float maxV = playerConfig::MOVE_SPEED_BASE;
@@ -110,7 +113,7 @@ void playerMove(
 	player->sliding = keyMap[GLFW_KEY_LEFT_CONTROL] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD);
 	if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
 		if (player->sliding) {
-			if (!prevSlide) {
+			if (!prevSlide && player->touchingFloor) {
 				maxV *= playerConfig::MOVE_SPEED_SLIDE_ADD;
 				glm::vec2 slideAddition = glm::normalize(XYDelta) * playerConfig::MOVE_SPEED_SLIDE_ADD;
 				player->velocity += glm::vec3(slideAddition.x, slideAddition.y, 0.0f);
@@ -153,6 +156,7 @@ void playerMove(
 			newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
 			newY += playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
 		}
+		lateralMovement = glm::vec2(newX, newY);
 	}
 	if (keyMap[GLFW_KEY_SPACE] && !prevJump) {
 		if (player->touchingFloor) {
@@ -176,12 +180,35 @@ void playerMove(
 	if (length(vAddition) > playerSpeed) {
 		vAddition = normalize(vAddition) * playerSpeed;
 	}
+	glm::vec2 vRight = glm::normalize(glm::vec2(player->velocity.y, -player->velocity.x));
+
+	if (lateralMovement != glm::vec2(0.0f, 0.0f)) {
+		glm::vec2 rDir = glm::vec2(
+			cos((player->viewAngle) * constants::TO_RAD),
+			-sin((player->viewAngle) * constants::TO_RAD)
+		);
+		float leanDotLR = glm::dot(glm::normalize(lateralMovement), rDir);
+		desiredLeanLR = leanDotLR * playerConfig::LATERAL_VIEW_LEAN;
+
+		glm::vec2 fDir = glm::vec2(
+			sin((player->viewAngle) * constants::TO_RAD),
+			cos((player->viewAngle) * constants::TO_RAD)
+		);
+		float leanDotFB = glm::dot(glm::normalize(lateralMovement), fDir);
+		desiredLeanFB = leanDotFB * playerConfig::LATERAL_VIEW_LEAN;
+	} else {
+		desiredLeanLR = 0.0f;
+		desiredLeanFB = 0.0f;
+	}
+
+
+	player->viewRoll += (desiredLeanLR - player->viewRoll) * 0.125f;
+	player->viewPitch += (desiredLeanFB - player->viewPitch) * 0.125f;
 	
 
 	//Occasionally returns NaN somehow.
 	glm::vec2 curVelocity = glm::vec2(player->velocity.x, player->velocity.y);
 	if (length(curVelocity) > playerConfig::MAX_AIR_SPEED_XY && length(vAddition) > EPSILON) {
-		glm::vec2 vRight = glm::normalize(glm::vec2(player->velocity.y, -player->velocity.x));
 		vAddition = vRight * glm::dot(glm::normalize(vAddition), vRight) * playerSpeed;
 	}
 	player->velocity.x += vAddition.x; player->velocity.y += vAddition.y;
