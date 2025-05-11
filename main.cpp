@@ -79,8 +79,6 @@ int main() {
 	);
 
 
-
-
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 	currentScreenRes = display::SCREEN_RESOLUTION;
 
@@ -336,7 +334,6 @@ int main() {
 			double totalTime = (glfwGetTime() - frameStart);
 			FPS = floor(1/totalTime);
 		}
-
 
 		cursorXPosPrev = cursorXPos;
 		cursorYPosPrev = cursorYPos;

@@ -4,7 +4,7 @@ using namespace std;
 using namespace utils;
 
 
-bool prevJump = false;
+bool prevJump = false, prevSlide = false;
 bool touchingFloorCheck = false;
 const float EPSILON = 1e-5f;
 
@@ -106,45 +106,69 @@ void playerMove(
 	float playerSpeed = playerConfig::MOVE_SPEED_BASE;
 	float maxV = playerConfig::MOVE_SPEED_BASE;
 
+	glm::vec2 XYDelta = glm::vec2(player->velocity.x, player->velocity.y);
+	player->sliding = keyMap[GLFW_KEY_LEFT_CONTROL] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD);
 	if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
-		playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
-		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
+		if (player->sliding) {
+			if (!prevSlide) {
+				maxV *= playerConfig::MOVE_SPEED_SLIDE_ADD;
+				glm::vec2 slideAddition = glm::normalize(XYDelta) * playerConfig::MOVE_SPEED_SLIDE_ADD;
+				player->velocity += glm::vec3(slideAddition.x, slideAddition.y, 0.0f);
+			}
+		} else {
+			playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
+			maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
+		}
 	} else if (keyMap[GLFW_KEY_LEFT_SHIFT]) {
 		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
-	maxV *= 1.1f;
+	//maxV *= 1.125f;
 	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
 
 	// Determine the movement vector based on key presses
-	if (keyMap[GLFW_KEY_W]) {
-		float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX += playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
-		newY += playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
+	if (!player->sliding) {
+		if (keyMap[GLFW_KEY_W]) {
+			float reduction = 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX += playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
+			newY += playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
+		}
+		if (keyMap[GLFW_KEY_S]) {
+			float reduction = 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX -= playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
+			newY -= playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
+		}
+		if (keyMap[GLFW_KEY_A]) {
+			float reduction = 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX -= playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
+			newY -= playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
+		}
+		if (keyMap[GLFW_KEY_D]) {
+			float reduction = 1.0f;
+			if (!player->touchingFloor) {reduction *= 0.5f;}
+			newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
+			newY += playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
+		}
 	}
-	if (keyMap[GLFW_KEY_S]) {
-		float reduction = (keyMap[GLFW_KEY_A] || keyMap[GLFW_KEY_D]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX -= playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
-		newY -= playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
-	}
-	if (keyMap[GLFW_KEY_A]) {
-		float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX -= playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
-		newY -= playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
-	}
-	if (keyMap[GLFW_KEY_D]) {
-		float reduction = (keyMap[GLFW_KEY_W] || keyMap[GLFW_KEY_S]) ? 0.70710678f : 1.0f;
-		if (!player->touchingFloor) {reduction *= 0.5f;}
-		newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
-		newY += playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
-	}
-	if (keyMap[GLFW_KEY_SPACE] && !prevJump && touchingFloorCheck) {
-		player->velocity.z += playerConfig::JUMP_INIT_SPEED;
-		player->position.z += 0.025;
+	if (keyMap[GLFW_KEY_SPACE] && !prevJump) {
+		if (player->touchingFloor) {
+			player->jumpsUsed++;
+			player->velocity.z += playerConfig::JUMP_INIT_SPEED;
+			player->position.z += 0.025;
+		} else if (player->jumpsUsed < playerConfig::MAX_JUMPS) {
+			player->jumpsUsed = playerConfig::MAX_JUMPS;
+			if (player->velocity.z < 0.0f) {
+				player->velocity.z = playerConfig::JUMP_INIT_SPEED;
+			} else {
+				const float maxJumpSpeed = playerConfig::JUMP_INIT_SPEED * 2.0f;
+				float maxJump = glm::min(player->velocity.z + playerConfig::JUMP_INIT_SPEED, maxJumpSpeed);
+				player->velocity.z = maxJump;
+			}
+		}
 	}
 
 
@@ -165,6 +189,7 @@ void playerMove(
 
 
 	prevJump = keyMap[GLFW_KEY_SPACE];
+	prevSlide = player->sliding;
 	touchingFloorCheck = false;
 
 
@@ -204,6 +229,9 @@ void playerMove(
 		}
 	}
 	player->touchingFloor = touchingFloorCheck;
+	if (touchingFloorCheck) {
+		player->jumpsUsed = 0;
+	}
 
 
 
@@ -282,10 +310,22 @@ void playerMove(
 
 	//Apply friction.
 	if (touchingFloorCheck) {
-		player->velocity.x *= constants::FLOOR_FRICT_COEFF;
-		player->velocity.y *= constants::FLOOR_FRICT_COEFF;
+		if (player->sliding) {
+			player->velocity.x *= constants::FLOOR_FRICT_SLIDE_COEFF;
+			player->velocity.y *= constants::FLOOR_FRICT_SLIDE_COEFF;			
+		} else {
+			player->velocity.x *= constants::FLOOR_FRICT_COEFF;
+			player->velocity.y *= constants::FLOOR_FRICT_COEFF;
+		}
 	} else {
-		player->velocity *= constants::AIR_FRICT_COEFF;
+		if (player->sliding) {
+			player->velocity.x *= constants::AIR_FRICT_SLIDE_COEFF;
+			player->velocity.y *= constants::AIR_FRICT_SLIDE_COEFF;			
+		} else {
+			player->velocity.x *= constants::AIR_FRICT_COEFF;
+			player->velocity.y *= constants::AIR_FRICT_COEFF;
+		}
+		player->velocity.z *= constants::AIR_FRICT_COEFF;
 	}
 
 	player->velocity.z -= constants::GRAVITY_ACCEL / static_cast<float>(constants::DT);

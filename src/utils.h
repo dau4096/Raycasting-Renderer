@@ -46,12 +46,32 @@ namespace logicFunctions {
 
 //Utility functions
 namespace utils {
-	void print(std::string str);
-	void printVec2(glm::vec2 vector);
-	void printVec3(glm::vec3 vector);
-	void raise(std::string str);
-	void pause();
-	void GLErrorcheck(std::string location = "", bool shouldPause = false);
+	static inline void print(std::string str) {
+		std::cout << str << std::endl;
+	}
+	static inline void printVec2(glm::vec2 vector) {
+		std::cout << "(" << vector.x << ", " << vector.y << ")" << std::endl;
+	}
+	static inline void printVec3(glm::vec3 vector) {
+		std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+	}
+	static inline void raise(std::string err) {
+		std::cerr << err << std::endl;
+		std::string end;
+		std::cin >> end;
+	}
+	static inline void pause() {
+		string pause;
+		std::cin >> pause;
+	}
+	static inline void GLErrorcheck(std::string location = "", bool shouldPause = false) {
+		GLenum GLError;
+		GLError = glGetError();
+		if (GLError != GL_NO_ERROR) {
+			std::cerr << location << " | OpenGL error; " << GLError << std::endl;
+			if (shouldPause) {pause();}
+		}
+	}
 
     std::string readFile(const std::string& filePath);
 
@@ -325,17 +345,19 @@ namespace utils {
 	struct Player {
 		glm::vec3 position, velocity, cameraPosition;
 		float viewAngle, height;
-		bool touchingFloor;
+		bool touchingFloor, sliding;
 		Event state;
 		int health, energy;
+		int jumpsUsed;
 		//std::vector<utils::Weapon, constants::MAX_ITEMS_HELD> backpack;
 
 		Player(glm::vec3 position, float angle)
-			: position(position), velocity(0.0f, 0.0f, 0.0f),
+			: position(position), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
 			  cameraPosition(position + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
-			  viewAngle(angle), height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
+			  viewAngle(angle),
+			  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 			  health(playerConfig::PLAYER_MAX_HEALTH), energy(playerConfig::PLAYER_MAX_ENERGY),
-			  state(E_NONE) {}
+			  state(E_NONE), jumpsUsed(0), sliding(false) {}
 	};
 
 

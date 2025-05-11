@@ -14,6 +14,7 @@
     <visplane start="-0.5 -10.0" end="0.5 -11.0" height="0.25" texture="tabs=fish" type="V_TRIGGER" IOPtr="3" extra="0.0" />
     <visplane start="-2.0 -7.0" end="-4.0 -5.0" height="0.1" texture="piloten" type="V_MOVEV_SLOW" IOPtr="0" extra="1.0" />
     <visplane start="-5.0 -5.0" end="-3.0 -3.0" height="0.25" texture="tabs=fish" type="V_TRIGGER" IOPtr="3" extra="0.0" />
+    <visplane start="10.0 10.0" end="-10.0 40.0" height="0.0" texture="b" type="V_NORMAL" IOPtr="0" extra="0.0" />
 </visplanes>
 
 <!-- Walls -->
@@ -46,6 +47,7 @@
 <lights>
     <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="15.0" inputPTR="always" />
     <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="15.0" inputPTR="always" />
+    <light position="0.0, 0.0, 64.0" colour="1.0 1.0 0.9" intensity="64.0" inputPTR="always" />
 </lights>
 
 <!-- Logic Gates -->

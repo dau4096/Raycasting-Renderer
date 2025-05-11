@@ -67,8 +67,8 @@ enum GateType {
 
 
 namespace constants {
-	static int CONSTANT_TRUE = 1;
-	static int CONSTANT_FALSE = 0;
+	static int TRUE = 1;
+	static int FALSE = 0;
 
 
 	//Mathematical Constants
@@ -92,7 +92,9 @@ namespace constants {
 	//Sim Constants
 	constexpr float GRAVITY_ACCEL = 2.5e-4f;
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
+	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
 	constexpr float AIR_FRICT_COEFF = 0.975f;
+	constexpr float AIR_FRICT_SLIDE_COEFF = 0.9975f;
 	constexpr float KILL_PLANE_HEIGHT = -16.0f;
 	constexpr float MAX_STEP_HEIGHT = 0.42857f;
 
@@ -139,8 +141,11 @@ namespace playerConfig {
 	constexpr float MOVE_SPEED_BASE = 0.05f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
+	constexpr float MOVE_SPEED_SLIDE_ADD = 0.125f;
+	constexpr float SLIDE_THRESHOLD = MOVE_SPEED_BASE * 1.5f;
 	constexpr float JUMP_INIT_SPEED = 0.25f;
 	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.0f;
+	constexpr int MAX_JUMPS = 2; //Double jumps allowed.
 
 
 	//Physics Collision Values
@@ -168,7 +173,7 @@ namespace dev {
 	constexpr int NO_COLLIDE = 0;
 	constexpr int SHOW_FREQ = 1;
 	constexpr int NO_INTERFACE = 0;
-	constexpr int VIEW_BOB_DISABLE = 0;
+	constexpr int VIEW_BOB_DISABLE = 1;
 }
 
 #endif // CONSTANTS_H
