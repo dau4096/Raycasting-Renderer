@@ -176,7 +176,7 @@ namespace dev {
 	constexpr int NO_INTERFACE = 0;
 	constexpr int VIEW_BOB_DISABLE = 1;
 	constexpr int VIEW_LEAN_DISABLE = 0;
-	constexpr int LOCK_VLOOK = 1;
+	constexpr int LOCK_VLOOK = 0;
 }
 
 #endif // CONSTANTS_H

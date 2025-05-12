@@ -74,14 +74,15 @@ layout(std140, binding = 5) uniform lightSSBO {
 
 //Ray Struct.
 struct Ray {
-	vec2 position, direction, end;
+	dvec2 position, end;
+	dvec2 direction;
 };
 
-Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
+Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 	Ray ray;
 	ray.position = position;
 	ray.direction = direction;
-	ray.end = ray.position + (ray.direction * maxDist);
+	ray.end = ray.position + (ray.direction.xy * maxDist);
 	return ray;
 };
 
@@ -89,20 +90,22 @@ Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
 vec2 fragPosition;
 ivec2 renderResolution;
 vec4 fragColour;
-float verticalFOV, t, fragZ;
+double verticalFOV, t, fragZ;
+const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float MIN_WALL_DIST = 0.125f;
 const float DEFAULT_BRIGHTNESS = 0.1f;
 const float HEADLAMP_MIN_LIGHT = 0.025f;
-const vec2 INVALID = vec2(1e30f, 1e30f);
-const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
-const vec4 INVALIDv4 = vec4(1e30f, 1e30f, 1e30f, 1e30f);
+const dvec2 INVALIDdv2 = dvec2(INF, INF);
+const vec2 INVALIDv2 = vec2(INF, INF);
+const vec3 INVALIDv3 = vec3(INF, INF, INF);
+const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
 const bool noLighting = false;
 
 
-float determinant(vec2 vecA, vec2 vecB) {
+double determinant(dvec2 vecA, dvec2 vecB) {
 	return (vecA.x * vecB.y) - (vecA.y * vecB.x);
 }
 
@@ -116,42 +119,42 @@ float angleClamp(float value) {
 }
 
 
-vec2 rayIntersectCheck(Ray ray, Wall wall) {
-	vec2 wallStartV2 = vec2(wall.start.x, wall.start.y);
-	vec2 wallEndV2 = vec2(wall.end.x, wall.end.y);
+dvec2 rayIntersectCheck(Ray ray, Wall wall) {
+	dvec2 wallStartV2 = dvec2(wall.start.x, wall.start.y);
+	dvec2 wallEndV2 = dvec2(wall.end.x, wall.end.y);
 
-	vec2 xDiff = vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
-	vec2 yDiff = vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
+	dvec2 xDiff = dvec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
+	dvec2 yDiff = dvec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
 
 
 	double divisor = determinant(xDiff, yDiff);
 	if (abs(divisor) < EPSILON) {
 		//Lines do not intersect, as they are nearly parallel.
-		return INVALID;
+		return INVALIDdv2;
 	}
 
 
-	vec2 dets = vec2(determinant(ray.position, ray.end), determinant(wallStartV2, wallEndV2));
+	dvec2 dets = dvec2(determinant(ray.position, ray.end), determinant(wallStartV2, wallEndV2));
 	double xCoord = determinant(dets, xDiff) / divisor;
 	double yCoord = determinant(dets, yDiff) / divisor;
 
-	vec2 intersectPoint = vec2(xCoord, yCoord);
+	dvec2 intersectPoint = dvec2(xCoord, yCoord);
 
 
 	//Check if the intersection is within the wall.
 	if ((intersectPoint.x < min(wall.start.x, wall.end.x)) || (intersectPoint.x > max(wall.start.x, wall.end.x)) ||
 		(intersectPoint.y < min(wall.start.y, wall.end.y)) || (intersectPoint.y > max(wall.start.y, wall.end.y))) {
-		return INVALID;
+		return INVALIDdv2;
 	}
 
 
-	vec2 intersectDirection = normalize(intersectPoint - ray.position);
-	vec2 directionDifference = ray.direction - intersectDirection;
+	dvec2 intersectDirection = normalize(intersectPoint - ray.position);
+	dvec2 directionDifference = ray.direction - intersectDirection;
 
 	
 	if (length(directionDifference) < EPSILON_ALT) {
 		//Wrong way, behind camera.
-		return INVALID;
+		return INVALIDdv2;
 	}
 	
 
@@ -159,34 +162,34 @@ vec2 rayIntersectCheck(Ray ray, Wall wall) {
 }
 
 
-vec2 getWallUV(Wall thisWall, vec2 intersectPoint, vec3 originPos) {
+vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	const float textureRepeatInterval = 2.0f;
 	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
 	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 	//xUV calculation.
-	vec2 wallDirection = wallEndV2 - wallStartV2;
-	vec2 wallPosition = intersectPoint - wallStartV2;
-	float wallLength = length(wallDirection);
-	float projection = dot(wallPosition, normalize(wallDirection));
-	float xUV = fract(projection / textureRepeatInterval);
+	dvec2 wallDirection = wallEndV2 - wallStartV2;
+	dvec2 wallPosition = intersectPoint - wallStartV2;
+	double wallLength = length(wallDirection);
+	double projection = dot(wallPosition, normalize(wallDirection));
+	double xUV = fract(projection / textureRepeatInterval);
 
 
 	//yUV calculation.
-	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
-	float distance = length(originPos.xy - intersectPoint) / zoomEffect;
-	float projectedYLow = (originPos.z - wallLowZ) / distance;
-	float projectedYTop = (originPos.z - wallTopZ) / distance;
+	double zoomEffect = (zoom) ? zoomFactor : 1.0f;
+	double distance = length(originPos.xy - intersectPoint) / zoomEffect;
+	double projectedYLow = (originPos.z - wallLowZ) / distance;
+	double projectedYTop = (originPos.z - wallTopZ) / distance;
 
-	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
+	double screenYLow = renderResolution.y * (0.5 - projectedYLow);
+	double screenYTop = renderResolution.y * (0.5 - projectedYTop);
 
-	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALID;}
+	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALIDv2;}
 
-	float a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
+	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
 	fragZ = mix(wallLowZ, wallTopZ, a);
-	float yUV = 1.0f - fract(fragZ / textureRepeatInterval);
+	double yUV = 1.0f - fract(fragZ / textureRepeatInterval);
 
 
 	return vec2(xUV, yUV);
@@ -265,8 +268,8 @@ vec2 getVisplaneUV(vec3 position3D) {
 
 bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	vec3 LOSDelta = pointA - pointB;
-	float distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
-	float distToTarget = sqrt(distToTargetSQ);
+	double distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
+	double distToTarget = sqrt(distToTargetSQ);
 	vec3 LOSDirection = normalize(LOSDelta);
 	Ray LOSRay = createRay(pointA.xy, normalize(LOSDelta.xy), distToTarget);
 
@@ -276,14 +279,14 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		Wall thisWall = walls[idx];
 		if (thisWall.valid <= 0 || (idx == thisIndex && foundType == 1)) {continue; /* Wall is empty or is the index calling the LOS check. */}
 
-		vec2 intersectPoint = rayIntersectCheck(LOSRay, thisWall);
-		if (intersectPoint == INVALID) {continue; /* Invalid intersect point */}
+		dvec2 intersectPoint = rayIntersectCheck(LOSRay, thisWall);
+		if (intersectPoint == INVALIDv2) {continue; /* Invalid intersect point */}
 
-		float distToIntersectSQ = dot(pointA.xy - intersectPoint, pointA.xy - intersectPoint);
+		double distToIntersectSQ = dot(pointA.xy - intersectPoint, pointA.xy - intersectPoint);
 		if (distToIntersectSQ > distToTargetSQ) {continue; /* Not within the range of the LOScheck. */}
 
-		float a = sqrt(distToIntersectSQ) / distToTarget;
-		float actualZ = mix(pointA.z, pointB.z, a);
+		double a = sqrt(distToIntersectSQ) / distToTarget;
+		double actualZ = mix(pointA.z, pointB.z, a);
 
 		if ((actualZ > min(thisWall.start.z, thisWall.end.z)) && (actualZ < max(thisWall.start.z, thisWall.end.z))) {
 			return true;
@@ -334,7 +337,7 @@ void main() {
 
 
 	vec3 closestIntersectPoint, closestUV;
-	float minDistance = maxRayDistance;
+	double minDistance = maxRayDistance;
 	int closestIndex, foundType = 0;
 
 	//Iterate through all the walls. (2D)
@@ -342,15 +345,15 @@ void main() {
 		Wall thisWall = walls[idx];
 		if (thisWall.valid <= 0) {continue; /* Wall is empty */}
 
-		vec2 intersectPoint = rayIntersectCheck(fragRay, thisWall);
-		if (intersectPoint == INVALID) {continue; /* Invalid intersect point */}
-		vec3 intersectPointv3 = vec3(intersectPoint.xy, playerPosition.z);
-		float wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
+		dvec2 intersectPoint = rayIntersectCheck(fragRay, thisWall);
+		if (intersectPoint == INVALIDdv2) {continue; /* Invalid intersect point */}
+		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, playerPosition.z);
+		double wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
 
 		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition); //Check if inside wall (Valid UV)
 
 
-		if (wallUV != INVALID && wallDistanceSQ < minDistance*minDistance) {
+		if (wallUV != INVALIDv2 && wallDistanceSQ < minDistance*minDistance) {
 			//Set closest.
 			minDistance = sqrt(wallDistanceSQ);
 			closestIndex = idx;
