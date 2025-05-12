@@ -344,7 +344,7 @@ namespace utils {
 
 	struct Player {
 		glm::vec3 position, velocity, cameraPosition;
-		float viewAngle, viewRoll, viewPitch, height;
+		float viewAngle, viewRoll, viewPitch, vLook, height;
 		bool touchingFloor, sliding;
 		Event state;
 		int health, energy;
@@ -354,7 +354,7 @@ namespace utils {
 		Player(glm::vec3 position, float angle)
 			: position(position), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
 			  cameraPosition(position + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
-			  viewAngle(angle), viewRoll(0.0f), viewPitch(0.0f),
+			  viewAngle(angle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 			  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 			  health(playerConfig::PLAYER_MAX_HEALTH), energy(playerConfig::PLAYER_MAX_ENERGY),
 			  state(E_NONE), jumpsUsed(0), sliding(false) {}

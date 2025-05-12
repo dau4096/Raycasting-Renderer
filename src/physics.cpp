@@ -7,8 +7,8 @@ using namespace utils;
 bool prevJump = false, prevSlide = false;
 bool touchingFloorCheck = false;
 const float EPSILON = 1e-5f;
-float desiredLeanLR = 0.0f;
-float desiredLeanFB = 0.0f;
+float desiredLeanLR = 0.0f, leanLRCurrent = 0.0f;
+float desiredLeanFB = 0.0f, leanFBCurrent = 0.0f;
 
 
 namespace physics {
@@ -127,7 +127,6 @@ void playerMove(
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
-	//maxV *= 1.125f;
 	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
 
 	// Determine the movement vector based on key presses
@@ -203,12 +202,15 @@ void playerMove(
 
 
 	player->viewRoll += (desiredLeanLR - player->viewRoll) * 0.125f;
-	player->viewPitch += (desiredLeanFB - player->viewPitch) * 0.125f;
+	leanFBCurrent += (desiredLeanFB - leanFBCurrent) * 0.125f;
+	float vMoveLean = glm::clamp(player->velocity.z, -1.0f, 1.0f) * playerConfig::LATERAL_VIEW_LEAN;
+
+	player->viewPitch = player->vLook + leanFBCurrent + vMoveLean;
 	
 
 	//Occasionally returns NaN somehow.
 	glm::vec2 curVelocity = glm::vec2(player->velocity.x, player->velocity.y);
-	if (length(curVelocity) > playerConfig::MAX_AIR_SPEED_XY && length(vAddition) > EPSILON) {
+	if (glm::length(curVelocity) > playerConfig::MAX_AIR_SPEED_XY && glm::length(vAddition) > EPSILON) {
 		vAddition = vRight * glm::dot(glm::normalize(vAddition), vRight) * playerSpeed;
 	}
 	player->velocity.x += vAddition.x; player->velocity.y += vAddition.y;
@@ -352,7 +354,7 @@ void playerMove(
 			player->velocity.x *= constants::AIR_FRICT_COEFF;
 			player->velocity.y *= constants::AIR_FRICT_COEFF;
 		}
-		player->velocity.z *= constants::AIR_FRICT_COEFF;
+		player->velocity.z *= constants::AIR_FRICT_SLIDE_COEFF;
 	}
 
 	player->velocity.z -= constants::GRAVITY_ACCEL / static_cast<float>(constants::DT);

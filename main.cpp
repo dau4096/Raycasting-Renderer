@@ -183,8 +183,13 @@ int main() {
 		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
 
 		double cursorXDelta = cursorXPos - cursorXPosPrev;
+		double cursorYDelta = cursorYPos - cursorYPosPrev;
 		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
 		player.viewAngle = utils::angleClamp(player.viewAngle);
+		if (dev::LOCK_VLOOK < 1) {
+			double dY = cursorYDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
+			player.vLook = glm::clamp(float(player.vLook+dY), -22.5f, 22.5f);
+		}
 
 
 		//Update logic states.
