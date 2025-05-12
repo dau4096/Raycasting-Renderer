@@ -128,7 +128,7 @@ namespace display {
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr float FOV = 70.0f;
 	constexpr float MAX_RAY_ANGLE = FOV / 2.0f;
-	constexpr float MAX_RAY_DIST = 64.0f;
+	constexpr float MAX_RAY_DIST = 128.0f;
 }
 
 namespace playerConfig {
@@ -175,8 +175,8 @@ namespace dev {
 	constexpr int SHOW_FREQ = 1;
 	constexpr int NO_INTERFACE = 0;
 	constexpr int VIEW_BOB_DISABLE = 1;
-	constexpr int VIEW_LEAN_DISABLE = 0;
-	constexpr int LOCK_VLOOK = 0;
+	constexpr int VIEW_LEAN_DISABLE = 1;
+	constexpr int LOCK_VLOOK = 1;
 }
 
 #endif // CONSTANTS_H

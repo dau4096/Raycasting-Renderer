@@ -169,11 +169,18 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 	//xUV calculation.
-	dvec2 wallDirection = wallEndV2 - wallStartV2;
-	dvec2 wallPosition = intersectPoint - wallStartV2;
-	double wallLength = length(wallDirection);
-	double projection = dot(wallPosition, normalize(wallDirection));
-	double xUV = fract(projection / textureRepeatInterval);
+	double xUV;
+	vec2 wallDelta = wallEndV2 - wallStartV2;
+	vec2 wallDirection = normalize(wallDelta);
+	dvec2 camRight = dvec2(cos(radians(playerViewAngle)), -sin(radians(playerViewAngle)));
+	bool flipXUV = dot(wallDirection, camRight) < 0.0f;
+	if (abs(wallDelta.y) > abs(wallDelta.x)) {
+		xUV = fract(intersectPoint.y / textureRepeatInterval);
+	} else {
+		xUV = fract(intersectPoint.x / textureRepeatInterval);
+	}
+	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
+	if (flipXUV) {xUV = 1.0f - xUV;}
 
 
 	//yUV calculation.

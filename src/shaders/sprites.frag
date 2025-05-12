@@ -307,7 +307,7 @@ void main() {
 
 
 	//Negative is upward; so subtract.
-	float rollDecimal = playerViewRoll / 45.0f;
+	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
 	fragPosition.y -= pitchDecimal * 10.0f; //10x scaling.

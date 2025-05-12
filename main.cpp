@@ -78,13 +78,6 @@ int main() {
 		&textureNames
 	);
 
-	unsigned int idx = 0;
-	for (utils::Wall wall : wallData) {
-		printVec3(wall.start);
-		printVec3(wall.end);
-		cout << idx++ << endl;
-	}
-
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 	currentScreenRes = display::SCREEN_RESOLUTION;
