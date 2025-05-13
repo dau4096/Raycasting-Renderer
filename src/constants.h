@@ -122,6 +122,7 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 SCREEN_RESOLUTION = glm::ivec2(640, 400);
 	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(480, 270);
+	constexpr glm::ivec2 UI_RESOLUTION = RENDER_RESOLUTION;
 
 
 	//Rendering Assorted

@@ -39,7 +39,7 @@ std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
 
 
 
-GLuint frameTextureID, depthSSBO;
+GLuint renderedFrameID, depthSSBO;
 glm::ivec2 currentScreenRes;
 unordered_map<int, bool> keyMap = {};
 bool headLampEnabled = false;
@@ -95,7 +95,7 @@ int main() {
 
 
 
-	frameTextureID = render::createTexture(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+	renderedFrameID = render::createTexture(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
 	GLuint textureArrayEnvironment = render::createTextureArray(textureNames);
 	GLuint textureArrayUI = render::createTextureArray(UIImageNames);
 	GLuint textureArrayNumeric = render::createTextureArray(symbolNames);
@@ -225,9 +225,12 @@ int main() {
 		}
 
 
+		//Update resolution
+		glViewport(0, 0, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+
 		//Environment Shader.
 		glUseProgram(envShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		glBindTextureUnit(0, textureArrayEnvironment);
 
@@ -258,7 +261,7 @@ int main() {
 
 		//Sprite Shader.
 		glUseProgram(spriteShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 		glBindTextureUnit(0, textureArrayEnvironment);
 
@@ -289,8 +292,12 @@ int main() {
 		
 		//UI Shader.
 		if (!(dev::NO_INTERFACE > 0)) {
+			//Update resolution
+			glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
+
+
 			glUseProgram(uiShader);
-			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 			glBindTextureUnit(0, textureArrayEnvironment);
 			glBindTextureUnit(1, textureArrayUI);
@@ -324,10 +331,12 @@ int main() {
 		}
 		
 
+		//Update resolution
+		glViewport(0, 0, currentScreenRes.x, currentScreenRes.y);
 
 		//Display Shader and update screen.
 		glUseProgram(displayShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+		glBindTextureUnit(0, renderedFrameID);
 
 		GLuint screenResLoc = glGetUniformLocation(displayShader, "screenResolution");
 		glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
