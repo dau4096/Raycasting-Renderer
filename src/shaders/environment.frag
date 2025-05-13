@@ -451,7 +451,7 @@ void main() {
 						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 						float distance = length(intersect3D - thisLight.position);
 						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation * normalEffect, DEFAULT_BRIGHTNESS, 2.5);
+						float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
 
 						vec3 lightContribution = thisLight.colour * brightness;
 						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
@@ -478,7 +478,7 @@ void main() {
 						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 						float distance = length(intersect3D - headLamp.position);
 						float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation * normalEffect, HEADLAMP_MIN_LIGHT, 2.5);
+						float brightness = clamp(attenuation, HEADLAMP_MIN_LIGHT, 2.5);
 
 						vec3 lightContribution = headLamp.colour * brightness;
 						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);

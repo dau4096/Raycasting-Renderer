@@ -174,6 +174,7 @@ int main() {
 
 		if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
 			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
+			player.touchingFloor = false;
 		} else {
 			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_STAND;
 		}
