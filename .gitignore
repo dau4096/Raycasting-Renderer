@@ -1,8 +1,34 @@
-*.sublime-workspace
-*.sublime-project
+# Prerequisites
+*.d
+makefile
 
-*.exe
+# Compiled Object files
+*.slo
+*.lo
 *.o
-*.bat
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
 *.dll
-app.exe
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.bat
