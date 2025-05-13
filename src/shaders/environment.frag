@@ -102,6 +102,7 @@ const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
+const float textureRepeatInterval = 2.0f;
 const bool noLighting = false;
 
 
@@ -163,7 +164,6 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall) {
 
 
 vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
-	const float textureRepeatInterval = 2.0f;
 	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
 	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
@@ -180,7 +180,7 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 		xUV = fract(intersectPoint.x / textureRepeatInterval);
 	}
 	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
-	if (flipXUV) {xUV = 1.0f - xUV;}
+	else if (flipXUV) {xUV = 1.0f - xUV;}
 
 
 	//yUV calculation.
@@ -257,16 +257,15 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, bool isLOSCheck=false,
 vec2 getVisplaneUV(vec3 position3D) {
 	bool topHalf = fragPosition.y > renderResolution.y/2;
 	vec2 realPosition = position3D.xy;
-	float distance = length(realPosition - playerPosition.xy);
-	//Compare against some XY bounds maybe.
-
 
 	//Take the fractional parts of the position (texture tiles every unit square)
-	float xUV = fract(abs(realPosition.x));
+	float xUV = fract(realPosition.x / textureRepeatInterval);
+	if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
 	if (!topHalf) {
 		xUV = 1.0f - xUV;
 	}
-	float yUV = fract(abs(realPosition.y));
+	float yUV = fract(realPosition.y / textureRepeatInterval);
+	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
 	//Texture index depends on top (ceiling) or bottom (floor) half.
 
 	return vec2(xUV, yUV);
