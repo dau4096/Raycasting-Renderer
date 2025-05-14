@@ -164,6 +164,7 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall) {
 
 
 vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
+	const vec2 UVOffset = vec2(0.5f, 0.0);
 	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
 	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
@@ -199,7 +200,7 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	double yUV = 1.0f - fract(fragZ / textureRepeatInterval);
 
 
-	return vec2(xUV, yUV);
+	return vec2(xUV, yUV) + UVOffset;
 }
 
 
@@ -255,6 +256,7 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, bool isLOSCheck=false,
 
 
 vec2 getVisplaneUV(vec3 position3D) {
+	const vec2 UVOffset = vec2(0.5f, 0.5f);
 	bool topHalf = fragPosition.y > renderResolution.y/2;
 	vec2 realPosition = position3D.xy;
 
@@ -268,7 +270,7 @@ vec2 getVisplaneUV(vec3 position3D) {
 	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
 	//Texture index depends on top (ceiling) or bottom (floor) half.
 
-	return vec2(xUV, yUV);
+	return vec2(xUV, yUV) + UVOffset;
 }
 
 
@@ -442,7 +444,6 @@ void main() {
 					bool inShadow = checkLOS(thisLight.position, closestIntersectPoint, closestIndex, foundType);
 					vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
 					float normalDot = dot(normal, lightDir);
-					float normalEffect = normalDot * 0.6 + 0.4; //Dot of dir of player-wallIntersect, and intersect-light.
 
 					if (inShadow || normalDot < 0.0f) {
 						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
@@ -469,7 +470,6 @@ void main() {
 
 					vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
 					float normalDot = dot(normal, lightDir);
-					float normalEffect = normalDot * 0.6 + 0.4; //Dot of dir of player-wallIntersect, and intersect-light.
 
 					if (normalDot < 0.0f) {
 						fragColour = vec4(min(albedo.rgb * HEADLAMP_MIN_LIGHT + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);

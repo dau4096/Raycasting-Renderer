@@ -452,6 +452,7 @@ void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool ena
 	if (abs(plane.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
 		return;
 
+
 	} else if (plane.data < 0) { //Moving downwards.
 		if (enabled && (plane.internal > plane.data)) { //Turned on; moving down.
 			float newInternal = std::max(plane.internal - speed, plane.data);
@@ -468,13 +469,13 @@ void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool ena
 
 	} else { //Moving upwards.
 		if (enabled && (plane.internal < plane.data)) { //Turned on; moving up.
-			float newInternal = std::min(plane.internal + speed, 0.0f);
+			float newInternal = std::max(plane.internal + speed, 0.0f);
 			float delta = newInternal - plane.internal;
 			plane.height += delta;
 			plane.internal = newInternal;
 
 		} else if (!enabled && (plane.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(plane.internal - speed, plane.data);
+			float newInternal = std::min(plane.internal - speed, plane.data);
 			float delta = plane.internal - newInternal;
 			plane.height -= delta;
 			plane.internal = newInternal;
