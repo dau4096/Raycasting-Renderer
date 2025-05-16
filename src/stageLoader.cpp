@@ -156,6 +156,7 @@ static inline Sprite extractSprite(const pugi::xml_node& node, std::array<int, c
 	Sprite sprite = Sprite(
 		parseVec3(node.attribute("position").as_string()),
 		node.attribute("width").as_float(),
+		node.attribute("height").as_float(),
 		assignTexture(textureStr, textureNames),
 		static_cast<SpriteType>(assignEnum(typeStr)),
 		strToUpper(node.attribute("collision").as_string()) == "TRUE"

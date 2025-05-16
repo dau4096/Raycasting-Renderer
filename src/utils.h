@@ -272,7 +272,7 @@ namespace utils {
 
 	struct Sprite {
 		glm::vec3 position;
-		float width;
+		float width, height;
 		int textureID;
 		int valid;
 		int collision;
@@ -280,23 +280,24 @@ namespace utils {
 
 		Sprite() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), valid(0), type(SPR_INVALID), collision(false) {}
 
-		Sprite(glm::vec3 position, float width, int textureID, SpriteType type=SPR_DECO, int collision=1)
-			: position(position), width(width), textureID(textureID), valid(1), type(type), collision(collision) {}
+		Sprite(glm::vec3 position, float width, float height, int textureID, SpriteType type=SPR_DECO, int collision=1)
+			: position(position), width(width), height(height), textureID(textureID), valid(1), type(type), collision(collision) {}
 	};
 
 	struct SpriteGPU {
 		alignas(16) glm::vec3 position;
 		alignas(4) float width;
+		alignas(4) float height;
 		alignas(4) int textureID;
 		alignas(4) int valid;
-		alignas(4) float _padding;
 
-		SpriteGPU() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), valid(0), _padding(0.0f) {}
+		SpriteGPU() : position(0.0f, 0.0f, 0.0f), width(0.0f), height(0.0f), textureID(0), valid(0) {}
 
 		SpriteGPU(Sprite* sprite)
-			: position(sprite->position), width(sprite->width),
-			  textureID(sprite->textureID), valid(sprite->valid),
-			  _padding(0.0f) {}
+			: position(sprite->position),
+			  width(sprite->width), height(sprite->height),
+			  textureID(sprite->textureID),
+			  valid(sprite->valid) {}
 	};
 
 

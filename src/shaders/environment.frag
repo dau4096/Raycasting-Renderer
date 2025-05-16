@@ -48,11 +48,11 @@ layout(std430, binding = 3) buffer wallUBO {
 };
 
 struct Sprite {
-	vec2 position;	//Sprite Position.
+	vec3 position;	//Sprite Position.
 	float width;	//Sprite Width.
+	float height;	//Sprite Height.
 	int textureID;	//Sprite Texture ID.
 	int valid;		//Sprite Validity.
-	float _padding;	//Memory padding.
 };
 layout(std140, binding = 4) uniform spriteSSBO {
 	Sprite sprites[32];

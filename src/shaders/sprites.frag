@@ -50,9 +50,9 @@ layout(std430, binding = 3) buffer wallUBO {
 struct Sprite {
 	vec3 position;	//Sprite Position.
 	float width;	//Sprite Width.
+	float height;	//Sprite Height.
 	int textureID;	//Sprite Texture ID.
 	int valid;		//Sprite Validity.
-	float _padding;	//Memory padding.
 };
 layout(std140, binding = 4) uniform spriteSSBO {
 	Sprite sprites[32];
@@ -186,9 +186,8 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, bool isLOSCheck=false,
 
 
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
-	const float spriteHeightUnits = 1.75f;
-	float spriteFootZ = thisSprite.position.z - spriteHeightUnits/2.0f;
-	float spriteHeadZ = thisSprite.position.z + spriteHeightUnits/2.0f;
+	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
+	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
 	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float distance = length(playerPosition.xy - thisSprite.position.xy) / zoomEffect;

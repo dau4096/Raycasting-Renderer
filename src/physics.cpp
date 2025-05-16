@@ -295,9 +295,8 @@ void playerMove(
 
 	for (const utils::Sprite& sprite : *spriteData) {
 		if ((sprite.valid < 1) || !(sprite.collision)) {continue;}
-		const float spriteHeightTMP = 1.8f;
-		float spriteHeadZ = sprite.position.z + (spriteHeightTMP/2.0f);
-		float spriteFootZ = sprite.position.z - (spriteHeightTMP/2.0f);
+		float spriteHeadZ = sprite.position.z + (sprite.height/2.0f);
+		float spriteFootZ = sprite.position.z - (sprite.height/2.0f);
 
 		if (playerFootZ > spriteHeadZ || playerHeadZ < spriteFootZ) {continue; /* Above/Below sprite. */}
 
