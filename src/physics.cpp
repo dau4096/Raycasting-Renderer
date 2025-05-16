@@ -572,8 +572,9 @@ void updateSpecials(
 				break;
 			}
 
-			default:
+			default: {
 				break;
+			}
 		}
 	}
 
@@ -638,8 +639,9 @@ void updateSpecials(
 				break;
 			}
 
-			default:
+			default: {
 				break;
+			}
 		}
 	}
 }

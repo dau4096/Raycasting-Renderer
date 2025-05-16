@@ -82,6 +82,7 @@ namespace constants {
 	//Texture Standardisation
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
 	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 32;
+	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures/fallback.png";
 
 
 	//Physics/Rendering Frequency/dt
@@ -133,7 +134,7 @@ namespace display {
 }
 
 namespace playerConfig {
-	constexpr std::string STAGE_NAME = "dev";
+	constexpr const char* STAGE_NAME = "dev";
 
 	//Preference Speeds
 	constexpr float TURN_SPEED_KEYB = 1.0f;
@@ -176,7 +177,7 @@ namespace dev {
 	constexpr int SHOW_FREQ = 1;
 	constexpr int NO_INTERFACE = 0;
 	constexpr int VIEW_BOB_DISABLE = 1;
-	constexpr int VIEW_LEAN_DISABLE = 1;
+	constexpr int VIEW_LEAN_DISABLE = 0;
 	constexpr int LOCK_VLOOK = 1;
 }
 
