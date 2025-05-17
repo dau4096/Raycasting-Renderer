@@ -1,5 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
+#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
 #include "src/includes.h"
 #include "src/stageLoader.h"
 #include "src/physics.h"
@@ -30,7 +32,7 @@ std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
 	GLFW_KEY_W, GLFW_KEY_S,
 	GLFW_KEY_A, GLFW_KEY_D,
 	GLFW_KEY_E, GLFW_KEY_F,
-	GLFW_KEY_SPACE,
+	GLFW_KEY_SPACE, GLFW_KEY_F12,
 	GLFW_KEY_LEFT_SHIFT, GLFW_KEY_LEFT_CONTROL,
 	GLFW_KEY_1, GLFW_KEY_C,
 	GLFW_KEY_ESCAPE
@@ -136,7 +138,7 @@ int main() {
 	for (int key : monitoredKeys) {
 		keyMap[key] = false;
 	}
-	bool interactKey = false;
+	bool interactKey = false, shouldTakeScreenshot = false;
 	int lightFlickerRNG, FPS = 0;
 
 	while (!glfwWindowShouldClose(Window)) {
@@ -152,6 +154,7 @@ int main() {
 					headLampEnabled = !headLampEnabled;
 				}
 				interactKey = (key == GLFW_KEY_E) && (!keyMap[GLFW_KEY_E]);
+				shouldTakeScreenshot = (key == GLFW_KEY_F12) && (!keyMap[GLFW_KEY_F12]);
 
 				keyMap[key] = true;
 
@@ -318,6 +321,9 @@ int main() {
 		utils::GLErrorcheck("Sprite Shader", true);
 
 		
+		if ((dev::SCREENSHOT_HAS_HUD <= 0) && shouldTakeScreenshot) {
+			render::saveScreenshot(renderedFrameID);
+		}
 
 		//UI Shader.
 		if (!(dev::NO_INTERFACE > 0)) {
@@ -361,6 +367,11 @@ int main() {
 			glBindVertexArray(0);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 			utils::GLErrorcheck("UI Shader", true);
+		}
+
+
+		if ((dev::SCREENSHOT_HAS_HUD > 0) && shouldTakeScreenshot) {
+			render::saveScreenshot(renderedFrameID);
 		}
 		
 

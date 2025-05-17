@@ -1,6 +1,7 @@
 #include "includes.h"
 #include "utils.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
+#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
@@ -146,9 +147,9 @@ void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants
 		visplaneBuffer[index] = VisplaneGPU(&(dataSet->at(index)));
 	}
 
-    glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, visplaneBuffer.data());
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, visplaneBuffer.data());
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 
@@ -248,6 +249,38 @@ void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_L
 		raise("Failed to write data to lightUBO.");
 	}
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+
+void saveScreenshot(GLuint frameTextureID) {
+	GLuint fbo;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTextureID, 0);
+
+	std::vector<unsigned char> pixels(display::RENDER_RESOLUTION.x * display::RENDER_RESOLUTION.y * 3);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glReadPixels(0, 0, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+	//Flip image vertically.
+	for (int y = 0; y < display::RENDER_RESOLUTION.y / 2; ++y) {
+		for (int x = 0; x < display::RENDER_RESOLUTION.x * 3; ++x) {
+			std::swap(pixels[y * display::RENDER_RESOLUTION.x * 3 + x], pixels[(display::RENDER_RESOLUTION.y - 1 - y) * display::RENDER_RESOLUTION.x * 3 + x]);
+		}
+	}
+
+	std::string timeStr = utils::getTimestamp();
+
+	stbi_write_png(
+		("screenshots/" + timeStr + ".png").c_str(),
+		display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y,
+		3, pixels.data(), display::RENDER_RESOLUTION.x*3
+	);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	std::cout << "Successfully saved screenshot as : [" << timeStr << ".png]" << std::endl;
 }
 
 

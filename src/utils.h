@@ -75,6 +75,16 @@ namespace utils {
 
     std::string readFile(const std::string& filePath);
 
+    static inline std::string getTimestamp() {
+    	time_t now = time(nullptr);
+    	struct tm* timeinfo = localtime(&now);
+
+    	std::ostringstream oss;
+    	oss << std::put_time(timeinfo, "%Y%m%d%H%M%S");
+
+    	return oss.str();
+    }
+
 
 	static inline bool logicToBool(int A) {return (A > 0);}
 	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}

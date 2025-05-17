@@ -186,7 +186,8 @@ namespace dev {
 	constexpr int VIEW_BOB_DISABLE = 1;
 	constexpr int VIEW_LEAN_DISABLE = 0;
 	constexpr int LOCK_VLOOK = 1;
-	constexpr int SMOOTHING_ENABLED = 1;
+	constexpr int SMOOTHING_ENABLED = 0;
+	constexpr int SCREENSHOT_HAS_HUD = 1;
 }
 
 #endif // CONSTANTS_H
