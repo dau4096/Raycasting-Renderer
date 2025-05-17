@@ -348,10 +348,10 @@ int main() {
 			glUniform1i(energyLocation, player.energy);
 
 			//Assorted other data.
-			GLuint screenResLoc = glGetUniformLocation(uiShader, "screenResolution");
+			GLuint screenResLocation = glGetUniformLocation(uiShader, "screenResolution");
 			GLuint freqLocation = glGetUniformLocation(uiShader, "FPS");
 			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
-			glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
+			glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
 			glUniform1i(freqLocation, FPS);
 			glUniform1i(showFreqLocation, dev::SHOW_FREQ);
 
@@ -374,8 +374,10 @@ int main() {
 
 
 		//Assorted other data.
-		GLuint screenResLoc = glGetUniformLocation(displayShader, "screenResolution");
-		glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
+		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
+		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
+		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
+		glUniform1i(smoothingLocation, dev::SMOOTHING_ENABLED);
 
 
 
