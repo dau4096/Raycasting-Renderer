@@ -237,23 +237,35 @@ int main() {
 		glBindTextureUnit(0, textureArrayEnvironment);
 		glBindTextureUnit(1, skyboxTextureID);
 
+
+		//Player Data
 		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
 		GLuint playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
 		GLuint playerRollLocation = glGetUniformLocation(envShader, "playerViewRoll");
 		GLuint playerPitchLocation = glGetUniformLocation(envShader, "playerViewPitch");
 		GLuint zoomLocation = glGetUniformLocation(envShader, "zoom");
-		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
-		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
-		GLuint lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
-		
 		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1f(playerRollLocation, player.viewRoll);
 		glUniform1f(playerPitchLocation, player.viewPitch);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+
+		//Debug
+		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
 		glUniform1i(uvLocation, dev::DRAW_UV);
+
+		//Headlamp
+		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
+		GLuint lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
 		glUniform1i(lightLocation, headLampEnabled);
 		glUniform1i(lightFlickerLocation, lightFlickerRNG);
+
+		//Sun
+		GLuint sunDirLocation = glGetUniformLocation(envShader, "sunDirection");
+		GLuint sunColourLocation = glGetUniformLocation(envShader, "sunColour");
+		glUniform3f(sunDirLocation, display::SUN_DIRECTION.x, display::SUN_DIRECTION.y, display::SUN_DIRECTION.z);
+		glUniform3f(sunColourLocation, display::SUN_COLOUR.x, display::SUN_COLOUR.y, display::SUN_COLOUR.z);
+
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -262,29 +274,42 @@ int main() {
 		utils::GLErrorcheck("Environment Shader", true);
 
 
+
 		//Sprite Shader.
 		glUseProgram(spriteShader);
 		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 		glBindTextureUnit(0, textureArrayEnvironment);
 
+
+		//Player Data
 		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
 		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
 		playerRollLocation = glGetUniformLocation(spriteShader, "playerViewRoll");
 		playerPitchLocation = glGetUniformLocation(spriteShader, "playerViewPitch");
 		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
-		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
-		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(spriteShader, "headLampFlicker");
-		
 		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1f(playerRollLocation, player.viewRoll);
 		glUniform1f(playerPitchLocation, player.viewPitch);
 		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+
+		//Debug
+		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
 		glUniform1i(uvLocation, dev::DRAW_UV);
+
+		//Headlamp
+		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
+		lightFlickerLocation = glGetUniformLocation(spriteShader, "headLampFlicker");
 		glUniform1i(lightLocation, headLampEnabled);
 		glUniform1i(lightFlickerLocation, lightFlickerRNG);
+
+		//Sun
+		sunDirLocation = glGetUniformLocation(spriteShader, "sunDirection");
+		sunColourLocation = glGetUniformLocation(spriteShader, "sunColour");
+		glUniform3f(sunDirLocation, display::SUN_DIRECTION.x, display::SUN_DIRECTION.y, display::SUN_DIRECTION.z);
+		glUniform3f(sunColourLocation, display::SUN_COLOUR.x, display::SUN_COLOUR.y, display::SUN_COLOUR.z);
+
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -293,6 +318,7 @@ int main() {
 		utils::GLErrorcheck("Sprite Shader", true);
 
 		
+
 		//UI Shader.
 		if (!(dev::NO_INTERFACE > 0)) {
 			//Update resolution
@@ -302,29 +328,33 @@ int main() {
 			glUseProgram(uiShader);
 			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-			glBindTextureUnit(0, textureArrayEnvironment);
-			glBindTextureUnit(1, textureArrayUI);
-			glBindTextureUnit(2, textureArrayNumeric);
+			glBindTextureUnit(0, textureArrayEnvironment); //World Textures
+			glBindTextureUnit(1, textureArrayUI); //UI Textures
+			glBindTextureUnit(2, textureArrayNumeric); //0-9 Textures.
 
+
+			//Player Data.
 			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
 			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
 			GLuint vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
 			GLuint healthLocation = glGetUniformLocation(uiShader, "health");
 			GLuint energyLocation = glGetUniformLocation(uiShader, "energy");
-			GLuint screenResLoc = glGetUniformLocation(uiShader, "screenResolution");
-			GLuint freqLocation = glGetUniformLocation(uiShader, "FPS");
-			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
-			
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
 			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 			glUniform4f(vignetteColourLocation, tintData.x, tintData.y, tintData.z, tintData.w);
 			glUniform1i(healthLocation, player.health);
 			glUniform1i(energyLocation, player.energy);
+
+			//Assorted other data.
+			GLuint screenResLoc = glGetUniformLocation(uiShader, "screenResolution");
+			GLuint freqLocation = glGetUniformLocation(uiShader, "FPS");
+			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
 			glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
 			glUniform1i(freqLocation, FPS);
 			glUniform1i(showFreqLocation, dev::SHOW_FREQ);
+
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -334,6 +364,7 @@ int main() {
 		}
 		
 
+
 		//Update resolution
 		glViewport(0, 0, currentScreenRes.x, currentScreenRes.y);
 
@@ -341,8 +372,12 @@ int main() {
 		glUseProgram(displayShader);
 		glBindTextureUnit(0, renderedFrameID);
 
+
+		//Assorted other data.
 		GLuint screenResLoc = glGetUniformLocation(displayShader, "screenResolution");
 		glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
+
+
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);

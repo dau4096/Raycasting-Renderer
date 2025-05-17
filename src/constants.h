@@ -127,6 +127,12 @@ namespace display {
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures/fallback.png";
 
 
+	//Sun
+	constexpr glm::vec3 SUN_DIRECTION = glm::vec3(0.0f, 0.0f, 1.0f);
+	constexpr float SUN_INTENSITY = 2.5f;
+	constexpr glm::vec3 SUN_COLOUR = glm::vec3(1.0f, 1.0f, 1.0f) * SUN_INTENSITY;
+
+
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr float FOV = 70.0f;
