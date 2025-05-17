@@ -2,14 +2,21 @@
 #version 460 core
 
 
+//Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
 layout(binding=1) uniform sampler2D skyboxTexture;
+
+//PlayerData
 uniform float playerViewAngle;
 uniform float playerViewRoll;
 uniform float playerViewPitch;
 uniform vec3 playerPosition;
 uniform bool zoom;
+
+//Debug
 uniform int drawUV;
+
+//Headlamp
 uniform bool headLampEnabled;
 uniform int headLampFlicker;
 
@@ -97,8 +104,7 @@ const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float MIN_WALL_DIST = 0.125f;
-const float DEFAULT_BRIGHTNESS = 0.1f;
-const float HEADLAMP_MIN_LIGHT = 0.025f;
+const float DEFAULT_BRIGHTNESS = 0.175f;
 const dvec2 INVALIDdv2 = dvec2(INF, INF);
 const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
@@ -110,15 +116,6 @@ const bool noLighting = false;
 
 double determinant(dvec2 vecA, dvec2 vecB) {
 	return (vecA.x * vecB.y) - (vecA.y * vecB.x);
-}
-
-
-
-float angleClamp(float value) {
-	if (value < 0.0f) {
-		return 360.0f + value;
-	}
-	return mod(value, 360.0f);
 }
 
 
@@ -336,7 +333,7 @@ void main() {
 
 	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
-	float rayAngleYaw = radians(angleClamp(playerViewAngle + 180.0f + rayOffset));
+	float rayAngleYaw = radians(playerViewAngle + 180.0f + rayOffset);
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	Ray fragRay = createRay(playerPosition.xy, rayDirection);
@@ -438,6 +435,7 @@ void main() {
 				fragColour = albedo;
 
 			} else {
+				vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 				for (int idx=0; idx<64; idx++) {
 					//Iterate through all lights.
 					Light thisLight = lights[idx];
@@ -448,13 +446,10 @@ void main() {
 					vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
 					float normalDot = dot(normal, lightDir);
 
-					if (inShadow || normalDot < 0.0f) {
-						fragColour = vec4(min(albedo.rgb * DEFAULT_BRIGHTNESS + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
-					} else {
-						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
+					if (!inShadow && normalDot > 0.0f) {
 						float distance = length(intersect3D - thisLight.position);
 						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation, DEFAULT_BRIGHTNESS, 2.5);
+						float brightness = clamp(attenuation, 0.0f, 1.0f);
 
 						vec3 lightContribution = thisLight.colour * brightness;
 						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
@@ -474,13 +469,10 @@ void main() {
 					vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
 					float normalDot = dot(normal, lightDir);
 
-					if (normalDot < 0.0f) {
-						fragColour = vec4(min(albedo.rgb * HEADLAMP_MIN_LIGHT + fragColour.rgb, vec3(1.0f, 1.0f, 1.0f)), 1.0f);
-					} else {
-						vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
+					if (normalDot >= 0.0f) {
 						float distance = length(intersect3D - headLamp.position);
 						float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation, HEADLAMP_MIN_LIGHT, 2.5);
+						float brightness = clamp(attenuation, 0.0f, 1.0f);
 
 						vec3 lightContribution = headLamp.colour * brightness;
 						vec4 litColor = vec4(albedo.rgb * lightContribution, 1.0f);
@@ -488,6 +480,10 @@ void main() {
 						fragColour = min(litColor + fragColour, vec4(1.0f, 1.0f, 1.0f, 1.0f));
 					}
 				}
+
+
+				//Minimum/Maximum brightness.
+				fragColour = clamp(fragColour, albedo * DEFAULT_BRIGHTNESS, albedo);
 			}
 		}
 	} else {
