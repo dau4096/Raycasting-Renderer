@@ -27,8 +27,9 @@ namespace render {
     GLuint createDepthSSBO(int width);
 
 
-    GLuint createTexture(int width, int height);
-    GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>& textureNames);
+    GLuint createGLImage2D(int width, int height);
+    GLuint loadGLTexture2D(const std::string textureName, int expectedWidth=-1, int expectedHeight=-1);
+    GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames);
 
 
     GLuint getVAO();

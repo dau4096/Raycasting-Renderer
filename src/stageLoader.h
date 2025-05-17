@@ -17,7 +17,7 @@ namespace stageLoader {
 		std::array<utils::Light, constants::MAX_LIGHTS>* lightData,
 		std::array<utils::LogicGate, constants::MAX_GATES>* logicGates,
 		std::array<int, constants::MAX_FLAGS>* flags,
-		std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	);
 
 

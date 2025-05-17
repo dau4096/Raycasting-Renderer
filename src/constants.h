@@ -79,12 +79,6 @@ namespace constants {
 	constexpr float TO_DEG = 57.2957795130824f;
 
 
-	//Texture Standardisation
-	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
-	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 32;
-	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures/fallback.png";
-
-
 	//Physics/Rendering Frequency/dt
 	constexpr int HZ = 45;
 	constexpr double DT = 1.0d/HZ;
@@ -124,6 +118,13 @@ namespace display {
 	constexpr glm::ivec2 SCREEN_RESOLUTION = glm::ivec2(640, 400);
 	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(480, 270);
 	constexpr glm::ivec2 UI_RESOLUTION = RENDER_RESOLUTION;
+
+
+	//Texture Standardisation
+	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
+	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
+	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 32;
+	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures/fallback.png";
 
 
 	//Rendering Assorted

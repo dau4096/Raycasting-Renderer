@@ -68,7 +68,7 @@ int main() {
 	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
 	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
 
-	std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
+	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 
 	stageLoader::loadStage(
 		playerConfig::STAGE_NAME,
@@ -95,10 +95,11 @@ int main() {
 
 
 
-	renderedFrameID = render::createTexture(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
-	GLuint textureArrayEnvironment = render::createTextureArray(textureNames);
-	GLuint textureArrayUI = render::createTextureArray(UIImageNames);
-	GLuint textureArrayNumeric = render::createTextureArray(symbolNames);
+	renderedFrameID = render::createGLImage2D(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
+	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames);
+	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames);
+	GLuint skyboxTextureID = render::loadGLTexture2D("skybox", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 	render::createConstUBO();
 
@@ -234,6 +235,7 @@ int main() {
 		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		glBindTextureUnit(0, textureArrayEnvironment);
+		glBindTextureUnit(1, skyboxTextureID);
 
 		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
 		GLuint playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");

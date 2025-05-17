@@ -115,7 +115,7 @@ void createConstUBO() {
 		display::MAX_RAY_ANGLE,
 		display::MAX_RAY_DIST,
 
-		{constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y}
+		{display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y}
 	};
 
 	GLuint constUBO;
@@ -252,7 +252,7 @@ void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_L
 
 
 
-GLuint createTexture(int width, int height) {
+GLuint createGLImage2D(int width, int height) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
@@ -268,13 +268,55 @@ GLuint createTexture(int width, int height) {
 }
 
 
-GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>& textureNames) {
+GLuint loadGLTexture2D(const std::string textureName, int expectedWidth=-1, int expectedHeight=-1) {
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	int width, height, channels;
+	unsigned char* textureData = stbi_load(
+		("src/textures/" + textureName + ".png").c_str(),
+		&width, &height,
+		&channels, 4
+	);
+
+	if (!textureData) {
+		std::cerr << "Failed to load texture : " << textureName << ".png : " << stbi_failure_reason() << std::endl;
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDeleteTextures(1, &textureID);
+		return 0;
+	}
+
+	if ((expectedWidth != -1 && width != expectedWidth) || (expectedHeight != -1 && height != expectedHeight)) {
+		std::cout << "Failed to load texture : " << textureName << ".png : Image was not correct resolution." << std::endl;
+		std::cerr << "Expected [" << expectedWidth << ", " << expectedHeight << "] : Got [" << width << ", " << height << "]" << std::endl;
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDeleteTextures(1, &textureID);
+		return 0;
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	stbi_image_free(textureData);
+
+	return textureID;
+}
+
+
+GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames) {
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
 
 
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y, constants::TEXTURE_ARRAY_MAX_LAYERS, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y, display::TEXTURE_ARRAY_MAX_LAYERS, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
 
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -289,7 +331,7 @@ GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_L
 	bool usedFallback;
 
 	unsigned char* fallbackTextureData = stbi_load(
-		constants::FALLBACK_TEXTURE_PATH,
+		display::FALLBACK_TEXTURE_PATH,
 		&fallbackTextureWidth, &fallbackTextureHeight,
 		&fallbackTextureChannels, 4
 	);
@@ -328,15 +370,15 @@ GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_L
 		}
 
 
-		if (width != constants::TEXTURE_RESOLUTION.x || height != constants::TEXTURE_RESOLUTION.y) {
+		if (width != display::TEXTURE_RESOLUTION.x || height != display::TEXTURE_RESOLUTION.y) {
 			std::cerr << "Texture " << reportedTextureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
-					  << constants::TEXTURE_RESOLUTION.x << "x" << constants::TEXTURE_RESOLUTION.y << "." << std::endl;
+					  << display::TEXTURE_RESOLUTION.x << "x" << display::TEXTURE_RESOLUTION.y << "." << std::endl;
 			stbi_image_free(textureData);
 			continue;
 		}
 
 
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 
 
 		if (!usedFallback) {
@@ -344,7 +386,7 @@ GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_L
 		}
 
 		layerIndex++;
-		if (layerIndex >= constants::TEXTURE_ARRAY_MAX_LAYERS) break;
+		if (layerIndex >= display::TEXTURE_ARRAY_MAX_LAYERS) break;
 	}
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);

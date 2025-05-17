@@ -2,7 +2,8 @@
 #version 460 core
 
 
-uniform sampler2DArray textureArray;
+layout(binding=0) uniform sampler2DArray textureArray;
+layout(binding=1) uniform sampler2D skyboxTexture;
 uniform float playerViewAngle;
 uniform float playerViewRoll;
 uniform float playerViewPitch;
@@ -90,7 +91,8 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 vec2 fragPosition;
 ivec2 renderResolution;
 vec4 fragColour;
-double verticalFOV, t, fragZ;
+double verticalFOV, verticalViewAngleOffset;
+double t, fragZ;
 const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
@@ -227,15 +229,11 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, bool isLOSCheck=false,
 
 
 	} else { //Used within the main Visplane loop of main() for rendering.
-		float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-		float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
+		float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
+		float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
 
-		float verticalFOV = 2 * atan(tan(radians(rayAngle)) * (renderResolution.x / renderResolution.y));
-
-		float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
-		float vAO = normY * (verticalFOV/2);
 		float theta = radians(playerViewAngle + rayOffset);
-		vec3 rayDirection = vec3(sin(theta), cos(theta), tan(vAO));
+		vec3 rayDirection = vec3(sin(theta), cos(theta), tan(float(verticalViewAngleOffset)));
 
 
 		/*
@@ -336,12 +334,17 @@ void main() {
 	fragPosition.y -= pitchDecimal * 10.0f; //10x scaling.
 
 
-	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	float rayOffset = -rayAngle + (fragPosition.x / renderResolution.x) * 2.0f * rayAngle;
-	float angle = radians(angleClamp(playerViewAngle + 180.0f + rayOffset));
+	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
+	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
+	float rayAngleYaw = radians(angleClamp(playerViewAngle + 180.0f + rayOffset));
 
-	vec2 rayDirection = vec2(sin(angle), cos(angle));
+	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	Ray fragRay = createRay(playerPosition.xy, rayDirection);
+	
+	verticalFOV = 2 * atan(tan(radians(halfFOV)) * (renderResolution.x / renderResolution.y));
+	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
+	verticalViewAngleOffset = normY * (verticalFOV / 2.0f);
+
 
 
 	vec3 closestIntersectPoint, closestUV;
@@ -487,6 +490,12 @@ void main() {
 				}
 			}
 		}
+	} else {
+		vec2 UV = vec2(
+			fract(rayAngleYaw / 6.28318530718f), //Over 2*Pi.
+			1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
+		);
+		fragColour.rgb = texture(skyboxTexture, UV).rgb;
 	}
 
 	

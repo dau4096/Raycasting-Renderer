@@ -67,7 +67,7 @@ int assignEnum(const std::string& enumStr) {
 }
 
 int currentTextureIndex = 0;
-int assignTexture(std::string textureStr, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
+int assignTexture(std::string textureStr, std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
 	auto begin = textureNames->begin(), end = textureNames->end();
 	auto namePTR = std::find(std::begin(*textureNames), std::end(*textureNames), textureStr);
 
@@ -76,7 +76,7 @@ int assignTexture(std::string textureStr, std::array<std::string, constants::TEX
 	if (namePTR != end) {
 		idx = std::distance(begin, namePTR);
 	} else {
-		if (currentTextureIndex >= constants::TEXTURE_ARRAY_MAX_LAYERS) {
+		if (currentTextureIndex >= display::TEXTURE_ARRAY_MAX_LAYERS) {
 			raise("Maximum texture layers reached. Cannot assign more.");
 			return -1;
 		}
@@ -95,8 +95,13 @@ template<typename T, std::size_t N>
 std::array<T, N> fetchFromXML(
 		const pugi::xml_document& doc,
 		const std::string& xpath,
-		std::function<T(const pugi::xml_node&, std::array<int, constants::MAX_FLAGS>* flags, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames)> extractor,
-		std::array<int, constants::MAX_FLAGS>* flags=nullptr, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
+		std::function<T(
+			const pugi::xml_node&,
+			std::array<int, constants::MAX_FLAGS>* flags,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		)> extractor,
+		std::array<int, constants::MAX_FLAGS>* flags=nullptr,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
 	)
 {
 	std::array<T, N> result{};
@@ -113,7 +118,11 @@ std::array<T, N> fetchFromXML(
 
 
 
-static inline Visplane extractVisplane(const pugi::xml_node& node, std::array<int, constants::MAX_FLAGS>* flags, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
+static inline Visplane extractVisplane(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
 	std::string typeStr = strToUpper(node.attribute("type").as_string());
 	std::string flagPTR = node.attribute("IOPtr").as_string();
 	std::string textureStr = node.attribute("texture").as_string();
@@ -131,7 +140,11 @@ static inline Visplane extractVisplane(const pugi::xml_node& node, std::array<in
 }
 
 
-static inline Wall extractWall(const pugi::xml_node& node, std::array<int, constants::MAX_FLAGS>* flags, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
+static inline Wall extractWall(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
 	glm::vec3 start = parseVec3(node.attribute("start").as_string());
 	glm::vec3 end = parseVec3(node.attribute("end").as_string());
 	std::string typeStr = strToUpper(node.attribute("type").as_string());
@@ -150,7 +163,11 @@ static inline Wall extractWall(const pugi::xml_node& node, std::array<int, const
 }
 
 
-static inline Sprite extractSprite(const pugi::xml_node& node, std::array<int, constants::MAX_FLAGS>* flags, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
+static inline Sprite extractSprite(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
 	std::string typeStr = strToUpper(node.attribute("type").as_string());
 	std::string textureStr = node.attribute("texture").as_string();
 	Sprite sprite = Sprite(
@@ -166,7 +183,11 @@ static inline Sprite extractSprite(const pugi::xml_node& node, std::array<int, c
 }
 
 
-static inline Light extractLight(const pugi::xml_node& node, std::array<int, constants::MAX_FLAGS>* flags, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
+static inline Light extractLight(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
 	std::string flagPTR = node.attribute("inputPTR").as_string();
 	Light light = Light(
 		parseVec3(node.attribute("position").as_string()),
@@ -179,7 +200,11 @@ static inline Light extractLight(const pugi::xml_node& node, std::array<int, con
 }
 
 
-static inline LogicGate extractGate(const pugi::xml_node& node, std::array<int, constants::MAX_FLAGS>* flags, std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
+static inline LogicGate extractGate(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
 	std::string typeStr = node.attribute("type").as_string();
 	LogicGate gate = LogicGate(
 		static_cast<GateType>(assignEnum(typeStr)),
@@ -203,7 +228,7 @@ void loadStage(
 		std::array<utils::Light, constants::MAX_LIGHTS>* lightData,
 		std::array<utils::LogicGate, constants::MAX_GATES>* logicGates,
 		std::array<int, constants::MAX_FLAGS>* flags,
-		std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 	std::string filePath = "stages/" + stageName + ".xml";
 	std::string XMLSrc = utils::readFile(filePath);
