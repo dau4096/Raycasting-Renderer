@@ -56,7 +56,7 @@ glm::vec2 raycast(utils::Ray ray, utils::Wall wall) {
 }
 
 
-bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius) {
+bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr) {
 	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
 	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
 
@@ -69,6 +69,9 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 	glm::vec2 closestPoint = lineStartV2 + t * lineDir;
 	float distToCircle = glm::length(circlePosition - closestPoint);
 
+	if (distToLine) {
+		*distToLine = distToCircle;
+	}
 	return distToCircle <= radius;
 }
 
@@ -265,9 +268,11 @@ void playerMove(
 
 
 	//Horizontal Calculations;
+	/*
 	if (glm::length(player->velocity) < EPSILON) {
 		return;
 	}
+	*/
 
 
 	if (dev::NO_COLLIDE > 0) {
@@ -278,18 +283,63 @@ void playerMove(
 	}
 
 
-	glm::vec2 playerPosV2 = glm::vec2(player->position.x, player->position.y);
 	for (const utils::Wall& wall : *wallData) {
 		if ((wall.valid < 1) || (wall.specialType == W_TRIGGER)) {continue;}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
 		); //!aboveOrBelow.
+		bool touchingWallCheck = circleLineIntersect(
+			wall,
+			glm::vec2(player->position) + glm::vec2(player->velocity),
+			playerConfig::PLAYER_COLLISION_RADIUS
+		);
 
-		if (circleLineIntersect(wall, playerPosV2 + glm::vec2(player->velocity.x, player->velocity.y), playerConfig::PLAYER_COLLISION_RADIUS) && playerZCheckWall) {
-			glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
-			glm::vec2 correctedV = wallDir * glm::dot(glm::normalize(glm::vec2(player->velocity.x, player->velocity.y)), wallDir) * playerSpeed;
-			player->velocity.x = correctedV.x; player->velocity.y = correctedV.y;
+		if (touchingWallCheck && playerZCheckWall) {
+			glm::vec2 playerStartDelta = glm::vec2(player->position) - glm::vec2(wall.start);
+			glm::vec2 playerEndDelta = glm::vec2(player->position) - glm::vec2(wall.end);
+
+			float playerStartDist = glm::length(playerStartDelta);
+			float playerEndDist = glm::length(playerEndDelta);
+
+			if ((playerStartDist < playerConfig::PLAYER_COLLISION_RADIUS) || (playerEndDist < playerConfig::PLAYER_COLLISION_RADIUS)) {
+				//Stop the player walking through the start/end of the wall.
+				if (playerStartDist < playerEndDist) {
+					player->position = glm::vec3(
+						glm::vec2(player->position) + glm::normalize(playerStartDelta) * (playerConfig::PLAYER_COLLISION_RADIUS - playerStartDist + 1e-2f),
+						player->position.z
+					);
+				} else {
+					player->position = glm::vec3(
+						glm::vec2(player->position) + glm::normalize(playerEndDelta) * (playerConfig::PLAYER_COLLISION_RADIUS - playerEndDist + 1e-2f),
+						player->position.z
+					);
+				}
+			} else {
+				glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
+				glm::vec2 wallNormal = glm::vec2(wallDir.y, -wallDir.x);
+
+				glm::vec2 correctedV = wallDir * glm::dot(glm::normalize(glm::vec2(player->velocity.x, player->velocity.y)), wallDir) * playerSpeed;
+				player->velocity.x = correctedV.x; player->velocity.y = correctedV.y;
+				float distToWall;
+				touchingWallCheck = circleLineIntersect(
+					wall,
+					glm::vec2(player->position) + glm::vec2(player->velocity),
+					playerConfig::PLAYER_COLLISION_RADIUS,
+					&distToWall
+				);
+
+				if (distToWall < playerConfig::PLAYER_COLLISION_RADIUS) {
+					float correctionDist = glm::clamp(playerConfig::PLAYER_COLLISION_RADIUS - distToWall, 0.0f, playerConfig::PLAYER_COLLISION_RADIUS);
+					float projection = glm::dot(glm::vec2(player->position-wall.start), wallNormal);
+					int sign = (projection > 0.0f) ? 1 : -1;
+					correctionDist *= sign;
+					player->position = glm::vec3(
+						glm::vec2(player->position) + wallNormal * correctionDist,
+						player->position.z
+					);
+				}
+			}
 		}
 	}
 
@@ -302,7 +352,7 @@ void playerMove(
 
 
 		glm::vec2 spritePosV2 = glm::vec2(sprite.position.x, sprite.position.y);
-		glm::vec2 spriteDir = spritePosV2 - playerPosV2;
+		glm::vec2 spriteDir = spritePosV2 - glm::vec2(player->position);
 		float radius = playerConfig::PLAYER_COLLISION_RADIUS + sprite.width;
 
 		if (glm::length(spriteDir) > radius) {continue;}
@@ -328,7 +378,7 @@ void playerMove(
 			Mu = 0.0f;
 		}
 
-		glm::vec2 intersectPoint = playerPosV2 + glm::vec2(player->velocity.x, player->velocity.y) * Mu;
+		glm::vec2 intersectPoint = glm::vec2(player->position) + glm::vec2(player->velocity.x, player->velocity.y) * Mu;
 		glm::vec2 normal = glm::normalize(intersectPoint - spritePosV2);
 		glm::vec2 movementAlongNormal = glm::dot(glm::vec2(player->velocity.x, player->velocity.y), normal) * normal;
 		glm::vec2 correctedV = glm::vec2(player->velocity.x, player->velocity.y) - movementAlongNormal*0.75f;
@@ -502,13 +552,17 @@ void updateSpecials(
 			case W_TRIGGER:{
 				float playerFootZ = player->position.z - (player->height/2.0f);
 				float playerHeadZ = player->position.z + (player->height/2.0f);
-				glm::vec2 playerPosV2 = glm::vec2(player->position.x, player->position.y);
 				bool playerZCheckWall = !(
 					(playerHeadZ < (std::min(wall.start.z, wall.end.z)))
 					 || (playerFootZ + constants::MAX_STEP_HEIGHT > (std::max(wall.start.z, wall.end.z)))
 				); //!aboveOrBelow.
+				bool touchingWallCheck = circleLineIntersect(
+					wall,
+					glm::vec2(player->position) + glm::vec2(player->velocity.x, player->velocity.y),
+					playerConfig::PLAYER_COLLISION_RADIUS
+				);
 
-				if (circleLineIntersect(wall, playerPosV2 + glm::vec2(player->velocity.x, player->velocity.y), playerConfig::PLAYER_COLLISION_RADIUS) && playerZCheckWall) {
+				if (touchingWallCheck && playerZCheckWall) {
 					*(wall.IOPtr) = 1;
 				} else {
 					*(wall.IOPtr) = 0;
@@ -519,7 +573,6 @@ void updateSpecials(
 			case W_SWITCH: { //Check for interaction with wall. // Doesn't trigger anymore? Investigate.
 				glm::vec2 dir = glm::vec2(sin((player->viewAngle + 180.0f) * constants::TO_RAD), cos((player->viewAngle + 180.0f) * constants::TO_RAD));
 				utils::Ray ray = utils::Ray(player->position, dir, playerConfig::PLAYER_INTERACT_RAY_DIST);
-				glm::vec2 playerPosV2 = glm::vec2(player->position.x, player->position.y);
 				float playerFootZ = player->position.z - (player->height/2.0f);
 				float playerHeadZ = player->position.z + (player->height/2.0f);
 
@@ -529,7 +582,7 @@ void updateSpecials(
 					(buttonIntersect != constants::INVALIDv2) && 
 					((playerFootZ <= wall.end.z) || (playerHeadZ >= wall.start.z))
 				) {
-					float distSQ = glm::dot((buttonIntersect-playerPosV2), (buttonIntersect-playerPosV2));
+					float distSQ = glm::dot((buttonIntersect-glm::vec2(player->position)), (buttonIntersect-glm::vec2(player->position)));
 					int rIndex = -1;
 					bool LOSBlocked = false;
 
@@ -537,7 +590,7 @@ void updateSpecials(
 						rIndex++;
 						if ((rIndex == wIndex) || (thisWall.specialType == W_INVALID)) {continue;}
 						glm::vec2 LOSintersect = raycast(ray, thisWall);
-						float thisDistSQ = glm::dot((LOSintersect-playerPosV2), (LOSintersect-playerPosV2));
+						float thisDistSQ = glm::dot((LOSintersect-glm::vec2(player->position)), (LOSintersect-glm::vec2(player->position)));
 						if (thisDistSQ < distSQ) {
 							LOSBlocked = true;
 							break;
@@ -597,7 +650,6 @@ void updateSpecials(
 		if (inPlaneXYRange) {
 			float playerFootZ = player->position.z - (player->height/2.0f);
 			float playerHeadZ = player->position.z + (player->height/2.0f);
-			glm::vec2 playerPosV2 = glm::vec2(player->position.x, player->position.y);
 			//If ΔZ < 0.42857u then allow player to climb up (stairs, ledge)
 			float stepUpZ = plane.height - playerFootZ;
 			if (stepUpZ <= constants::MAX_STEP_HEIGHT && stepUpZ >= 0.0f) {
