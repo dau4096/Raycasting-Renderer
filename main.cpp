@@ -327,10 +327,6 @@ int main() {
 
 		//UI Shader.
 		if (!(dev::NO_INTERFACE > 0)) {
-			//Update resolution
-			glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-
-
 			glUseProgram(uiShader);
 			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 

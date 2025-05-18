@@ -20,6 +20,9 @@ vec2 fragPosition;
 ivec2 renderResolution, framePosition;
 vec3 fragColour;
 float fragDepth;
+vec2 uiScaleFactor;
+
+const ivec2 uiResolution = ivec2(480, 270);
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
@@ -79,12 +82,19 @@ layout(std140, binding = 5) uniform lightUBO {
 };
 
 
+vec2 scaleUI(vec2 position) {
+    return position * uiScaleFactor;
+}
 
+float scaleUI(float value) {
+    return value * uiScaleFactor.x; // or .y if consistent scaling is needed
+}
 
 void renderImage(vec2 position, vec2 scale, int imageID, bool blendAlpha=true, sampler2DArray texArray=textureArrayUI) {
 	if ((0 > imageID) || (imageID > 32)) {return; /* Invalid imageID */}
 	if ((fragPosition.x < position.x) || (fragPosition.y < position.y)) {return;}
 	vec2 relativePos = position - fragPosition;
+
 
 	if (fragPosition.x < position.x || fragPosition.x >= position.x + scale.x ||
 		fragPosition.y < position.y || fragPosition.y >= position.y + scale.y) {
@@ -113,7 +123,7 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 	bool started = false;
 	int divisor = 10000;
 
-	vec2 digitOffset = vec2(scale, 0.0);
+	vec2 digitOffset = vec2(scale * 0.75f, 0.0);
 
 
 	if (value < 0) {
@@ -136,11 +146,11 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 
 
 void drawCrosshair() {
-	const int radius = 5;
-	const int thickness = 1;
+	float radius = scaleUI(5.0);
+	float thickness = scaleUI(1.0);
 	const vec4 crosshairColour = vec4(0.25f, 0.25f, 0.25f, 0.5f);
 
-	ivec2 centreScreen = renderResolution/2;
+	vec2 centreScreen = renderResolution/2.0f;
 	float dist = length(fragPosition - centreScreen) - radius;
 	if ((dist > 0) && (dist < thickness)) {
 		fragColour = mix(fragColour, crosshairColour.rgb, crosshairColour.a);
@@ -158,9 +168,10 @@ void addVignetteShading() {
 
 
 void main() {
-	fragPosition = gl_FragCoord.xy;
 	renderResolution = imageSize(renderedFrame);
-	ivec2 framePosition = ivec2(fragPosition);
+	uiScaleFactor = vec2(renderResolution) / vec2(uiResolution);
+	fragPosition = gl_FragCoord.xy;
+	ivec2 framePosition = ivec2(gl_FragCoord.xy);
 	vec4 imageColour = imageLoad(renderedFrame, framePosition);
 	fragColour = imageColour.rgb;
 	fragDepth = imageColour.a;
@@ -174,16 +185,16 @@ void main() {
 
 	//Show FPS.
 	if (showFreq > 0) {
-		drawInt(vec2(0, 245), 25, FPS);
+		drawInt(scaleUI(vec2(0, 245)), int(scaleUI(25.0)), FPS);
 	}
 
 
 	//Render stats.
-	renderImage(vec2(-16, -48), vec2(128, 128), 0);
-	drawInt(vec2(8, 24), 25, health);
+	renderImage(scaleUI(vec2(-16, -48)), scaleUI(vec2(128.0, 128.0)), 0);
+	drawInt(scaleUI(vec2(16, 24)), int(scaleUI(25.0f)), health);
 
-	renderImage(vec2(360, -48), vec2(128, 128), 1);
-	drawInt(vec2(400, 24), 25, energy);
+	renderImage(scaleUI(vec2(355, -48)), scaleUI(vec2(128, 128)), 1);
+	drawInt(scaleUI(vec2(400, 24)), int(scaleUI(25.0f)), energy);
 
 
 	drawCrosshair();
