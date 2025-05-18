@@ -211,7 +211,7 @@ vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
 	if (drawUV > 0) {
 		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
-	if (!fetchTexture) return vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	if (!fetchTexture) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
 	return texture(textureArray, UV);
 }
 
