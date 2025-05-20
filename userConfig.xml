@@ -33,7 +33,7 @@
 	<option function="VIEW_LEAN" value="true" />
 	<option function="VIEW_VLOOK" value="false" />
 	<option function="VIEW_SMOOTHING" value="false" />
-	<option function="VIEW_ANTIALIAS_LEVEL" value="2.0" />
+	<option function="VIEW_ANTIALIAS_LEVEL" value="0.0" />
 	<option function="VIEW_MAX_FREQ" value="45.0" />
 	<option function="VIEW_NO_INTERFACE" value="false" />
 
@@ -41,7 +41,7 @@
 	<option function="META_SHOW_FREQ_UI" value="true" />
 	<option function="META_SHOW_FREQ_TERMINAL" value="false" />
 	<option function="META_SCREENSHOT_HAS_HUD" value="false" />
-	<option function="META_STAGE_NAME" value="dev" />
+	<option function="META_STAGE_NAME" value="dev-original" />
 
 	<option function="PHYS_NO_COLLIDE" value="false" />
 </config>
