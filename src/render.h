@@ -2,6 +2,7 @@
 #define RENDER_H
 
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 #include <array>
 

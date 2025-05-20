@@ -1,0 +1,46 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+
+<!-- Keybinds -->
+<keybinds>
+	<bind function="MOVE_FORWARD" key="KEY_W" />
+	<bind function="MOVE_BACKWARD" key="KEY_S" />
+	<bind function="MOVE_LEFT" key="KEY_A" />
+	<bind function="MOVE_RIGHT" key="KEY_D" />
+	<bind function="MOVE_JUMP" key="KEY_SPACE" />
+	<bind function="MOVE_CROUCH" key="KEY_LEFT_CONTROL" />
+	<bind function="MOVE_SPRINT" key="KEY_LEFT_SHIFT" />
+
+	<bind function="USE_INTERACT" key="KEY_E" />
+	<bind function="USE_HEADLAMP" key="KEY_H" />
+	<bind function="USE_VIEWZOOM" key="KEY_C" />
+
+	<bind function="META_SCREENSHOT" key="KEY_F12" />
+	<bind function="META_EXIT" key="KEY_ESCAPE" />
+	<bind function="META_FREECURSOR" key="KEY_1" />
+</keybinds>
+
+
+<!-- Configs -->
+<config>
+	<option function="TURN_SPEED_MOUSE" value="0.25" />
+	<option function="TURN_SPEED_KEYBOARD" value="1.0" />
+
+	<option function="VIEW_FOV" value="90.0" />
+	<option function="VIEW_MAX_RAY_DIST" value="128.0" />
+	<option function="VIEW_SHOW_HUD" value="true" />
+	<option function="VIEW_BOB" value="true" />
+	<option function="VIEW_LEAN" value="true" />
+	<option function="VIEW_VLOOK" value="false" />
+	<option function="VIEW_SMOOTHING" value="true" />
+	<option function="VIEW_MAX_FREQ" value="45.0" />
+	<option function="VIEW_NO_INTERFACE" value="false" />
+
+	<option function="META_DRAW_UV" value="false" />
+	<option function="META_SHOW_FREQ_UI" value="true" />
+	<option function="META_SHOW_FREQ_TERMINAL" value="false" />
+	<option function="META_SCREENSHOT_HAS_HUD" value="false" />
+	<option function="META_STAGE_NAME" value="dev" />
+
+	<option function="PHYS_NO_COLLIDE" value="false" />
+</config>

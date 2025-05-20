@@ -1,4 +1,5 @@
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 using namespace std;
 using namespace utils;
@@ -87,7 +88,6 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 
 void playerMove(
 		utils::Player *player,
-		unordered_map<int, bool> keyMap,
 		std::array<utils::Wall, constants::MAX_WALLS>*wallData,
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
@@ -113,8 +113,8 @@ void playerMove(
 	float maxV = playerConfig::MOVE_SPEED_BASE;
 
 	glm::vec2 XYDelta = glm::vec2(player->velocity.x, player->velocity.y);
-	player->sliding = keyMap[GLFW_KEY_LEFT_CONTROL] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD);
-	if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
+	player->sliding = keyMap["MOVE_CROUCH"] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD);
+	if (keyMap["MOVE_CROUCH"]) {
 		if (player->sliding) {
 			if (!prevSlide && player->touchingFloor) {
 				maxV *= playerConfig::MOVE_SPEED_SLIDE_ADD;
@@ -125,7 +125,7 @@ void playerMove(
 			playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
 			maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
 		}
-	} else if (keyMap[GLFW_KEY_LEFT_SHIFT]) {
+	} else if (keyMap["MOVE_SPRINT"]) {
 		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
@@ -134,25 +134,25 @@ void playerMove(
 
 	// Determine the movement vector based on key presses
 	if (!player->sliding) {
-		if (keyMap[GLFW_KEY_W]) {
+		if (keyMap["MOVE_FORWARD"]) {
 			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
 			newY += playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
 		}
-		if (keyMap[GLFW_KEY_S]) {
+		if (keyMap["MOVE_BACKWARD"]) {
 			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
 			newY -= playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
 		}
-		if (keyMap[GLFW_KEY_A]) {
+		if (keyMap["MOVE_LEFT"]) {
 			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
 			newY -= playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
 		}
-		if (keyMap[GLFW_KEY_D]) {
+		if (keyMap["MOVE_RIGHT"]) {
 			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
@@ -160,7 +160,7 @@ void playerMove(
 		}
 		lateralMovement = glm::vec2(newX, newY);
 	}
-	if (keyMap[GLFW_KEY_SPACE] && !prevJump) {
+	if (keyMap["MOVE_JUMP"] && !prevJump) {
 		if (player->touchingFloor) {
 			player->jumpsUsed++;
 			player->velocity.z += playerConfig::JUMP_INIT_SPEED;
@@ -220,7 +220,7 @@ void playerMove(
 
 
 
-	prevJump = keyMap[GLFW_KEY_SPACE];
+	prevJump = keyMap["MOVE_JUMP"];
 	prevSlide = player->sliding;
 	touchingFloorCheck = false;
 
@@ -268,14 +268,7 @@ void playerMove(
 
 
 	//Horizontal Calculations;
-	/*
-	if (glm::length(player->velocity) < EPSILON) {
-		return;
-	}
-	*/
-
-
-	if (dev::NO_COLLIDE > 0) {
+	if (utils::configToBool("PHYS_NO_COLLIDE")) {
 		glm::vec3 newPos = player->position + glm::vec3(player->velocity.x, player->velocity.y, 0.0f);
 		if (isVec3NaN(newPos)) {return;}
 		player->position = newPos;
@@ -537,8 +530,7 @@ void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool ena
 void updateSpecials(
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		utils::Player *player, std::unordered_map<int, bool> keyMap,
-		bool interactKey
+		utils::Player *player, bool interactKey
 	) {
 
 

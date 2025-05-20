@@ -3,7 +3,8 @@
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
 #include "src/includes.h"
-#include "src/stageLoader.h"
+#include "src/global.h"
+#include "src/loader.h"
 #include "src/physics.h"
 #include "src/render.h"
 #include "src/utils.h"
@@ -27,23 +28,10 @@ std::array<std::string, 32> symbolNames = {
 	"symbol_-"
 };
 
-// Keyboard presses to monitor.
-std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
-	GLFW_KEY_W, GLFW_KEY_S,
-	GLFW_KEY_A, GLFW_KEY_D,
-	GLFW_KEY_E, GLFW_KEY_F,
-	GLFW_KEY_SPACE, GLFW_KEY_F12,
-	GLFW_KEY_LEFT_SHIFT, GLFW_KEY_LEFT_CONTROL,
-	GLFW_KEY_1, GLFW_KEY_C,
-	GLFW_KEY_ESCAPE
-};
-
-
 
 
 GLuint renderedFrameID, depthSSBO;
 glm::ivec2 currentScreenRes;
-unordered_map<int, bool> keyMap = {};
 bool headLampEnabled = false;
 int tick = 0;
 
@@ -72,8 +60,9 @@ int main() {
 
 	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 
-	stageLoader::loadStage(
-		playerConfig::STAGE_NAME,
+	loader::loadBindings();
+	loader::loadStage(
+		userConfig["META_STAGE_NAME"],
 		&visplaneData, &wallData,
 		&spriteData, &lightData,
 		&logicGates, &flags,
@@ -103,7 +92,6 @@ int main() {
 	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames);
 	GLuint skyboxTextureID = render::loadGLTexture2D("skybox", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
-	render::createConstUBO();
 
 	GLuint visplaneUBO = render::createVisplaneUBO();
 	GLuint wallUBO = render::createWallUBO();
@@ -135,9 +123,6 @@ int main() {
 
 
 	// Initialize keyMap for input tracking
-	for (int key : monitoredKeys) {
-		keyMap[key] = false;
-	}
 	bool interactKey = false, shouldTakeScreenshot = false;
 	int lightFlickerRNG, FPS = 0;
 
@@ -147,36 +132,43 @@ int main() {
 		glfwPollEvents();
 
 		// Get inputs for this frame
-		for (int key : monitoredKeys) {
-			int keyState = glfwGetKey(Window, key);
+		for (auto &pair : userBindings) {
+			std::string functionName = pair.first;
+			int keyEnum = pair.second;
+			if (keyEnum == -1) {
+				raise(functionName + " was not bound to a key!");
+			}
+
+			int keyState = glfwGetKey(Window, keyEnum);
 			if (keyState == GLFW_PRESS) {
-				if (key == GLFW_KEY_F && !keyMap[GLFW_KEY_F]) {
+				//Handle specific on-press type use-cases.
+				if (functionName == "USE_HEADLAMP" && !keyMap["USE_HEADLAMP"]) {
 					headLampEnabled = !headLampEnabled;
 				}
-				interactKey = (key == GLFW_KEY_E) && (!keyMap[GLFW_KEY_E]);
-				shouldTakeScreenshot = (key == GLFW_KEY_F12) && (!keyMap[GLFW_KEY_F12]);
+				interactKey = (functionName == "USE_INTERACT") && (!keyMap["USE_INTERACT"]);
+				shouldTakeScreenshot = (functionName == "META_SCREENSHOT") && (!keyMap["META_SCREENSHOT"]);
 
-				keyMap[key] = true;
+				keyMap[functionName] = true;
 
 
 			} else if (keyState == GLFW_RELEASE) {
-				keyMap[key] = false;
+				keyMap[functionName] = false;
 			}
 		}
 
 
-		if (keyMap[GLFW_KEY_ESCAPE]) {
+		if (keyMap["META_EXIT"]) {
 			break; //Quit
 		}
 
-		if (keyMap[GLFW_KEY_1]) {
+		if (keyMap["META_FREECURSOR"]) {
 			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			
 		} else {
 			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 		}
 
-		if (keyMap[GLFW_KEY_LEFT_CONTROL]) {
+		if (keyMap["MOVE_CROUCH"]) {
 			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
 			player.touchingFloor = false;
 		} else {
@@ -185,14 +177,14 @@ int main() {
 
 
 
-		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
+		float rayAngle = (keyMap["USE_VIEWZOOM"]) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
 
 		double cursorXDelta = cursorXPos - cursorXPosPrev;
 		double cursorYDelta = cursorYPos - cursorYPosPrev;
-		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
+		player.viewAngle += cursorXDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / display::ZOOM_MULT);
 		player.viewAngle = utils::angleClamp(player.viewAngle);
-		if (dev::LOCK_VLOOK < 1) {
-			double dY = cursorYDelta * (playerConfig::TURN_SPEED_CURS / display::ZOOM_MULT);
+		if (utils::configToBool("VIEW_VLOOK")) {
+			double dY = cursorYDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / display::ZOOM_MULT);
 			player.vLook = glm::clamp(float(player.vLook+dY), -22.5f, 22.5f);
 		}
 
@@ -204,11 +196,11 @@ int main() {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, keyMap, interactKey);
+		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
 
 
-		physics::playerMove(&player, keyMap, &wallData, &spriteData, &visplaneData);
-		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
+		physics::playerMove(&player, &wallData, &spriteData, &visplaneData);
+		float viewBob = (utils::configToBool("VIEW_BOB")) ? render::viewBob(tick, player) : 0.0f;
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
@@ -225,13 +217,16 @@ int main() {
 		utils::GLErrorcheck("Updating UBOs", true);
 
 
+
 		if (headLampEnabled) {
 			lightFlickerRNG = utils::RNGc();
 		}
 
 
+
 		//Update resolution
 		glViewport(0, 0, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+
 
 		//Environment Shader.
 		glUseProgram(envShader);
@@ -240,6 +235,14 @@ int main() {
 		glBindTextureUnit(0, textureArrayEnvironment);
 		glBindTextureUnit(1, skyboxTextureID);
 
+
+		//Camera Data
+		GLuint maxVDistLocation = glGetUniformLocation(envShader, "maxRayDistance");
+		GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
+		GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
+		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
+		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
 
 		//Player Data
 		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
@@ -251,11 +254,11 @@ int main() {
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1f(playerRollLocation, player.viewRoll);
 		glUniform1f(playerPitchLocation, player.viewPitch);
-		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
 
 		//Debug
 		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
-		glUniform1i(uvLocation, dev::DRAW_UV);
+		glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
 
 		//Headlamp
 		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
@@ -285,6 +288,14 @@ int main() {
 		glBindTextureUnit(0, textureArrayEnvironment);
 
 
+		//Camera Data
+		maxVDistLocation = glGetUniformLocation(spriteShader, "maxRayDistance");
+		maxRAngleLocation = glGetUniformLocation(spriteShader, "maxRayAngle");
+		zoomFactorLocation = glGetUniformLocation(spriteShader, "zoomFactor");
+		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
+		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+
 		//Player Data
 		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
 		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
@@ -295,11 +306,11 @@ int main() {
 		glUniform1f(playerAngleLocation, player.viewAngle);
 		glUniform1f(playerRollLocation, player.viewRoll);
 		glUniform1f(playerPitchLocation, player.viewPitch);
-		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
+		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
 
 		//Debug
 		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
-		glUniform1i(uvLocation, dev::DRAW_UV);
+		glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
 
 		//Headlamp
 		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
@@ -321,12 +332,12 @@ int main() {
 		utils::GLErrorcheck("Sprite Shader", true);
 
 		
-		if ((dev::SCREENSHOT_HAS_HUD <= 0) && shouldTakeScreenshot) {
+		if (!(utils::configToBool("META_SCREENSHOT_HAS_HUD")) && shouldTakeScreenshot) {
 			render::saveScreenshot(renderedFrameID);
 		}
 
 		//UI Shader.
-		if (!(dev::NO_INTERFACE > 0)) {
+		if (utils::configToBool("VIEW_SHOW_HUD")) {
 			glUseProgram(uiShader);
 			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
@@ -336,15 +347,9 @@ int main() {
 
 
 			//Player Data.
-			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
-			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
-			zoomLocation = glGetUniformLocation(uiShader, "zoom");
 			GLuint vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
 			GLuint healthLocation = glGetUniformLocation(uiShader, "health");
 			GLuint energyLocation = glGetUniformLocation(uiShader, "energy");
-			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-			glUniform1f(playerAngleLocation, player.viewAngle);
-			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
 			glUniform4f(vignetteColourLocation, tintData.x, tintData.y, tintData.z, tintData.w);
 			glUniform1i(healthLocation, player.health);
 			glUniform1i(energyLocation, player.energy);
@@ -355,7 +360,7 @@ int main() {
 			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
 			glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
 			glUniform1i(freqLocation, FPS);
-			glUniform1i(showFreqLocation, dev::SHOW_FREQ);
+			glUniform1i(showFreqLocation, utils::configToIntBool("META_SHOW_FREQ_UI"));
 
 
 			glBindVertexArray(VAO);
@@ -366,7 +371,7 @@ int main() {
 		}
 
 
-		if ((dev::SCREENSHOT_HAS_HUD > 0) && shouldTakeScreenshot) {
+		if (utils::configToBool("META_SCREENSHOT_HAS_HUD") && shouldTakeScreenshot) {
 			render::saveScreenshot(renderedFrameID);
 		}
 		
@@ -384,7 +389,7 @@ int main() {
 		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
 		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
-		glUniform1i(smoothingLocation, dev::SMOOTHING_ENABLED);
+		glUniform1i(smoothingLocation, utils::configToIntBool("VIEW_SMOOTHING"));
 
 
 
@@ -397,9 +402,10 @@ int main() {
 		utils::GLErrorcheck("Display Shader", true);
 
 		while (glfwGetTime() - frameStart < constants::DT) {}
-		if (dev::SHOW_FREQ > 0) {
-			double totalTime = (glfwGetTime() - frameStart);
-			FPS = floor(1/totalTime);
+		double totalTime = (glfwGetTime() - frameStart);
+		FPS = floor(1/totalTime);
+		if (utils::configToBool("META_SHOW_FREQ_TERMINAL")) {
+			std::cout << FPS << std::endl;
 		}
 
 		cursorXPosPrev = cursorXPos;

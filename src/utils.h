@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include "includes.h"
+#include "global.h"
 #include "constants.h"
 #include <vector>
 #include <stdexcept>
@@ -73,23 +74,18 @@ namespace utils {
 		}
 	}
 
-    std::string readFile(const std::string& filePath);
+	std::string readFile(const std::string& filePath);
 
-    static inline std::string getTimestamp() {
-    	time_t now = time(nullptr);
-    	struct tm* timeinfo = localtime(&now);
+	static inline std::string getTimestamp() {
+		time_t now = time(nullptr);
+		struct tm* timeinfo = localtime(&now);
 
-    	std::ostringstream oss;
-    	oss << std::put_time(timeinfo, "%Y%m%d%H%M%S");
+		std::ostringstream oss;
+		oss << std::put_time(timeinfo, "%Y%m%d%H%M%S");
 
-    	return oss.str();
-    }
+		return oss.str();
+	}
 
-
-	static inline bool logicToBool(int A) {return (A > 0);}
-	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}
-	static inline bool isVec2NaN(glm::vec2 v) {return (std::isnan(v.x) || std::isnan(v.y));}
-	static inline bool isVec3NaN(glm::vec3 v) {return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z));}
 
 
 
@@ -104,6 +100,58 @@ namespace utils {
 		std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c){return std::toupper(c);});
 		return result;
 	}
+
+	static inline bool checkIfInUserConfig(const std::string configName) {
+		return userConfig.find(configName) != userConfig.end();
+	}
+	static inline bool configToBool(const std::string configName) {
+		if (checkIfInUserConfig(configName)) {
+			std::string configValue = userConfig[configName];
+			if ((configValue == "TRUE") || (configValue == "T")) {
+				return true;
+			} else if ((configValue == "FALSE") || (configValue == "F")) {
+				return false;
+			} else {
+				raise("Unknown config value for " + configName + ": " + configValue);
+			}
+		} else {
+			raise("Unknown config name: " + configName);
+		}
+		return false;
+	}
+	static inline int configToIntBool(const std::string configName) {return (configToBool(configName)) ? 1 : 0;}
+	static inline int configToInt(const std::string configName) {
+		if (checkIfInUserConfig(configName)) {
+			std::string valueString = userConfig[configName];
+			try {
+				return std::stoi(valueString);
+			} catch (const std::invalid_argument) {
+				raise("Unable to convert " + valueString + " for: " + configName + " to an integer.");
+			}
+		} else {
+			raise("Unknown config name: " + configName);
+		}
+		return 0;
+	}
+	static inline float configToFloat(const std::string configName) {
+		if (checkIfInUserConfig(configName)) {
+			std::string valueString = userConfig[configName];
+			try {
+				return std::stof(valueString);
+			} catch (const std::invalid_argument) {
+				raise("Unable to convert " + valueString + " for: " + configName + " to a floating-point value.");
+			}
+		} else {
+			raise("Unknown config name: " + configName);
+		}
+		return 0.0f;
+	}
+
+	static inline bool logicToBool(int A) {return (A > 0);}
+	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}
+
+	static inline bool isVec2NaN(glm::vec2 v) {return (std::isnan(v.x) || std::isnan(v.y));}
+	static inline bool isVec3NaN(glm::vec3 v) {return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z));}
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
@@ -347,7 +395,7 @@ namespace utils {
 	struct Ray {
 		glm::vec2 position, direction, end;
 
-		Ray(glm::vec2 position, glm::vec2 direction, float len=display::MAX_RAY_DIST)
+		Ray(glm::vec2 position, glm::vec2 direction, float len=configToFloat("VIEW_MAX_RAY_DIST"))
 			: position(position), direction(direction), end(position + (direction * len)) {}
 	};
 

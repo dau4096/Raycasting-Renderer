@@ -1,4 +1,5 @@
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 using namespace std;
 using namespace utils;
@@ -92,7 +93,7 @@ int assignTexture(std::string textureStr, std::array<std::string, display::TEXTU
 
 
 template<typename T, std::size_t N>
-std::array<T, N> fetchFromXML(
+std::array<T, N> fetchObjectFromXML(
 		const pugi::xml_document& doc,
 		const std::string& xpath,
 		std::function<T(
@@ -217,7 +218,57 @@ static inline LogicGate extractGate(
 
 
 
-namespace stageLoader {
+
+
+void fetchBindingsFromXML(const pugi::xml_document& doc) {
+	const char* xpath = "//keybinds/bind";
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath);
+	size_t count = static_cast<size_t>(nodeList.size());
+	
+	std::string functionString, keyString;
+	for (size_t i = 0; i < count; ++i) {
+		pugi::xml_node node = nodeList[i].node();
+
+		functionString = strToUpper(node.attribute("function").as_string());
+		if (userBindings.find(functionString) == userBindings.end()) {
+			raise("Unknown binding function: " + functionString);
+		}
+
+		keyString = strToUpper(node.attribute("key").as_string());
+		if (keyNameToGLFW.find(keyString) != keyNameToGLFW.end()) {
+			userBindings.at(functionString) = keyNameToGLFW.at(keyString);
+		} else {
+			raise("Unknown Key: " + keyString + " for binding function: " + functionString);
+		}
+	}
+}
+
+void fetchConfigsFromXML(const pugi::xml_document& doc) {
+	const char* xpath = "//config/option";
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath);
+	size_t count = static_cast<size_t>(nodeList.size());
+	
+	std::string functionString, valueString;
+	for (size_t i = 0; i < count; ++i) {
+		pugi::xml_node node = nodeList[i].node();
+
+		functionString = strToUpper(node.attribute("function").as_string());
+		if (userConfig.find(functionString) == userConfig.end()) {
+			raise("Unknown config function: " + functionString);
+		}
+
+		valueString = strToUpper(node.attribute("value").as_string());
+		if (valueString != "") {
+			userConfig.at(functionString) = valueString;
+		} else {
+			raise("Invalid value for: " + functionString);
+		}
+	}
+}
+
+
+
+namespace loader {
 
 
 void loadStage(
@@ -240,12 +291,26 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	// Now use the generic fetch function to extract each element type.
-	*visplaneData = fetchFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, flags, textureNames);
-	*wallData = fetchFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, flags, textureNames);
-	*spriteData	= fetchFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, nullptr, textureNames);
-	*lightData = fetchFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, nullptr, nullptr);
-	*logicGates	= fetchFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, flags, nullptr);
+	*visplaneData = fetchObjectFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, flags, textureNames);
+	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, flags, textureNames);
+	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, nullptr, textureNames);
+	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, nullptr, nullptr);
+	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, flags, nullptr);
+}
+
+
+void loadBindings() {
+	const std::string filePath = "userConfig.xml";
+	std::string XMLSrc = utils::readFile(filePath);
+
+	pugi::xml_document doc;
+	pugi::xml_parse_result parseResult = doc.load_string(XMLSrc.c_str());
+	if (!parseResult) {
+		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
+	}
+
+	fetchBindingsFromXML(doc);
+	fetchConfigsFromXML(doc);
 }
 
 }

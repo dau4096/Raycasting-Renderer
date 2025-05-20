@@ -1,13 +1,13 @@
-#ifndef STAGE_LOADER_H
-#define STAGE_LOADER_H
+#ifndef LOADER_H
+#define LOADER_H
 
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 #include <array>
 
 
-namespace stageLoader {
-
+namespace loader {
 
 	void loadStage(
 		const std::string& stageName,
@@ -20,6 +20,8 @@ namespace stageLoader {
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	);
 
+
+	void loadBindings();
 
 }
 

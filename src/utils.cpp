@@ -1,4 +1,5 @@
 #include "includes.h"
+#include "global.h"
 #include "constants.h"
 #include "utils.h"
 using namespace std;

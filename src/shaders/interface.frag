@@ -6,9 +6,6 @@ layout(binding = 0) uniform sampler2DArray textureArrayEnvironment;
 layout(binding = 1) uniform sampler2DArray textureArrayUI;
 layout(binding = 2) uniform sampler2DArray textureArrayNumeric;
 
-uniform float playerViewAngle;
-uniform vec3 playerPosition;
-uniform bool zoom;
 uniform vec4 screenTint;
 uniform int health;
 uniform int energy;
@@ -175,8 +172,6 @@ void main() {
 	vec4 imageColour = imageLoad(renderedFrame, framePosition);
 	fragColour = imageColour.rgb;
 	fragDepth = imageColour.a;
-
-	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
 
 

@@ -1,4 +1,5 @@
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
@@ -99,34 +100,6 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 	glDeleteShader(fragmentShader);
 
 	return shaderProgram;
-}
-
-
-void createConstUBO() {
-	struct ConstData {
-		float ZOOM_MULT;
-		float MAX_RAY_ANGLE;
-		float MAX_RAY_DIST;
-
-		glm::vec2 TEXTURE_RESOLUTION;
-	};
-
-	ConstData constData = {
-		display::ZOOM_MULT,
-		display::MAX_RAY_ANGLE,
-		display::MAX_RAY_DIST,
-
-		{display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y}
-	};
-
-	GLuint constUBO;
-	glGenBuffers(1, &constUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, constUBO);
-
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(ConstData), &constData, GL_STATIC_DRAW);
-
-	glBindBufferBase(GL_UNIFORM_BUFFER, 10, constUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 

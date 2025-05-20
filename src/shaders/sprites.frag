@@ -6,6 +6,11 @@
 layout(binding=0) uniform sampler2DArray textureArray;
 layout(binding=1) uniform sampler2D skyboxTexture;
 
+//CameraData
+uniform float maxRayDistance;
+uniform float maxRayAngle;
+uniform float zoomFactor;
+
 //Player Data
 uniform float playerViewAngle;
 uniform float playerViewRoll;
@@ -26,15 +31,6 @@ uniform vec3 sunColour;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
-layout(std140, binding = 10) uniform constUBO {
-	float zoomFactor;
-	float maxRayAngle;
-	float maxRayDistance;
-
-	vec2 textureSize;
-
-	float padding[4];
-};
 
 struct Visplane {
 	vec2 start;			//Visplane Start.
