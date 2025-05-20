@@ -107,8 +107,14 @@ void renderImage(vec2 position, vec2 scale, int imageID, bool blendAlpha=true, s
 	vec4 albedo = texture(texArray, UV);
 	if (blendAlpha) {
 		fragColour = mix(fragColour, albedo.rgb, albedo.a);
+		if (albedo.a <= 0.0f) {
+			fragDepth = -1.0f;
+		}
 	} else {
-		fragColour = albedo.rgb;
+		if (albedo.a > 0.0f) {
+			fragColour = albedo.rgb;
+			fragDepth = -1.0f;
+		}
 	}
 }
 
@@ -124,7 +130,7 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 
 
 	if (value < 0) {
-		renderImage(position, vec2(scale), 10, true, textureArrayNumeric); //"-"
+		renderImage(position, vec2(scale), 10, false, textureArrayNumeric); //"-"
 		position += digitOffset;
 	}
 
@@ -133,7 +139,7 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 
 		if (digit > 0 || started || (i == maxDigits - 1)) {
 			started = true;
-			renderImage(position, vec2(scale), digit, true, textureArrayNumeric); //"[0-9]"
+			renderImage(position, vec2(scale), digit, false, textureArrayNumeric); //"[0-9]"
 			position += digitOffset;
 		}
 
@@ -151,6 +157,7 @@ void drawCrosshair() {
 	float dist = length(fragPosition - centreScreen) - radius;
 	if ((dist > 0) && (dist < thickness)) {
 		fragColour = mix(fragColour, crosshairColour.rgb, crosshairColour.a);
+		fragDepth = -1.0f;
 	}
 }
 

@@ -387,8 +387,10 @@ int main() {
 
 		//Assorted other data.
 		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
+		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
 		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
+		glUniform1i(antiAliasLocation, utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 		glUniform1i(smoothingLocation, utils::configToIntBool("VIEW_SMOOTHING"));
 
 

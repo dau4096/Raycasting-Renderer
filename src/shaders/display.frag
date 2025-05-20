@@ -6,22 +6,85 @@ out vec4 fragColour;
 
 uniform ivec2 screenResolution;
 uniform sampler2D renderedFrame;
+uniform int antiAliasingLevel;
 uniform int smoothingEnabled;
 
 
-void main() {
+
+vec4 antiAliasFunc() {
+	const float edgeThreshold = 1.0f;
+
+    vec2 baseUV = gl_FragCoord.xy / vec2(screenResolution);
+    vec4 centrePX = texture(renderedFrame, baseUV);
+    float centreDepth = centrePX.a;
+
+    float minDepth = centreDepth, maxDepth = centreDepth;
+
+    vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
+    int n = 0;
+
+	for (int dx=-antiAliasingLevel; dx<=antiAliasingLevel; dx++) {
+		for (int dy=-antiAliasingLevel; dy<=antiAliasingLevel; dy++) {
+            vec2 uv = (gl_FragCoord.xy + vec2(dx, dy)) / vec2(screenResolution);
+            vec4 sampledPX = texture(renderedFrame, uv);
+
+            float depth = sampledPX.a;
+            if (depth < 0.0) {continue; /* fragment was UI */}
+
+            minDepth = min(minDepth, depth);
+            maxDepth = max(maxDepth, depth);
+            colourSum += sampledPX.rgb;
+            n++;
+		}
+	}
+
+	if ((maxDepth - minDepth) > edgeThreshold) { //Edge found.
+		vec3 meanColour = colourSum / float(n);
+		return vec4(meanColour.rgb, 1.0f);
+	} else { //No edge found.
+		return centrePX;
+	}
+
+}
+
+
+vec4 smoothingFunc() {
+	int n = 0;
 	vec2 UV;
-	if (smoothingEnabled > 0) { //Simple Anti-Aliasing
-		vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
-		for (int x=-1; x<=1; x++) {
-			for (int y=-1; y<=1; y++) {
-				UV = (gl_FragCoord.xy + vec2(x, y)) / vec2(screenResolution);
-				colourSum += texture(renderedFrame, UV).rgb;
+	vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
+	vec4 albedo;
+
+	for (int dx=-1; dx<=1; dx++) {
+		for (int dy=-1; dy<=1; dy++) {
+			UV = (gl_FragCoord.xy + vec2(dx, dy)) / vec2(screenResolution);
+			albedo = texture(renderedFrame, UV);
+			if (albedo.a != -1) {
+				n++;
+				colourSum += albedo.rgb;
 			}
 		}
-		fragColour = vec4(colourSum / 9.0f, 1.0f);
-	} else {
-		UV = gl_FragCoord.xy / vec2(screenResolution);
-		fragColour = vec4(texture(renderedFrame, UV).rgb, 1.0f);
 	}
+
+	UV = gl_FragCoord.xy / vec2(screenResolution);
+	vec4 centrePX = texture(renderedFrame, UV);
+	if (n > 0) {
+		return vec4(colourSum / float(n), centrePX.a);
+	} else {
+		return centrePX;
+	}
+}
+
+
+void main() {
+	vec4 resultant;
+	if (antiAliasingLevel > 0) {
+		resultant = antiAliasFunc();
+	} else if (smoothingEnabled > 0) { //Simple Anti-Aliasing
+		resultant = smoothingFunc();
+	} else {
+		vec2 UV = gl_FragCoord.xy / vec2(screenResolution);
+		resultant = vec4(texture(renderedFrame, UV).rgb, 1.0f);
+	}
+
+	fragColour = vec4(resultant.rgb, 1.0f);
 }

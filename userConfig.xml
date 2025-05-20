@@ -32,7 +32,8 @@
 	<option function="VIEW_BOB" value="true" />
 	<option function="VIEW_LEAN" value="true" />
 	<option function="VIEW_VLOOK" value="false" />
-	<option function="VIEW_SMOOTHING" value="true" />
+	<option function="VIEW_SMOOTHING" value="false" />
+	<option function="VIEW_ANTIALIAS_LEVEL" value="2.0" />
 	<option function="VIEW_MAX_FREQ" value="45.0" />
 	<option function="VIEW_NO_INTERFACE" value="false" />
 
