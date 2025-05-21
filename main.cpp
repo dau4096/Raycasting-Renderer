@@ -50,7 +50,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 int main() {
 	try { //Catch exceptions
-	Player player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
+	Player player;
 	std::array<int, constants::MAX_FLAGS> flags;
 	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
 	std::array<utils::Wall, constants::MAX_WALLS> wallData;
@@ -62,7 +62,7 @@ int main() {
 
 	loader::loadBindings();
 	loader::loadStage(
-		userConfig["META_STAGE_NAME"],
+		userConfig["META_STAGE_NAME"], &player,
 		&visplaneData, &wallData,
 		&spriteData, &lightData,
 		&logicGates, &flags,
@@ -90,7 +90,7 @@ int main() {
 	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames);
 	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames);
-	GLuint skyboxTextureID = render::loadGLTexture2D("skybox", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 
 	GLuint visplaneUBO = render::createVisplaneUBO();
@@ -269,8 +269,8 @@ int main() {
 		//Sun
 		GLuint sunDirLocation = glGetUniformLocation(envShader, "sunDirection");
 		GLuint sunColourLocation = glGetUniformLocation(envShader, "sunColour");
-		glUniform3f(sunDirLocation, display::SUN_DIRECTION.x, display::SUN_DIRECTION.y, display::SUN_DIRECTION.z);
-		glUniform3f(sunColourLocation, display::SUN_COLOUR.x, display::SUN_COLOUR.y, display::SUN_COLOUR.z);
+		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
+		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
 
 
 		glBindVertexArray(VAO);
@@ -321,8 +321,8 @@ int main() {
 		//Sun
 		sunDirLocation = glGetUniformLocation(spriteShader, "sunDirection");
 		sunColourLocation = glGetUniformLocation(spriteShader, "sunColour");
-		glUniform3f(sunDirLocation, display::SUN_DIRECTION.x, display::SUN_DIRECTION.y, display::SUN_DIRECTION.z);
-		glUniform3f(sunColourLocation, display::SUN_COLOUR.x, display::SUN_COLOUR.y, display::SUN_COLOUR.z);
+		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
+		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
 
 
 		glBindVertexArray(VAO);

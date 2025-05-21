@@ -55,3 +55,25 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 
 	{"PHYS_NO_COLLIDE", ""},
 };
+
+
+struct StageData {
+	std::string skyboxTextureName;
+	glm::vec3 sunDirection, sunColour;
+	
+	float gravity;
+
+	glm::vec3 playerStartPoint;
+	float playerStartAngle;
+	float playerStartHealth, playerStartEnergy;
+
+
+	StageData()
+		: skyboxTextureName("fallback-skybox"),
+		  sunDirection(0.0f, 0.0f, 1.0f), sunColour(1.0f, 1.0f, 1.0f),
+		  gravity(0.486),
+		  playerStartPoint(0.0f, 0.0f, 0.0f), playerStartAngle(0.0f),
+		  playerStartHealth(1.0f), playerStartEnergy(1.0f) {}
+};
+
+inline StageData stageData;

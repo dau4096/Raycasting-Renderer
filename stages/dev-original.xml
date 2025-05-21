@@ -1,5 +1,14 @@
 <?xml version="1.1" encoding="UTF-8"?>
 
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="skybox" />
+    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
+    <physics gravity="0.486" />
+    <player startPoint="-2.5 -2.5 1.0" startAngle="90.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+
 <!-- Visplanes -->
 <visplanes>
 	<visplane start="10.0 10.0" end="-10.0 -14.0" height="0.0" texture="c" type="V_NORMAL" IOPtr="0" extra="0.0" />

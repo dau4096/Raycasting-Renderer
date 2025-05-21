@@ -399,7 +399,7 @@ void playerMove(
 		player->velocity.z *= constants::AIR_FRICT_SLIDE_COEFF;
 	}
 
-	player->velocity.z -= constants::GRAVITY_ACCEL / freq;
+	player->velocity.z -= stageData.gravity / freq;
 	player->position += player->velocity;
 
 	if (isVec3NaN(player->position) || isVec3NaN(player->velocity)) {
@@ -536,7 +536,6 @@ void updateSpecials(
 	//If freq is higher than expected, then speed is reduced.
 	//If freq is lower than expected, then speed is increased.
 
-	cout << endl;
 
 	int wIndex = -1;
 	for (utils::Wall& wall : *wallData) {

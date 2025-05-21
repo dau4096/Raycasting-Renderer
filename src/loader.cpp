@@ -219,6 +219,65 @@ static inline LogicGate extractGate(
 
 
 
+static inline pugi::xml_node getMetaNode(const pugi::xml_document& doc, std::string subNodeName) {
+	std::string xpath = "//meta/" + subNodeName;
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	if (count != 1) {
+		utils::print("Unknown " + subNodeName + " metanode found.");
+	}
+	return nodeList[0].node();
+}
+
+
+static inline float handlePlayerHEString(std::string inputSTR, float maxValue) {
+	if (strToUpper(inputSTR) == "MAX") {
+		return maxValue;
+	} else if (strToUpper(inputSTR) == "MIN") {
+		return 1.0f;
+	}
+	try {
+		return std::stof(inputSTR);
+	} catch (const std::invalid_argument) {
+		raise("Unable to convert " + inputSTR + " to a floating-point value.");
+	}
+	return 0.0f;
+}
+
+
+void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player) {
+	//Sky
+	pugi::xml_node skyNode = getMetaNode(doc, "sky");
+	stageData.skyboxTextureName = skyNode.attribute("skyboxTexture").as_string();
+
+
+	//Sun
+	pugi::xml_node sunNode = getMetaNode(doc, "sun");
+	stageData.sunDirection = parseVec3(sunNode.attribute("sunDirection").as_string());
+	float sunIntensity = sunNode.attribute("sunIntensity").as_float();
+	stageData.sunColour = parseVec3(sunNode.attribute("sunColour").as_string()) * sunIntensity;
+
+
+	//Physics
+	pugi::xml_node physNode = getMetaNode(doc, "physics");
+	stageData.gravity = physNode.attribute("gravity").as_float();
+
+
+	//Player
+	pugi::xml_node playerNode = getMetaNode(doc, "player");
+	stageData.playerStartPoint = parseVec3(playerNode.attribute("startPoint").as_string());
+	stageData.playerStartAngle = playerNode.attribute("startAngle").as_float();
+
+	std::string startHealthStr = playerNode.attribute("initialHealth").as_string();
+	stageData.playerStartHealth = handlePlayerHEString(startHealthStr, playerConfig::PLAYER_MAX_HEALTH);
+
+	std::string startEnergyStr = playerNode.attribute("initialEnergy").as_string();
+	stageData.playerStartEnergy = handlePlayerHEString(startEnergyStr, playerConfig::PLAYER_MAX_ENERGY);
+
+	*player = utils::Player();
+}
+
+
 
 void fetchBindingsFromXML(const pugi::xml_document& doc) {
 	const char* xpath = "//keybinds/bind";
@@ -272,7 +331,7 @@ namespace loader {
 
 
 void loadStage(
-		const std::string& stageName,
+		const std::string& stageName, utils::Player* player,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
@@ -296,6 +355,9 @@ void loadStage(
 	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, nullptr, textureNames);
 	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, nullptr, nullptr);
 	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, flags, nullptr);
+
+
+	retrieveStageMetaData(doc, player);
 }
 
 

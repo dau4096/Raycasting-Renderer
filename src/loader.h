@@ -10,7 +10,7 @@
 namespace loader {
 
 	void loadStage(
-		const std::string& stageName,
+		const std::string& stageName,  utils::Player* player,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,

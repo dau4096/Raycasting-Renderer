@@ -425,15 +425,15 @@ namespace utils {
 		bool touchingFloor, sliding;
 		Event state;
 		int health, energy;
-		int jumpsUsed;
+		unsigned int jumpsUsed;
 		//std::vector<utils::Weapon, constants::MAX_ITEMS_HELD> backpack;
 
-		Player(glm::vec3 position, float angle)
-			: position(position), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
-			  cameraPosition(position + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
-			  viewAngle(angle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
+		Player()
+			: position(stageData.playerStartPoint), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
+			  cameraPosition(stageData.playerStartPoint + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
+			  viewAngle(stageData.playerStartAngle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 			  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
-			  health(playerConfig::PLAYER_MAX_HEALTH), energy(playerConfig::PLAYER_MAX_ENERGY),
+			  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
 			  state(E_NONE), jumpsUsed(0), sliding(false) {}
 	};
 
