@@ -12,7 +12,7 @@
 	<bind function="MOVE_SPRINT" key="KEY_LEFT_SHIFT" />
 
 	<bind function="USE_INTERACT" key="KEY_E" />
-	<bind function="USE_HEADLAMP" key="KEY_H" />
+	<bind function="USE_HEADLAMP" key="KEY_F" />
 	<bind function="USE_VIEWZOOM" key="KEY_C" />
 
 	<bind function="META_SCREENSHOT" key="KEY_F12" />

@@ -432,14 +432,14 @@ void applyWallVerticalMovement(utils::Wall& wall, float speed, bool enabled) {
 
 	} else { //Upwards
 		if (enabled && (wall.internal < wall.data)) { //Turned on; moving up.
-			float newInternal = std::min(wall.internal + speed, 0.0f);
+			float newInternal = std::min(wall.internal + speed, wall.data);
 			float delta = newInternal - wall.internal;
 			wall.start.z += delta;
 			wall.end.z += delta;
 			wall.internal = newInternal;
 
 		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall.internal - speed, wall.data);
+			float newInternal = std::max(wall.internal - speed, 0.0f);
 			float delta = wall.internal - newInternal;
 			wall.start.z -= delta;
 			wall.end.z -= delta;
@@ -536,6 +536,8 @@ void updateSpecials(
 	//If freq is higher than expected, then speed is reduced.
 	//If freq is lower than expected, then speed is increased.
 
+	cout << endl;
+
 	int wIndex = -1;
 	for (utils::Wall& wall : *wallData) {
 		wIndex++;
@@ -543,7 +545,7 @@ void updateSpecials(
 		bool enabled = *(wall.IOPtr) == 1;
 
 		switch(wall.specialType) {
-			case W_TRIGGER:{
+			case W_TRIGGER: {
 				float playerFootZ = player->position.z - (player->height/2.0f);
 				float playerHeadZ = player->position.z + (player->height/2.0f);
 				bool playerZCheckWall = !(
@@ -567,14 +569,13 @@ void updateSpecials(
 			case W_SWITCH: { //Check for interaction with wall. // Doesn't trigger anymore? Investigate.
 				glm::vec2 dir = glm::vec2(sin((player->viewAngle + 180.0f) * constants::TO_RAD), cos((player->viewAngle + 180.0f) * constants::TO_RAD));
 				utils::Ray ray = utils::Ray(player->position, dir, playerConfig::PLAYER_INTERACT_RAY_DIST);
-				float playerFootZ = player->position.z - (player->height/2.0f);
-				float playerHeadZ = player->position.z + (player->height/2.0f);
+				float playerFaceZ = player->position.z + (player->height/3.0f);
 
 				glm::vec2 buttonIntersect = raycast(ray, wall);
 				if (
 					interactKey && 
 					(buttonIntersect != constants::INVALIDv2) && 
-					((playerFootZ <= wall.end.z) || (playerHeadZ >= wall.start.z))
+					((playerFaceZ <= wall.end.z) || (playerFaceZ >= wall.start.z))
 				) {
 					float distSQ = glm::dot((buttonIntersect-glm::vec2(player->position)), (buttonIntersect-glm::vec2(player->position)));
 					int rIndex = -1;
@@ -585,7 +586,7 @@ void updateSpecials(
 						if ((rIndex == wIndex) || (thisWall.specialType == W_INVALID)) {continue;}
 						glm::vec2 LOSintersect = raycast(ray, thisWall);
 						float thisDistSQ = glm::dot((LOSintersect-glm::vec2(player->position)), (LOSintersect-glm::vec2(player->position)));
-						if (thisDistSQ < distSQ) {
+						if ((thisDistSQ < distSQ) && (playerFaceZ < thisWall.end.z) && (playerFaceZ > thisWall.start.z)) {
 							LOSBlocked = true;
 							break;
 						}
