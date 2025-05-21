@@ -399,7 +399,7 @@ void playerMove(
 		player->velocity.z *= constants::AIR_FRICT_SLIDE_COEFF;
 	}
 
-	player->velocity.z -= constants::GRAVITY_ACCEL * freq;
+	player->velocity.z -= constants::GRAVITY_ACCEL / freq;
 	player->position += player->velocity;
 
 	if (isVec3NaN(player->position) || isVec3NaN(player->velocity)) {

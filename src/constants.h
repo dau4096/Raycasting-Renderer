@@ -203,7 +203,7 @@ namespace constants {
 
 
 	//Sim Constants
-	constexpr float GRAVITY_ACCEL = 2.5e-4f;
+	constexpr float GRAVITY_ACCEL = 0.486f;
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
 	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
 	constexpr float AIR_FRICT_COEFF = 0.975f;
