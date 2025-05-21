@@ -10,7 +10,7 @@ uniform vec4 screenTint;
 uniform int health;
 uniform int energy;
 uniform ivec2 screenResolution;
-uniform int FPS;
+uniform int freq;
 uniform int showFreq;
 
 vec2 fragPosition;
@@ -185,9 +185,9 @@ void main() {
 	addVignetteShading();
 
 
-	//Show FPS.
+	//Show freq.
 	if (showFreq > 0) {
-		drawInt(scaleUI(vec2(0, 245)), int(scaleUI(25.0)), FPS);
+		drawInt(scaleUI(vec2(0, 245)), int(scaleUI(25.0)), freq);
 	}
 
 

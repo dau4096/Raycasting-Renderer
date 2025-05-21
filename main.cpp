@@ -124,7 +124,7 @@ int main() {
 
 	// Initialize keyMap for input tracking
 	bool interactKey = false, shouldTakeScreenshot = false;
-	int lightFlickerRNG, FPS = 0;
+	int lightFlickerRNG, freq = 0;
 
 	while (!glfwWindowShouldClose(Window)) {
 		tick++;
@@ -196,10 +196,10 @@ int main() {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
+		physics::updateSpecials(&wallData, &visplaneData, &player, freq, interactKey);
 
 
-		physics::playerMove(&player, &wallData, &spriteData, &visplaneData);
+		physics::playerMove(&player, freq, &wallData, &spriteData, &visplaneData);
 		float viewBob = (utils::configToBool("VIEW_BOB")) ? render::viewBob(tick, player) : 0.0f;
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
@@ -356,10 +356,10 @@ int main() {
 
 			//Assorted other data.
 			GLuint screenResLocation = glGetUniformLocation(uiShader, "screenResolution");
-			GLuint freqLocation = glGetUniformLocation(uiShader, "FPS");
+			GLuint freqLocation = glGetUniformLocation(uiShader, "freq");
 			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
 			glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
-			glUniform1i(freqLocation, FPS);
+			glUniform1i(freqLocation, freq);
 			glUniform1i(showFreqLocation, utils::configToIntBool("META_SHOW_FREQ_UI"));
 
 
@@ -403,11 +403,11 @@ int main() {
 		glfwSwapBuffers(Window);
 		utils::GLErrorcheck("Display Shader", true);
 
-		while (glfwGetTime() - frameStart < constants::DT) {}
+		while (glfwGetTime() - frameStart < (1.0f/utils::configToFloat("VIEW_MAX_FREQ"))) {}
 		double totalTime = (glfwGetTime() - frameStart);
-		FPS = floor(1/totalTime);
+		freq = floor(1/totalTime);
 		if (utils::configToBool("META_SHOW_FREQ_CONSOLE")) {
-			std::cout << FPS << std::endl;
+			std::cout << freq << std::endl;
 		}
 
 		cursorXPosPrev = cursorXPos;

@@ -201,10 +201,6 @@ namespace constants {
 	constexpr float TO_DEG = 57.2957795130824f;
 
 
-	//Physics/Rendering Frequency/dt
-	constexpr int HZ = 45;
-	constexpr double DT = 1.0d/HZ;
-
 
 	//Sim Constants
 	constexpr float GRAVITY_ACCEL = 2.5e-4f;
