@@ -16,6 +16,7 @@
 	<bind function="USE_VIEWZOOM" key="KEY_C" />
 
 	<bind function="META_SCREENSHOT" key="KEY_F12" />
+	<bind function="META_RELOAD_STAGE" key="KEY_F5" />
 	<bind function="META_EXIT" key="KEY_ESCAPE" />
 	<bind function="META_FREECURSOR" key="KEY_1" />
 </keybinds>

@@ -157,6 +157,7 @@ int main() {
 		}
 
 
+		//Meta controls
 		if (keyMap["META_EXIT"]) {
 			break; //Quit
 		}
@@ -168,6 +169,18 @@ int main() {
 			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 		}
 
+		if (keyMap["META_RELOAD_STAGE"]) {
+			loader::loadStage(
+				userConfig["META_STAGE_NAME"], &player,
+				&visplaneData, &wallData,
+				&spriteData, &lightData,
+				&logicGates, &flags,
+				&textureNames
+			);
+		}
+
+
+		//Crouch changes physical height
 		if (keyMap["MOVE_CROUCH"]) {
 			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
 			player.touchingFloor = false;

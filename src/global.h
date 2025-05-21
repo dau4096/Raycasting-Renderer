@@ -16,6 +16,7 @@ inline std::unordered_map<std::string, int> userBindings = {
 	{"USE_VIEWZOOM", -1},
 
 	{"META_SCREENSHOT", -1},
+	{"META_RELOAD_STAGE", -1},
 	{"META_EXIT", -1},
 	{"META_FREECURSOR", -1},
 };
