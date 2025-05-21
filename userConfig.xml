@@ -28,20 +28,21 @@
 
 	<option function="VIEW_FOV" value="70.0" />
 	<option function="VIEW_MAX_RAY_DIST" value="128.0" />
-	<option function="VIEW_SHOW_HUD" value="true" />
-	<option function="VIEW_BOB" value="true" />
-	<option function="VIEW_LEAN" value="true" />
-	<option function="VIEW_VLOOK" value="false" />
-	<option function="VIEW_SMOOTHING" value="false" />
+	<option function="VIEW_SHOW_HUD" value="TRUE" />
+	<option function="VIEW_BOB" value="TRUE" />
+	<option function="VIEW_LEAN" value="TRUE" />
+	<option function="VIEW_VLOOK" value="FALSE" />
+	<option function="VIEW_SMOOTHING" value="FALSE" />
 	<option function="VIEW_ANTIALIAS_LEVEL" value="0.0" />
 	<option function="VIEW_MAX_FREQ" value="45.0" />
-	<option function="VIEW_NO_INTERFACE" value="false" />
+	<option function="VIEW_NO_INTERFACE" value="FALSE" />
 
-	<option function="META_DRAW_UV" value="false" />
-	<option function="META_SHOW_FREQ_UI" value="true" />
-	<option function="META_SHOW_FREQ_TERMINAL" value="false" />
-	<option function="META_SCREENSHOT_HAS_HUD" value="false" />
+	<option function="META_DRAW_UV" value="FALSE" />
+	<option function="META_SHOW_FREQ_UI" value="TRUE" />
+	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
+	<option function="META_SHOW_CONSOLE" value="FALSE" />
+	<option function="META_SCREENSHOT_HAS_HUD" value="FALSE" />
 	<option function="META_STAGE_NAME" value="dev-quake" />
 
-	<option function="PHYS_NO_COLLIDE" value="false" />
+	<option function="PHYS_NO_COLLIDE" value="FALSE" />
 </config>

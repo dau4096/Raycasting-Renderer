@@ -189,8 +189,8 @@ inline const std::unordered_map<std::string, int> keyNameToGLFW = {
 
 
 namespace constants {
-	static int TRUE = 1;
-	static int FALSE = 0;
+	static int C_TRUE = 1;
+	static int C_FALSE = 0;
 
 
 	//Mathematical Constants

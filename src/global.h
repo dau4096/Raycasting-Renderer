@@ -48,7 +48,8 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 
 	{"META_DRAW_UV", ""},
 	{"META_SHOW_FREQ_UI", ""},
-	{"META_SHOW_FREQ_TERMINAL", ""},
+	{"META_SHOW_FREQ_CONSOLE", ""},
+	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
 	{"META_SCREENSHOT_HAS_HUD", ""},
 

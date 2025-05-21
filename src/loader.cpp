@@ -25,9 +25,9 @@ static inline glm::vec2 parseVec2(const std::string& str) {
 int* managePTR(std::string ptrStr, std::array<int, constants::MAX_FLAGS>* flags) {
 	std::string ptrStrUpper = strToUpper(ptrStr);
 	if ((ptrStrUpper == "TRUE") || (ptrStrUpper == "ALWAYS")) {
-		return &(constants::TRUE);
+		return &(constants::C_TRUE);
 	} else if ((ptrStrUpper == "FALSE") || (ptrStrUpper == "NEVER")) {
-		return &(constants::FALSE);
+		return &(constants::C_FALSE);
 	}
 
 	try {
@@ -43,7 +43,7 @@ int* managePTR(std::string ptrStr, std::array<int, constants::MAX_FLAGS>* flags)
 	} catch (const std::out_of_range& err) {
 		raise("Pointer string: [" + ptrStr + "] was not an integer flag index, [0 -> " + std::to_string(constants::MAX_FLAGS) + "] (inclusive).");
 	}
-	return &(constants::FALSE);
+	return &(constants::C_FALSE);
 };
 
 
@@ -311,6 +311,13 @@ void loadBindings() {
 
 	fetchBindingsFromXML(doc);
 	fetchConfigsFromXML(doc);
+
+
+	if (utils::configToBool("META_SHOW_CONSOLE")) {
+		utils::showConsole();
+	} else {
+		utils::hideConsole();
+	}
 }
 
 }

@@ -12,12 +12,12 @@ using namespace std;
 
 
 namespace logicFunctions {
-	static void AND(int* A, int* B, int* Q, int* internalState) {*Q = (*A) & (*B);}
-	static void OR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) | (*B);}
-	static void NOT(int* A, int* B, int* Q, int* internalState) {*Q = ~(*A);}
-	static void XOR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) ^ (*B);}
+	static void LGF_AND(int* A, int* B, int* Q, int* internalState) {*Q = (*A) & (*B);}
+	static void LGF_OR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) | (*B);}
+	static void LGF_NOT(int* A, int* B, int* Q, int* internalState) {*Q = ~(*A);}
+	static void LGF_XOR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) ^ (*B);}
 
-	static void LATCH(int* A, int* B, int* Q, int* internalState) { //Swap between 1 and 0 with A and B.
+	static void LGF_LATCH(int* A, int* B, int* Q, int* internalState) { //Swap between 1 and 0 with A and B.
 		if (((*A) & (*B)) > 0) {
 			//internalState remains unchanged; both inputs counteract each other's change.
 		} else if ((*A) > 0) {
@@ -28,33 +28,51 @@ namespace logicFunctions {
 		*Q = *internalState;
 	}
 
-	static void PULSE(int* A, int* B, int* Q, int* internalState) { //If A is 1, return 1 for a single frame.
+	static void LGF_PULSE(int* A, int* B, int* Q, int* internalState) { //If A is 1, return 1 for a single frame.
 		if (((*internalState) < 1) && ((*A) == 1)) {*Q = 1;}
 		else {*Q = 0;}
 		*internalState = *A;
 	}
 
-	static void TOGGLE(int* A, int* B, int* Q, int* internalState) { //Toggles between 1 and 0 if A is 1.
+	static void LGF_TOGGLE(int* A, int* B, int* Q, int* internalState) { //Toggles between 1 and 0 if A is 1.
 		if ((*A) == 1) {
 			*internalState = ((*internalState) < 1) ? 1 : 0;
 		}
 		*Q = *internalState;
 	}
 
-	static void PASSTHROUGH(int* A, int* B, int* Q, int* internalState) {*Q = *A;}
+	static void LGF_PASSTHROUGH(int* A, int* B, int* Q, int* internalState) {*Q = *A;}
 }
 
 
 //Utility functions
 namespace utils {
+
+	static inline void hideConsole() {
+		ShowWindow(GetConsoleWindow(), SW_HIDE);
+	}
+	static inline void showConsole() {
+		ShowWindow(GetConsoleWindow(), SW_SHOW);
+	}
+	static inline bool isConsoleVisible() {
+		return IsWindowVisible(GetConsoleWindow()) != FALSE;
+	}
+
+
 	static inline void print(std::string str) {
-		std::cout << str << std::endl;
+		if (isConsoleVisible()) {
+			std::cout << str << std::endl;
+		}
 	}
 	static inline void printVec2(glm::vec2 vector) {
-		std::cout << "(" << vector.x << ", " << vector.y << ")" << std::endl;
+		if (isConsoleVisible()) {
+			std::cout << "(" << vector.x << ", " << vector.y << ")" << std::endl;
+		}
 	}
 	static inline void printVec3(glm::vec3 vector) {
-		std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+		if (isConsoleVisible()) {
+			std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+		}
 	}
 	static inline void raise(std::string err) {
 		std::cerr << err << std::endl;
@@ -173,14 +191,14 @@ namespace utils {
 
 			void _assignEvalFunction() {
 				switch (this->gateType) {
-					case G_AND: evalGate = logicFunctions::AND; break;
-					case G_OR: evalGate = logicFunctions::OR; break;
-					case G_NOT: evalGate = logicFunctions::NOT; break;
-					case G_XOR: evalGate = logicFunctions::XOR; break;
-					case G_LATCH: evalGate = logicFunctions::LATCH; break;
-					case G_PULSE: evalGate = logicFunctions::PULSE; break;
-					case G_TOGGLE: evalGate = logicFunctions::TOGGLE; break;
-					default: evalGate = logicFunctions::PASSTHROUGH; break;
+					case G_AND: evalGate = logicFunctions::LGF_AND; break;
+					case G_OR: evalGate = logicFunctions::LGF_OR; break;
+					case G_NOT: evalGate = logicFunctions::LGF_NOT; break;
+					case G_XOR: evalGate = logicFunctions::LGF_XOR; break;
+					case G_LATCH: evalGate = logicFunctions::LGF_LATCH; break;
+					case G_PULSE: evalGate = logicFunctions::LGF_PULSE; break;
+					case G_TOGGLE: evalGate = logicFunctions::LGF_TOGGLE; break;
+					default: evalGate = logicFunctions::LGF_PASSTHROUGH; break;
 				}
 			}
 
@@ -190,7 +208,7 @@ namespace utils {
 
 			LogicGate() {
 				this->gateType = G_INVALID;
-				this->evalGate = logicFunctions::PASSTHROUGH;
+				this->evalGate = logicFunctions::LGF_PASSTHROUGH;
 
 				this->inputA = nullptr;
 				this->inputB = nullptr;

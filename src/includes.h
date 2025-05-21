@@ -2,6 +2,9 @@
 #define INCLUDES_H
 
 
+//Include Windows.
+#include <Windows.h>
+
 //Include GLEW.
 #include <C:/Users/User/Documents/code/.cpp/glew-2.1.0/include/GL/glew.h>
 

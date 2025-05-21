@@ -406,7 +406,7 @@ int main() {
 		while (glfwGetTime() - frameStart < constants::DT) {}
 		double totalTime = (glfwGetTime() - frameStart);
 		FPS = floor(1/totalTime);
-		if (utils::configToBool("META_SHOW_FREQ_TERMINAL")) {
+		if (utils::configToBool("META_SHOW_FREQ_CONSOLE")) {
 			std::cout << FPS << std::endl;
 		}
 
