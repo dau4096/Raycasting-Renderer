@@ -309,7 +309,7 @@ void playerMove(
 					);
 				}
 			} else {
-				glm::vec2 wallDir = glm::normalize(wall.start - wall.end);
+				glm::vec2 wallDir = glm::normalize(wall.end - wall.start);
 				glm::vec2 wallNormal = glm::vec2(wallDir.y, -wallDir.x);
 
 				glm::vec2 correctedV = wallDir * glm::dot(glm::normalize(glm::vec2(player->velocity.x, player->velocity.y)), wallDir) * playerSpeed;

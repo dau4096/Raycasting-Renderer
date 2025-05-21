@@ -163,7 +163,7 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall) {
 
 
 vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
-	const vec2 UVOffset = vec2(0.5f, 0.0);
+	const vec2 UVOffset = vec2(0.5f, 0.0f);
 	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
 	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;

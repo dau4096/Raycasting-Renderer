@@ -26,7 +26,7 @@
 	<option function="TURN_SPEED_MOUSE" value="0.25" />
 	<option function="TURN_SPEED_KEYBOARD" value="1.0" />
 
-	<option function="VIEW_FOV" value="90.0" />
+	<option function="VIEW_FOV" value="70.0" />
 	<option function="VIEW_MAX_RAY_DIST" value="128.0" />
 	<option function="VIEW_SHOW_HUD" value="true" />
 	<option function="VIEW_BOB" value="true" />
@@ -41,7 +41,7 @@
 	<option function="META_SHOW_FREQ_UI" value="true" />
 	<option function="META_SHOW_FREQ_TERMINAL" value="false" />
 	<option function="META_SCREENSHOT_HAS_HUD" value="false" />
-	<option function="META_STAGE_NAME" value="dev-original" />
+	<option function="META_STAGE_NAME" value="dev-quake" />
 
 	<option function="PHYS_NO_COLLIDE" value="false" />
 </config>
