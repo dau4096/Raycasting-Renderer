@@ -416,7 +416,7 @@ namespace utils {
 		TextObject() : text(""), position(0.0f, 0.0f, 0.0f), scale(0), valid(0) {}
 
 		TextObject(std::string text, glm::vec3 position, int scale)
-			: text(text),
+			: text(text.substr(0, display::MAX_TEXTOBJECT_CHARACTERS)),
 			  position(position),
 			  scale(scale),
 			  valid(1) {}

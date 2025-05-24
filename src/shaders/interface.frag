@@ -38,7 +38,7 @@ const ivec2 uiResolution = ivec2(480, 270);
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 
 struct TextObject {
-	ivec4 text[8];	//Array of character indices.
+	ivec4 text[16];	//Array of character indices.
 	int length;		//Length of text.
 	int scale;		//Text scale.
 	int valid;		//TextObject validity.

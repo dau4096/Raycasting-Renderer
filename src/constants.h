@@ -253,7 +253,7 @@ namespace display {
 
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
-	constexpr int MAX_TEXTOBJECT_CHARACTERS = 32;
+	constexpr int MAX_TEXTOBJECT_CHARACTERS = 64;
 }
 
 namespace playerConfig {
