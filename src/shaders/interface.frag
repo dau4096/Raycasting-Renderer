@@ -214,7 +214,7 @@ void drawTextObjects(float rayAngle) {
 			
 			float zoomEffect = (zoom) ? zoomFactor : 1.0f;
 			float distance = sqrt(TODepthSQ);
-			float scale = thisTO.scale / distance;
+			float scale = (thisTO.scale / distance) * ((zoom) ? zoomFactor : 1.0f);
 			if (scale < 1.0f) {continue; /* Scale too small to see. */}
 
 			//X
@@ -226,7 +226,7 @@ void drawTextObjects(float rayAngle) {
 
 			//Y
 			float verticalRatio = (playerPosition.z - thisTO.position.z) / distance;
-			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y;
+			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y * ((zoom) ? zoomFactor : 1.0f);
 			float charY = centreY - (scale / 2.0f);
 
 
