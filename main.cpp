@@ -436,13 +436,7 @@ int main() {
 			glBindVertexArray(0);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 			utils::GLErrorcheck("UI Shader", true);
-		}
-
-
-		if (utils::configToBool("META_SCREENSHOT_HAS_HUD") && shouldTakeScreenshot) {
-			render::saveScreenshot(renderedFrameID);
-		}
-		
+		}		
 
 
 		//Update resolution
@@ -450,6 +444,7 @@ int main() {
 
 		//Display Shader and update screen.
 		glUseProgram(displayShader);
+		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 		glBindTextureUnit(0, renderedFrameID);
 
 
@@ -459,11 +454,13 @@ int main() {
 		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
 		GLuint quantLocation = glGetUniformLocation(displayShader, "quantisingLevel");
+		GLuint screenHUDLocation = glGetUniformLocation(displayShader, "screenshotHasHUD");
 		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
 		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1i(antiAliasLocation, utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
-		glUniform1i(smoothingLocation, utils::configToIntBool("VIEW_SMOOTHING"));
+		glUniform1i(smoothingLocation, utils::configToBool("VIEW_SMOOTHING"));
 		glUniform1i(quantLocation, utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
+		glUniform1i(screenHUDLocation, utils::configToBool("META_SCREENSHOT_HAS_HUD"));
 
 
 
@@ -474,6 +471,13 @@ int main() {
 
 		glfwSwapBuffers(Window);
 		utils::GLErrorcheck("Display Shader", true);
+
+
+		if (utils::configToBool("META_SCREENSHOT_HAS_HUD") && shouldTakeScreenshot) {
+			render::saveScreenshot(renderedFrameID);
+		}
+
+
 
 		while (glfwGetTime() - frameStart < (1.0f/utils::configToFloat("VIEW_MAX_FREQ"))) {}
 		double totalTime = (glfwGetTime() - frameStart);

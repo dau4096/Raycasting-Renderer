@@ -4,12 +4,15 @@
 in vec2 fragTexCoord;
 out vec4 fragColour;
 
+layout(rgba32f, binding = 0) uniform image2D renderedFrameWriteOnly;
+
 uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform sampler2D renderedFrame;
 uniform int antiAliasingLevel;
-uniform int smoothingEnabled;
+uniform bool smoothingEnabled;
 uniform int quantisingLevel;
+uniform bool screenshotHasHUD;
 
 
 const float EPSILON = 1e-4f;
@@ -99,11 +102,14 @@ void main() {
 	} else if (quantisingLevel > 1) {
 		//Quantising 1 would be 1 colour. Not adequate.
 		resultant = quantisingFunc(mainUV);
-	} else if (smoothingEnabled > 0) { //Simple Anti-Aliasing
+	} else if (smoothingEnabled) { //Simple Anti-Aliasing
 		resultant = smoothingFunc();
 	} else {
 		resultant = vec4(texture(renderedFrame, mainUV).rgb, 1.0f);
 	}
 
 	fragColour = vec4(resultant.rgb, 1.0f);
+	if (screenshotHasHUD) {
+		imageStore(renderedFrameWriteOnly, ivec2(gl_FragCoord.xy), vec4(resultant.rgb, 1.0f));
+	}
 }
