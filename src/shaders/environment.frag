@@ -41,7 +41,7 @@ struct Visplane {
 	float _padding;		//Visplane Padding
 };
 layout(std140, binding = 7) uniform visplaneUBO {
-	Visplane visplanes[64];
+	Visplane visplanes[128];
 };
 
 struct Wall {
@@ -52,7 +52,7 @@ struct Wall {
 	float _padding[2];	//Wall Padding.
 };
 layout(std430, binding = 3) buffer wallUBO {
-	Wall walls[256];
+	Wall walls[512];
 };
 
 struct Light {
@@ -63,7 +63,7 @@ struct Light {
 	float _padding;		//Light Padding.
 };
 layout(std140, binding = 5) uniform lightUBO {
-	Light lights[64];
+	Light lights[128];
 };
 
 
@@ -258,7 +258,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 
 	//Iterate through all the walls. (2D)
-	for (int idx = 0; idx < 256; idx++) {
+	for (int idx=0; idx<512; idx++) {
 		Wall thisWall = walls[idx];
 		if (thisWall.valid <= 0 || (idx == thisIndex && foundType == 1)) {continue; /* Wall is empty or is the index calling the LOS check. */}
 
@@ -278,7 +278,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 
 	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<64; idx++) {
+	for (int idx=0; idx<128; idx++) {
 		Visplane thisPlane = visplanes[idx];
 		if (thisPlane.valid <= 0 || (idx == thisIndex && foundType == 2)) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
@@ -328,7 +328,7 @@ void main() {
 	int closestIndex, foundType = 0;
 
 	//Iterate through all the walls. (2D)
-	for (int idx = 0; idx < 256; idx++) {
+	for (int idx=0; idx<512; idx++) {
 		Wall thisWall = walls[idx];
 		if (thisWall.valid <= 0) {continue; /* Wall is empty */}
 
@@ -356,7 +356,7 @@ void main() {
 	}
 
 	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<64; idx++) {
+	for (int idx=0; idx<128; idx++) {
 		Visplane thisPlane = visplanes[idx];
 		if (thisPlane.valid <= 0) {continue; /* Visplane is not valid. */}
 
@@ -416,7 +416,7 @@ void main() {
 			} else {
 				vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 				//Light effect
-				for (int idx=0; idx<64; idx++) {
+				for (int idx=0; idx<128; idx++) {
 					//Iterate through all lights.
 					Light thisLight = lights[idx];
 					if (thisLight.valid <= 0) {continue; /* Light is empty */}

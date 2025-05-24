@@ -47,7 +47,7 @@ struct TextObject {
 	float _paddingB;//Padding
 };
 layout(std140, binding = 6) uniform textObjectUBO {
-	TextObject textObjects[16];
+	TextObject textObjects[32];
 };
 
 
@@ -205,7 +205,7 @@ void drawTextObjects(float rayAngle) {
 	const bool hasBackground = true;
 	const vec3 backgroundColour = vec3(0.0f, 0.0f, 0.0f);
 
-	for (int idx=0; idx<16; idx++) {
+	for (int idx=0; idx<32; idx++) {
 		TextObject thisTO = textObjects[idx];
 		if ((thisTO.valid > 0.0f) && (thisTO.length > 0.0f) && (thisTO.scale >= 1.0f)) {
 			vec3 delta = playerPosition - thisTO.position;

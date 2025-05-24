@@ -220,13 +220,13 @@ namespace constants {
 
 
 	//Maximum quantities of each type.
-	constexpr int MAX_VISPLANES = 64;
-	constexpr int MAX_WALLS = 256;
-	constexpr int MAX_SPRITES = 32;
-	constexpr int MAX_LIGHTS = 64;
-	constexpr int MAX_TEXT_OBJECTS = 16;
-	constexpr int MAX_GATES = 32;
-	constexpr int MAX_FLAGS = 128;
+	constexpr int MAX_VISPLANES = 128;
+	constexpr int MAX_WALLS = 512;
+	constexpr int MAX_SPRITES = 64;
+	constexpr int MAX_LIGHTS = 128;
+	constexpr int MAX_TEXT_OBJECTS = 32;
+	constexpr int MAX_GATES = 64;
+	constexpr int MAX_FLAGS = 256;
 
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
