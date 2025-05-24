@@ -224,6 +224,7 @@ namespace constants {
 	constexpr int MAX_WALLS = 256;
 	constexpr int MAX_SPRITES = 32;
 	constexpr int MAX_LIGHTS = 64;
+	constexpr int MAX_TEXT_OBJECTS = 16;
 	constexpr int MAX_GATES = 32;
 	constexpr int MAX_FLAGS = 128;
 
@@ -240,7 +241,7 @@ namespace display {
 	//Texture Standardisation
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
-	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 32;
+	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures/fallback-general.png";
 
 
@@ -252,6 +253,7 @@ namespace display {
 
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
+	constexpr int MAX_TEXTOBJECT_CHARACTERS = 32;
 }
 
 namespace playerConfig {

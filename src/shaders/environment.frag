@@ -55,17 +55,6 @@ layout(std430, binding = 3) buffer wallUBO {
 	Wall walls[256];
 };
 
-struct Sprite {
-	vec3 position;	//Sprite Position.
-	float width;	//Sprite Width.
-	float height;	//Sprite Height.
-	int textureID;	//Sprite Texture ID.
-	int valid;		//Sprite Validity.
-};
-layout(std140, binding = 4) uniform spriteSSBO {
-	Sprite sprites[32];
-};
-
 struct Light {
 	vec3 position;		//Light Position.
 	vec3 colour;		//Light Colour.
@@ -73,7 +62,7 @@ struct Light {
 	int valid;			//Light Validity.
 	float _padding;		//Light Padding.
 };
-layout(std140, binding = 5) uniform lightSSBO {
+layout(std140, binding = 5) uniform lightUBO {
 	Light lights[64];
 };
 

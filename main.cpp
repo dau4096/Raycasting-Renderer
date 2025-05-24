@@ -14,23 +14,37 @@ using namespace glm;
 
 
 //Images to be used in the UI.
-std::array<std::string, 32> UIImageNames = {
+std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> UIImageNames = {
 	"ui-health", "ui-energy"
 };
 
 //Symbols to be used in the UI.
-std::array<std::string, 32> symbolNames = {
+std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 	"symbol_0", "symbol_1",
 	"symbol_2", "symbol_3",
 	"symbol_4", "symbol_5",
 	"symbol_6", "symbol_7",
 	"symbol_8", "symbol_9",
-	"symbol_-"
+	"symbol_DOT", "symbol_DASH",
+	"symbol_EMARK", "symbol_QMARK",
+	"symbol_A", "symbol_B",
+	"symbol_C", "symbol_D",
+	"symbol_E", "symbol_F",
+	"symbol_G", "symbol_H",
+	"symbol_I", "symbol_J",
+	"symbol_K", "symbol_L",
+	"symbol_M", "symbol_N",
+	"symbol_O", "symbol_P",
+	"symbol_Q", "symbol_R",
+	"symbol_S", "symbol_T",
+	"symbol_U", "symbol_V",
+	"symbol_X", "symbol_Y",
+	"symbol_Z"
 };
 
 
 
-GLuint renderedFrameID, depthSSBO;
+GLuint renderedFrameID, depthUBO;
 glm::ivec2 currentScreenRes;
 bool headLampEnabled = false;
 int tick = 0;
@@ -51,12 +65,13 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 int main() {
 	try { //Catch exceptions
 	Player player;
-	std::array<int, constants::MAX_FLAGS> flags;
 	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
 	std::array<utils::Wall, constants::MAX_WALLS> wallData;
 	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
 	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
+	std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS> textObjectData;
 	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
+	std::array<int, constants::MAX_FLAGS> flags;
 
 	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 
@@ -65,6 +80,7 @@ int main() {
 		userConfig["META_STAGE_NAME"], &player,
 		&visplaneData, &wallData,
 		&spriteData, &lightData,
+		&textObjectData,
 		&logicGates, &flags,
 		&textureNames
 	);
@@ -95,8 +111,9 @@ int main() {
 
 	GLuint visplaneUBO = render::createVisplaneUBO();
 	GLuint wallUBO = render::createWallUBO();
-	GLuint lightSSBO = render::createLightSSBO();
-	GLuint spriteSSBO = render::createSpriteSSBO();
+	GLuint spriteUBO = render::createSpriteUBO();
+	GLuint lightUBO = render::createLightUBO();
+	GLuint textObjectUBO = render::createTextObjectUBO();
 
 
 	//Environment shader
@@ -174,6 +191,7 @@ int main() {
 				userConfig["META_STAGE_NAME"], &player,
 				&visplaneData, &wallData,
 				&spriteData, &lightData,
+				&textObjectData,
 				&logicGates, &flags,
 				&textureNames
 			);
@@ -225,8 +243,9 @@ int main() {
 		//Update Dynamic UBOs.
 		render::updateVisplaneUBO(visplaneUBO, &visplaneData);
 		render::updateWallUBO(wallUBO, &wallData);
-		render::updateSpriteSSBO(spriteSSBO, &spriteData);
-		render::updateLightSSBO(lightSSBO, &lightData);
+		render::updateSpriteUBO(spriteUBO, &spriteData);
+		render::updateLightUBO(lightUBO, &lightData);
+		render::updateTextObjectUBO(textObjectUBO, &textObjectData, &symbolNames);
 		utils::GLErrorcheck("Updating UBOs", true);
 
 
@@ -358,6 +377,27 @@ int main() {
 			glBindTextureUnit(1, textureArrayUI); //UI Textures
 			glBindTextureUnit(2, textureArrayNumeric); //0-9 Textures.
 
+
+
+			//Camera Data
+			maxVDistLocation = glGetUniformLocation(uiShader, "maxRayDistance");
+			maxRAngleLocation = glGetUniformLocation(uiShader, "maxRayAngle");
+			zoomFactorLocation = glGetUniformLocation(uiShader, "zoomFactor");
+			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
+			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+
+			//Player Data
+			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
+			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
+			playerRollLocation = glGetUniformLocation(uiShader, "playerViewRoll");
+			playerPitchLocation = glGetUniformLocation(uiShader, "playerViewPitch");
+			zoomLocation = glGetUniformLocation(uiShader, "zoom");
+			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
+			glUniform1f(playerAngleLocation, player.viewAngle);
+			glUniform1f(playerRollLocation, player.viewRoll);
+			glUniform1f(playerPitchLocation, player.viewPitch);
+			glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
 
 			//Player Data.
 			GLuint vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");

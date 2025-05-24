@@ -40,7 +40,7 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std430, binding = 2) buffer visplaneUBO {
+layout(std140, binding = 7) uniform visplaneUBO {
 	Visplane visplanes[64];
 };
 
@@ -62,7 +62,7 @@ struct Sprite {
 	int textureID;	//Sprite Texture ID.
 	int valid;		//Sprite Validity.
 };
-layout(std140, binding = 4) uniform spriteSSBO {
+layout(std140, binding = 4) uniform spriteUBO {
 	Sprite sprites[32];
 };
 
@@ -76,6 +76,8 @@ struct Light {
 layout(std140, binding = 5) uniform lightUBO {
 	Light lights[64];
 };
+
+
 
 
 struct Ray {

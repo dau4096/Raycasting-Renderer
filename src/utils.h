@@ -407,6 +407,85 @@ namespace utils {
 	};
 
 
+	struct TextObject {
+		std::string text;
+		glm::vec3 position;
+		int scale;
+		int valid;
+
+		TextObject() : text(""), position(0.0f, 0.0f, 0.0f), scale(0), valid(0) {}
+
+		TextObject(std::string text, glm::vec3 position, int scale)
+			: text(text),
+			  position(position),
+			  scale(scale),
+			  valid(1) {}
+	};
+
+	static std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> convertTextToIdxArray(
+		const std::string& input,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+	) {
+		std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> result;
+		result.fill(-1);
+
+		std::string inputUpper = strToUpper(input);
+
+		for (size_t idx=0; (idx<input.size() && idx<display::MAX_TEXTOBJECT_CHARACTERS); ++idx) {
+			std::string ch(1, inputUpper[idx]);
+			int res;
+
+			if (ch == "|") {res = -3;}
+			else if (ch == " ") {res = -2;}
+			else if (ch == ".") {res = 10;}
+			else if (ch == "-") {res = 11;}
+			else if (ch == "!") {res = 12;}
+			else if (ch == "?") {res = 13;}
+			else {
+				auto it = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + ch);
+				if (it != symbolNames->end()) {
+					res = static_cast<int>(std::distance(symbolNames->begin(), it));
+				} else {
+					//Unknown char; show "?"
+					res = 13;
+				}
+			}
+			result[idx] = res;
+		}
+
+		return result;
+	}
+
+	struct TextObjectGPU {
+		alignas(16) std::array<glm::ivec4, display::MAX_TEXTOBJECT_CHARACTERS / 4> text;
+		
+		alignas(4) int length;
+		alignas(4) int scale;
+		alignas(4) int valid;
+		alignas(4) int _paddingA;
+
+		alignas(16) glm::vec3 position;
+		alignas(4) float _paddingB;
+
+		TextObjectGPU() : text(), position(0.0f, 0.0f, 0.0f), scale(0), valid(0), _paddingA(0), _paddingB(0.0f) {}
+
+		TextObjectGPU(
+			TextObject* textObject,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+		)	: length(textObject->text.length()),
+			  position(textObject->position),
+			  scale(textObject->scale),
+			  valid(textObject->valid),
+			  _paddingA(0), _paddingB(0.0f)
+		{
+	        std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
+	        for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
+	            text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
+	        }
+		}
+	};
+
+
 
 
 

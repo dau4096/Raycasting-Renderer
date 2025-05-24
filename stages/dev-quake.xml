@@ -99,6 +99,13 @@
 </lights>
 
 
+<!-- Objects -->
+<objects>
+    <textObj text="Hello there!" position="-3.0 2.0 1.5" scale="100.0" />
+    <textObj text="I am a TextObject" position="-3.0 2.0 1.3" scale="100.0" />
+</objects>
+
+
 <!-- Logic Gates -->
 <logicGates>
     <!-- Empty for now -->

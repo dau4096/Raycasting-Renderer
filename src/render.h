@@ -19,13 +19,18 @@ namespace render {
     GLuint createWallUBO();
     void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet);
 
-    GLuint createSpriteSSBO();
-    void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet);
+    GLuint createSpriteUBO();
+    void updateSpriteUBO(GLuint spriteUBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet);
 
-    GLuint createLightSSBO();
-    void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet);
+    GLuint createLightUBO();
+    void updateLightUBO(GLuint lightUBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet);
 
-    GLuint createDepthSSBO(int width);
+    GLuint createTextObjectUBO();
+    void updateTextObjectUBO(
+        GLuint textObjectUBO,
+        std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* dataSet,
+        std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+    );
 
 
     void saveScreenshot(GLuint frameTextureID);

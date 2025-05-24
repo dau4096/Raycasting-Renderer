@@ -201,6 +201,22 @@ static inline Light extractLight(
 }
 
 
+static inline TextObject extractTextObject(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
+	std::string flagPTR = node.attribute("inputPTR").as_string();
+	TextObject textObject = TextObject(
+		node.attribute("text").as_string(),
+		parseVec3(node.attribute("position").as_string()),
+		node.attribute("scale").as_int()
+	);
+	
+	return textObject;
+}
+
+
 static inline LogicGate extractGate(
 		const pugi::xml_node& node,
 		std::array<int, constants::MAX_FLAGS>* flags,
@@ -336,6 +352,7 @@ void loadStage(
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Light, constants::MAX_LIGHTS>* lightData,
+		std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* textObjectData,
 		std::array<utils::LogicGate, constants::MAX_GATES>* logicGates,
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
@@ -354,6 +371,7 @@ void loadStage(
 	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, flags, textureNames);
 	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, nullptr, textureNames);
 	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, nullptr, nullptr);
+	*textObjectData = fetchObjectFromXML<utils::TextObject, constants::MAX_TEXT_OBJECTS>(doc, "//objects/textObj", extractTextObject, nullptr, nullptr);
 	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, flags, nullptr);
 
 

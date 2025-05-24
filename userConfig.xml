@@ -42,7 +42,7 @@
 	<option function="META_SHOW_FREQ_UI" value="TRUE" />
 	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="FALSE" />
-	<option function="META_SCREENSHOT_HAS_HUD" value="FALSE" />
+	<option function="META_SCREENSHOT_HAS_HUD" value="TRUE" />
 	<option function="META_STAGE_NAME" value="dev-quake" />
 
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />

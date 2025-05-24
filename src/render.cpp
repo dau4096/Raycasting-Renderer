@@ -159,26 +159,26 @@ void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>
 
 
 
-GLuint createSpriteSSBO() {
-	GLuint spriteSSBO;
-	glGenBuffers(1, &spriteSSBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
+GLuint createSpriteUBO() {
+	GLuint spriteUBO;
+	glGenBuffers(1, &spriteUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::SpriteGPU) * constants::MAX_SPRITES, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteSSBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	return spriteSSBO;
+	return spriteUBO;
 }
 
-void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
+void updateSpriteUBO(GLuint spriteUBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
 	std::array<utils::SpriteGPU, constants::MAX_SPRITES> spriteBuffer;
 	for (int index=0; index<constants::MAX_SPRITES; index++) {
 		spriteBuffer[index] = SpriteGPU(&(dataSet->at(index)));
 	}
 
-	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
@@ -192,27 +192,27 @@ void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MA
 
 
 
-GLuint createLightSSBO() {
-	GLuint lightSSBO;
-	glGenBuffers(1, &lightSSBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
+GLuint createLightUBO() {
+	GLuint lightUBO;
+	glGenBuffers(1, &lightUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::LightGPU) * constants::MAX_LIGHTS, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightSSBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	return lightSSBO;
+	return lightUBO;
 }
 
-void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
+void updateLightUBO(GLuint lightUBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
 	std::array<utils::LightGPU, constants::MAX_LIGHTS> lightBuffer;
 	for (int index=0; index<constants::MAX_LIGHTS; index++) {
 		if (dataSet->at(index).valid <= 0) {continue;}
 		lightBuffer[index] = LightGPU(&(dataSet->at(index)));
 	}
 
-	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
@@ -220,6 +220,44 @@ void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_L
 		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	} else {
 		raise("Failed to write data to lightUBO.");
+	}
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+
+GLuint createTextObjectUBO() {
+	GLuint textObjectUBO;
+	glGenBuffers(1, &textObjectUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, textObjectUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::TextObjectGPU) * constants::MAX_TEXT_OBJECTS, nullptr, GL_DYNAMIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 6, textObjectUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	return textObjectUBO;
+}
+
+void updateTextObjectUBO(
+		GLuint textObjectUBO,
+		std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* dataSet,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+	) {
+	std::array<utils::TextObjectGPU, constants::MAX_TEXT_OBJECTS> textObjectBuffer;
+	for (int index=0; index<constants::MAX_TEXT_OBJECTS; index++) {
+		if (dataSet->at(index).valid <= 0) {continue;}
+		textObjectBuffer[index] = TextObjectGPU(&(dataSet->at(index)), symbolNames);
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, textObjectUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, textObjectBuffer.data(), sizeof(utils::TextObjectGPU) * constants::MAX_TEXT_OBJECTS);
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to textObjectUBO.");
 	}
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
