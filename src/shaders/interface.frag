@@ -159,7 +159,7 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 void drawCrosshair() {
 	float radius = scaleUI(5.0);
 	float thickness = scaleUI(1.0);
-	const vec4 crosshairColour = vec4(0.25f, 0.25f, 0.25f, 0.5f);
+	const vec4 crosshairColour = vec4(0.5f, 0.5f, 0.5f, 0.75f);
 
 	vec2 centreScreen = renderResolution/2.0f;
 	float dist = length(fragPosition - centreScreen) - radius;
