@@ -101,14 +101,14 @@
 
 <!-- Objects -->
 <objects>
-    <textObj text="Door controlled by Flag 2" position="0.0 -7.75 2.0" scale="100.0" />
-    <textObj text="Empty open space for movement" position="0.0 25.0 2.5" scale="200.0" />
-    <textObj text="lift" position="5.0 -7.0 1.5" scale="50.0" />
-    <textObj text="lift" position="5.0 -7.0 4.5" scale="50.0" />
-    <textObj text="You aren't supposed to be here" position="0.0 0.0 -2.0" scale="200.0" />
-    <textObj text=".-!?,'/:;&#" position="15.0 0.0 2.0" scale="500.0" />
-    <textObj text="abcdefghijklmnopqrstuvwxyz" position="15.0 0.0 3.0" scale="500.0" />
-    <textObj text="0123456789" position="15.0 0.0 4.0" scale="500.0" />
+    <textObj text="Door: f2" position="0.0 -7.5 2.0" scale="100.0" />
+    <textObj text="Empty open space for movement." position="0.0 25.0 2.5" scale="200.0" />
+    <textObj text="lift ^" position="5.0 -7.0 1.5" scale="50.0" />
+    <textObj text="lift V" position="5.0 -7.0 4.5" scale="50.0" />
+    <textObj text="You aren't supposed to be here!" position="0.0 0.0 -2.0" scale="200.0" />
+    <textObj text="Hi :]" position="0.0 0.0 2.0" scale="75.0" />
+    <textObj text="Light brighter than sun." position="-5.0 2.5 2.0" scale="100.0" />
+    <textObj text="Light illuminating a room." position="-5.0 -10.0 2.0" scale="100.0" />
 </objects>
 
 

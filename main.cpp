@@ -30,6 +30,8 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 	"symbol_COMMA", "symbol_QUOTE",
 	"symbol_FSLASH", "symbol_COLON",
 	"symbol_SEMICOLON", "symbol_AND",
+	"symbol_OPNBRACKET", "symbol_CLSBRACKET",
+	"symbol_CARET", "symbol_UNKNOWN",
 	"symbol_A", "symbol_B",
 	"symbol_C", "symbol_D",
 	"symbol_E", "symbol_F",
@@ -42,8 +44,7 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 	"symbol_S", "symbol_T",
 	"symbol_U", "symbol_V",
 	"symbol_W", "symbol_X",
-	"symbol_Y", "symbol_Z",
-	"symbol_UNKNOWN"
+	"symbol_Y", "symbol_Z"
 };
 
 

@@ -428,7 +428,10 @@ namespace utils {
 		{"!", 12}, {"?", 13},
 		{",", 14}, {"'", 15},
 		{"/", 16}, {":", 17},
-		{";", 18}, {"&", 19}
+		{";", 18}, {"&", 19},
+		{"[", 20}, {"]", 21},
+		{"(", 20}, {")", 21},
+		{"^", 22}
 	};
 
 	static std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> convertTextToIdxArray(
@@ -452,8 +455,8 @@ namespace utils {
 				if (symNamesIt != symbolNames->end()) {
 					res = static_cast<int>(std::distance(symbolNames->begin(), symNamesIt));
 				} else {
-					//Unknown char; show "?"
-					res = 46;
+					//Unknown char; show unknown char
+					res = 23;
 				}
 			}
 			result[idx] = res;
