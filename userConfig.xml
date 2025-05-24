@@ -15,7 +15,7 @@
 	<bind function="USE_HEADLAMP" key="KEY_F" />
 	<bind function="USE_VIEWZOOM" key="KEY_C" />
 
-	<bind function="META_SCREENSHOT" key="KEY_F12" />
+	<bind function="META_SCREENSHOT" key="KEY_F10" />
 	<bind function="META_RELOAD_STAGE" key="KEY_F5" />
 	<bind function="META_RELOAD_ENV" key="KEY_F4" />
 	<bind function="META_EXIT" key="KEY_ESCAPE" />
