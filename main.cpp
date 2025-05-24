@@ -27,6 +27,9 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 	"symbol_8", "symbol_9",
 	"symbol_DOT", "symbol_DASH",
 	"symbol_EMARK", "symbol_QMARK",
+	"symbol_COMMA", "symbol_QUOTE",
+	"symbol_FSLASH", "symbol_COLON",
+	"symbol_SEMICOLON", "symbol_AND",
 	"symbol_A", "symbol_B",
 	"symbol_C", "symbol_D",
 	"symbol_E", "symbol_F",
@@ -38,8 +41,9 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 	"symbol_Q", "symbol_R",
 	"symbol_S", "symbol_T",
 	"symbol_U", "symbol_V",
-	"symbol_X", "symbol_Y",
-	"symbol_Z"
+	"symbol_W", "symbol_X",
+	"symbol_Y", "symbol_Z",
+	"symbol_UNKNOWN"
 };
 
 
@@ -104,9 +108,9 @@ int main() {
 
 	renderedFrameID = render::createGLImage2D(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
 	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
-	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames);
-	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames);
-	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
+	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
+	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 
 	GLuint visplaneUBO = render::createVisplaneUBO();

@@ -242,7 +242,7 @@ namespace display {
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
 	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 64;
-	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures/fallback-general.png";
+	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback-general.png";
 
 
 	//Sun

@@ -422,6 +422,15 @@ namespace utils {
 			  valid(1) {}
 	};
 
+	const std::unordered_map<std::string, int> chMap = {
+		{"|", -3}, {" ", -2},
+		{".", 10}, {"-", 11},
+		{"!", 12}, {"?", 13},
+		{",", 14}, {"'", 15},
+		{"/", 16}, {":", 17},
+		{";", 18}, {"&", 19}
+	};
+
 	static std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> convertTextToIdxArray(
 		const std::string& input,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
@@ -435,19 +444,16 @@ namespace utils {
 			std::string ch(1, inputUpper[idx]);
 			int res;
 
-			if (ch == "|") {res = -3;}
-			else if (ch == " ") {res = -2;}
-			else if (ch == ".") {res = 10;}
-			else if (ch == "-") {res = 11;}
-			else if (ch == "!") {res = 12;}
-			else if (ch == "?") {res = 13;}
-			else {
-				auto it = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + ch);
-				if (it != symbolNames->end()) {
-					res = static_cast<int>(std::distance(symbolNames->begin(), it));
+			auto chMapIt = chMap.find(ch);
+			if (chMapIt != chMap.end()) {
+				res = chMapIt->second;
+			} else {
+				auto symNamesIt = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + ch);
+				if (symNamesIt != symbolNames->end()) {
+					res = static_cast<int>(std::distance(symbolNames->begin(), symNamesIt));
 				} else {
 					//Unknown char; show "?"
-					res = 13;
+					res = 46;
 				}
 			}
 			result[idx] = res;
@@ -478,10 +484,10 @@ namespace utils {
 			  valid(textObject->valid),
 			  _paddingA(0), _paddingB(0.0f)
 		{
-	        std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
-	        for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
-	            text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
-	        }
+			std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
+			for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
+				text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
+			}
 		}
 	};
 

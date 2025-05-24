@@ -213,7 +213,7 @@ void drawTextObjects(float rayAngle) {
 			if ((TODepthSQ >= (fragDepth*fragDepth)) || (TODepthSQ < minDepthSQ)) {continue; /* Obscured */}
 			
 			float zoomEffect = (zoom) ? zoomFactor : 1.0f;
-			float distance = length(playerPosition.xy - thisTO.position.xy) / zoomEffect;
+			float distance = sqrt(TODepthSQ);
 			float scale = thisTO.scale / distance;
 			if (scale < 1.0f) {continue; /* Scale too small to see. */}
 
@@ -228,6 +228,7 @@ void drawTextObjects(float rayAngle) {
 			float verticalRatio = (playerPosition.z - thisTO.position.z) / distance;
 			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y;
 			float charY = centreY - (scale / 2.0f);
+
 
 			for (int letterIdx=0; letterIdx<thisTO.length; letterIdx++) {
 				//Iterate through letters.

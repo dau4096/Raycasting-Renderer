@@ -312,14 +312,14 @@ GLuint createGLImage2D(int width, int height) {
 }
 
 
-GLuint loadGLTexture2D(const std::string textureName, int expectedWidth=-1, int expectedHeight=-1) {
+GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
 	int width, height, channels;
 	unsigned char* textureData = stbi_load(
-		("src/textures/" + textureName + ".png").c_str(),
+		("src/" + subFolder + "/" + textureName + ".png").c_str(),
 		&width, &height,
 		&channels, 4
 	);
@@ -354,7 +354,7 @@ GLuint loadGLTexture2D(const std::string textureName, int expectedWidth=-1, int 
 }
 
 
-GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames) {
+GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env") {
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
@@ -396,7 +396,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 		usedFallback = false;
 
 		std::string reportedTextureName = textureName;
-		std::string texturePath = "src/textures/" + textureName + ".png";
+		std::string texturePath = "src/" + subFolder + "/" + textureName + ".png";
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
