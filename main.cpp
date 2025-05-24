@@ -200,6 +200,16 @@ int main() {
 				&logicGates, &flags,
 				&textureNames
 			);
+		} else if (keyMap["META_RELOAD_ENV"]) {
+			utils::Player tmpPlayer;
+			loader::loadStage(
+				userConfig["META_STAGE_NAME"], &tmpPlayer,
+				&visplaneData, &wallData,
+				&spriteData, &lightData,
+				&textObjectData,
+				&logicGates, &flags,
+				&textureNames
+			);
 		}
 
 
@@ -444,12 +454,16 @@ int main() {
 
 
 		//Assorted other data.
+		maxVDistLocation = glGetUniformLocation(displayShader, "maxRayDistance");
 		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
 		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
+		GLuint quantLocation = glGetUniformLocation(displayShader, "quantisingLevel");
 		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
+		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1i(antiAliasLocation, utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 		glUniform1i(smoothingLocation, utils::configToIntBool("VIEW_SMOOTHING"));
+		glUniform1i(quantLocation, utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 
 
 

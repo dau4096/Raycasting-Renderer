@@ -4,11 +4,15 @@
 in vec2 fragTexCoord;
 out vec4 fragColour;
 
+uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform sampler2D renderedFrame;
 uniform int antiAliasingLevel;
 uniform int smoothingEnabled;
+uniform int quantisingLevel;
 
+
+const float EPSILON = 1e-4f;
 
 
 vec4 antiAliasFunc() {
@@ -48,6 +52,18 @@ vec4 antiAliasFunc() {
 }
 
 
+vec4 quantisingFunc(vec2 mainUV) {
+	float delta = 255.0f / (quantisingLevel - 1.0f);
+
+	//https://en.wikipedia.org/wiki/Quantization_(image_processing)#Grayscale_quantization
+	vec4 albedo = texture(renderedFrame, mainUV);
+	if ((albedo.a == -1.0f) || (albedo.a >= maxRayDistance)) {return albedo; /* UI Element */}
+	vec3 qVal = floor(floor((albedo.rgb * 255.0f) / delta) * delta + (delta/2.0f)) / 255.0f;
+
+	return vec4(qVal, 1.0f);
+}
+
+
 vec4 smoothingFunc() {
 	int n = 0;
 	vec2 UV;
@@ -77,13 +93,16 @@ vec4 smoothingFunc() {
 
 void main() {
 	vec4 resultant;
+	vec2 mainUV = gl_FragCoord.xy / vec2(screenResolution);
 	if (antiAliasingLevel > 0) {
 		resultant = antiAliasFunc();
+	} else if (quantisingLevel > 1) {
+		//Quantising 1 would be 1 colour. Not adequate.
+		resultant = quantisingFunc(mainUV);
 	} else if (smoothingEnabled > 0) { //Simple Anti-Aliasing
 		resultant = smoothingFunc();
 	} else {
-		vec2 UV = gl_FragCoord.xy / vec2(screenResolution);
-		resultant = vec4(texture(renderedFrame, UV).rgb, 1.0f);
+		resultant = vec4(texture(renderedFrame, mainUV).rgb, 1.0f);
 	}
 
 	fragColour = vec4(resultant.rgb, 1.0f);

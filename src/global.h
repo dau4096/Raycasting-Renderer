@@ -17,6 +17,7 @@ inline std::unordered_map<std::string, int> userBindings = {
 
 	{"META_SCREENSHOT", -1},
 	{"META_RELOAD_STAGE", -1},
+	{"META_RELOAD_ENV", -1},
 	{"META_EXIT", -1},
 	{"META_FREECURSOR", -1},
 };
@@ -44,6 +45,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_VLOOK", ""},
 	{"VIEW_SMOOTHING", ""},
 	{"VIEW_ANTIALIAS_LEVEL", ""},
+	{"VIEW_LUMINANCE_QUANTISATION", ""},
 	{"VIEW_MAX_FREQ", ""},
 	{"VIEW_NO_INTERFACE", ""},
 
