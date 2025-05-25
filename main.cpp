@@ -139,6 +139,8 @@ int main() {
 	glDisable(GL_DEPTH_TEST);
 	GLuint VAO = render::getVAO();
 
+	double verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (display::RENDER_RESOLUTION.x / display::RENDER_RESOLUTION.y));
+
 
 	utils::GLErrorcheck("Initialisation", true);
 
@@ -286,9 +288,11 @@ int main() {
 		//Camera Data
 		GLuint maxVDistLocation = glGetUniformLocation(envShader, "maxRayDistance");
 		GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
+		GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
 		GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
 		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+		glUniform1f(vFOVLocation, verticalFOV);
 		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
 
 		//Player Data
@@ -338,9 +342,11 @@ int main() {
 		//Camera Data
 		maxVDistLocation = glGetUniformLocation(spriteShader, "maxRayDistance");
 		maxRAngleLocation = glGetUniformLocation(spriteShader, "maxRayAngle");
+		vFOVLocation = glGetUniformLocation(spriteShader, "verticalFOV");
 		zoomFactorLocation = glGetUniformLocation(spriteShader, "zoomFactor");
 		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+		glUniform1f(vFOVLocation, verticalFOV);
 		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
 
 		//Player Data

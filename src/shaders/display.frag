@@ -97,15 +97,16 @@ vec4 smoothingFunc() {
 void main() {
 	vec4 resultant;
 	vec2 mainUV = gl_FragCoord.xy / vec2(screenResolution);
-	if (antiAliasingLevel > 0) {
-		resultant = antiAliasFunc();
-	} else if (quantisingLevel > 1) {
-		//Quantising 1 would be 1 colour. Not adequate.
+	resultant = vec4(texture(renderedFrame, mainUV).rgb, 1.0f);
+
+	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not adequate. Works based on luminance.
 		resultant = quantisingFunc(mainUV);
+	}
+
+	if (antiAliasingLevel > 0) { //More useful Anti-Aliasing
+		resultant = antiAliasFunc();
 	} else if (smoothingEnabled) { //Simple Anti-Aliasing
 		resultant = smoothingFunc();
-	} else {
-		resultant = vec4(texture(renderedFrame, mainUV).rgb, 1.0f);
 	}
 
 	fragColour = vec4(resultant.rgb, 1.0f);

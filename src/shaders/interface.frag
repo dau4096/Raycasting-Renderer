@@ -30,9 +30,11 @@ vec2 fragPosition, tiltedFragPosition;
 ivec2 renderResolution, framePosition;
 vec3 fragColour;
 float fragDepth;
+float zoomEffect;
 vec2 uiScaleFactor;
 
 const ivec2 uiResolution = ivec2(480, 270);
+const float INF = 0xFFFFFF;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
@@ -65,9 +67,7 @@ void drawRect(
 		vec3 rectColour, vec2 thisFragPos=fragPosition,
 		bool overwritePrevious=false
 	) {
-	if ((thisFragPos.x < position.x) || (thisFragPos.y < position.y)) {return;}
 	vec2 relativePos = position - thisFragPos;
-
 
 	if (thisFragPos.x < position.x || thisFragPos.x >= position.x + dimensions.x ||
 		thisFragPos.y < position.y || thisFragPos.y >= position.y + dimensions.y) {
@@ -88,9 +88,7 @@ void renderImage(
 		bool outline=false, vec3 outlineColour=vec3(0.0f, 0.0f, 0.0f)
 	) {
 	if ((0 > imageID) /*|| (imageID > 32)*/) {return; /* Invalid imageID */}
-	if ((thisFragPos.x < position.x) || (thisFragPos.y < position.y)) {return;}
 	vec2 relativePos = position - thisFragPos;
-
 
 	if (thisFragPos.x < position.x || thisFragPos.x >= position.x + scale.x ||
 		thisFragPos.y < position.y || thisFragPos.y >= position.y + scale.y) {
@@ -105,13 +103,7 @@ void renderImage(
 
 	vec4 albedo = texture(texArray, UV);
 	if (outline) {
-		bool u = texture(texArray, vec3(UV.x, UV.y-1.0f, UV.z)).a < 0.5f;
-		bool d = texture(texArray, vec3(UV.x, UV.y+1.0f, UV.z)).a < 0.5f;
-		bool l = texture(texArray, vec3(UV.x-1.0f, UV.y, UV.z)).a < 0.5f;
-		bool r = texture(texArray, vec3(UV.x+1.0f, UV.y, UV.z)).a < 0.5f;
-		if ((u || d || l || r) && (albedo.a < 0.5f) && (fragDepth != -1.0f)) {
-			albedo = vec4(outlineColour, 1.0f);
-		}
+		drawRect(position, scale, outlineColour, thisFragPos);
 	}
 	if (blendAlpha) {
 		fragColour = mix(fragColour, albedo.rgb, albedo.a);
@@ -188,7 +180,7 @@ float getTOScreenX(TextObject thisTO, float rayAngle) {
 	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
 	vec2 TODir = thisTO.position.xy - playerPosition.xy;
 
-	if (dot(dir, normalize(TODir)) < 0.0f) {return 1e30f;}
+	if (dot(dir, normalize(TODir)) < 0.0f) {return INF;}
 
 
 	float invDet = 1.0f / (plane.x * dir.y - dir.x * plane.y);
@@ -207,14 +199,14 @@ void drawTextObjects(float rayAngle) {
 
 	for (int idx=0; idx<32; idx++) {
 		TextObject thisTO = textObjects[idx];
-		if ((thisTO.valid > 0.0f) && (thisTO.length > 0.0f) && (thisTO.scale >= 1.0f)) {
+		if (thisTO.valid <= 0) {break; /* End of valid TextObjects */}
+		if ((thisTO.length > 0.0f) && (thisTO.scale >= 1.0f)) {
 			vec3 delta = playerPosition - thisTO.position;
 			float TODepthSQ = dot(delta, delta);
 			if ((TODepthSQ >= (fragDepth*fragDepth)) || (TODepthSQ < minDepthSQ)) {continue; /* Obscured */}
 			
-			float zoomEffect = (zoom) ? zoomFactor : 1.0f;
-			float distance = sqrt(TODepthSQ);
-			float scale = (thisTO.scale / distance) * ((zoom) ? zoomFactor : 1.0f);
+			float invdistance = inversesqrt(TODepthSQ);
+			float scale = thisTO.scale * invdistance * zoomEffect;
 			if (scale < 1.0f) {continue; /* Scale too small to see. */}
 
 			//X
@@ -225,8 +217,8 @@ void drawTextObjects(float rayAngle) {
 			}
 
 			//Y
-			float verticalRatio = (playerPosition.z - thisTO.position.z) / distance;
-			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y * ((zoom) ? zoomFactor : 1.0f);
+			float verticalRatio = (playerPosition.z - thisTO.position.z) * invdistance;
+			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y * zoomEffect;
 			float charY = centreY - (scale / 2.0f);
 
 
@@ -267,6 +259,8 @@ void main() {
 	vec4 imageColour = imageLoad(renderedFrame, framePosition);
 	fragColour = imageColour.rgb;
 	fragDepth = imageColour.a;
+
+	zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
 	//Negative is upward; so subtract.

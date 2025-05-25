@@ -107,7 +107,7 @@
     <textObj text="lift V" position="5.0 -7.0 4.5" scale="50.0" />
     <textObj text="You aren't supposed to be here!" position="0.0 0.0 -2.0" scale="200.0" />
     <textObj text="Hiya :]" position="0.0 0.0 4.0" scale="100.0" />
-    <textObj text="Project by mrdau4096 on github." position="0.0 0.0 3.75" scale="100.0" />
+    <textObj text="Project by dau4096 on github." position="0.0 0.0 3.75" scale="100.0" />
     <textObj text="https://github.com/dau4096/Raycasting-Renderer" position="0.0 0.0 3.5" scale="100.0" />
     <textObj text="Light brighter than sun." position="-5.0 2.5 2.0" scale="100.0" />
     <textObj text="Light illuminating a room." position="-5.0 -10.0 2.0" scale="100.0" />
