@@ -39,6 +39,10 @@ const float INF = 0xFFFFFF;
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 
+struct textArray{
+	ivec4 contents[16];
+	int length, scale;
+};
 struct TextObject {
 	ivec4 text[16];	//Array of character indices.
 	int length;		//Length of text.
@@ -51,6 +55,14 @@ struct TextObject {
 layout(std140, binding = 6) uniform textObjectUBO {
 	TextObject textObjects[32];
 };
+
+textArray createTAFromTO(TextObject TO) {
+	textArray TA;
+	TA.contents = TO.text;
+	TA.length = TO.length;
+	TA.scale = TO.scale;
+	return TA;
+}
 
 
 
@@ -170,6 +182,29 @@ void addVignetteShading() {
 }
 
 
+void drawText(textArray TA, vec2 centre, float scale, bool hasBackground=false, vec3 backgroundColour=vec3(0.0f, 0.0f, 0.0f), vec2 thisFragPos=fragPosition) {
+	for (int letterIdx=0; letterIdx<TA.length; letterIdx++) {
+		//Iterate through letters.
+		ivec4 charIvec4 = TA.contents[letterIdx / 4];
+		int mod = letterIdx % 4;
+		int charIdx = charIvec4[mod];
+
+
+		if (charIdx == -1) {continue; /* Blank Character */}
+		float charX = centre.x + scale*0.65f*(letterIdx - (TA.length/2.0f));
+		vec2 charPos = vec2(charX, centre.y);
+
+
+		if ((charIdx == -2) && hasBackground) {
+			drawRect(charPos, vec2(scale, scale), backgroundColour, thisFragPos);
+			continue;
+		}
+
+		renderImage(charPos, vec2(scale, scale), charIdx, true, textureArrayNumeric, thisFragPos, hasBackground, backgroundColour);
+	}
+}
+
+
 
 //TextObject stuff.
 float getTOScreenX(TextObject thisTO, float rayAngle) {
@@ -221,29 +256,7 @@ void drawTextObjects(float rayAngle) {
 			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y * zoomEffect;
 			float charY = centreY - (scale / 2.0f);
 
-
-			for (int letterIdx=0; letterIdx<thisTO.length; letterIdx++) {
-				//Iterate through letters.
-				ivec4 charIvec4 = thisTO.text[letterIdx / 4];
-				int mod = letterIdx % 4;
-				int charIdx = charIvec4[mod];
-
-
-				if (charIdx == -1) {continue; /* Blank Character */}
-				float charX = centreX + scale*0.65f*(letterIdx - (thisTO.length/2.0f));
-				vec2 charPos = vec2(charX, charY);
-
-				if (charIdx == -3) {
-					//Newline char;
-					continue;
-				}
-				if ((charIdx == -2) && hasBackground) {
-					drawRect(charPos, vec2(scale, scale), backgroundColour, tiltedFragPosition);
-					continue;
-				}
-
-				renderImage(charPos, vec2(scale, scale), charIdx, true, textureArrayNumeric, tiltedFragPosition, hasBackground, backgroundColour);
-			}
+			drawText(createTAFromTO(thisTO), vec2(centreX, charY), scale, hasBackground, backgroundColour, tiltedFragPosition);
 		}
 	}
 }
