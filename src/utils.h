@@ -106,14 +106,6 @@ namespace utils {
 
 
 
-	static inline bool isMouseEnum(int Enum) {
-		return (Enum >= GLFW_MOUSE_BUTTON_1) && (Enum <= GLFW_MOUSE_BUTTON_LAST);
-	}
-	static inline bool isKBEnum(int Enum) {
-		return (Enum >= GLFW_KEY_SPACE);
-	}
-
-
 
 	static inline std::string strToLower(const std::string& input) {
 		std::string result = input;
@@ -518,16 +510,11 @@ namespace utils {
 	struct Player {
 		glm::vec3 position, velocity, cameraPosition;
 		float viewAngle, viewRoll, viewPitch, vLook, height;
-
+		bool touchingFloor, sliding;
 		Event state;
 		int health, energy;
-
-		bool touchingFloor, sliding;
 		unsigned int jumpsUsed;
-
-		std::array<std::string, playerConfig::MAX_ITEMS_HELD> backpack;
-		int heldItemIdx;
-		Item* heldItemPTR;
+		//std::vector<utils::Weapon, constants::MAX_ITEMS_HELD> backpack;
 
 		Player()
 			: position(stageData.playerStartPoint), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
@@ -535,50 +522,11 @@ namespace utils {
 			  viewAngle(stageData.playerStartAngle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 			  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 			  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
-			  backpack(stageData.initialPlayerItems), heldItemIdx(-1), heldItemPTR(nullptr),
 			  state(E_NONE), jumpsUsed(0), sliding(false) {}
 	};
 
-	static inline void updateItemHeld(Player* player, float* itemTextOpacity) {
-		//Reduce opacity of text, if possible.
-		*itemTextOpacity = glm::clamp(*itemTextOpacity - (1.0f / (freq * playerConfig::SECONDS_TO_FADE_TEXT)), 0.0f, 1.0f);
 
-		//Assign delta.
-		int delta;
-		if ((userBindings["META_NEXT_ITEM"] == -2) || (userBindings["META_PREV_ITEM"] == -3)) {
-			delta = globalScroll.y;
-		} else if ((userBindings["META_PREV_ITEM"] == -2) || (userBindings["META_NEXT_ITEM"] == -3)) {
-			delta = -globalScroll.y;
-		} else {
-			delta = (keyMap["META_NEXT_ITEM"]) ? 1 : ((keyMap["META_PREV_ITEM"]) ? -1 : 0);
-		}
-
-		const int TOTAL_SLOTS = playerConfig::MAX_ITEMS_HELD + 1;
-		if (delta > 0) {
-			player->heldItemIdx = (player->heldItemIdx + 1) % TOTAL_SLOTS;
-		} else if (delta < 0) {
-			player->heldItemIdx = (player->heldItemIdx - 1 + TOTAL_SLOTS) % TOTAL_SLOTS;
-		} else {
-			//No change.
-			return;
-		}
-
-
-		std::string heldItemName;
-		if (player->heldItemIdx == (playerConfig::MAX_ITEMS_HELD)) {
-			heldItemName = playerConfig::EMPTY_HAND_ITEM_NAME;
-		} else {
-			heldItemName = player->backpack[player->heldItemIdx];
-		}
-		player->heldItemPTR = &(itemData[heldItemName]);
-		if (player->heldItemPTR->type != IFN_INVALID) {
-			heldItemName = playerConfig::EMPTY_HAND_ITEM_NAME;
-			*itemTextOpacity = 1.0f;
-		}
-		cout << player->heldItemIdx << endl;
-	}
-
-	static inline void hurtPlayer(Player* player, int delta) {
+	static inline void hurtPlayer(Player *player, int delta) {
 		player->health = min(playerConfig::PLAYER_MAX_HEALTH, (player->health) + delta);
 		if (delta > 0) {player->state = E_HEAL;}
 		else if (player->health > 0) {player->state = E_DEAD;}

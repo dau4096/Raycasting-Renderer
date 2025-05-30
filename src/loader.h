@@ -18,13 +18,11 @@ namespace loader {
 		std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* textObjectData,
 		std::array<utils::LogicGate, constants::MAX_GATES>* logicGates,
 		std::array<int, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* envTextureNames
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	);
 
 
 	void loadBindings();
-
-	void loadGameData(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* UIImageNames);
 
 }
 

@@ -32,12 +32,6 @@ namespace render {
         std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
     );
 
-    GLuint createItemTextUBO();
-    void updateItemTextUBO(
-        GLuint itemTextUBO, utils::Player* player,
-        std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
-    );
-
 
     void saveScreenshot(GLuint frameTextureID);
 

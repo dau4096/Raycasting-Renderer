@@ -87,7 +87,7 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 
 
 void playerMove(
-		utils::Player *player,
+		utils::Player *player, float freq,
 		std::array<utils::Wall, constants::MAX_WALLS>*wallData,
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
@@ -530,7 +530,7 @@ void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool ena
 void updateSpecials(
 		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		utils::Player *player, bool interactKey
+		utils::Player *player, float freq, bool interactKey
 	) {
 	float speedModifier = 45.0f / freq;
 	//If freq is higher than expected, then speed is reduced.

@@ -50,11 +50,12 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 
 
 GLuint renderedFrameID, depthUBO;
+glm::ivec2 currentScreenRes;
 bool headLampEnabled = false;
 int tick = 0;
 
 
-void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -62,9 +63,6 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 	currentScreenRes = glm::ivec2(width, height);
 }
 
-void scrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
-	globalScroll = glm::ivec2(static_cast<int>(xOffset), static_cast<int>(yOffset));
-}
 
 
 
@@ -80,9 +78,8 @@ int main() {
 	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
 	std::array<int, constants::MAX_FLAGS> flags;
 
-	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> envTextureNames;
+	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 
-	loader::loadGameData(&UIImageNames);
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
@@ -90,7 +87,7 @@ int main() {
 		&spriteData, &lightData,
 		&textObjectData,
 		&logicGates, &flags,
-		&envTextureNames
+		&textureNames
 	);
 
 
@@ -99,19 +96,19 @@ int main() {
 
 
 	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer/GPU");
-	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
-	glfwSetScrollCallback(Window, scrollCallback);
+	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
 
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
 	utils::GLErrorcheck("Window Creation", true);
-	
+
+
 
 
 	renderedFrameID = render::createGLImage2D(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
-	GLuint textureArrayEnvironment = render::createTexture2DArray(envTextureNames);
+	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
 	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
 	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
@@ -122,7 +119,6 @@ int main() {
 	GLuint spriteUBO = render::createSpriteUBO();
 	GLuint lightUBO = render::createLightUBO();
 	GLuint textObjectUBO = render::createTextObjectUBO();
-	GLuint itemTextUBO = render::createItemTextUBO();
 
 
 	//Environment shader
@@ -144,7 +140,7 @@ int main() {
 	GLuint VAO = render::getVAO();
 
 	double verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (display::RENDER_RESOLUTION.x / display::RENDER_RESOLUTION.y));
-	float itemTextOpacity = 0.0f;
+
 
 	utils::GLErrorcheck("Initialisation", true);
 
@@ -152,16 +148,14 @@ int main() {
 
 	// Initialize keyMap for input tracking
 	bool interactKey = false, shouldTakeScreenshot = false;
-	int lightFlickerRNG;
-	freq = 0;
+	int lightFlickerRNG, freq = 0;
 
 	while (!glfwWindowShouldClose(Window)) {
 		tick++;
 		double frameStart = glfwGetTime();
-		globalScroll = glm::ivec2(0, 0);
 		glfwPollEvents();
 
-		//Get inputs for this frame
+		// Get inputs for this frame
 		for (auto &pair : userBindings) {
 			std::string functionName = pair.first;
 			int keyEnum = pair.second;
@@ -169,17 +163,7 @@ int main() {
 				raise(functionName + " was not bound to a key!");
 			}
 
-			int keyState;
-			if (utils::isKBEnum(keyEnum)) {
-				keyState = glfwGetKey(Window, keyEnum);
-			} else if (utils::isMouseEnum(keyEnum)) {
-				keyState = glfwGetMouseButton(Window, keyEnum);
-			} else {
-				//Invalid keytype.
-				continue;
-			}
-
-
+			int keyState = glfwGetKey(Window, keyEnum);
 			if (keyState == GLFW_PRESS) {
 				//Handle specific on-press type use-cases.
 				if (functionName == "USE_HEADLAMP" && !keyMap["USE_HEADLAMP"]) {
@@ -196,7 +180,6 @@ int main() {
 			}
 		}
 
-		utils::updateItemHeld(&player, &itemTextOpacity);
 
 		//Meta controls
 		if (keyMap["META_EXIT"]) {
@@ -217,7 +200,7 @@ int main() {
 				&spriteData, &lightData,
 				&textObjectData,
 				&logicGates, &flags,
-				&envTextureNames
+				&textureNames
 			);
 		} else if (keyMap["META_RELOAD_ENV"]) {
 			utils::Player tmpPlayer;
@@ -227,7 +210,7 @@ int main() {
 				&spriteData, &lightData,
 				&textObjectData,
 				&logicGates, &flags,
-				&envTextureNames
+				&textureNames
 			);
 		}
 
@@ -261,10 +244,10 @@ int main() {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
+		physics::updateSpecials(&wallData, &visplaneData, &player, freq, interactKey);
 
 
-		physics::playerMove(&player, &wallData, &spriteData, &visplaneData);
+		physics::playerMove(&player, freq, &wallData, &spriteData, &visplaneData);
 		float viewBob = (utils::configToBool("VIEW_BOB")) ? render::viewBob(tick, player) : 0.0f;
 		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
@@ -280,7 +263,6 @@ int main() {
 		render::updateSpriteUBO(spriteUBO, &spriteData);
 		render::updateLightUBO(lightUBO, &lightData);
 		render::updateTextObjectUBO(textObjectUBO, &textObjectData, &symbolNames);
-		render::updateItemTextUBO(itemTextUBO, &player, &symbolNames);
 		utils::GLErrorcheck("Updating UBOs", true);
 
 
@@ -427,17 +409,11 @@ int main() {
 			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
 
 			//Player Data
-			GLuint heldItemLocation = glGetUniformLocation(uiShader, "itemTextureIDX");
-			GLuint itemTextOpacityLocation = glGetUniformLocation(uiShader, "itemTextOpacity");
-			GLuint itemTextLengthLocation = glGetUniformLocation(uiShader, "itemTextLength");
 			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
 			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
 			playerRollLocation = glGetUniformLocation(uiShader, "playerViewRoll");
 			playerPitchLocation = glGetUniformLocation(uiShader, "playerViewPitch");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
-			glUniform1i(heldItemLocation, player.heldItemPTR->textureID);
-			glUniform1f(itemTextOpacityLocation, itemTextOpacity);
-			glUniform1i(itemTextLengthLocation, player.heldItemPTR->name.length());
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
 			glUniform1f(playerRollLocation, player.viewRoll);

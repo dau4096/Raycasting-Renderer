@@ -14,11 +14,7 @@
 	<bind function="USE_INTERACT" key="KEY_E" />
 	<bind function="USE_HEADLAMP" key="KEY_F" />
 	<bind function="USE_VIEWZOOM" key="KEY_C" />
-	<bind function="USE_ITEM_PRIMARY" key="MOUSE_LEFT" />
-	<bind function="USE_ITEM_SECONDARY" key="MOUSE_RIGHT" />
 
-	<bind function="META_NEXT_ITEM" key="MOUSE_SCROLL_UP" />
-	<bind function="META_PREV_ITEM" key="MOUSE_SCROLL_DOWN" />
 	<bind function="META_SCREENSHOT" key="KEY_F10" />
 	<bind function="META_RELOAD_STAGE" key="KEY_F5" />
 	<bind function="META_RELOAD_ENV" key="KEY_F4" />

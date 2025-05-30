@@ -41,7 +41,7 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std140, binding = 2) uniform visplaneUBO {
+layout(std140, binding = 7) uniform visplaneUBO {
 	Visplane visplanes[128];
 };
 
