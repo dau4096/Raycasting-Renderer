@@ -108,7 +108,7 @@ GLuint createVisplaneUBO() {
 	glGenBuffers(1, &visplaneUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 7, visplaneUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 2, visplaneUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	return visplaneUBO;
@@ -264,6 +264,48 @@ void updateTextObjectUBO(
 
 
 
+GLuint createItemTextUBO() {
+	GLuint itemTextUBO;
+	glGenBuffers(1, &itemTextUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, itemTextUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::ivec4) * constants::MAX_TEXT_OBJECTS, nullptr, GL_DYNAMIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 7, itemTextUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	return itemTextUBO;
+}
+
+void updateItemTextUBO(
+		GLuint itemTextUBO,	utils::Player* player,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+	) {
+	std::string itemName = player->heldItemPTR->name;
+	if (itemName == playerConfig::EMPTY_HAND_ITEM_NAME) {itemName = "EMPTY"; /* Don't show internal empty hand name. */}
+	std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = utils::convertTextToIdxArray(
+		itemName, symbolNames
+	);
+	std::array<glm::ivec4, display::MAX_TEXTOBJECT_CHARACTERS> textIdxIvec4Array;
+	for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
+		textIdxIvec4Array[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
+	}
+
+
+	glBindBuffer(GL_UNIFORM_BUFFER, itemTextUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, textIdxIvec4Array.data(), sizeof(glm::ivec4) * constants::MAX_TEXT_OBJECTS);
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to itemTextUBO.");
+	}
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+
 void saveScreenshot(GLuint frameTextureID) {
 	GLuint fbo;
 	glGenFramebuffers(1, &fbo);
@@ -402,8 +444,10 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 			&width, &height,
 			&channels, 4
 		);
+		
 
 		if (!textureData) {
+			std::cout << "Using Fallback Texture: " << texturePath << " does not exist." << std::endl;
 			//Use fallback texture.
 			textureData = fallbackTextureData;
 			width = fallbackTextureWidth;

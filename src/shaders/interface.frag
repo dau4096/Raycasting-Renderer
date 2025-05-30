@@ -13,6 +13,9 @@ uniform float zoomFactor;
 uniform bool zoom;
 
 //Player Data
+uniform int itemTextureIDX;
+uniform float itemTextOpacity;
+uniform int itemTextLength;
 uniform float playerViewAngle;
 uniform float playerViewRoll;
 uniform float playerViewPitch;
@@ -41,7 +44,8 @@ layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 
 struct textArray{
 	ivec4 contents[16];
-	int length, scale;
+	int length;
+	float opacity;
 };
 struct TextObject {
 	ivec4 text[16];	//Array of character indices.
@@ -52,7 +56,7 @@ struct TextObject {
 	vec3 position;  //3D position.
 	float _paddingB;//Padding
 };
-layout(std140, binding = 6) uniform textObjectUBO {
+layout(std140, binding=6) uniform textObjectUBO {
 	TextObject textObjects[32];
 };
 
@@ -60,9 +64,13 @@ textArray createTAFromTO(TextObject TO) {
 	textArray TA;
 	TA.contents = TO.text;
 	TA.length = TO.length;
-	TA.scale = TO.scale;
+	TA.opacity = 1.0f;
 	return TA;
 }
+
+layout(std140, binding=7) uniform itemTextBuffer {
+	ivec4 itemText[16];
+};
 
 
 
@@ -97,7 +105,8 @@ void renderImage(
 		int imageID, bool blendAlpha=true,
 		sampler2DArray texArray=textureArrayUI,
 		vec2 thisFragPos=fragPosition,
-		bool outline=false, vec3 outlineColour=vec3(0.0f, 0.0f, 0.0f)
+		bool outline=false, vec3 outlineColour=vec3(0.0f, 0.0f, 0.0f),
+		float opacity=1.0f
 	) {
 	if ((0 > imageID) /*|| (imageID > 32)*/) {return; /* Invalid imageID */}
 	vec2 relativePos = position - thisFragPos;
@@ -118,13 +127,13 @@ void renderImage(
 		drawRect(position, scale, outlineColour, thisFragPos);
 	}
 	if (blendAlpha) {
-		fragColour = mix(fragColour, albedo.rgb, albedo.a);
+		fragColour = mix(fragColour, albedo.rgb, albedo.a * opacity);
 		if (albedo.a > 0.0f) {
 			fragDepth = -1.0f;
 		}
 	} else {
 		if (albedo.a >= 0.5f) {
-			fragColour = albedo.rgb;
+			fragColour = mix(fragColour, albedo.rgb, opacity);
 			fragDepth = -1.0f;
 		}
 	}
@@ -200,7 +209,7 @@ void drawText(textArray TA, vec2 centre, float scale, bool hasBackground=false, 
 			continue;
 		}
 
-		renderImage(charPos, vec2(scale, scale), charIdx, true, textureArrayNumeric, thisFragPos, hasBackground, backgroundColour);
+		renderImage(charPos, vec2(scale, scale), charIdx, true, textureArrayNumeric, thisFragPos, hasBackground, backgroundColour, TA.opacity);
 	}
 }
 
@@ -248,7 +257,7 @@ void drawTextObjects(float rayAngle) {
 			float centreX = getTOScreenX(thisTO, rayAngle);
 			if ((centreX + scale * 0.65f * (thisTO.length / 2.0f) < 0.0f) || 
 				(centreX - scale * 0.65f * (thisTO.length / 2.0f) > renderResolution.x)) {
-				continue; // Off-screen horizontally
+				continue; //Off-screen horizontally
 			}
 
 			//Y
@@ -259,6 +268,31 @@ void drawTextObjects(float rayAngle) {
 			drawText(createTAFromTO(thisTO), vec2(centreX, charY), scale, hasBackground, backgroundColour, tiltedFragPosition);
 		}
 	}
+}
+
+
+
+void drawHeldItem() {
+	//Debug
+	textArray TA;
+	if (itemTextureIDX < 0) {
+		TA.contents[0] = ivec4(11, abs(itemTextureIDX), 0, 0);
+		TA.length = 2;
+	} else {
+		TA.contents[0] = ivec4(abs(itemTextureIDX), 0, 0, 0);
+		TA.length = 1;
+	}
+	TA.opacity = 1.0f;
+	drawText(TA, vec2(renderResolution.x/2.0f, 0), 100);
+
+
+	//Top of screen, item name.
+	textArray titleText;
+	titleText.contents = itemText;
+	titleText.length = itemTextLength;
+	titleText.opacity = itemTextOpacity;
+
+	drawText(titleText, vec2(renderResolution.x/2.0f, renderResolution.y-50), 50);
 }
 
 
@@ -302,7 +336,11 @@ void main() {
 	renderImage(scaleUI(vec2(355, -48)), scaleUI(vec2(128, 128)), 1);
 	drawInt(scaleUI(vec2(400, 24)), int(scaleUI(25.0f)), energy);
 
+
+	//Other UI stuff
 	drawCrosshair();
+
+	drawHeldItem();
 
 
 
