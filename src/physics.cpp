@@ -691,4 +691,194 @@ void updateSpecials(
 	}
 }
 
+
+
+glm::dvec2 rayIntersectCheck(utils::Ray ray, utils::Wall wall) {
+	glm::dvec2 wallStartV2 = wall.start.xy;
+	glm::dvec2 wallEndV2 = wall.end.xy;
+
+	glm::dvec2 r = ray.end - ray.position;
+	glm::dvec2 s = wallEndV2 - wallStartV2;
+
+	double denom = r.x * s.y - r.y * s.x;
+	if (abs(denom) < EPSILON) return constantsINVALIDdv2;
+
+	glm::dvec2 diff = wallStartV2 - ray.position;
+	double t = (diff.x * s.y - diff.y * s.x) / denom;
+	double u = (diff.x * r.y - diff.y * r.x) / denom;
+
+	if (t < 0.0f || u < 0.0f || u > 1.0f) return constantsINVALIDdv2;
+
+	return ray.position + t * r;
+}
+
+
+bool checkLOS(
+		glm::vec3 pointA, glm::vec3 pointB,
+		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
+		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
+		bool findClosestIntersect=false, glm::dvec3* rayIntersectPoint=nullptr
+	) {
+	glm::vec3 LOSDelta = pointB - pointA;
+	double distToTargetSQ = glm::dot(LOSDelta.xy, LOSDelta.xy);
+	double distToTarget = sqrt(distToTargetSQ);
+	dvec3 LOSDirection = glm::normalize(LOSDelta);
+	utils::Ray LOSRay = utils::Ray(pointA.xy, glm::normalize(LOSDelta.xy), distToTarget);
+	glm::dvec3 closestIntersect = constants::INVALIDdv3;
+	float minDistanceSQ = distToTargetSQ;
+
+
+	//Iterate through all the walls. (2D)
+	for (utils::Wall thisWall : *wallData) {
+		if (thisWall.valid <= 0) {break; /* End of valid walls */}
+		if (idx == thisIndex && foundType == 1) {continue; /* Wall is empty or is the index calling the LOS check. */}
+
+		dvec2 intersectPoint = rayIntersectCheck(LOSRay, thisWall);
+		if (intersectPoint == constants::INVALIDv2) {continue; /* Invalid intersect point */}
+
+		double distToIntersectSQ = glm::dot(pointA.xy - intersectPoint, pointA.xy - intersectPoint);
+		if (distToIntersectSQ > distToTargetSQ) {continue; /* Not within the range of the LOScheck. */}
+
+		double a = sqrt(distToIntersectSQ) / distToTarget;
+		double actualZ = pointA.z + (pointB.z-pointA.z)*a;
+
+		if ((actualZ > glm::min(thisWall.start.z, thisWall.end.z)) && (actualZ < glm::max(thisWall.start.z, thisWall.end.z))) {
+			if (rayIntersectPoint != nullptr) {
+				*rayIntersectPoint = glm::dvec3(intersectPoint.x, intersectPoint.y, actualZ);
+			}
+			if (!findClosestIntersect) {
+				return true;
+			} else {
+				if (distToIntersectSQ < minDistanceSQ){
+					closestIntersect = glm::dvec3(intersectPoint.x, intersectPoint.y, actualZ);
+					minDistanceSQ = distToIntersectSQ;
+				}
+			}
+		}
+	}
+
+
+	//Iterate through all visplanes. (3D)
+	for (utils::Visplane thisPlane : *visplaneData) {
+		if (thisPlane.valid <= 0) {break; /* End of valid visplanes */}
+		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
+		if (thisPlane.height < glm::min(pointA.z, pointB.z) || thisPlane.height > glm::max(pointA.z, pointB.z)) {continue;}
+
+
+		double tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
+		dvec3 intersectPoint = pointA + LOSDirection * tFrac;
+		if ((intersectPoint.x > glm::min(thisPlane.start.x, thisPlane.end.x)) && (intersectPoint.x < glm::max(thisPlane.start.x, thisPlane.end.x)) &&
+			(intersectPoint.y > glm::min(thisPlane.start.y, thisPlane.end.y)) && (intersectPoint.y < glm::max(thisPlane.start.y, thisPlane.end.y))) {
+
+			if (!findClosestIntersect) {
+				if (rayIntersectPoint != nullptr) {
+					*rayIntersectPoint = intersectPoint;
+				}
+				return true;
+			} else {
+				glm::dvec3 delta = intersectPoint - pointA;
+				if (glm::dot(delta, delta) < minDistanceSQ){
+					closestIntersect = intersectPoint;
+					minDistanceSQ = distToIntersectSQ;
+				}
+			}
+		}
+	}
+
+
+	if (rayIntersectPoint != nullptr) {
+		*rayIntersectPoint = closestIntersect;
+	}
+	return minDistanceSQ < distToTargetSQ;
+}
+
+
+void handleUtility(
+		utils::Player* player, Item& item, bool useP, bool useS,
+		std::array<utils::Light, constants::MAX_LIGHTS>* lightData
+	) {
+
+}
+
+void handleHitscan(
+		utils::Player* player, Item& item, bool useP, bool useS,
+		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
+		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
+	) {
+	
+	int numShots = getAttributeFromItemData(&item, IA_SHOTS_PER_USE);
+	float shotSpread = getAttributeFromItemData(&item, IA_SPREAD_PER_SHOT);
+
+	for (int iter=0; iter<numShots; iter++) {
+		glm::vec2 normRNG = glm::vec2((utils::RNGc() / 127.0f) - 1.0f, (utils::RNGc() / 127.0f) - 1.0f);
+		glm::vec2 spread = (normRNG * shotSpread);
+
+		glm::vec3 furthestPoint = player->position + glm::vec3(sin((player->viewAngle+spread.x) * constants::TO_RAD), cos((player->viewAngle+spread.y) * constants::TO_RAD), 0.0f) * playerConfig::PLAYER_INTERACT_RAY_DIST;
+		glm::dvec3 collisPoint;
+		bool hit = checkLOS(player->position, furthestPoint, wallData, visplaneData, true, &collisPoint);
+		if (hit) {
+			
+		}
+	}
+}
+
+void handleProjectile(
+		utils::Player* player, Item& item, bool useP, bool useS,
+		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
+		std::array<utils::Light, constants::MAX_LIGHTS>* lightData
+	) {
+	
+}
+
+void handleMelee(
+		utils::Player* player, Item& item, bool useP, bool useS,
+		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
+		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
+	) {
+	
+	glm::vec3 furthestPoint = player->position + glm::vec3(sin((player->viewAngle) * constants::TO_RAD), cos((player->viewAngle) * constants::TO_RAD), 0.0f) * playerConfig::PLAYER_INTERACT_RAY_DIST;
+	glm::dvec3 collisPoint;
+	bool hit = checkLOS(player->position, furthestPoint, wallData, visplaneData, true, &collisPoint);
+	if (hit) {
+
+	}
+}
+
+void updateItem(
+		utils::Player* player,
+		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
+		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
+		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
+		std::array<utils::Light, constants::MAX_LIGHTS>* lightData
+	) {
+
+
+	Item heldItem = *(player->heldItemPTR);
+
+	bool useP = keyMap["USE_ITEM_PRIMARY"];
+	bool useS = keyMap["USE_ITEM_SECONDARY"];
+
+	switch (heldItem.type) {
+	case (IFN_UTILITY): {
+		handleUtility(player, heldItem, useP, useS, lightData);
+		break;
+	}
+	case (IFN_HITSCAN): {
+		handleHitscan(player, heldItem, useP, useS, wallData, visplaneData);
+		break;
+	}
+	case (IFN_PROJECTILE): {
+		handleProjectile(player, heldItem, useP, useS, spriteData, lightData);
+		break;
+	}
+	case (IFN_MELEE): {
+		handleMelee(player, heldItem, useP, useS, wallData, visplaneData);
+		break;
+	}
+	default: {
+		break;
+	}
+	}
+}
+
 }

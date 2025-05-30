@@ -72,13 +72,6 @@ void scrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
 int main() {
 	try { //Catch exceptions
 	Player player;
-	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
-	std::array<utils::Wall, constants::MAX_WALLS> wallData;
-	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
-	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
-	std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS> textObjectData;
-	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
-	std::array<int, constants::MAX_FLAGS> flags;
 
 	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> envTextureNames;
 
@@ -435,7 +428,7 @@ int main() {
 			playerRollLocation = glGetUniformLocation(uiShader, "playerViewRoll");
 			playerPitchLocation = glGetUniformLocation(uiShader, "playerViewPitch");
 			zoomLocation = glGetUniformLocation(uiShader, "zoom");
-			glUniform1i(heldItemLocation, player.heldItemPTR->textureID);
+			glUniform1i(heldItemLocation, player.heldItemPTR->textureIDs[player.heldItemPTR->state]);
 			glUniform1f(itemTextOpacityLocation, itemTextOpacity);
 			glUniform1i(itemTextLengthLocation, player.heldItemPTR->name.length());
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);

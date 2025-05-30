@@ -97,14 +97,15 @@ struct Item {
 	ItemFunction type;
 	std::array<float, 5> data;
 	bool active;
-	int textureID;
+	ItemState state;
+	std::array<int, 5> textureIDs;
 
-	Item() : name(playerConfig::EMPTY_HAND_ITEM_NAME), type(IFN_INVALID), data(), active(false), textureID(0) {}
+	Item() : name(playerConfig::EMPTY_HAND_ITEM_NAME), type(IFN_INVALID), data(), active(false), state(IS_INVALID), textureIDs{-1, -1, -1, -1, -1} {}
 
-	Item(std::string name, ItemFunction type, std::array<float, 5>& data, int texID)
+	Item(std::string name, ItemFunction type, std::array<float, 5>& data, std::array<int, 5>& texIDs)
 		: name(name), type(type),
-		  data(data), active(false),
-		  textureID(texID) {}
+		  data(data), state(IS_IDLE),
+		  textureIDs(texIDs) {}
 };
 
 
@@ -156,9 +157,12 @@ static inline float getAttributeFromItemData(Item* item, ItemAttr attribute) {
 			return item->data[2];
 			break;
 		}
-		case IA_ILLUMINATE_SURROUNDINGS: {
+		case IA_SHOTS_PER_USE: {
 			return item->data[3];
 			break;
+		}
+		case IA_SPREAD_PER_SHOT: {
+			return item->data[4];
 		}
 		default: {
 			break;
@@ -227,3 +231,7 @@ static inline float getAttributeFromItemData(Item* item, ItemAttr attribute) {
 }
 
 inline std::unordered_map<std::string, Item> itemData;
+
+
+
+

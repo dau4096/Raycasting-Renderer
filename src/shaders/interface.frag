@@ -273,17 +273,8 @@ void drawTextObjects(float rayAngle) {
 
 
 void drawHeldItem() {
-	//Debug
-	textArray TA;
-	if (itemTextureIDX < 0) {
-		TA.contents[0] = ivec4(11, abs(itemTextureIDX), 0, 0);
-		TA.length = 2;
-	} else {
-		TA.contents[0] = ivec4(abs(itemTextureIDX), 0, 0, 0);
-		TA.length = 1;
-	}
-	TA.opacity = 1.0f;
-	drawText(TA, vec2(renderResolution.x/2.0f, 0), 100);
+	//Show item visual.
+	renderImage(vec2((renderResolution.x/2.0f)-96.0f, -32.0f), vec2(192, 192), itemTextureIDX);
 
 
 	//Top of screen, item name.

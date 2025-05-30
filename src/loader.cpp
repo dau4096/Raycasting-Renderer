@@ -381,6 +381,16 @@ void fetchItemsFromXML(const pugi::xml_document& doc, std::array<std::string, di
 	const char* xpath = "//items/item";
 	pugi::xpath_node_set nodeList = doc.select_nodes(xpath);
 	size_t count = static_cast<size_t>(nodeList.size());
+
+	int initialLen = 0;
+	for (std::string imgName : *UIImageNames) {
+		if (imgName == "") {
+			break;
+		}
+		initialLen++;
+	}
+	UITexIdx = initialLen;
+
 	
 	std::string functionString, valueString;
 	for (size_t i = 0; i < count; ++i) {
@@ -403,7 +413,8 @@ void fetchItemsFromXML(const pugi::xml_document& doc, std::array<std::string, di
 			data[0] = node.attribute("usePerSecond").as_float();
 			data[1] = node.attribute("energyUse").as_int();
 			data[2] = node.attribute("strength").as_int();
-			data[3] = attrBoolInt(node.attribute("envIlluminate").as_string());
+			data[3] = node.attribute("raysPerUse").as_int();
+			data[4] = node.attribute("raySpread").as_float();
 			break;
 		}
 
@@ -430,13 +441,29 @@ void fetchItemsFromXML(const pugi::xml_document& doc, std::array<std::string, di
 		}
 		}
 
-		std::string textureStr = node.attribute("texture").as_string();
-		int textureID = assignTexture(textureStr, UIImageNames, &UITexIdx);
+
+		//Textures
+		std::array<int, 5> textureIDs;
+		std::string textureStr;
+		//IS_IDLE
+		textureStr = node.attribute("texture-idle").as_string();
+		textureIDs[0] = assignTexture(textureStr, UIImageNames, &UITexIdx);
+		//IS_ACTIVE
+		textureStr = node.attribute("texture-active").as_string();
+		textureIDs[1] = assignTexture(textureStr, UIImageNames, &UITexIdx);
+		//IS_RECHARGE
+		textureStr = node.attribute("texture-recharge").as_string();
+		textureIDs[2] = assignTexture(textureStr, UIImageNames, &UITexIdx);
+		//IS_DEPLETED
+		textureStr = node.attribute("texture-depleted").as_string();
+		textureIDs[3] = assignTexture(textureStr, UIImageNames, &UITexIdx);
+		//IS_INVALID
+		textureIDs[4] = -1;
 
 		std::string itemName = utils::strToUpper(node.attribute("name").as_string());
 		Item thisItem = Item(
 			itemName, type,
-			data, textureID
+			data, textureIDs
 		);
 
 
@@ -446,10 +473,11 @@ void fetchItemsFromXML(const pugi::xml_document& doc, std::array<std::string, di
 
 
 	//Add empty item (nothing held)
-	std::array<float, 5> emptyData;
+	std::array<float, 5> emptyfData;
+	std::array<int, 5> emptyiData = {-1, -1, -1, -1, -1};
 	Item emptyItem = Item(
 		playerConfig::EMPTY_HAND_ITEM_NAME, IFN_EMPTY,
-		emptyData, -1
+		emptyfData, emptyiData
 	);
 	itemData[playerConfig::EMPTY_HAND_ITEM_NAME] = emptyItem;
 }

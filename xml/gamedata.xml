@@ -3,5 +3,6 @@
 
 <!-- Items -->
 <items>
-	<item name="Hands" type="IFN_MELEE" userPerSecond="1" maxUses="1677215" energyUse="1" strength="10" />
+	<item name="Fist" type="IFN_MELEE" usePerSecond="0.5" maxUses="1677215" energyUse="1" strength="10" texture-idle="symbol_0" texture-active="symbol_1" texture-recharge="symbol_2" texture-depleted="symbol_3" />
+	<item name="dbs" type="IFN_HITSCAN" usePerSecond="1" energyUse="10" strength="25" raysPerUse="8" raySpread="2.5" texture-idle="dbs-idle" texture-active="fallback-interface" texture-recharge="fallback-interface" texture-depleted="fallback-interface"/>
 </items>

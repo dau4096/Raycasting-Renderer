@@ -32,7 +32,16 @@ enum ItemAttr {
 	IA_USE_PER_SECOND, IA_MAX_USES,
 	IA_ENERGY_PER_USE, IA_HEALTH_ON_USE,
 	IA_STRENGTH, IA_PROJECTILE_SPEED,
-	IA_ILLUMINATE_SURROUNDINGS
+	IA_ILLUMINATE_SURROUNDINGS,
+	IA_SHOTS_PER_USE, IA_SPREAD_PER_SHOT
+};
+
+enum ItemState {
+	IS_IDLE,
+	IS_ACTIVE,
+	IS_RECHARGE,
+	IS_DEPLETED,
+	IS_INVALID
 };
 
 
@@ -241,7 +250,9 @@ namespace constants {
 	//Invalid returns for vectors and floats.
 	constexpr float INVALID = 1e30f;
 	constexpr glm::vec2 INVALIDv2 = glm::vec2(INVALID, INVALID);
+	constexpr glm::dvec2 INVALIDdv2 = glm::dvec2(INVALID, INVALID);
 	constexpr glm::vec3 INVALIDv3 = glm::vec3(INVALID, INVALID, INVALID);
+	constexpr glm::dvec3 INVALIDdv3 = glm::dvec3(INVALID, INVALID, INVALID);
 	constexpr glm::vec4 INVALIDv4 = glm::vec4(INVALID, INVALID, INVALID, INVALID);
 
 
