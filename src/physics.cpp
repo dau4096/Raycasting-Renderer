@@ -232,8 +232,8 @@ void playerMove(
 
 
 	//Vertical Calculations;
-	for (const utils::Visplane& plane : *visplaneData) {
-		if (plane.valid < 1) {continue;}
+	for (int vIndex=0; vIndex<validVisplanes; vIndex++) {
+		utils::Visplane plane = visplaneData->at(vIndex);
 
 		bool inPlaneXYRange = !(
 			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.x, plane.end.x))
@@ -276,8 +276,10 @@ void playerMove(
 	}
 
 
-	for (const utils::Wall& wall : *wallData) {
-		if ((wall.valid < 1) || (wall.specialType == W_TRIGGER)) {continue;}
+	for (int wIndex=0; wIndex<validWalls; wIndex++) {
+		utils::Wall wall = wallData->at(wIndex);
+
+		if (wall.specialType == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
@@ -537,9 +539,8 @@ void updateSpecials(
 	//If freq is lower than expected, then speed is increased.
 
 
-	int wIndex = -1;
-	for (utils::Wall& wall : *wallData) {
-		wIndex++;
+	for (int wIndex=0; wIndex<validWalls; wIndex++) {
+		utils::Wall wall = wallData->at(wIndex);
 		if ((wall.specialType == W_INVALID) || (wall.specialType == W_NORMAL)) {continue;}
 		bool enabled = *(wall.IOPtr) == 1;
 
@@ -625,9 +626,8 @@ void updateSpecials(
 	}
 
 
-	int vIndex = -1;
-	for (utils::Visplane& plane : *visplaneData) {
-		vIndex++;
+	for (int vIndex=0; vIndex<validVisplanes; vIndex++) {
+		utils::Visplane plane = visplaneData->at(vIndex);
 		if ((plane.specialType == V_INVALID) || (plane.specialType == V_NORMAL)) {continue;}
 		bool enabled = logicToBool(*(plane.IOPtr));
 
