@@ -30,6 +30,11 @@ uniform int headLampFlicker;
 uniform vec3 sunDirection;
 uniform vec3 sunColour;
 
+//Other
+uniform int numWalls;
+uniform int numVisplanes;
+uniform int numLights;
+
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 
@@ -127,6 +132,27 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall) {
 	if (t < 0.0f || u < 0.0f || u > 1.0f) return INVALIDdv2;
 
 	return ray.position + t * r;
+}
+
+
+
+bool wallIntersectQuick(vec3 start, vec3 end, Wall wall) {
+	vec2 wallDirection = normalize(wall.start.xy - wall.end.xy);
+	vec2 wallNormal = vec2(-wallDirection.y, wallDirection.x);
+
+	float startProj = dot(start.xy - wall.start.xy, wallNormal);
+	float endProj = dot(end.xy - wall.start.xy, wallNormal);
+	if (startProj * endProj >= 0.0f) {return false;}
+	if (sign(startProj) == sign(endProj)) {return false;}
+
+	float denom = endProj - startProj;
+	if (abs(denom) < EPSILON) return false;
+	float alpha = startProj / denom;
+
+	if (alpha < 0.0f || alpha > 1.0f) {return false;}
+
+	float thisZ = mix(start.z, end.z, alpha);
+	return (thisZ >= wall.start.z - EPSILON) && (thisZ <= wall.end.z + EPSILON);
 }
 
 
@@ -235,30 +261,18 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 
 	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<512; idx++) {
+	for (int idx=0; idx<numWalls; idx++) {
 		Wall thisWall = walls[idx];
-		if (thisWall.valid <= 0) {break; /* End of valid walls */}
 		if (idx == thisIndex && foundType == 1) {continue; /* Wall is empty or is the index calling the LOS check. */}
 
-		dvec2 intersectPoint = rayIntersectCheck(LOSRay, thisWall);
-		if (intersectPoint == INVALIDv2) {continue; /* Invalid intersect point */}
-
-		double distToIntersectSQ = dot(pointA.xy - intersectPoint, pointA.xy - intersectPoint);
-		if (distToIntersectSQ > distToTargetSQ) {continue; /* Not within the range of the LOScheck. */}
-
-		double a = sqrt(distToIntersectSQ) / distToTarget;
-		double actualZ = mix(pointA.z, pointB.z, a);
-
-		if ((actualZ > min(thisWall.start.z, thisWall.end.z)) && (actualZ < max(thisWall.start.z, thisWall.end.z))) {
-			return true;
-		}
+		bool intersect = wallIntersectQuick(pointA, pointB, thisWall);
+		if (intersect) {return true;}
 	}
 
 
 	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<128; idx++) {
+	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
-		if (thisPlane.valid <= 0) {break; /* End of valid visplanes */}
 		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
 
@@ -307,7 +321,7 @@ void main() {
 	int closestIndex, foundType = 0;
 
 	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<512; idx++) {
+	for (int idx=0; idx<numWalls; idx++) {
 		Wall thisWall = walls[idx];
 		if (thisWall.valid <= 0) {break; /* End of valid walls */}
 
@@ -335,10 +349,9 @@ void main() {
 	}
 
 	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<128; idx++) {
+	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
 		if (thisPlane.valid <= 0) {break; /* End of valid visplanes */}
-
 
 		vec3 intersectPoint = getVisplaneIntersect(thisPlane, playerPosition);
 		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
@@ -395,22 +408,23 @@ void main() {
 			} else {
 				vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 				//Light effect
-				for (int idx=0; idx<128; idx++) {
+				for (int idx=0; idx<numLights; idx++) {
 					//Iterate through all lights.
 					Light thisLight = lights[idx];
-					if (thisLight.valid <= 0) {break; /* End of valid lights */}
+					vec3 delta = closestIntersectPoint - thisLight.position;
+					float distSQ = dot(delta, delta);
+					float attenuation = max(0.0, 1.0 - (distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
+					if (attenuation < 0.05f) {continue;}
+					vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
+					float normalDot = dot(normal, lightDir);
+					if (normalDot <= 0.0f) {continue;}
+
 					
 					//Shadow Checks
 					bool inShadow = checkLOS(thisLight.position, closestIntersectPoint, closestIndex, foundType);
-					vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
-					float normalDot = dot(normal, lightDir);
 
-					if (!inShadow && normalDot > 0.0f) {
-						float distance = length(closestIntersectPoint - thisLight.position);
-						float attenuation = max(0.0, 1.0 - ((distance*distance) / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation, 0.0f, 1.0f);
-
-						vec3 lightContribution = thisLight.colour * brightness;
+					if (!inShadow) {
+						vec3 lightContribution = thisLight.colour * attenuation;
 						vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
 
 						fragColour += litColour;

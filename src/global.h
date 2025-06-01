@@ -80,3 +80,11 @@ struct StageData {
 };
 
 inline StageData stageData;
+
+
+inline int validWalls;
+inline int validVisplanes;
+inline int validSprites;
+inline int validLights;
+inline int validTextObjects;
+inline int validGates;

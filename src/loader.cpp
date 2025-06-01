@@ -101,6 +101,7 @@ std::array<T, N> fetchObjectFromXML(
 			std::array<int, constants::MAX_FLAGS>* flags,
 			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 		)> extractor,
+		int* numObjects,
 		std::array<int, constants::MAX_FLAGS>* flags=nullptr,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
 	)
@@ -108,6 +109,7 @@ std::array<T, N> fetchObjectFromXML(
 	std::array<T, N> result{};
 	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
 	size_t count = std::min(static_cast<size_t>(nodeList.size()), N);
+	*numObjects = count;
 	
 	for (size_t i = 0; i < count; ++i) {
 		pugi::xml_node node = nodeList[i].node();
@@ -367,12 +369,12 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	*visplaneData = fetchObjectFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, flags, textureNames);
-	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, flags, textureNames);
-	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, nullptr, textureNames);
-	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, nullptr, nullptr);
-	*textObjectData = fetchObjectFromXML<utils::TextObject, constants::MAX_TEXT_OBJECTS>(doc, "//objects/textObj", extractTextObject, nullptr, nullptr);
-	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, flags, nullptr);
+	*visplaneData = fetchObjectFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, &validWalls, flags, textureNames);
+	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, &validVisplanes, flags, textureNames);
+	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, &validSprites, nullptr, textureNames);
+	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, &validLights, nullptr, nullptr);
+	*textObjectData = fetchObjectFromXML<utils::TextObject, constants::MAX_TEXT_OBJECTS>(doc, "//objects/textObj", extractTextObject, &validTextObjects, nullptr, nullptr);
+	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, &validGates, flags, nullptr);
 
 
 	retrieveStageMetaData(doc, player);

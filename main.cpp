@@ -323,6 +323,14 @@ int main() {
 		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
 		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
 
+		//Other
+		GLuint numWallsLocation = glGetUniformLocation(envShader, "numWalls");
+		GLuint numVisplanesLocation = glGetUniformLocation(envShader, "numVisplanes");
+		GLuint numLightsLocation = glGetUniformLocation(envShader, "numLights");
+		glUniform1i(numWallsLocation, validWalls);
+		glUniform1i(numVisplanesLocation, validVisplanes);
+		glUniform1i(numLightsLocation, validLights);
+
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
