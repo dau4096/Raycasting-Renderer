@@ -279,6 +279,7 @@ void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player)
 	//Physics
 	pugi::xml_node physNode = getMetaNode(doc, "physics");
 	stageData.gravity = physNode.attribute("gravity").as_float();
+	stageData.killPlaneZ = physNode.attribute("killPlaneZ").as_float();
 
 
 	//Player

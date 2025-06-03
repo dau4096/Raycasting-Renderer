@@ -139,7 +139,7 @@ void playerMove(
 
 	Player playerCopy = *player;
 
-	if (player->position.z <= constants::KILL_PLANE_HEIGHT) {
+	if (player->position.z <= stageData.killPlaneZ) {
 		//Reset player.
 		player->position = stageData.playerStartPoint;
 		player->velocity = glm::vec3(0.0f, 0.0f, 0.0f);

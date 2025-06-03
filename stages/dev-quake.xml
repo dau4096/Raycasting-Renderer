@@ -4,7 +4,7 @@
 <meta>
     <sky skyboxTexture="skybox" />
     <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
-    <physics gravity="0.486" />
+    <physics gravity="0.486" killPlaneZ="-16.0" />
     <player startPoint="-2.5 -2.5 1.0" startAngle="90.0" initialHealth="MAX" initialEnergy="MAX" />
 </meta>
 

@@ -208,7 +208,6 @@ namespace constants {
 	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
 	constexpr float AIR_FRICT_COEFF = 0.975f;
 	constexpr float AIR_FRICT_SLIDE_COEFF = 0.9975f;
-	constexpr float KILL_PLANE_HEIGHT = -16.0f;
 	constexpr float MAX_STEP_HEIGHT = 0.42857f;
 
 
