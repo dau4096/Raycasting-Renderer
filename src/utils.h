@@ -330,19 +330,17 @@ namespace utils {
 	struct WallGPU {
 		alignas(16) glm::vec3 start;
 		alignas(16) glm::vec3 end;
+		alignas(8) glm::vec2 direction;
 		alignas(4) int textureID;
 		alignas(4) int valid;
-		alignas(8) float _padding[2];
 
 		WallGPU()
-			: start(glm::vec3(0.0f, 0.0f, 0.0f)), end(glm::vec3(0.0f, 0.0f, 0.0f)),
-			  textureID(0), valid(0), 
-			  _padding{0.0f, 0.0f} {}
+			: start(), end(), direction(),
+			  textureID(0), valid(0) {}
 
 		WallGPU(Wall *wall)
-			: start(wall->start), end(wall->end),
-			  textureID(wall->textureID), valid(wall->valid),
-			  _padding{0.0f, 0.0f} {}
+			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)),
+			  textureID(wall->textureID), valid(wall->valid) {}
 	};
 
 

@@ -37,14 +37,13 @@
 	<option function="VIEW_SMOOTHING" value="FALSE" />
 	<option function="VIEW_ANTIALIAS_LEVEL" value="0.0" />
 	<option function="VIEW_LUMINANCE_QUANTISATION" value="12.0" />
-	<option function="VIEW_MAX_FREQ" value="45.0" />
+	<option function="VIEW_MAX_FREQ" value="75.0" />
 	<option function="VIEW_NO_INTERFACE" value="FALSE" />
 
 	<option function="META_DRAW_UV" value="FALSE" />
 	<option function="META_SHOW_FREQ_UI" value="TRUE" />
 	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
-	<option function="META_SCREENSHOT_HAS_HUD" value="TRUE" />
 	<option function="META_STAGE_NAME" value="dev-quake" />
 
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />

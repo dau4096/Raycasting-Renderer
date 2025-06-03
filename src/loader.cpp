@@ -369,8 +369,8 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	*visplaneData = fetchObjectFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, &validWalls, flags, textureNames);
-	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, &validVisplanes, flags, textureNames);
+	*visplaneData = fetchObjectFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, &validVisplanes, flags, textureNames);
+	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, &validWalls, flags, textureNames);
 	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, &validSprites, nullptr, textureNames);
 	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, &validLights, nullptr, nullptr);
 	*textObjectData = fetchObjectFromXML<utils::TextObject, constants::MAX_TEXT_OBJECTS>(doc, "//objects/textObj", extractTextObject, &validTextObjects, nullptr, nullptr);

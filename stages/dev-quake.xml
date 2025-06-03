@@ -101,7 +101,7 @@
 
 <!-- Objects -->
 <objects>
-    <textObj text="Door: f2" position="0.0 -7.5 2.0" scale="100.0" />
+    <textObj text="Door: f1" position="0.0 -7.5 2.0" scale="100.0" />
     <textObj text="Empty open space for movement." position="0.0 25.0 2.5" scale="200.0" />
     <textObj text="lift ^" position="5.0 -7.0 1.5" scale="50.0" />
     <textObj text="lift V" position="5.0 -7.0 4.5" scale="50.0" />

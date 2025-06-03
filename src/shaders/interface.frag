@@ -1,16 +1,19 @@
 /* interface.frag */
 #version 460 core
 
-
-layout(binding = 0) uniform sampler2DArray textureArrayEnvironment;
-layout(binding = 1) uniform sampler2DArray textureArrayUI;
-layout(binding = 2) uniform sampler2DArray textureArrayNumeric;
+layout(binding = 0) uniform sampler2D renderedFrame;
+layout(binding = 1) uniform sampler2DArray textureArrayEnvironment;
+layout(binding = 2) uniform sampler2DArray textureArrayUI;
+layout(binding = 3) uniform sampler2DArray textureArrayNumeric;
+layout(rgba32f, binding = 0) uniform image2D interfaceTexture;
 
 //CameraData
 uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float zoomFactor;
 uniform bool zoom;
+uniform ivec2 interfaceResolution;
+uniform ivec2 renderResolution;
 
 //Player Data
 uniform float playerViewAngle;
@@ -25,19 +28,19 @@ uniform int energy;
 uniform ivec2 screenResolution;
 uniform int freq;
 uniform int showFreq;
+uniform int numTextObjects;
+
 
 vec2 fragPosition, tiltedFragPosition;
-ivec2 renderResolution, framePosition;
+ivec2 framePosition;
 vec3 fragColour;
 float fragDepth;
 float zoomEffect;
-vec2 uiScaleFactor;
 
-const ivec2 uiResolution = ivec2(480, 270);
 const float INF = 0xFFFFFF;
 
 
-layout(rgba32f, binding = 0) uniform image2D renderedFrame;
+
 
 struct textArray{
 	ivec4 contents[16];
@@ -65,14 +68,6 @@ textArray createTAFromTO(TextObject TO) {
 }
 
 
-
-vec2 scaleUI(vec2 position) {
-	return position * uiScaleFactor;
-}
-
-float scaleUI(float value) {
-	return value * uiScaleFactor.x; // or .y if consistent scaling is needed
-}
 
 void drawRect(
 		vec2 position, vec2 dimensions,
@@ -161,11 +156,11 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 
 
 void drawCrosshair() {
-	float radius = scaleUI(5.0);
-	float thickness = scaleUI(1.0);
+	const float radius = 7.5f;
+	const float thickness = 2.0f;
 	const vec4 crosshairColour = vec4(0.5f, 0.5f, 0.5f, 0.75f);
 
-	vec2 centreScreen = renderResolution/2.0f;
+	vec2 centreScreen = interfaceResolution/2.0f;
 	float dist = length(fragPosition - centreScreen) - radius;
 	if ((dist > 0) && (dist < thickness)) {
 		fragColour = mix(fragColour, crosshairColour.rgb, crosshairColour.a);
@@ -223,18 +218,18 @@ float getTOScreenX(TextObject thisTO, float rayAngle) {
 	float transformX = invDet * (dir.y * TODir.x - dir.x * TODir.y);
 	float transformY = invDet * (-plane.y * TODir.x + plane.x * TODir.y);
 
-	return (renderResolution.x / 2.0f) * (1.0f - transformX / transformY);
+	return (interfaceResolution.x / 2.0f) * (1.0f - transformX / transformY);
 }
 
 void drawTextObjects(float rayAngle) {
 	if (fragDepth < 0.0f) {return; /* UI Element here */}
-	const float minDepthSQ = 1.0f;
+	const float minDepthSQ = 0.5f;
 	const bool hasBackground = true;
 	const vec3 backgroundColour = vec3(0.0f, 0.0f, 0.0f);
 
-	for (int idx=0; idx<32; idx++) {
+	for (int idx=0; idx<numTextObjects; idx++) {
 		TextObject thisTO = textObjects[idx];
-		if (thisTO.valid <= 0) {break; /* End of valid TextObjects */}
+
 		if ((thisTO.length > 0.0f) && (thisTO.scale >= 1.0f)) {
 			vec3 delta = playerPosition - thisTO.position;
 			float TODepthSQ = dot(delta, delta);
@@ -242,7 +237,6 @@ void drawTextObjects(float rayAngle) {
 			
 			float invdistance = inversesqrt(TODepthSQ);
 			float scale = thisTO.scale * invdistance * zoomEffect;
-			if (scale < 1.0f) {continue; /* Scale too small to see. */}
 
 			//X
 			float centreX = getTOScreenX(thisTO, rayAngle);
@@ -253,7 +247,7 @@ void drawTextObjects(float rayAngle) {
 
 			//Y
 			float verticalRatio = (playerPosition.z - thisTO.position.z) * invdistance;
-			float centreY = (renderResolution.y / 2.0f) - verticalRatio * renderResolution.y * zoomEffect;
+			float centreY = (interfaceResolution.y / 2.0f) - verticalRatio * interfaceResolution.y * zoomEffect;
 			float charY = centreY - (scale / 2.0f);
 
 			drawText(createTAFromTO(thisTO), vec2(centreX, charY), scale, hasBackground, backgroundColour, tiltedFragPosition);
@@ -264,21 +258,20 @@ void drawTextObjects(float rayAngle) {
 
 
 void main() {
-	renderResolution = imageSize(renderedFrame);
-	uiScaleFactor = vec2(renderResolution) / vec2(uiResolution);
 	fragPosition = gl_FragCoord.xy;
 	tiltedFragPosition = fragPosition;
+
 	ivec2 framePosition = ivec2(gl_FragCoord.xy);
-	vec4 imageColour = imageLoad(renderedFrame, framePosition);
-	fragColour = imageColour.rgb;
-	fragDepth = imageColour.a;
+	vec4 frameColour = texture(renderedFrame, fragPosition/vec2(interfaceResolution));
+	fragColour = frameColour.rgb;
+	fragDepth = frameColour.a;
 
 	zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
 	//Negative is upward; so subtract.
 	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
-	tiltedFragPosition.y -= (tiltedFragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
+	tiltedFragPosition.y -= (tiltedFragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
 	tiltedFragPosition.y -= pitchDecimal * 10.0f; //10x scaling.
 
@@ -291,21 +284,21 @@ void main() {
 
 	//Show freq.
 	if (showFreq > 0) {
-		drawInt(scaleUI(vec2(0, 245)), int(scaleUI(25.0)), freq);
+		drawInt(vec2(0, 370), int(25.0), freq);
 	}
 
 
 	//Render stats.
-	renderImage(scaleUI(vec2(-16, -48)), scaleUI(vec2(128.0, 128.0)), 0);
-	drawInt(scaleUI(vec2(16, 24)), int(scaleUI(25.0f)), health);
+	renderImage(vec2(-16, -72), vec2(192.0, 192.0), 0);
+	drawInt(vec2(32, 32), int(40.0f), health);
 
-	renderImage(scaleUI(vec2(355, -48)), scaleUI(vec2(128, 128)), 1);
-	drawInt(scaleUI(vec2(400, 24)), int(scaleUI(25.0f)), energy);
+	renderImage(vec2(460, -72), vec2(192, 192), 1);
+	drawInt(vec2(520, 32), int(40.0f), energy);
 
 	drawCrosshair();
 
 
 
-	vec4 finalFragColour = vec4(fragColour.rgb, fragDepth);
-	imageStore(renderedFrame, framePosition, finalFragColour);
+	vec4 finalFragColour = vec4(fragColour.rgb, (fragDepth == -1) ? 1.0f : 0.0f);
+	imageStore(interfaceTexture, framePosition, finalFragColour);
 }

@@ -14,6 +14,41 @@ float desiredLeanFB = 0.0f, leanFBCurrent = 0.0f;
 
 namespace physics {
 
+
+float cross(glm::vec2 a, glm::vec2 b) {
+	return a.x * b.y - a.y * b.x;
+}
+
+
+
+bool quickIntersect(glm::vec3 pointA, glm::vec3 pointB, utils::Wall wall, float* distSQ) {
+	glm::vec2 rayDelta = glm::vec2(pointB) - glm::vec2(pointA);
+	glm::vec2 wallDelta = glm::vec2(wall.end) - glm::vec2(wall.start);
+
+	float denom = cross(rayDelta, wallDelta);
+	if (abs(denom) < 1e-4f) {return false;}
+
+	glm::vec2 rel = glm::vec2(wall.start) - glm::vec2(pointA);
+	float t = cross(rel, wallDelta) / denom;
+	float u = cross(rel, rayDelta) / denom;
+
+	if ((t < -1e-4f) || (t > 1.0f + 1e-4f) || (u < -1e-4f) || (u > 1.0f + 1e-4f)) {return false;}
+
+	float z = pointA.z + (pointB.z - pointA.z) * t;
+
+	if ((min(wall.start.z, wall.end.z) - 1e-4f <= z) && (z <= max(wall.start.z, wall.end.z) + 1e-4f)) {
+		if (distSQ != nullptr) {
+			glm::vec2 intersectPoint = glm::vec2(wall.start) + wallDelta * t;
+			glm::vec2 distDelta = intersectPoint - glm::vec2(pointA);
+			*distSQ = glm::dot(distDelta, distDelta);
+		}
+		return true;
+	}
+	return false;
+}
+
+
+
 glm::vec2 raycast(utils::Ray ray, utils::Wall wall) {
 	glm::vec2 wallStartV2 = glm::vec2(wall.start.x, wall.start.y);
 	glm::vec2 wallEndV2 = glm::vec2(wall.end.x, wall.end.y);
@@ -57,6 +92,8 @@ glm::vec2 raycast(utils::Ray ray, utils::Wall wall) {
 }
 
 
+
+
 bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr) {
 	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
 	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
@@ -78,11 +115,15 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 
 
 
+
+
 float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
 	float sign = (positiveSolution) ? 1.0f : -1.0f;
 	//(-b +/- sqrt(b^2 - 4ac)) / (2a)
 	return (-b + (sign * sqrt(determinant))) / (2*a);
 }
+
+
 
 
 
@@ -92,13 +133,17 @@ void playerMove(
 		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
 		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
 	) {
+	float speedModifier = 45.0f / freq;
+	//If freq is higher than expected, then speed is reduced.
+	//If freq is lower than expected, then speed is increased.
+
 	Player playerCopy = *player;
 
 	if (player->position.z <= constants::KILL_PLANE_HEIGHT) {
 		//Reset player.
-		player->position = playerConfig::PLAYER_START_POSITION;
+		player->position = stageData.playerStartPoint;
 		player->velocity = glm::vec3(0.0f, 0.0f, 0.0f);
-		player->viewAngle = playerConfig::PLAYER_START_ANGLE;
+		player->viewAngle = stageData.playerStartAngle;
 		player->state = E_NONE;
 		player->touchingFloor = false;
 		player->health = playerConfig::PLAYER_MAX_HEALTH;
@@ -130,30 +175,27 @@ void playerMove(
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
-	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
+	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV) * speedModifier;
 
 	// Determine the movement vector based on key presses
 	if (!player->sliding) {
+		float reduction = 1.0f;
 		if (keyMap["MOVE_FORWARD"]) {
-			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
 			newY += playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
 		}
 		if (keyMap["MOVE_BACKWARD"]) {
-			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * sin(player->viewAngle * constants::TO_RAD) * reduction;
 			newY -= playerSpeed * cos(player->viewAngle * constants::TO_RAD) * reduction;
 		}
 		if (keyMap["MOVE_LEFT"]) {
-			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
 			newY -= playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
 		}
 		if (keyMap["MOVE_RIGHT"]) {
-			float reduction = 1.0f;
 			if (!player->touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * cos((player->viewAngle) * constants::TO_RAD) * reduction;
 			newY += playerSpeed * -sin((player->viewAngle) * constants::TO_RAD) * reduction;
@@ -566,36 +608,23 @@ void updateSpecials(
 				break;
 			}
 
-			case W_SWITCH: { //Check for interaction with wall. // Doesn't trigger anymore? Investigate.
-				glm::vec2 dir = glm::vec2(sin((player->viewAngle + 180.0f) * constants::TO_RAD), cos((player->viewAngle + 180.0f) * constants::TO_RAD));
-				utils::Ray ray = utils::Ray(player->position, dir, playerConfig::PLAYER_INTERACT_RAY_DIST);
-				float playerFaceZ = player->position.z + (player->height/3.0f);
-
-				glm::vec2 buttonIntersect = raycast(ray, wall);
-				if (
-					interactKey && 
-					(buttonIntersect != constants::INVALIDv2) && 
-					((playerFaceZ <= wall.end.z) || (playerFaceZ >= wall.start.z))
-				) {
-					float distSQ = glm::dot((buttonIntersect-glm::vec2(player->position)), (buttonIntersect-glm::vec2(player->position)));
-					int rIndex = -1;
-					bool LOSBlocked = false;
-
-					for (utils::Wall& thisWall : *wallData) { //Check for LOS to button. Only occurs when valid click is found, so should not impact performance much.
-						rIndex++;
-						if ((rIndex == wIndex) || (thisWall.specialType == W_INVALID)) {continue;}
-						glm::vec2 LOSintersect = raycast(ray, thisWall);
-						float thisDistSQ = glm::dot((LOSintersect-glm::vec2(player->position)), (LOSintersect-glm::vec2(player->position)));
-						if ((thisDistSQ < distSQ) && (playerFaceZ < thisWall.end.z) && (playerFaceZ > thisWall.start.z)) {
-							LOSBlocked = true;
-							break;
-						}
-					}
-					if (!LOSBlocked && (distSQ < (playerConfig::PLAYER_INTERACT_RAY_DIST*playerConfig::PLAYER_INTERACT_RAY_DIST))) {
+			case W_SWITCH: { //Check for interaction with wall.
+				if (interactKey) {
+					float distSQ;
+					bool hitSwitch = quickIntersect(
+						player->position,
+						player->position + playerConfig::PLAYER_INTERACT_RAY_DIST*glm::vec3(sin(player->viewAngle*constants::TO_RAD), cos(player->viewAngle*constants::TO_RAD), 0.0f),
+						wall,
+						&distSQ
+					);
+					cout << distSQ << endl;
+					if ((distSQ > 1e-2f) && (distSQ < playerConfig::PLAYER_INTERACT_RAY_DIST*playerConfig::PLAYER_INTERACT_RAY_DIST)) {
 						wall.internal = (wall.internal > 0) ? 0 : 1;
+						cout << "happened" << endl;
 					}
 				}
 				*(wall.IOPtr) = wall.internal;
+				cout << wall.internal << endl << endl;
 				break;
 			}
 

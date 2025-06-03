@@ -18,6 +18,7 @@ uniform float playerViewRoll;
 uniform float playerViewPitch;
 uniform vec3 playerPosition;
 uniform bool zoom;
+uniform ivec2 renderResolution;
 
 //Debug
 uniform int drawUV;
@@ -29,6 +30,12 @@ uniform int headLampFlicker;
 //Sun
 uniform vec3 sunDirection;
 uniform vec3 sunColour;
+
+//Other
+uniform int numWalls;
+uniform int numVisplanes;
+uniform int numSprites;
+uniform int numLights;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
@@ -95,7 +102,6 @@ Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
 
 
 vec2 fragPosition;
-ivec2 renderResolution;
 vec4 fragColour;
 float fragDepth, tanVerticalViewAngleOffset, zoomEffect;
 const float INF = 0xFFFFFF;
@@ -109,10 +115,6 @@ const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 
 const bool noLighting = false;
 
-
-float determinant(vec2 vecA, vec2 vecB) {
-	return (vecA.x * vecB.y) - (vecA.y * vecB.x);
-}
 
 
 dvec2 rayIntersectCheck(Ray ray, Wall wall) {
@@ -133,6 +135,28 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall) {
 
 	return ray.position + t * r;
 }
+
+
+
+bool wallIntersectQuick(vec3 start, vec3 end, Wall wall) {
+	vec2 wallDirection = normalize(wall.start.xy - wall.end.xy);
+	vec2 wallNormal = vec2(-wallDirection.y, wallDirection.x);
+
+	float startProj = dot(start.xy - wall.start.xy, wallNormal);
+	float endProj = dot(end.xy - wall.start.xy, wallNormal);
+	if (startProj * endProj >= 0.0f) {return false;}
+	if (sign(startProj) == sign(endProj)) {return false;}
+
+	float denom = endProj - startProj;
+	if (abs(denom) < EPSILON) return false;
+	float alpha = startProj / denom;
+
+	if (alpha < 0.0f || alpha > 1.0f) {return false;}
+
+	float thisZ = mix(start.z, end.z, alpha);
+	return (thisZ >= wall.start.z - EPSILON) && (thisZ <= wall.end.z + EPSILON);
+}
+
 
 vec3 getVisplaneIntersect(Visplane plane, vec3 originPos) {
 	float targetZ = (originPos.z - plane.height) * zoomEffect;
@@ -196,59 +220,37 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 }
 
 
-
-float angleClamp(float value) {
-	if (value < 0.0f) {
-		return angleClamp(360.0f + value);
-	}
-	return mod(value, 360.0f);
-}
-
-
 bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
-	vec3 LOSDelta = pointA - pointB;
+	vec3 LOSDelta = pointB - pointA;
 	float distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
-	float distToTargetInv = inversesqrt(distToTargetSQ);
-	vec3 LOSDirection = normalize(LOSDelta);
-	Ray LOSRay = createRay(pointA.xy, normalize(LOSDelta.xy), 1.0f / distToTargetInv);
+	float distToTarget = sqrt(distToTargetSQ);
+	dvec3 LOSDirection = normalize(LOSDelta);
+	Ray LOSRay = createRay(pointA.xy, normalize(LOSDelta.xy), distToTarget);
 
 
 	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<512; idx++) {
+	for (int idx=0; idx<numWalls; idx++) {
 		Wall thisWall = walls[idx];
-		if (thisWall.valid <= 0) {break; /* End of valid walls */}
 		if (idx == thisIndex && foundType == 1) {continue; /* Wall is empty or is the index calling the LOS check. */}
 
-		dvec2 intersectPoint = rayIntersectCheck(LOSRay, thisWall);
-		if (intersectPoint == INVALIDv2) {continue; /* Invalid intersect point */}
-
-		double distToIntersectSQ = dot(pointA.xy - intersectPoint, pointA.xy - intersectPoint);
-		if (distToIntersectSQ > distToTargetSQ) {continue; /* Not within the range of the LOScheck. */}
-
-		double a = distToTargetInv / inversesqrt(distToIntersectSQ);
-		float actualZ = mix(pointA.z, pointB.z, float(a));
-
-		if ((actualZ > min(thisWall.start.z, thisWall.end.z)) && (actualZ < max(thisWall.start.z, thisWall.end.z))) {
-			return true;
-		}
+		bool intersect = wallIntersectQuick(pointA, pointB, thisWall);
+		if (intersect) {return true;}
 	}
 
 
 	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<128; idx++) {
+	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
-		if (thisPlane.valid <= 0) {break; /* End of valid visplanes */}
 		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
 
 
-		vec3 intersectPoint = getVisplaneIntersect(thisPlane, pointB);
-		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
-		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
-			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
-			continue;
+		double tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
+		dvec3 intersectPoint = pointA + LOSDirection * tFrac;
+		if ((intersectPoint.x > min(thisPlane.start.x, thisPlane.end.x)) && (intersectPoint.x < max(thisPlane.start.x, thisPlane.end.x)) &&
+			(intersectPoint.y > min(thisPlane.start.y, thisPlane.end.y)) && (intersectPoint.y < max(thisPlane.start.y, thisPlane.end.y))) {
+			return true;
 		}
-		return true;
 	}
 
 	return false;
@@ -278,7 +280,6 @@ float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	renderResolution = imageSize(renderedFrame);
 	ivec2 framePosition = ivec2(fragPosition);	
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
 
@@ -300,9 +301,8 @@ void main() {
 	vec3 albedo;
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
-	for (int index=0; index<64; index++) {
+	for (int index=0; index<numSprites; index++) {
 		Sprite thisSprite = sprites[index];
-		if (thisSprite.valid <= 0) {break; /* End of valid Sprites */}
 
 
 		float spriteDistance = length(playerPosition.xy - thisSprite.position.xy);
@@ -342,9 +342,8 @@ void main() {
 
 		} else {
 			vec3 realPosition3D = vec3(closestSprite.position.xy, closestSprite.position.z);
-			for (int idx=0; idx<128; idx++) {
+			for (int idx=0; idx<numLights; idx++) {
 				Light thisLight = lights[idx];
-				if (thisLight.valid <= 0) {break; /* End of valid lights */}
 
 				bool inShadow = checkLOS(thisLight.position, closestSprite.position);
 				if (!inShadow) {

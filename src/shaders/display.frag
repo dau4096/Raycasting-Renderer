@@ -4,15 +4,16 @@
 in vec2 fragTexCoord;
 out vec4 fragColour;
 
-layout(rgba32f, binding = 0) uniform image2D renderedFrameWriteOnly;
+
+layout(binding = 0) uniform sampler2D renderedFrame;
+layout(binding = 1) uniform sampler2D interfaceTexture;
+
 
 uniform float maxRayDistance;
 uniform ivec2 screenResolution;
-uniform sampler2D renderedFrame;
 uniform int antiAliasingLevel;
 uniform bool smoothingEnabled;
 uniform int quantisingLevel;
-uniform bool screenshotHasHUD;
 
 
 const float EPSILON = 1e-4f;
@@ -109,8 +110,7 @@ void main() {
 		resultant = smoothingFunc();
 	}
 
-	fragColour = vec4(resultant.rgb, 1.0f);
-	if (screenshotHasHUD) {
-		imageStore(renderedFrameWriteOnly, ivec2(gl_FragCoord.xy), vec4(resultant.rgb, 1.0f));
-	}
+
+	vec4 interfaceColour = texture(interfaceTexture, mainUV);
+	fragColour = vec4(mix(resultant.rgb, interfaceColour.rgb, interfaceColour.a), 1.0f);
 }

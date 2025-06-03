@@ -54,7 +54,6 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"META_SHOW_FREQ_CONSOLE", ""},
 	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
-	{"META_SCREENSHOT_HAS_HUD", ""},
 
 	{"PHYS_NO_COLLIDE", ""},
 };
@@ -82,8 +81,8 @@ struct StageData {
 inline StageData stageData;
 
 
-inline int validWalls;
 inline int validVisplanes;
+inline int validWalls;
 inline int validSprites;
 inline int validLights;
 inline int validTextObjects;

@@ -234,8 +234,9 @@ namespace constants {
 
 namespace display {
 	//Resolutions
-	constexpr glm::ivec2 SCREEN_RESOLUTION = glm::ivec2(640, 400);
-	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(640, 400);
+	constexpr glm::ivec2 SCREEN_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(640, 400);
 
 
 	//Texture Standardisation
@@ -264,7 +265,7 @@ namespace playerConfig {
 	constexpr float MOVE_SPEED_SLIDE_ADD = 0.125f;
 	constexpr float SLIDE_THRESHOLD = MOVE_SPEED_BASE * 1.5f;
 	constexpr float JUMP_INIT_SPEED = 0.25f;
-	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.0f;
+	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.5f;
 	constexpr int MAX_JUMPS = 2; //Double jumps allowed.
 
 
@@ -276,8 +277,6 @@ namespace playerConfig {
 
 
 	//Player Initial Values
-	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(-2.5f, -2.5f, 1.0f);
-	constexpr float PLAYER_START_ANGLE = -45.0f;
 	constexpr float LATERAL_VIEW_LEAN = 2.5f;
 	constexpr int PLAYER_MAX_HEALTH = 128;
 	constexpr int PLAYER_MAX_ENERGY = 64;
