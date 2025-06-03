@@ -175,6 +175,7 @@ void playerMove(
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
+	maxV *= speedModifier;
 	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV) * speedModifier;
 
 	// Determine the movement vector based on key presses
@@ -617,14 +618,14 @@ void updateSpecials(
 						wall,
 						&distSQ
 					);
-					cout << distSQ << endl;
+					//cout << distSQ << endl;
 					if ((distSQ > 1e-2f) && (distSQ < playerConfig::PLAYER_INTERACT_RAY_DIST*playerConfig::PLAYER_INTERACT_RAY_DIST)) {
 						wall.internal = (wall.internal > 0) ? 0 : 1;
-						cout << "happened" << endl;
+						//cout << "happened" << endl;
 					}
 				}
 				*(wall.IOPtr) = wall.internal;
-				cout << wall.internal << endl << endl;
+				//cout << wall.internal << endl << endl;
 				break;
 			}
 

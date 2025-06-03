@@ -233,8 +233,7 @@ namespace constants {
 
 namespace display {
 	//Resolutions
-	constexpr glm::ivec2 SCREEN_RESOLUTION = glm::ivec2(960, 540);
-	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(640, 400);
 
 

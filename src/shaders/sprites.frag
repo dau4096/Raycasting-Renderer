@@ -288,7 +288,7 @@ void main() {
 	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
-	fragPosition.y -= pitchDecimal * 10.0f; //10x scaling.
+	fragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 	
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
 	tanVerticalViewAngleOffset = tan(normY * (verticalFOV / 2.0f));

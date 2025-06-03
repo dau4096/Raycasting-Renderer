@@ -36,6 +36,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"TURN_SPEED_MOUSE", ""},
 	{"TURN_SPEED_KEYBOARD", ""},
 
+	{"VIEW_RENDER_RESOLUTION_QUALITY", ""},
 	{"VIEW_FOV", ""},
 	{"VIEW_MAX_RAY_DIST", ""},
 	{"VIEW_SHOW_HUD", ""},
@@ -88,3 +89,7 @@ inline int validSprites;
 inline int validLights;
 inline int validTextObjects;
 inline int validGates;
+
+inline glm::ivec2 currentWindowResolution;
+inline glm::ivec2 desiredRenderResolution;
+inline glm::ivec2 currentRenderResolution;

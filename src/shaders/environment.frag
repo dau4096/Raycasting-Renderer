@@ -309,7 +309,7 @@ void main() {
 	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
-	fragPosition.y -= pitchDecimal * 10.0f; //10x scaling.
+	fragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);

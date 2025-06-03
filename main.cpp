@@ -49,9 +49,10 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 
 
 
-glm::ivec2 currentScreenRes;
 bool headLampEnabled = false;
 int tick = 0;
+double verticalFOV;
+GLuint renderedFrameID;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -59,7 +60,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 
-	currentScreenRes = glm::ivec2(width, height);
+	currentWindowResolution = glm::ivec2(width, height);
+	currentRenderResolution = glm::ivec2(
+		glm::min(width, desiredRenderResolution.x),
+		glm::min(height, desiredRenderResolution.y)
+	);
+
+	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (currentRenderResolution.x / currentRenderResolution.y));
 }
 
 
@@ -91,10 +99,14 @@ int main() {
 
 
 	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
-	currentScreenRes = display::SCREEN_RESOLUTION;
+	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
+	currentRenderResolution = glm::ivec2(
+		glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
+		glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
+	);
 
 
-	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer/GPU");
+	GLFWwindow* Window = render::initializeWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
 	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
@@ -106,7 +118,7 @@ int main() {
 
 
 
-	GLuint renderedFrameID = render::createGLImage2D(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	GLuint interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
@@ -135,11 +147,11 @@ int main() {
 
 
 
-	glViewport(0, 0, currentScreenRes.x, currentScreenRes.y);
+	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
 	glDisable(GL_DEPTH_TEST);
 	GLuint VAO = render::getVAO();
 
-	double verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (display::RENDER_RESOLUTION.x / display::RENDER_RESOLUTION.y));
+	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (currentRenderResolution.x / currentRenderResolution.y));
 
 
 	utils::GLErrorcheck("Initialisation", true);
@@ -274,7 +286,7 @@ int main() {
 
 
 		//Update resolution
-		glViewport(0, 0, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+		glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 
 
 		//Environment Shader.
@@ -307,7 +319,7 @@ int main() {
 		glUniform1f(playerRollLocation, player.viewRoll);
 		glUniform1f(playerPitchLocation, player.viewPitch);
 		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-		glUniform2i(renderResLocation, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 
 		//Debug
 		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
@@ -371,7 +383,7 @@ int main() {
 		glUniform1f(playerRollLocation, player.viewRoll);
 		glUniform1f(playerPitchLocation, player.viewPitch);
 		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-		glUniform2i(renderResLocation, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 
 		//Debug
 		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
@@ -430,7 +442,7 @@ int main() {
 			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
 			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
 			glUniform2i(interfaceResLocation, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-			glUniform2i(renderResLocation, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+			glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 
 			//Player Data
 			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
@@ -457,7 +469,7 @@ int main() {
 			GLuint freqLocation = glGetUniformLocation(uiShader, "freq");
 			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
 			GLuint numTextObjectsLocation = glGetUniformLocation(uiShader, "numTextObjects");
-			glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
+			glUniform2i(screenResLocation, currentWindowResolution.x, currentWindowResolution.y);
 			glUniform1i(freqLocation, freq);
 			glUniform1i(showFreqLocation, utils::configToIntBool("META_SHOW_FREQ_UI"));
 			glUniform1i(numTextObjectsLocation, validVisplanes);
@@ -472,7 +484,7 @@ int main() {
 
 
 		//Update resolution
-		glViewport(0, 0, currentScreenRes.x, currentScreenRes.y);
+		glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
 
 		//Display Shader and update screen.
 		glUseProgram(displayShader);
@@ -487,8 +499,8 @@ int main() {
 		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
 		GLuint quantLocation = glGetUniformLocation(displayShader, "quantisingLevel");
-		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
-		glUniform2i(renderResLocation, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
+		glUniform2i(screenResLocation, currentWindowResolution.x, currentWindowResolution.y);
+		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1i(antiAliasLocation, utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 		glUniform1i(smoothingLocation, utils::configToBool("VIEW_SMOOTHING"));

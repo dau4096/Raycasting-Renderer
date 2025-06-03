@@ -14,6 +14,7 @@ uniform float zoomFactor;
 uniform bool zoom;
 uniform ivec2 interfaceResolution;
 uniform ivec2 renderResolution;
+uniform ivec2 screenResolution;
 
 //Player Data
 uniform float playerViewAngle;
@@ -25,7 +26,6 @@ uniform int health;
 uniform int energy;
 
 //Other
-uniform ivec2 screenResolution;
 uniform int freq;
 uniform int showFreq;
 uniform int numTextObjects;
@@ -241,7 +241,7 @@ void drawTextObjects(float rayAngle) {
 			//X
 			float centreX = getTOScreenX(thisTO, rayAngle);
 			if ((centreX + scale * 0.65f * (thisTO.length / 2.0f) < 0.0f) || 
-				(centreX - scale * 0.65f * (thisTO.length / 2.0f) > renderResolution.x)) {
+				(centreX - scale * 0.65f * (thisTO.length / 2.0f) > interfaceResolution.x)) {
 				continue; // Off-screen horizontally
 			}
 
@@ -273,7 +273,7 @@ void main() {
 	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
 	tiltedFragPosition.y -= (tiltedFragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
-	tiltedFragPosition.y -= pitchDecimal * 10.0f; //10x scaling.
+	tiltedFragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 
 	addVignetteShading();

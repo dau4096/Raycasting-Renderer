@@ -270,14 +270,14 @@ void saveScreenshot(GLuint frameTextureID) {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTextureID, 0);
 
-	std::vector<unsigned char> pixels(display::RENDER_RESOLUTION.x * display::RENDER_RESOLUTION.y * 3);
+	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(0, 0, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	glReadPixels(0, 0, currentRenderResolution.x, currentRenderResolution.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
 
 	//Flip image vertically.
-	for (int y = 0; y < display::RENDER_RESOLUTION.y / 2; ++y) {
-		for (int x = 0; x < display::RENDER_RESOLUTION.x * 3; ++x) {
-			std::swap(pixels[y * display::RENDER_RESOLUTION.x * 3 + x], pixels[(display::RENDER_RESOLUTION.y - 1 - y) * display::RENDER_RESOLUTION.x * 3 + x]);
+	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
+		for (int x = 0; x < currentRenderResolution.x * 3; ++x) {
+			std::swap(pixels[y * currentRenderResolution.x * 3 + x], pixels[(currentRenderResolution.y - 1 - y) * currentRenderResolution.x * 3 + x]);
 		}
 	}
 
@@ -285,8 +285,8 @@ void saveScreenshot(GLuint frameTextureID) {
 
 	stbi_write_png(
 		("screenshots/" + timeStr + ".png").c_str(),
-		display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y,
-		3, pixels.data(), display::RENDER_RESOLUTION.x*3
+		currentRenderResolution.x, currentRenderResolution.y,
+		3, pixels.data(), currentRenderResolution.x*3
 	);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -305,6 +305,8 @@ GLuint createGLImage2D(int width, int height) {
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -363,10 +365,10 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y, display::TEXTURE_ARRAY_MAX_LAYERS, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
 
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 
 

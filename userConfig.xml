@@ -28,6 +28,7 @@
 	<option function="TURN_SPEED_MOUSE" value="0.25" />
 	<option function="TURN_SPEED_KEYBOARD" value="1.0" />
 
+	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
 	<option function="VIEW_FOV" value="70.0" />
 	<option function="VIEW_MAX_RAY_DIST" value="128.0" />
 	<option function="VIEW_SHOW_HUD" value="TRUE" />

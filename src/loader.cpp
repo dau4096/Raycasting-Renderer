@@ -70,7 +70,7 @@ int assignEnum(const std::string& enumStr) {
 int currentTextureIndex = 0;
 int assignTexture(std::string textureStr, std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
 	auto begin = textureNames->begin(), end = textureNames->end();
-	auto namePTR = std::find(std::begin(*textureNames), std::end(*textureNames), textureStr);
+	auto namePTR = std::find(begin, end, textureStr);
 
 	int idx = -1;
 
@@ -345,6 +345,16 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 }
 
 
+static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
+	{"TERRIBLE", glm::ivec2(64, 36)},
+	{"AWFUL", glm::ivec2(256, 144)},
+	{"LOW", glm::ivec2(640, 400)},
+	{"MEDIUM", glm::ivec2(960, 540)},
+	{"HIGH", glm::ivec2(1280, 720)},
+	{"AMAZING", glm::ivec2(1920, 1080)}
+};
+
+
 
 namespace loader {
 
@@ -395,6 +405,19 @@ void loadBindings() {
 	fetchBindingsFromXML(doc);
 	fetchConfigsFromXML(doc);
 
+
+	//Handle render quality setting.
+	std::string renderQuality = userConfig["VIEW_RENDER_RESOLUTION_QUALITY"];
+	auto it = resolutionMap.find(renderQuality);
+	if (it != resolutionMap.end()) {
+		desiredRenderResolution = resolutionMap[renderQuality];
+	} else {
+		std::cout << ("Invalid render resolution quality: " + renderQuality) << std::endl << "Expected one of:";
+		for (auto pair : resolutionMap) {
+			std::cout << std::endl << pair.first << " for [" << pair.second.x << " x " << pair.second.y << "]";
+		}
+		desiredRenderResolution = resolutionMap["LOW"];
+	}
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();
