@@ -483,10 +483,12 @@ int main() {
 		//Assorted other data.
 		maxVDistLocation = glGetUniformLocation(displayShader, "maxRayDistance");
 		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
+		renderResLocation = glGetUniformLocation(displayShader, "renderResolution");
 		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
 		GLuint quantLocation = glGetUniformLocation(displayShader, "quantisingLevel");
 		glUniform2i(screenResLocation, currentScreenRes.x, currentScreenRes.y);
+		glUniform2i(renderResLocation, display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
 		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1i(antiAliasLocation, utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 		glUniform1i(smoothingLocation, utils::configToBool("VIEW_SMOOTHING"));

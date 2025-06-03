@@ -11,6 +11,7 @@ layout(binding = 1) uniform sampler2D interfaceTexture;
 
 uniform float maxRayDistance;
 uniform ivec2 screenResolution;
+uniform ivec2 renderResolution;
 uniform int antiAliasingLevel;
 uniform bool smoothingEnabled;
 uniform int quantisingLevel;
@@ -18,11 +19,15 @@ uniform int quantisingLevel;
 
 const float EPSILON = 1e-4f;
 
+vec2 getUV(vec2 pos) {
+	return vec2(pos) / vec2(screenResolution);
+}
+
 
 vec4 antiAliasFunc() {
 	const float edgeThreshold = 1.0f;
 
-    vec2 baseUV = gl_FragCoord.xy / vec2(screenResolution);
+    vec2 baseUV = getUV(gl_FragCoord.xy);
     vec4 centrePX = texture(renderedFrame, baseUV);
     float centreDepth = centrePX.a;
 
@@ -33,8 +38,8 @@ vec4 antiAliasFunc() {
 
 	for (int dx=-antiAliasingLevel; dx<=antiAliasingLevel; dx++) {
 		for (int dy=-antiAliasingLevel; dy<=antiAliasingLevel; dy++) {
-            vec2 uv = (gl_FragCoord.xy + vec2(dx, dy)) / vec2(screenResolution);
-            vec4 sampledPX = texture(renderedFrame, uv);
+            vec2 UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
+            vec4 sampledPX = texture(renderedFrame, UV);
 
             float depth = sampledPX.a;
             if (depth < 0.0) {continue; /* fragment was UI */}
@@ -76,7 +81,7 @@ vec4 smoothingFunc() {
 
 	for (int dx=-1; dx<=1; dx++) {
 		for (int dy=-1; dy<=1; dy++) {
-			UV = (gl_FragCoord.xy + vec2(dx, dy)) / vec2(screenResolution);
+			UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
 			albedo = texture(renderedFrame, UV);
 			if (albedo.a != -1) {
 				n++;
@@ -85,7 +90,7 @@ vec4 smoothingFunc() {
 		}
 	}
 
-	UV = gl_FragCoord.xy / vec2(screenResolution);
+	UV = getUV(gl_FragCoord.xy);
 	vec4 centrePX = texture(renderedFrame, UV);
 	if (n > 0) {
 		return vec4(colourSum / float(n), centrePX.a);
@@ -97,7 +102,7 @@ vec4 smoothingFunc() {
 
 void main() {
 	vec4 resultant;
-	vec2 mainUV = gl_FragCoord.xy / vec2(screenResolution);
+	vec2 mainUV = getUV(gl_FragCoord.xy);
 	resultant = vec4(texture(renderedFrame, mainUV).rgb, 1.0f);
 
 	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not adequate. Works based on luminance.
