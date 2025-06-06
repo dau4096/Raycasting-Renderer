@@ -52,7 +52,7 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 bool headLampEnabled = false;
 int tick = 0;
 double verticalFOV;
-GLuint renderedFrameID;
+GLuint renderedFrameID, portalMaskID;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -67,6 +67,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	);
 
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	portalMaskID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (currentRenderResolution.x / currentRenderResolution.y));
 }
 
@@ -119,6 +120,7 @@ int main() {
 
 
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	portalMaskID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	GLuint interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
@@ -289,134 +291,139 @@ int main() {
 		glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 
 
-		//Environment Shader.
-		glUseProgram(envShader);
-		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		for (int recursionIdx=0; recursionIdx<=utils::configToInt("VIEW_MAX_PORTAL_RECURSIONS"); recursionIdx++) {
+			//Environment Shader.
+			glUseProgram(envShader);
+			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			glBindImageTexture(1, portalMaskID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-		glBindTextureUnit(0, textureArrayEnvironment);
-		glBindTextureUnit(1, skyboxTextureID);
-
-
-		//Camera Data
-		GLuint maxVDistLocation = glGetUniformLocation(envShader, "maxRayDistance");
-		GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
-		GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
-		GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
-		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
-		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
-		glUniform1f(vFOVLocation, verticalFOV);
-		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
-
-		//Player Data
-		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
-		GLuint playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
-		GLuint playerRollLocation = glGetUniformLocation(envShader, "playerViewRoll");
-		GLuint playerPitchLocation = glGetUniformLocation(envShader, "playerViewPitch");
-		GLuint zoomLocation = glGetUniformLocation(envShader, "zoom");
-		GLuint renderResLocation = glGetUniformLocation(envShader, "renderResolution");
-		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1f(playerRollLocation, player.viewRoll);
-		glUniform1f(playerPitchLocation, player.viewPitch);
-		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
-
-		//Debug
-		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
-		glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
-
-		//Headlamp
-		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
-		GLuint lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
-		glUniform1i(lightLocation, headLampEnabled);
-		glUniform1i(lightFlickerLocation, lightFlickerRNG);
-
-		//Sun
-		GLuint sunDirLocation = glGetUniformLocation(envShader, "sunDirection");
-		GLuint sunColourLocation = glGetUniformLocation(envShader, "sunColour");
-		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
-		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
-
-		//Other
-		GLuint numVisplanesLocation = glGetUniformLocation(envShader, "numVisplanes");
-		GLuint numWallsLocation = glGetUniformLocation(envShader, "numWalls");
-		GLuint numLightsLocation = glGetUniformLocation(envShader, "numLights");
-		glUniform1i(numVisplanesLocation, validVisplanes);
-		glUniform1i(numWallsLocation, validWalls);
-		glUniform1i(numLightsLocation, validLights);
+			glBindTextureUnit(0, textureArrayEnvironment);
+			glBindTextureUnit(1, skyboxTextureID);
 
 
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("Environment Shader", true);
+			//Camera Data
+			GLuint maxVDistLocation = glGetUniformLocation(envShader, "maxRayDistance");
+			GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
+			GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
+			GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
+			GLuint portalRecursionLocation = glGetUniformLocation(envShader, "recursionIdx");
+			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
+			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+			glUniform1f(vFOVLocation, verticalFOV);
+			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+			glUniform1i(portalRecursionLocation, recursionIdx);
+
+			//Player Data
+			GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
+			GLuint playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
+			GLuint playerRollLocation = glGetUniformLocation(envShader, "playerViewRoll");
+			GLuint playerPitchLocation = glGetUniformLocation(envShader, "playerViewPitch");
+			GLuint zoomLocation = glGetUniformLocation(envShader, "zoom");
+			GLuint renderResLocation = glGetUniformLocation(envShader, "renderResolution");
+			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
+			glUniform1f(playerAngleLocation, player.viewAngle);
+			glUniform1f(playerRollLocation, player.viewRoll);
+			glUniform1f(playerPitchLocation, player.viewPitch);
+			glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
+			glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
+
+			//Debug
+			GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
+			glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
+
+			//Headlamp
+			GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
+			GLuint lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
+			glUniform1i(lightLocation, headLampEnabled);
+			glUniform1i(lightFlickerLocation, lightFlickerRNG);
+
+			//Sun
+			GLuint sunDirLocation = glGetUniformLocation(envShader, "sunDirection");
+			GLuint sunColourLocation = glGetUniformLocation(envShader, "sunColour");
+			glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
+			glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
+
+			//Other
+			GLuint numVisplanesLocation = glGetUniformLocation(envShader, "numVisplanes");
+			GLuint numWallsLocation = glGetUniformLocation(envShader, "numWalls");
+			GLuint numLightsLocation = glGetUniformLocation(envShader, "numLights");
+			glUniform1i(numVisplanesLocation, validVisplanes);
+			glUniform1i(numWallsLocation, validWalls);
+			glUniform1i(numLightsLocation, validLights);
+
+
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+			glBindVertexArray(0);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			utils::GLErrorcheck("Environment Shader", true);
 
 
 
-		//Sprite Shader.
-		glUseProgram(spriteShader);
-		glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			//Sprite Shader.
+			glUseProgram(spriteShader);
+			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-		glBindTextureUnit(0, textureArrayEnvironment);
-
-
-		//Camera Data
-		maxVDistLocation = glGetUniformLocation(spriteShader, "maxRayDistance");
-		maxRAngleLocation = glGetUniformLocation(spriteShader, "maxRayAngle");
-		vFOVLocation = glGetUniformLocation(spriteShader, "verticalFOV");
-		zoomFactorLocation = glGetUniformLocation(spriteShader, "zoomFactor");
-		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
-		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
-		glUniform1f(vFOVLocation, verticalFOV);
-		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
-
-		//Player Data
-		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
-		playerRollLocation = glGetUniformLocation(spriteShader, "playerViewRoll");
-		playerPitchLocation = glGetUniformLocation(spriteShader, "playerViewPitch");
-		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
-		renderResLocation = glGetUniformLocation(spriteShader, "renderResolution");
-		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1f(playerRollLocation, player.viewRoll);
-		glUniform1f(playerPitchLocation, player.viewPitch);
-		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
-
-		//Debug
-		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
-		glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
-
-		//Headlamp
-		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(spriteShader, "headLampFlicker");
-		glUniform1i(lightLocation, headLampEnabled);
-		glUniform1i(lightFlickerLocation, lightFlickerRNG);
-
-		//Sun
-		sunDirLocation = glGetUniformLocation(spriteShader, "sunDirection");
-		sunColourLocation = glGetUniformLocation(spriteShader, "sunColour");
-		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
-		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
-
-		//Other
-		numVisplanesLocation = glGetUniformLocation(spriteShader, "numVisplanes");
-		numWallsLocation = glGetUniformLocation(spriteShader, "numWalls");
-		GLuint numSpritesLocation = glGetUniformLocation(spriteShader, "numSprites");
-		numLightsLocation = glGetUniformLocation(spriteShader, "numLights");
-		glUniform1i(numVisplanesLocation, validVisplanes);
-		glUniform1i(numWallsLocation, validWalls);
-		glUniform1i(numSpritesLocation, validSprites);
-		glUniform1i(numLightsLocation, validLights);
+			glBindTextureUnit(0, textureArrayEnvironment);
 
 
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("Sprite Shader", true);
+			//Camera Data
+			maxVDistLocation = glGetUniformLocation(spriteShader, "maxRayDistance");
+			maxRAngleLocation = glGetUniformLocation(spriteShader, "maxRayAngle");
+			vFOVLocation = glGetUniformLocation(spriteShader, "verticalFOV");
+			zoomFactorLocation = glGetUniformLocation(spriteShader, "zoomFactor");
+			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
+			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
+			glUniform1f(vFOVLocation, verticalFOV);
+			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+
+			//Player Data
+			playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
+			playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
+			playerRollLocation = glGetUniformLocation(spriteShader, "playerViewRoll");
+			playerPitchLocation = glGetUniformLocation(spriteShader, "playerViewPitch");
+			zoomLocation = glGetUniformLocation(spriteShader, "zoom");
+			renderResLocation = glGetUniformLocation(spriteShader, "renderResolution");
+			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
+			glUniform1f(playerAngleLocation, player.viewAngle);
+			glUniform1f(playerRollLocation, player.viewRoll);
+			glUniform1f(playerPitchLocation, player.viewPitch);
+			glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
+			glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
+
+			//Debug
+			uvLocation = glGetUniformLocation(spriteShader, "drawUV");
+			glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
+
+			//Headlamp
+			lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
+			lightFlickerLocation = glGetUniformLocation(spriteShader, "headLampFlicker");
+			glUniform1i(lightLocation, headLampEnabled);
+			glUniform1i(lightFlickerLocation, lightFlickerRNG);
+
+			//Sun
+			sunDirLocation = glGetUniformLocation(spriteShader, "sunDirection");
+			sunColourLocation = glGetUniformLocation(spriteShader, "sunColour");
+			glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
+			glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
+
+			//Other
+			numVisplanesLocation = glGetUniformLocation(spriteShader, "numVisplanes");
+			numWallsLocation = glGetUniformLocation(spriteShader, "numWalls");
+			GLuint numSpritesLocation = glGetUniformLocation(spriteShader, "numSprites");
+			numLightsLocation = glGetUniformLocation(spriteShader, "numLights");
+			glUniform1i(numVisplanesLocation, validVisplanes);
+			glUniform1i(numWallsLocation, validWalls);
+			glUniform1i(numSpritesLocation, validSprites);
+			glUniform1i(numLightsLocation, validLights);
+
+
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+			glBindVertexArray(0);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			utils::GLErrorcheck("Sprite Shader", true);
+		}
 
 
 		//UI Shader.
@@ -433,11 +440,11 @@ int main() {
 
 
 			//Camera Data
-			maxVDistLocation = glGetUniformLocation(uiShader, "maxRayDistance");
-			maxRAngleLocation = glGetUniformLocation(uiShader, "maxRayAngle");
-			zoomFactorLocation = glGetUniformLocation(uiShader, "zoomFactor");
+			GLuint maxVDistLocation = glGetUniformLocation(uiShader, "maxRayDistance");
+			GLuint maxRAngleLocation = glGetUniformLocation(uiShader, "maxRayAngle");
+			GLuint zoomFactorLocation = glGetUniformLocation(uiShader, "zoomFactor");
 			GLuint interfaceResLocation = glGetUniformLocation(uiShader, "interfaceResolution");
-			renderResLocation = glGetUniformLocation(uiShader, "renderResolution");
+			GLuint renderResLocation = glGetUniformLocation(uiShader, "renderResolution");
 			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
 			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
@@ -445,11 +452,11 @@ int main() {
 			glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 
 			//Player Data
-			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
-			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
-			playerRollLocation = glGetUniformLocation(uiShader, "playerViewRoll");
-			playerPitchLocation = glGetUniformLocation(uiShader, "playerViewPitch");
-			zoomLocation = glGetUniformLocation(uiShader, "zoom");
+			GLuint playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
+			GLuint playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
+			GLuint playerRollLocation = glGetUniformLocation(uiShader, "playerViewRoll");
+			GLuint playerPitchLocation = glGetUniformLocation(uiShader, "playerViewPitch");
+			GLuint zoomLocation = glGetUniformLocation(uiShader, "zoom");
 			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
 			glUniform1f(playerAngleLocation, player.viewAngle);
 			glUniform1f(playerRollLocation, player.viewRoll);
@@ -493,9 +500,9 @@ int main() {
 
 
 		//Assorted other data.
-		maxVDistLocation = glGetUniformLocation(displayShader, "maxRayDistance");
+		GLuint maxVDistLocation = glGetUniformLocation(displayShader, "maxRayDistance");
 		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
-		renderResLocation = glGetUniformLocation(displayShader, "renderResolution");
+		GLuint renderResLocation = glGetUniformLocation(displayShader, "renderResolution");
 		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
 		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
 		GLuint quantLocation = glGetUniformLocation(displayShader, "quantisingLevel");
@@ -519,9 +526,6 @@ int main() {
 
 		if (shouldTakeScreenshot) {
 			render::saveScreenshot(renderedFrameID);
-		}
-		if (dev::SHOW_POSITION > 0) {
-			printVec3(player.position);
 		}
 
 

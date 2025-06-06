@@ -31,7 +31,7 @@
 	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
 	<option function="VIEW_FOV" value="70.0" />
 	<option function="VIEW_MAX_RAY_DIST" value="128.0" />
-	<option function="VIEW_SHOW_HUD" value="TRUE" />
+	<option function="VIEW_SHOW_HUD" value="FALSE" />
 	<option function="VIEW_BOB" value="TRUE" />
 	<option function="VIEW_LEAN" value="TRUE" />
 	<option function="VIEW_VLOOK" value="FALSE" />
@@ -39,7 +39,7 @@
 	<option function="VIEW_ANTIALIAS_LEVEL" value="0.0" />
 	<option function="VIEW_LUMINANCE_QUANTISATION" value="12.0" />
 	<option function="VIEW_MAX_FREQ" value="75.0" />
-	<option function="VIEW_NO_INTERFACE" value="FALSE" />
+	<option function="VIEW_MAX_PORTAL_RECURSIONS" value="1.0" />
 
 	<option function="META_DRAW_UV" value="FALSE" />
 	<option function="META_SHOW_FREQ_UI" value="TRUE" />

@@ -48,7 +48,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_ANTIALIAS_LEVEL", ""},
 	{"VIEW_LUMINANCE_QUANTISATION", ""},
 	{"VIEW_MAX_FREQ", ""},
-	{"VIEW_NO_INTERFACE", ""},
+	{"VIEW_MAX_PORTAL_RECURSIONS", ""},
 
 	{"META_DRAW_UV", ""},
 	{"META_SHOW_FREQ_UI", ""},

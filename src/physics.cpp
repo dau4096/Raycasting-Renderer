@@ -323,7 +323,7 @@ void playerMove(
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
 
-		if (wall.specialType == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
+		if (wall.type == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
@@ -382,8 +382,9 @@ void playerMove(
 		}
 	}
 
-	for (const utils::Sprite& sprite : *spriteData) {
-		if ((sprite.valid < 1) || !(sprite.collision)) {continue;}
+	for (int sIndex=0; sIndex<validSprites; sIndex++) {
+		utils::Sprite sprite = spriteData->at(sIndex);
+		if (!(sprite.collision)) {continue;}
 		float spriteHeadZ = sprite.position.z + (sprite.height/2.0f);
 		float spriteFootZ = sprite.position.z - (sprite.height/2.0f);
 
@@ -585,10 +586,10 @@ void updateSpecials(
 
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
-		if ((wall.specialType == W_INVALID) || (wall.specialType == W_NORMAL)) {continue;}
+		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL)) {continue;}
 		bool enabled = *(wall.IOPtr) == 1;
 
-		switch(wall.specialType) {
+		switch(wall.type) {
 			case W_TRIGGER: {
 				float playerFootZ = player->position.z - (player->height/2.0f);
 				float playerHeadZ = player->position.z + (player->height/2.0f);
@@ -665,6 +666,10 @@ void updateSpecials(
 				break;
 			}
 
+			case W_PORTAL: {
+				break;
+			}
+
 			default: {
 				break;
 			}
@@ -674,7 +679,7 @@ void updateSpecials(
 
 	for (int vIndex=0; vIndex<validVisplanes; vIndex++) {
 		utils::Visplane plane = visplaneData->at(vIndex);
-		if ((plane.specialType == V_INVALID) || (plane.specialType == V_NORMAL)) {continue;}
+		if ((plane.type == V_INVALID) || (plane.type == V_NORMAL)) {continue;}
 		bool enabled = logicToBool(*(plane.IOPtr));
 
 

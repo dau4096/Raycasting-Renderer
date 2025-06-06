@@ -11,6 +11,7 @@ uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
+uniform int recursionIdx;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -38,36 +39,38 @@ uniform int numLights;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
+layout(rgba32f, binding = 1) uniform image2D portalMask;
 
 struct Visplane {
-	vec2 start;			//Visplane Start.
-	vec2 end;			//Visplane End.
-	float height;		//Visplane Height.
-	int textureID;		//Visplane Texture.
-	int valid;			//Visplane Validity.
-	float _padding;		//Visplane Padding
+	vec2 start;			//Visplane 2D start
+	vec2 end;			//Visplane 2D end
+	float height;		//Visplane Z height
+	int textureID;		//Visplane texture index
+	int valid;			//Visplane validity
+	float _padding;		//Visplane padding
 };
 layout(std140, binding = 7) uniform visplaneUBO {
 	Visplane visplanes[128];
 };
 
 struct Wall {
-	vec3 start;		//Wall Start.
-	vec3 end;		//Wall End.
-	vec2 direction;	//Wall 2D Direction
-	int textureID;	//Wall Texture.
-	int valid;		//Wall Validity.
+    vec3 start;        float _pad0;     // vec3 + pad to 16
+    vec3 end;          float _pad1;     // vec3 + pad to 16
+    vec2 direction;    vec2 _pad2;      // vec2 + pad to 16
+    int textureID;     int type;
+    float extra;       int valid;       // total: 16 bytes
+    vec2 _padding;     vec2 _pad3;      // pad to 16
 };
-layout(std430, binding = 3) buffer wallUBO {
+layout(std140, binding = 3) uniform wallUBO {
 	Wall walls[512];
 };
 
 struct Light {
-	vec3 position;		//Light Position.
-	vec3 colour;		//Light Colour.
-	float intensity;	//Light Intensity.
-	int valid;			//Light Validity.
-	float _padding;		//Light Padding.
+	vec3 position;		//Light 3D position
+	vec3 colour;		//Light RGB, 0-1 colour
+	float intensity;	//Light intensity
+	int valid;			//Light validity
+	float _padding;		//Light padding
 };
 layout(std140, binding = 5) uniform lightUBO {
 	Light lights[128];
@@ -91,6 +94,11 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 };
 
 
+bool prevHitPortal = false;
+int portalExitIdx = 0;
+
+vec3 camPosition;
+float camViewAngle;
 vec2 fragPosition;
 vec4 fragColour;
 float zoomEffect;
@@ -169,7 +177,7 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	double xUV;
 	vec2 wallDelta = wallEndV2 - wallStartV2;
 	vec2 wallDirection = normalize(wallDelta);
-	dvec2 camRight = dvec2(cos(radians(playerViewAngle)), -sin(radians(playerViewAngle)));
+	dvec2 camRight = dvec2(cos(radians(camViewAngle)), -sin(radians(camViewAngle)));
 	bool flipXUV = dot(wallDirection, camRight) < 0.0f;
 	if (abs(wallDelta.y) > abs(wallDelta.x)) {
 		xUV = fract(intersectPoint.y / textureRepeatInterval);
@@ -216,7 +224,7 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos) {
 	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
 
-	float theta = radians(playerViewAngle + rayOffset);
+	float theta = radians(camViewAngle + rayOffset);
 	vec3 rayDirection = vec3(sin(theta), cos(theta), tanVerticalViewAngleOffset);
 
 
@@ -303,6 +311,44 @@ void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	float nearDistance = MIN_WALL_DIST;
+
+
+	camViewAngle = playerViewAngle;
+	camPosition = playerPosition;
+
+
+	if (recursionIdx > 0) { //Uses mask to draw area through portals.
+		vec4 maskData = imageLoad(portalMask, framePosition);
+		ivec2 portalMaskIndices = ivec2(maskData.xy);
+		nearDistance = maskData.z;
+		if (portalMaskIndices.x < 0 || portalMaskIndices.y < 0) {return;}
+		prevHitPortal = true;
+		portalExitIdx = portalMaskIndices.y;
+
+		Wall portalIn = walls[portalMaskIndices.x];
+		Wall portalOut = walls[portalMaskIndices.y];
+
+		float inAngle = atan(portalIn.direction.y, portalIn.direction.x);
+		float outAngle = atan(portalOut.direction.y, portalOut.direction.x);
+		float camAngle = radians(playerViewAngle);
+		float delta = camAngle - inAngle;
+		camViewAngle = degrees(outAngle + delta);
+
+		float portalAngleDelta = outAngle - inAngle;
+		float cosA = cos(portalAngleDelta);
+		float sinA = sin(portalAngleDelta);
+
+		vec2 rel = playerPosition.xy - portalIn.start.xy;
+		vec2 rotatedRel;
+		rotatedRel.x = rel.x * cosA - rel.y * sinA;
+		rotatedRel.y = rel.x * sinA + rel.y * cosA;
+
+		float dZ = playerPosition.z - portalIn.start.z;
+		float newZ = portalOut.start.z + dZ;
+
+		camPosition = vec3(portalOut.start.xy + rotatedRel, newZ);
+	}
 
 
 	//Negative is upward; so subtract.
@@ -315,12 +361,12 @@ void main() {
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
 	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
-	float rayAngleYaw = radians(playerViewAngle + rayOffset);
+	float rayAngleYaw = radians(camViewAngle + rayOffset);
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
-	Ray fragRay = createRay(playerPosition.xy, rayDirection);
+	Ray fragRay = createRay(camPosition.xy, rayDirection);
 
-	vec2 rayStart = playerPosition.xy;
+	vec2 rayStart = camPosition.xy;
 	vec2 rayEnd = vec2(fragRay.end.xy);
 	
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
@@ -334,6 +380,7 @@ void main() {
 
 	//Iterate through all the walls. (2D)
 	for (int idx=0; idx<numWalls; idx++) {
+		if (prevHitPortal && (idx == portalExitIdx)) {continue;}
 		Wall thisWall = walls[idx];
 		vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
 		float projStart = dot(rayStart-thisWall.start.xy, wallNormal);
@@ -344,23 +391,19 @@ void main() {
 		double t;
 		dvec2 intersectPoint = rayIntersectCheck(fragRay, thisWall, t);
 		if (intersectPoint == INVALIDdv2) {continue; /* Invalid intersect point */}
-		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, playerPosition.z);
-		double wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
+		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, camPosition.z);
+		double wallDistanceSQ = dot(camPosition - intersectPointv3, camPosition - intersectPointv3); //Cheaper length() call
 
-		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition); //Check if inside wall (Valid UV)
+		vec2 wallUV = getWallUV(thisWall, intersectPoint, camPosition); //Check if inside wall (Valid UV)
 
 
-		if (wallUV != INVALIDv2 && wallDistanceSQ < minDistance*minDistance) {
+		if (wallUV != INVALIDv2 && (wallDistanceSQ > nearDistance*nearDistance) && (wallDistanceSQ < minDistance*minDistance)) {
 			//Set closest.
 			minDistance = sqrt(wallDistanceSQ);
 			closestIndex = idx;
 			closestIntersectPoint = vec3(intersectPoint.xy, fragZ);
 			closestUV = vec3(wallUV.xy, thisWall.textureID);
-			foundType = 1;
-
-			if (minDistance <= MIN_WALL_DIST) {
-				break; //No closer walls will be found.
-			}
+			foundType = (thisWall.type == 8) ? 3 : 1; //Portal.
 		}
 		
 	}
@@ -370,7 +413,7 @@ void main() {
 		Visplane thisPlane = visplanes[idx];
 		if (thisPlane.valid <= 0) {break; /* End of valid visplanes */}
 
-		vec3 intersectPoint = getVisplaneIntersect(thisPlane, playerPosition);
+		vec3 intersectPoint = getVisplaneIntersect(thisPlane, camPosition);
 		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
 		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
 			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
@@ -378,12 +421,12 @@ void main() {
 			continue;
 		}
 
-		float vPlaneDistanceSQ = dot(playerPosition.xy - intersectPoint.xy, playerPosition.xy - intersectPoint.xy); //Cheaper length() call
+		float vPlaneDistanceSQ = dot(camPosition.xy - intersectPoint.xy, camPosition.xy - intersectPoint.xy); //Cheaper length() call
 		if (vPlaneDistanceSQ < minDistance*minDistance) {
 			minDistance = sqrt(vPlaneDistanceSQ);
 			closestIntersectPoint = intersectPoint;
 			closestIndex = idx;
-			foundType = 2;
+			foundType = 2;//(thisPlane.type == 6) ? 3 : 2; //Portal.
 			closestUV = vec3(getVisplaneUV(intersectPoint), thisPlane.textureID);
 		}
 	}
@@ -400,7 +443,7 @@ void main() {
 
 			vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
 			vec2 normalv2 = vec2(wallDirection.y, -wallDirection.x);
-			if (dot(normalv2, playerPosition.xy - closestIntersectPoint.xy) < 0.0) {
+			if (dot(normalv2, camPosition.xy - closestIntersectPoint.xy) < 0.0) {
 				normalv2 *= -1;
 				closestUV.x *= -1;
 			}
@@ -409,10 +452,19 @@ void main() {
 		} else if (foundType == 2) { //Visplane
 			closestPlane = visplanes[closestIndex];
 
-			if (closestPlane.height > playerPosition.z) {
+			if (closestPlane.height > camPosition.z) {
 				normal = vec3(0.0f, 0.0f, -1.0f);
 			} else {
 				normal = vec3(0.0f, 0.0f, 1.0f);
+			}
+		} else if (foundType == 3) { //Portal of some sort.
+			closestWall = walls[closestIndex];
+			if (prevHitPortal) {
+				imageStore(renderedFrame, framePosition, vec4(1.0f, 0.0f, 1.0f, 0.0f));
+				return; //Exit here.
+			} else {
+				imageStore(portalMask, framePosition, vec4(closestIndex, int(closestWall.extra), minDistance, 0.0f)); //Has portal. Write other portal's index to the mask.
+				return; //Exit here.
 			}
 		}
 
@@ -452,10 +504,9 @@ void main() {
 				//Headlamp Effect
 				if (headLampEnabled) {
 					Light headLamp;
-					headLamp.position = playerPosition;
+					headLamp.position = camPosition;
 					headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
 					headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
-					headLamp.valid = 1;
 
 
 					vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
@@ -499,5 +550,6 @@ void main() {
 
 	
 	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+	imageStore(portalMask, framePosition, vec4(-1.0f, -1.0f, 0.0f, 0.0f)); //No portal.
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }

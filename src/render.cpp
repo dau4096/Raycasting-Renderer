@@ -116,7 +116,7 @@ GLuint createVisplaneUBO() {
 
 void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants::MAX_VISPLANES>* dataSet) {
 	std::array<utils::VisplaneGPU, constants::MAX_VISPLANES> visplaneBuffer;
-	for (int index=0; index<constants::MAX_VISPLANES; index++) {
+	for (int index=0; index<validVisplanes; index++) {
 		visplaneBuffer[index] = VisplaneGPU(&(dataSet->at(index)));
 	}
 
@@ -130,31 +130,31 @@ void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants
 GLuint createWallUBO() {
 	GLuint wallUBO;
 	glGenBuffers(1, &wallUBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(utils::WallGPU) * constants::MAX_WALLS, nullptr, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, wallUBO);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::WallGPU) * constants::MAX_WALLS, nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, wallUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	return wallUBO;
 }
 
 void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet) {
 	std::array<utils::WallGPU, constants::MAX_WALLS> wallBuffer;
-	for (int index=0; index<constants::MAX_WALLS; index++) {
+	for (int index=0; index<validWalls; index++) {
 		wallBuffer[index] = WallGPU(&(dataSet->at(index)));
 	}
 
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, wallUBO);
-	void* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+	glBindBuffer(GL_UNIFORM_BUFFER, wallUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
 		memcpy(ptr, wallBuffer.data(), sizeof(utils::WallGPU) * constants::MAX_WALLS);
-		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	} else {
 		raise("Failed to write data to wallUBO.");
 	}
 
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 
@@ -174,7 +174,7 @@ GLuint createSpriteUBO() {
 
 void updateSpriteUBO(GLuint spriteUBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
 	std::array<utils::SpriteGPU, constants::MAX_SPRITES> spriteBuffer;
-	for (int index=0; index<constants::MAX_SPRITES; index++) {
+	for (int index=0; index<validSprites; index++) {
 		spriteBuffer[index] = SpriteGPU(&(dataSet->at(index)));
 	}
 
@@ -207,8 +207,7 @@ GLuint createLightUBO() {
 
 void updateLightUBO(GLuint lightUBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
 	std::array<utils::LightGPU, constants::MAX_LIGHTS> lightBuffer;
-	for (int index=0; index<constants::MAX_LIGHTS; index++) {
-		if (dataSet->at(index).valid <= 0) {continue;}
+	for (int index=0; index<validLights; index++) {
 		lightBuffer[index] = LightGPU(&(dataSet->at(index)));
 	}
 
@@ -245,8 +244,7 @@ void updateTextObjectUBO(
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
 	) {
 	std::array<utils::TextObjectGPU, constants::MAX_TEXT_OBJECTS> textObjectBuffer;
-	for (int index=0; index<constants::MAX_TEXT_OBJECTS; index++) {
-		if (dataSet->at(index).valid <= 0) {continue;}
+	for (int index=0; index<validTextObjects; index++) {
 		textObjectBuffer[index] = TextObjectGPU(&(dataSet->at(index)), symbolNames);
 	}
 
@@ -296,12 +294,12 @@ void saveScreenshot(GLuint frameTextureID) {
 
 
 
-GLuint createGLImage2D(int width, int height) {
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
+GLuint createGLImage2D(int width, int height, GLuint internalFormat=GL_RGBA32F) {
+	GLuint imageID;
+	glGenTextures(1, &imageID);
+	glBindTexture(GL_TEXTURE_2D, imageID);
 
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, width, height);
+	glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, width, height);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -310,7 +308,7 @@ GLuint createGLImage2D(int width, int height) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	return textureID;
+	return imageID;
 }
 
 

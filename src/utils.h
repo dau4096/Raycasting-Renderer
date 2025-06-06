@@ -327,26 +327,29 @@ namespace utils {
 			  internal(0.0f) {}
 	};
 
-	struct WallGPU {
-		alignas(16) glm::vec3 start;
-		alignas(16) glm::vec3 end;
-		alignas(8) glm::vec2 direction;
-		alignas(4) int textureID;
-		alignas(4) int type;
-		alignas(4) float extra;
-		alignas(4) int valid;
+	struct alignas(16) WallGPU {
+		glm::vec3 start;     float _pad0 = 0.0f;   // 16 bytes
+		glm::vec3 end;       float _pad1 = 0.0f;   // 16 bytes
+		glm::vec2 direction; glm::vec2 _pad2 = {}; // 16 bytes
 
-		WallGPU()
-			: start(glm::vec3(0.0f, 0.0f, 0.0f)), end(glm::vec3(0.0f, 0.0f, 0.0f)),
-			  textureID(0),
-			  type(0), extra(0.0f),
-			  valid(0) {}
+		int textureID = 0;
+		int type = 0;
+		float extra = 0.0f;
+		int valid = 0;                             // 16 bytes
 
-		WallGPU(Wall *wall)
-			: start(wall->start), end(wall->end),
+		glm::vec2 _padding = {}; glm::vec2 _pad3 = {}; // 16 bytes
+
+		WallGPU() = default;
+
+		WallGPU(Wall* wall)
+			: start(wall->start), _pad0(0.0f),
+			  end(wall->end), _pad1(0.0f),
+			  direction(glm::normalize(wall->end - wall->start)), _pad2(),
 			  textureID(wall->textureID),
-			  type(static_cast<int>(wall->type)), extra(wall->data),
-			  valid(wall->valid) {}
+			  type(static_cast<int>(wall->type)),
+			  extra(wall->data),
+			  valid(wall->valid),
+			  _padding(), _pad3() {}
 	};
 
 

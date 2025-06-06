@@ -55,9 +55,9 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"G_OR", 3}, 			{"W_MOVEV_FAST", 3},	{"V_MOVEV_FAST", 3}, 
 	{"G_NOT", 4}, 			{"W_MOVEV_SLOW", 4},	{"V_MOVEV_SLOW", 4}, 
 	{"G_XOR", 5}, 			{"W_MOVEH_FAST", 5},	{"V_HURT", 5}, 
-	{"G_LATCH", 6}, 		{"W_MOVEH_SLOW", 6},
+	{"G_LATCH", 6}, 		{"W_MOVEH_SLOW", 6},	{"V_PORTAL", 6},
 	{"G_PULSE", 7}, 		{"W_SWITCH", 7}, 
-	{"G_TOGGLE", 8}
+	{"G_TOGGLE", 8},		{"W_PORTAL", 8},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -88,6 +88,57 @@ int assignTexture(std::string textureStr, std::array<std::string, display::TEXTU
 	return idx;
 }
 
+
+
+static std::vector<std::string> nameMap, validNames;
+float assignExtra(const pugi::xml_node& node) {
+	if (strcmp(node.attribute("type").value(), "W_PORTAL") == 0) {
+		std::string name = node.attribute("extra").as_string();
+		auto it = std::find(nameMap.begin(), nameMap.end(), name);
+		if (it == nameMap.end()) {
+			nameMap.push_back(name);
+			validNames.push_back(name);
+			return static_cast<float>(nameMap.size() - 1);
+		} else {
+			int idx = std::distance(nameMap.begin(), it);
+
+			auto validIt = std::find(validNames.begin(), validNames.end(), name);
+			if (validIt == validNames.end()) {
+				raise("More than two portals cannot link together.");
+			}
+
+			validNames.erase(validIt); //Only allow 2 portals to be assigned together.
+			return static_cast<float>(idx);
+		}
+	}
+	return node.attribute("extra").as_float();
+}
+
+
+void processPortals(std::array<utils::Wall, constants::MAX_WALLS>* wallData) {
+    std::unordered_map<int, std::vector<int>> portalGroups;
+
+    for (int i = 0; i < constants::MAX_WALLS; ++i) {
+        utils::Wall& wall = (*wallData)[i];
+        if (wall.type != W_PORTAL) continue;
+
+        int portalID = static_cast<int>(wall.data);
+        portalGroups[portalID].push_back(i);
+    }
+
+    for (const auto& [portalID, indices] : portalGroups) {
+        if (indices.size() != 2) {
+            raise("Portal ID " + std::to_string(portalID) + " must be used exactly twice. Found: " + std::to_string(indices.size()));
+            continue;
+        }
+
+        int a = indices[0];
+        int b = indices[1];
+
+        (*wallData)[a].data = static_cast<float>(b);
+        (*wallData)[b].data = static_cast<float>(a);
+    }
+}
 
 
 
@@ -159,7 +210,7 @@ static inline Wall extractWall(
 		assignTexture(textureStr, textureNames),
 		static_cast<WallType>(assignEnum(typeStr)),
 		managePTR(flagPTR, flags),
-		node.attribute("extra").as_float()
+		assignExtra(node)
 	);
 	
 	return wall;
@@ -336,6 +387,9 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 		}
 
 		valueString = strToUpper(node.attribute("value").as_string());
+		if (valueString == "NONE") {
+			valueString = "0.0";
+		}
 		if (valueString != "") {
 			userConfig.at(functionString) = valueString;
 		} else {
@@ -388,6 +442,7 @@ void loadStage(
 	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, &validGates, flags, nullptr);
 
 
+	processPortals(wallData);
 	retrieveStageMetaData(doc, player);
 }
 

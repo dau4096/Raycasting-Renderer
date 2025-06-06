@@ -1,3 +1,5 @@
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 #pragma once
 
 #include "includes.h"
@@ -38,7 +40,8 @@ enum VisplaneType {
 	V_INVALID, V_NORMAL,
 	V_TRIGGER,
 	V_MOVEV_FAST, V_MOVEV_SLOW,
-	V_HURT
+	V_HURT,
+	V_PORTAL
 };
 
 enum LogicInput {
