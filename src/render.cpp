@@ -1,6 +1,8 @@
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
+#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
@@ -101,34 +103,6 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 }
 
 
-void createConstUBO() {
-	struct ConstData {
-		float ZOOM_MULT;
-		float MAX_RAY_ANGLE;
-		float MAX_RAY_DIST;
-
-		glm::vec2 TEXTURE_RESOLUTION;
-	};
-
-	ConstData constData = {
-		display::ZOOM_MULT,
-		display::MAX_RAY_ANGLE,
-		display::MAX_RAY_DIST,
-
-		{constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y}
-	};
-
-	GLuint constUBO;
-	glGenBuffers(1, &constUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, constUBO);
-
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(ConstData), &constData, GL_STATIC_DRAW);
-
-	glBindBufferBase(GL_UNIFORM_BUFFER, 10, constUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
-
 GLuint createVisplaneUBO() {
 	GLuint visplaneUBO;
 	glGenBuffers(1, &visplaneUBO);
@@ -146,9 +120,9 @@ void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants
 		visplaneBuffer[index] = VisplaneGPU(&(dataSet->at(index)));
 	}
 
-    glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, visplaneBuffer.data());
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, visplaneUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(utils::VisplaneGPU) * constants::MAX_VISPLANES, visplaneBuffer.data());
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 
@@ -185,26 +159,26 @@ void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>
 
 
 
-GLuint createSpriteSSBO() {
-	GLuint spriteSSBO;
-	glGenBuffers(1, &spriteSSBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
+GLuint createSpriteUBO() {
+	GLuint spriteUBO;
+	glGenBuffers(1, &spriteUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::SpriteGPU) * constants::MAX_SPRITES, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteSSBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 4, spriteUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	return spriteSSBO;
+	return spriteUBO;
 }
 
-void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
+void updateSpriteUBO(GLuint spriteUBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet) {
 	std::array<utils::SpriteGPU, constants::MAX_SPRITES> spriteBuffer;
 	for (int index=0; index<constants::MAX_SPRITES; index++) {
 		spriteBuffer[index] = SpriteGPU(&(dataSet->at(index)));
 	}
 
-	glBindBuffer(GL_UNIFORM_BUFFER, spriteSSBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, spriteUBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
@@ -218,27 +192,27 @@ void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MA
 
 
 
-GLuint createLightSSBO() {
-	GLuint lightSSBO;
-	glGenBuffers(1, &lightSSBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
+GLuint createLightUBO() {
+	GLuint lightUBO;
+	glGenBuffers(1, &lightUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
 
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::LightGPU) * constants::MAX_LIGHTS, nullptr, GL_DYNAMIC_DRAW);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightSSBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 5, lightUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	return lightSSBO;
+	return lightUBO;
 }
 
-void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
+void updateLightUBO(GLuint lightUBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet) {
 	std::array<utils::LightGPU, constants::MAX_LIGHTS> lightBuffer;
 	for (int index=0; index<constants::MAX_LIGHTS; index++) {
 		if (dataSet->at(index).valid <= 0) {continue;}
 		lightBuffer[index] = LightGPU(&(dataSet->at(index)));
 	}
 
-	glBindBuffer(GL_UNIFORM_BUFFER, lightSSBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
 	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	
 	if (ptr) {
@@ -252,7 +226,77 @@ void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_L
 
 
 
-GLuint createTexture(int width, int height) {
+GLuint createTextObjectUBO() {
+	GLuint textObjectUBO;
+	glGenBuffers(1, &textObjectUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, textObjectUBO);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(utils::TextObjectGPU) * constants::MAX_TEXT_OBJECTS, nullptr, GL_DYNAMIC_DRAW);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 6, textObjectUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	return textObjectUBO;
+}
+
+void updateTextObjectUBO(
+		GLuint textObjectUBO,
+		std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* dataSet,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+	) {
+	std::array<utils::TextObjectGPU, constants::MAX_TEXT_OBJECTS> textObjectBuffer;
+	for (int index=0; index<constants::MAX_TEXT_OBJECTS; index++) {
+		if (dataSet->at(index).valid <= 0) {continue;}
+		textObjectBuffer[index] = TextObjectGPU(&(dataSet->at(index)), symbolNames);
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, textObjectUBO);
+	void* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	
+	if (ptr) {
+		memcpy(ptr, textObjectBuffer.data(), sizeof(utils::TextObjectGPU) * constants::MAX_TEXT_OBJECTS);
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	} else {
+		raise("Failed to write data to textObjectUBO.");
+	}
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+
+
+void saveScreenshot(GLuint frameTextureID) {
+	GLuint fbo;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTextureID, 0);
+
+	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glReadPixels(0, 0, currentRenderResolution.x, currentRenderResolution.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+	//Flip image vertically.
+	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
+		for (int x = 0; x < currentRenderResolution.x * 3; ++x) {
+			std::swap(pixels[y * currentRenderResolution.x * 3 + x], pixels[(currentRenderResolution.y - 1 - y) * currentRenderResolution.x * 3 + x]);
+		}
+	}
+
+	std::string timeStr = utils::getTimestamp();
+
+	stbi_write_png(
+		("screenshots/" + timeStr + ".png").c_str(),
+		currentRenderResolution.x, currentRenderResolution.y,
+		3, pixels.data(), currentRenderResolution.x*3
+	);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	std::cout << "Successfully saved screenshot as : [" << timeStr << ".png]" << std::endl;
+}
+
+
+
+GLuint createGLImage2D(int width, int height) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
@@ -261,6 +305,8 @@ GLuint createTexture(int width, int height) {
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -268,56 +314,130 @@ GLuint createTexture(int width, int height) {
 }
 
 
-GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>& textureNames) {
+GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1) {
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	int width, height, channels;
+	unsigned char* textureData = stbi_load(
+		("src/" + subFolder + "/" + textureName + ".png").c_str(),
+		&width, &height,
+		&channels, 4
+	);
+
+	if (!textureData) {
+		std::cerr << "Failed to load texture : " << textureName << ".png : " << stbi_failure_reason() << std::endl;
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDeleteTextures(1, &textureID);
+		return 0;
+	}
+
+	if ((expectedWidth != -1 && width != expectedWidth) || (expectedHeight != -1 && height != expectedHeight)) {
+		std::cout << "Failed to load texture : " << textureName << ".png : Image was not correct resolution." << std::endl;
+		std::cerr << "Expected [" << expectedWidth << ", " << expectedHeight << "] : Got [" << width << ", " << height << "]" << std::endl;
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDeleteTextures(1, &textureID);
+		return 0;
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	stbi_image_free(textureData);
+
+	return textureID;
+}
+
+
+GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env") {
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
 
 
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y, constants::TEXTURE_ARRAY_MAX_LAYERS, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y, display::TEXTURE_ARRAY_MAX_LAYERS, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
 
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+
+
+	int fallbackTextureWidth, fallbackTextureHeight, fallbackTextureChannels;
+	bool usedFallback;
+
+	unsigned char* fallbackTextureData = stbi_load(
+		display::FALLBACK_TEXTURE_PATH,
+		&fallbackTextureWidth, &fallbackTextureHeight,
+		&fallbackTextureChannels, 4
+	);
+
+	if (!fallbackTextureData) {
+		std::cerr << "Failed to load fallback texture : " << stbi_failure_reason() << std::endl;
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		glDeleteTextures(1, &sheetArrayID);
+		return 0;	
+	}
+
 
 
 	int width, height, channels;
 	int layerIndex = 0;
-
 	for (const std::string& textureName : textureNames) {
 		if (textureName.empty()) continue;
+		usedFallback = false;
 
-		std::string texturePath = "src/textures/" + textureName + ".png";
-		unsigned char* textureData = stbi_load(texturePath.c_str(), &width, &height, &channels, 4); // Force RGBA (4 channels)
+		std::string reportedTextureName = textureName;
+		std::string texturePath = "src/" + subFolder + "/" + textureName + ".png";
+		unsigned char* textureData = stbi_load(
+			texturePath.c_str(),
+			&width, &height,
+			&channels, 4
+		);
 
 		if (!textureData) {
-			std::cerr << "Failed to load image " << texturePath << ": " << stbi_failure_reason() << std::endl;
-			glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-			glDeleteTextures(1, &sheetArrayID);
-			return 0; // Indicate failure
+			//Use fallback texture.
+			textureData = fallbackTextureData;
+			width = fallbackTextureWidth;
+			height = fallbackTextureHeight;
+			channels = fallbackTextureChannels;
+			reportedTextureName = "FALLBACK_TEXTURE";
+			usedFallback = true;
 		}
 
 
-		if (width != constants::TEXTURE_RESOLUTION.x || height != constants::TEXTURE_RESOLUTION.y) {
-			std::cerr << "Texture " << textureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
-					  << constants::TEXTURE_RESOLUTION.x << "x" << constants::TEXTURE_RESOLUTION.y << "." << std::endl;
+		if (width != display::TEXTURE_RESOLUTION.x || height != display::TEXTURE_RESOLUTION.y) {
+			std::cerr << "Texture " << reportedTextureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
+					  << display::TEXTURE_RESOLUTION.x << "x" << display::TEXTURE_RESOLUTION.y << "." << std::endl;
 			stbi_image_free(textureData);
 			continue;
 		}
 
 
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, constants::TEXTURE_RESOLUTION.x, constants::TEXTURE_RESOLUTION.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layerIndex, display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 
 
-		stbi_image_free(textureData);
+		if (!usedFallback) {
+			stbi_image_free(textureData);
+		}
 
 		layerIndex++;
-		if (layerIndex >= constants::TEXTURE_ARRAY_MAX_LAYERS) break;
+		if (layerIndex >= display::TEXTURE_ARRAY_MAX_LAYERS) break;
 	}
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+	stbi_image_free(fallbackTextureData);
 
 	return sheetArrayID;
 }
@@ -375,7 +495,7 @@ GLuint getVAO() {
 
 float viewBob(float tick, utils::Player player) {
 	if (player.touchingFloor) {
-		float seconds = tick / static_cast<float>(constants::HZ);
+		float seconds = tick / utils::configToFloat("VIEW_MAX_FREQ");
 		float playerSpeed = length(glm::vec2(player.velocity.x, player.velocity.y));
 		float speedMultiplier = glm::clamp(playerSpeed / playerConfig::MAX_AIR_SPEED_XY, 0.0f, 1.0f);
 		float offset = sin(seconds * 6.0f) * 0.25f * speedMultiplier;

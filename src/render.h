@@ -2,6 +2,7 @@
 #define RENDER_H
 
 #include "includes.h"
+#include "global.h"
 #include "utils.h"
 #include <array>
 
@@ -18,17 +19,25 @@ namespace render {
     GLuint createWallUBO();
     void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet);
 
-    GLuint createSpriteSSBO();
-    void updateSpriteSSBO(GLuint spriteSSBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet);
+    GLuint createSpriteUBO();
+    void updateSpriteUBO(GLuint spriteUBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet);
 
-    GLuint createLightSSBO();
-    void updateLightSSBO(GLuint lightSSBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet);
+    GLuint createLightUBO();
+    void updateLightUBO(GLuint lightUBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet);
 
-    GLuint createDepthSSBO(int width);
+    GLuint createTextObjectUBO();
+    void updateTextObjectUBO(
+        GLuint textObjectUBO,
+        std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* dataSet,
+        std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+    );
 
 
-    GLuint createTexture(int width, int height);
-    GLuint createTextureArray(std::array<std::string, constants::TEXTURE_ARRAY_MAX_LAYERS>& textureNames);
+    void saveScreenshot(GLuint frameTextureID);
+
+    GLuint createGLImage2D(int width, int height);
+    GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
+    GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env");
 
 
     GLuint getVAO();

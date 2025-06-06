@@ -15,8 +15,8 @@ IF EXIST "render.o" (
 IF EXIST "utils.o" (
     DEL /Q "utils.o"
 )
-IF EXIST "stageLoader.o" (
-    DEL /Q "stageLoader.o"
+IF EXIST "loader.o" (
+    DEL /Q "loader.o"
 )
 
 
