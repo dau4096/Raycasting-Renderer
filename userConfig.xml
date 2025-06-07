@@ -39,7 +39,7 @@
 	<option function="VIEW_ANTIALIAS_LEVEL" value="0.0" />
 	<option function="VIEW_LUMINANCE_QUANTISATION" value="12.0" />
 	<option function="VIEW_MAX_FREQ" value="75.0" />
-	<option function="VIEW_MAX_PORTAL_RECURSIONS" value="1.0" />
+	<option function="VIEW_MAX_PORTAL_RECURSIONS" value="8.0" />
 
 	<option function="META_DRAW_UV" value="FALSE" />
 	<option function="META_SHOW_FREQ_UI" value="TRUE" />

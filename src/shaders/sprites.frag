@@ -331,7 +331,6 @@ void main() {
 		float newZ = portalOut.start.z + dZ;
 
 		camPosition = vec3(portalOut.start.xy + rotatedRel, newZ);
-
 	}
 
 

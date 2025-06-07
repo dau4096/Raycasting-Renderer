@@ -127,8 +127,8 @@ int main() {
 	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
 	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
-	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
-	GLuint portalTextureID = render::loadGLTexture2D("portal-none", "textures-sym", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y, GL_CLAMP_TO_EDGE);
+	GLuint portalTextureID = render::loadGLTexture2D("portal-none", "textures-sym", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y, GL_CLAMP_TO_EDGE);
 	GLuint playerTextureID = render::loadGLTexture2D("player-idle", "textures-sym");
 
 
@@ -295,7 +295,7 @@ int main() {
 		glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 
 
-		int numPortalRecursions = glm::clamp(utils::configToInt("VIEW_MAX_PORTAL_RECURSIONS"), 0, 8);
+		int numPortalRecursions = glm::clamp(utils::configToInt("VIEW_MAX_PORTAL_RECURSIONS"), 0, 1);
 		for (int recursionIdx=0; recursionIdx<=numPortalRecursions; recursionIdx++) {
 			//Environment Shader.
 			glUseProgram(envShader);
@@ -313,13 +313,17 @@ int main() {
 			GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
 			GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
 			GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
-			GLuint portalRecursionLocation = glGetUniformLocation(envShader, "recursionIdx");
-			GLuint portalBlankTexture = glGetUniformLocation(envShader, "usePortalFallback");
 			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
 			glUniform1f(vFOVLocation, verticalFOV);
 			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+
+			//Portal data
+			GLuint portalRecursionLocation = glGetUniformLocation(envShader, "recursionIdx");
+			GLuint portalRecursionMaxLocation = glGetUniformLocation(envShader, "maxPortalRecursions");
+			GLuint portalBlankTexture = glGetUniformLocation(envShader, "usePortalFallback");
 			glUniform1i(portalRecursionLocation, recursionIdx);
+			glUniform1i(portalRecursionMaxLocation, numPortalRecursions);
 			glUniform1i(portalBlankTexture, numPortalRecursions == 0);
 
 			//Player Data

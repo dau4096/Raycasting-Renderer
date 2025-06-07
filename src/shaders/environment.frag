@@ -12,8 +12,11 @@ uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
+
+//Portals
 uniform int recursionIdx;
 uniform bool usePortalFallback;
+uniform int maxPortalRecursions;
 
 //Player Data
 uniform float playerViewAngle;
@@ -117,6 +120,9 @@ const dvec2 INVALIDdv2 = dvec2(INF, INF);
 const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
+const float PORTAL_BORDER_THICKNESS = 0.0625f;
+const vec3 PORTAL_IN_BORDER = vec3(1.0f, 0.0f, 0.0f);
+const vec3 PORTAL_OUT_BORDER = vec3(0.0f, 1.0f, 0.0f);
 
 const float textureRepeatInterval = 2.0f;
 const bool noLighting = false;
@@ -171,8 +177,7 @@ bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
 }
 
 
-vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
-	const vec2 UVOffset = vec2(0.5f, 0.0f);
+vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, vec2 UVOffset=vec2(0.5f, 0.0f)) {
 	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
 	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
@@ -244,8 +249,7 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos) {
 }
 
 
-vec2 getVisplaneUV(vec3 position3D) {
-	const vec2 UVOffset = vec2(0.5f, 0.5f);
+vec2 getVisplaneUV(vec3 position3D, vec2 UVOffset=vec2(0.5f, 0.5f)) {
 	bool topHalf = fragPosition.y > renderResolution.y/2;
 	vec2 realPosition = position3D.xy;
 
@@ -307,6 +311,20 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 }
 
 
+
+void drawPortalFallback(Wall closestWall, dvec3 intersectPoint, double minDistance) {
+	vec2 UV = getWallUV(closestWall, dvec2(intersectPoint), camPosition, vec2(0.0f, 0.0f));
+	vec3 colour;
+	if (drawUV > 0) {
+		colour = vec3(UV, 0.0f);
+	} else {
+		colour = texture(portalTexture, UV).rgb;
+	}
+	imageStore(renderedFrame, ivec2(gl_FragCoord.xy), vec4(colour, minDistance));
+}
+
+
+
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
@@ -331,6 +349,7 @@ void main() {
 
 		Wall portalIn = walls[portalMaskIndices.x];
 		Wall portalOut = walls[portalMaskIndices.y];
+
 
 		float inAngle = atan(portalIn.direction.y, portalIn.direction.x);
 		float outAngle = atan(portalOut.direction.y, portalOut.direction.x);
@@ -462,27 +481,28 @@ void main() {
 			}
 		} else if (foundType == 3) { //Portal of some sort.
 			closestWall = walls[closestIndex];
-			if (usePortalFallback || prevHitPortal) {
-				vec2 wallNormal = vec2(-closestWall.direction.y, closestWall.direction.x);
-				float rayDot = dot(wallNormal, rayDirection);
-				vec2 UV = vec2(
-					1.0f - abs(rayDot),
-					1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
-				);
 
-				vec3 colour;
-				if (drawUV > 0) {
-					colour = vec3(UV, 0.0f);
-				} else {
-					colour = texture(portalTexture, UV).rgb;
-				}
-				imageStore(renderedFrame, framePosition, vec4(colour, minDistance));
-				return; //Exit here.
+
+			bool drawBorderZ = (
+				(abs(fragZ - closestWall.start.z) < PORTAL_BORDER_THICKNESS) ||
+				(abs(fragZ - closestWall.end.z) < PORTAL_BORDER_THICKNESS)
+			);
+			bool drawBorderXY = (
+				(length(closestIntersectPoint.xy - closestWall.start.xy) < PORTAL_BORDER_THICKNESS) ||
+				(length(closestIntersectPoint.xy - closestWall.end.xy) < PORTAL_BORDER_THICKNESS)
+			);
+
+			if (drawBorderZ || drawBorderXY) {
+				bool isPortalIn = closestWall.extra > closestIndex;
+				vec3 borderColour = (isPortalIn) ? PORTAL_IN_BORDER : PORTAL_OUT_BORDER;
+				imageStore(renderedFrame, framePosition, vec4(borderColour, minDistance));
+				imageStore(portalMask, framePosition, vec4(-1.0f, -1.0f, minDistance, 0.0f)); //Has portal. Write other portal's index to the mask.
+			} else if (usePortalFallback || (recursionIdx >= maxPortalRecursions)) {
+				drawPortalFallback(closestWall, closestIntersectPoint, minDistance);
 			} else {
 				imageStore(portalMask, framePosition, vec4(closestIndex, int(closestWall.extra), minDistance, 0.0f)); //Has portal. Write other portal's index to the mask.
-				imageStore(renderedFrame, framePosition, vec4(1.0f, 0.0f, 1.0f, minDistance));
-				return; //Exit here.
 			}
+			return; //Exit here, after setting portal params.
 		}
 
 		vec4 albedo = fetchUV(closestUV);

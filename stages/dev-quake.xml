@@ -105,6 +105,10 @@
     <wall start="0.625 -10.875 3.0" end="0.5 -10.875 5.5" texture="metal" type="W_NORMAL" IOPtr="0" extra="0.0" />
     <wall start="-0.625 -11.125 3.0" end="-0.5 -11.125 5.5" texture="metal" type="W_NORMAL" IOPtr="0" extra="0.0" />
     <wall start="0.625 -11.125 3.0" end="0.5 -11.125 5.5" texture="metal" type="W_NORMAL" IOPtr="0" extra="0.0" />
+
+    <!-- Open area portals -->
+    <wall start="10.0 15.0 0.0" end="10.0 17.0 2.0" texture="brick" type="W_PORTAL" IOPtr="0" extra="infPortal" />
+    <wall start="5.0 15.0 0.0" end="5.0 17.0 2.0" texture="brick" type="W_PORTAL" IOPtr="0" extra="infPortal" />
 </walls>
 
 
