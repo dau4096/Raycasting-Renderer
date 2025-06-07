@@ -52,7 +52,7 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 bool headLampEnabled = false;
 int tick = 0;
 double verticalFOV;
-GLuint renderedFrameID, portalMaskID;
+GLuint renderedFrameID, portalMaskID, portalMaskTMPID;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -68,6 +68,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	portalMaskID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	portalMaskTMPID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (currentRenderResolution.x / currentRenderResolution.y));
 }
 
@@ -121,11 +122,14 @@ int main() {
 
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	portalMaskID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	portalMaskTMPID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	GLuint interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
 	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
 	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	GLuint portalTextureID = render::loadGLTexture2D("portal-none", "textures-sym", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	GLuint playerTextureID = render::loadGLTexture2D("player-idle", "textures-sym");
 
 
 	GLuint visplaneUBO = render::createVisplaneUBO();
@@ -291,14 +295,17 @@ int main() {
 		glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 
 
-		for (int recursionIdx=0; recursionIdx<=utils::configToInt("VIEW_MAX_PORTAL_RECURSIONS"); recursionIdx++) {
+		int numPortalRecursions = glm::clamp(utils::configToInt("VIEW_MAX_PORTAL_RECURSIONS"), 0, 8);
+		for (int recursionIdx=0; recursionIdx<=numPortalRecursions; recursionIdx++) {
 			//Environment Shader.
 			glUseProgram(envShader);
 			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 			glBindImageTexture(1, portalMaskID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindImageTexture(2, portalMaskTMPID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 			glBindTextureUnit(0, textureArrayEnvironment);
 			glBindTextureUnit(1, skyboxTextureID);
+			glBindTextureUnit(2, portalTextureID);
 
 
 			//Camera Data
@@ -307,11 +314,13 @@ int main() {
 			GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
 			GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
 			GLuint portalRecursionLocation = glGetUniformLocation(envShader, "recursionIdx");
+			GLuint portalBlankTexture = glGetUniformLocation(envShader, "usePortalFallback");
 			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
 			glUniform1f(vFOVLocation, verticalFOV);
 			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
 			glUniform1i(portalRecursionLocation, recursionIdx);
+			glUniform1i(portalBlankTexture, numPortalRecursions == 0);
 
 			//Player Data
 			GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
@@ -363,8 +372,11 @@ int main() {
 			//Sprite Shader.
 			glUseProgram(spriteShader);
 			glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindImageTexture(1, portalMaskID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindImageTexture(2, portalMaskTMPID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 			glBindTextureUnit(0, textureArrayEnvironment);
+			glBindTextureUnit(1, playerTextureID);
 
 
 			//Camera Data
@@ -372,10 +384,12 @@ int main() {
 			maxRAngleLocation = glGetUniformLocation(spriteShader, "maxRayAngle");
 			vFOVLocation = glGetUniformLocation(spriteShader, "verticalFOV");
 			zoomFactorLocation = glGetUniformLocation(spriteShader, "zoomFactor");
+			portalRecursionLocation = glGetUniformLocation(spriteShader, "recursionIdx");
 			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
 			glUniform1f(vFOVLocation, verticalFOV);
 			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+			glUniform1i(portalRecursionLocation, recursionIdx);
 
 			//Player Data
 			playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");

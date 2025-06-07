@@ -5,6 +5,7 @@
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
 layout(binding=1) uniform sampler2D skyboxTexture;
+layout(binding=2) uniform sampler2D portalTexture;
 
 //CameraData
 uniform float maxRayDistance;
@@ -12,8 +13,9 @@ uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
 uniform int recursionIdx;
+uniform bool usePortalFallback;
 
-//PlayerData
+//Player Data
 uniform float playerViewAngle;
 uniform float playerViewRoll;
 uniform float playerViewPitch;
@@ -40,6 +42,8 @@ uniform int numLights;
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
 layout(rgba32f, binding = 1) uniform image2D portalMask;
+layout(rgba32f, binding = 2) uniform image2D portalMaskTMP;
+
 
 struct Visplane {
 	vec2 start;			//Visplane 2D start
@@ -54,12 +58,12 @@ layout(std140, binding = 7) uniform visplaneUBO {
 };
 
 struct Wall {
-    vec3 start;        float _pad0;     // vec3 + pad to 16
-    vec3 end;          float _pad1;     // vec3 + pad to 16
-    vec2 direction;    vec2 _pad2;      // vec2 + pad to 16
-    int textureID;     int type;
-    float extra;       int valid;       // total: 16 bytes
-    vec2 _padding;     vec2 _pad3;      // pad to 16
+	vec3 start;        float _pad0;
+	vec3 end;          float _pad1;
+	vec2 direction;    vec2 _pad2;
+	int textureID;     int type;
+	float extra;       int valid;
+	vec2 _padding;     vec2 _pad3;
 };
 layout(std140, binding = 3) uniform wallUBO {
 	Wall walls[512];
@@ -176,16 +180,12 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	//xUV calculation.
 	double xUV;
 	vec2 wallDelta = wallEndV2 - wallStartV2;
-	vec2 wallDirection = normalize(wallDelta);
-	dvec2 camRight = dvec2(cos(radians(camViewAngle)), -sin(radians(camViewAngle)));
-	bool flipXUV = dot(wallDirection, camRight) < 0.0f;
 	if (abs(wallDelta.y) > abs(wallDelta.x)) {
 		xUV = fract(intersectPoint.y / textureRepeatInterval);
 	} else {
 		xUV = fract(intersectPoint.x / textureRepeatInterval);
 	}
 	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
-	else if (flipXUV) {xUV = 1.0f - xUV;}
 
 
 	//yUV calculation.
@@ -311,6 +311,7 @@ void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	float baseDistance = 0.0f;
 	float nearDistance = MIN_WALL_DIST;
 
 
@@ -320,9 +321,11 @@ void main() {
 
 	if (recursionIdx > 0) { //Uses mask to draw area through portals.
 		vec4 maskData = imageLoad(portalMask, framePosition);
+		imageStore(portalMaskTMP, framePosition, maskData);
 		ivec2 portalMaskIndices = ivec2(maskData.xy);
 		nearDistance = maskData.z;
-		if (portalMaskIndices.x < 0 || portalMaskIndices.y < 0) {return;}
+		baseDistance = nearDistance;
+		if (portalMaskIndices.x == portalMaskIndices.y) {return;}
 		prevHitPortal = true;
 		portalExitIdx = portalMaskIndices.y;
 
@@ -422,7 +425,7 @@ void main() {
 		}
 
 		float vPlaneDistanceSQ = dot(camPosition.xy - intersectPoint.xy, camPosition.xy - intersectPoint.xy); //Cheaper length() call
-		if (vPlaneDistanceSQ < minDistance*minDistance) {
+		if ((vPlaneDistanceSQ < minDistance*minDistance) && (vPlaneDistanceSQ > nearDistance*nearDistance)) {
 			minDistance = sqrt(vPlaneDistanceSQ);
 			closestIntersectPoint = intersectPoint;
 			closestIndex = idx;
@@ -459,11 +462,25 @@ void main() {
 			}
 		} else if (foundType == 3) { //Portal of some sort.
 			closestWall = walls[closestIndex];
-			if (prevHitPortal) {
-				imageStore(renderedFrame, framePosition, vec4(1.0f, 0.0f, 1.0f, 0.0f));
+			if (usePortalFallback || prevHitPortal) {
+				vec2 wallNormal = vec2(-closestWall.direction.y, closestWall.direction.x);
+				float rayDot = dot(wallNormal, rayDirection);
+				vec2 UV = vec2(
+					1.0f - abs(rayDot),
+					1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
+				);
+
+				vec3 colour;
+				if (drawUV > 0) {
+					colour = vec3(UV, 0.0f);
+				} else {
+					colour = texture(portalTexture, UV).rgb;
+				}
+				imageStore(renderedFrame, framePosition, vec4(colour, minDistance));
 				return; //Exit here.
 			} else {
 				imageStore(portalMask, framePosition, vec4(closestIndex, int(closestWall.extra), minDistance, 0.0f)); //Has portal. Write other portal's index to the mask.
+				imageStore(renderedFrame, framePosition, vec4(1.0f, 0.0f, 1.0f, minDistance));
 				return; //Exit here.
 			}
 		}
@@ -549,7 +566,7 @@ void main() {
 	}
 
 	
-	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+	vec4 finalFragColour = vec4(fragColour.rgb, minDistance + baseDistance);
 	imageStore(portalMask, framePosition, vec4(-1.0f, -1.0f, 0.0f, 0.0f)); //No portal.
 	imageStore(renderedFrame, framePosition, finalFragColour);
 }

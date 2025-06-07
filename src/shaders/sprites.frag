@@ -3,14 +3,15 @@
 
 
 //Samplers
-layout(binding=0) uniform sampler2DArray textureArray;
-layout(binding=1) uniform sampler2D skyboxTexture;
+layout(binding = 0) uniform sampler2DArray textureArray;
+layout(binding = 1) uniform sampler2D playerTexture;
 
 //CameraData
 uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
+uniform int recursionIdx;
 
 //Player Data
 uniform float playerViewAngle;
@@ -39,6 +40,9 @@ uniform int numLights;
 
 
 layout(rgba32f, binding = 0) uniform image2D renderedFrame;
+layout(rgba32f, binding = 1) uniform image2D portalMask;
+layout(rgba32f, binding = 2) uniform image2D portalMaskTMP;
+
 
 struct Visplane {
 	vec2 start;			//Visplane Start.
@@ -53,13 +57,14 @@ layout(std140, binding = 7) uniform visplaneUBO {
 };
 
 struct Wall {
-	vec3 start;			//Wall Start.
-	vec3 end;			//Wall End.
-	int textureID;		//Wall Texture.
-	int valid;			//Wall Validity.
-	float _padding[2];	//Wall Padding.
+	vec3 start;        float _pad0;
+	vec3 end;          float _pad1;
+	vec2 direction;    vec2 _pad2;
+	int textureID;     int type;
+	float extra;       int valid;
+	vec2 _padding;     vec2 _pad3;
 };
-layout(std430, binding = 3) buffer wallUBO {
+layout(std140, binding = 3) uniform wallUBO {
 	Wall walls[512];
 };
 
@@ -101,6 +106,9 @@ Ray createRay(vec2 position, vec2 direction, float maxDist=maxRayDistance) {
 };
 
 
+bool throughPortal, inPortal;
+vec3 camPosition;
+float camViewAngle;
 vec2 fragPosition;
 vec4 fragColour;
 float fragDepth, tanVerticalViewAngleOffset, zoomEffect;
@@ -108,6 +116,7 @@ const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float DEFAULT_BRIGHTNESS = 0.25f;
+const float MIN_WALL_DIST = 0.125f;
 const float HEADLAMP_MIN_LIGHT = 0.1f;
 const vec2 INVALIDv2 = vec2(1e30f, 1e30f);
 const dvec2 INVALIDdv2 = dvec2(INF, INF);
@@ -165,7 +174,7 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos) {
 	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
 
-	float theta = radians(playerViewAngle + rayOffset);
+	float theta = radians(camViewAngle + rayOffset);
 	vec3 rayDirection = vec3(sin(theta), cos(theta), tanVerticalViewAngleOffset);
 
 
@@ -190,9 +199,9 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
 	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
-	float distance = length(playerPosition.xy - thisSprite.position.xy) / zoomEffect;
-	float projectedYLow = (playerPosition.z - spriteFootZ) / distance;
-	float projectedYTop = (playerPosition.z - spriteHeadZ) / distance;
+	float distance = length(camPosition.xy - thisSprite.position.xy) / zoomEffect;
+	float projectedYLow = (camPosition.z - spriteFootZ) / distance;
+	float projectedYTop = (camPosition.z - spriteHeadZ) / distance;
 
 	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
 	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
@@ -200,7 +209,6 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 
 	float spriteHeight = screenYTop - screenYLow;
 	float spriteWidth = thisSprite.width * spriteHeight;
-	//spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
 	spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
 
 
@@ -259,13 +267,13 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
 	float f = tan(radians(rayAngle)); //tan(FOV/2)
-	float a = radians(playerViewAngle);
+	float a = radians(camViewAngle);
 
 	vec2 dir = vec2(sin(a), cos(a));
 	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
-	vec2 spriteDir = thisSprite.position.xy - playerPosition.xy;
+	vec2 spriteDir = thisSprite.position.xy - camPosition.xy;
 
-	if (dot(dir, normalize(spriteDir)) < 0.0f) {return 1e30f;}
+	if (dot(dir, normalize(spriteDir)) < 0.0f) {return INF;}
 
 
 	float invDet = 1.0f / (plane.x * dir.y - dir.x * plane.y);
@@ -280,8 +288,52 @@ float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
-	ivec2 framePosition = ivec2(fragPosition);	
+	ivec2 framePosition = ivec2(fragPosition);
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
+
+
+	float baseDistance = 0.0f;
+	float nearDistance = MIN_WALL_DIST;
+
+
+	camViewAngle = playerViewAngle;
+	camPosition = playerPosition;
+
+
+	inPortal = recursionIdx > 0;
+	if (inPortal) { //Uses mask to draw area through portals.
+		vec4 maskData = imageLoad(portalMaskTMP, framePosition);
+		ivec2 portalMaskIndices = ivec2(maskData.xy);
+		//fragDepth = imageLoad(portalMask, framePosition).z;
+		baseDistance = maskData.z;
+		nearDistance = baseDistance;
+		if (portalMaskIndices.x == portalMaskIndices.y) {return;}
+
+		Wall portalIn = walls[portalMaskIndices.x];
+		Wall portalOut = walls[portalMaskIndices.y];
+
+		float inAngle = atan(portalIn.direction.y, portalIn.direction.x);
+		float outAngle = atan(portalOut.direction.y, portalOut.direction.x);
+		float camAngle = radians(playerViewAngle);
+		float delta = camAngle - inAngle;
+		camViewAngle = degrees(outAngle + delta);
+
+		float portalAngleDelta = outAngle - inAngle;
+		float cosA = cos(portalAngleDelta);
+		float sinA = sin(portalAngleDelta);
+
+		vec2 rel = playerPosition.xy - portalIn.start.xy;
+		vec2 rotatedRel;
+		rotatedRel.x = rel.x * cosA - rel.y * sinA;
+		rotatedRel.y = rel.x * sinA + rel.y * cosA;
+
+		float dZ = playerPosition.z - portalIn.start.z;
+		float newZ = portalOut.start.z + dZ;
+
+		camPosition = vec3(portalOut.start.xy + rotatedRel, newZ);
+
+	}
+
 
 
 	//Negative is upward; so subtract.
@@ -304,35 +356,29 @@ void main() {
 	for (int index=0; index<numSprites; index++) {
 		Sprite thisSprite = sprites[index];
 
-
-		float spriteDistance = length(playerPosition.xy - thisSprite.position.xy);
-
-		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
-
-
+		float spriteDistance = length(thisSprite.position.xy - camPosition.xy);
+		if (spriteDistance >= fragDepth || spriteDistance <= nearDistance || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 		float centrePixelX = getSpriteScreenX(thisSprite, rayAngle);
-		if (centrePixelX == 1e30f) {continue; /* Invalid cpX, probably offscreen. */}
-
+		if (centrePixelX == INF) {continue; /* Invalid cpX, probably offscreen. */}
 
 		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
-		if (drawUV == 1) {
+		if (drawUV > 0) {
 			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
 			closestSprite = thisSprite;
+			fragDepth = spriteDistance;
 		} else {
 			vec4 alphaTexture = texture(textureArray, vec3(spriteUV.xy, float(thisSprite.textureID)));
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 			albedo = alphaTexture.rgb;
 			spriteHit = true;
 			closestSprite = thisSprite;
+			fragDepth = spriteDistance;
 		}
 
-		fragDepth = spriteDistance;
 	}
-
-
 
 
 
@@ -365,7 +411,7 @@ void main() {
 
 			if (headLampEnabled) {
 				Light headLamp;
-				headLamp.position = playerPosition;
+				headLamp.position = camPosition;
 				headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
 				headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
 				headLamp.valid = 1;
@@ -394,7 +440,9 @@ void main() {
 			fragColour.rgb = clamp(fragColour.rgb, albedo * DEFAULT_BRIGHTNESS, albedo * 1.0f);
 		}
 
-		vec4 finalFragColour = vec4(fragColour.rgb, fragDepth);
+
+		vec4 finalFragColour = vec4(fragColour.rgb, fragDepth + baseDistance);
 		imageStore(renderedFrame, framePosition, finalFragColour);
+		imageStore(portalMask, framePosition, vec4(-1.0f, -1.0f, 0.0f, 0.0f)); //Blocked portal.
 	}
 }
