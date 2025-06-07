@@ -296,6 +296,7 @@ namespace utils {
 	struct Wall {
 		glm::vec3 start;
 		glm::vec3 end;
+		glm::vec2 direction;
 		int textureID;
 		int valid;
 		WallType type;
@@ -304,16 +305,18 @@ namespace utils {
 		float internal;
 
 		Wall()
-			: start(0.0f, 0.0f, 0.0f),
-			  end(0.0f, 0.0f, 0.0f),
-			  textureID(0), valid(0),
+			: start(),
+			  end(),
+			  direction(),
+			  textureID(), valid(0),
 			  type(W_INVALID),
-			  IOPtr(nullptr), data(0.0f),
-			  internal(0.0f) {}
+			  IOPtr(nullptr), data(),
+			  internal() {}
 
 		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType type=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
 			: start(glm::vec3(start.x, start.y, lowZ)),
-			  end(glm::vec3(end.x, end.y, topZ)), 
+			  end(glm::vec3(end.x, end.y, topZ)),
+			  direction(glm::normalize(end - start)),
 			  textureID(textureID), valid(1), 
 			  type(type), 
 			  IOPtr(IOPtr), data(data), 
@@ -321,6 +324,7 @@ namespace utils {
 
 		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType type=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
 			: start(start), end(end), 
+			  direction(glm::normalize(end - start)),
 			  textureID(textureID), valid(1), 
 			  type(type), 
 			  IOPtr(IOPtr), data(data), 
@@ -344,7 +348,7 @@ namespace utils {
 		WallGPU(Wall* wall)
 			: start(wall->start), _pad0(0.0f),
 			  end(wall->end), _pad1(0.0f),
-			  direction(glm::normalize(wall->end - wall->start)), _pad2(),
+			  direction(wall->direction), _pad2(),
 			  textureID(wall->textureID),
 			  type(static_cast<int>(wall->type)),
 			  extra(wall->data),
@@ -517,7 +521,7 @@ namespace utils {
 	struct Player {
 		glm::vec3 position, velocity, cameraPosition;
 		float viewAngle, viewRoll, viewPitch, vLook, height;
-		bool touchingFloor, sliding;
+		bool touchingFloor, sliding, usedPortal, touchedPortal;
 		Event state;
 		int health, energy;
 		unsigned int jumpsUsed;
@@ -529,7 +533,7 @@ namespace utils {
 			  viewAngle(stageData.playerStartAngle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 			  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 			  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
-			  state(E_NONE), jumpsUsed(0), sliding(false) {}
+			  state(E_NONE), jumpsUsed(0), sliding(false), usedPortal(false), touchedPortal(false) {}
 	};
 
 

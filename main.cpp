@@ -172,6 +172,8 @@ int main() {
 		tick++;
 		double frameStart = glfwGetTime();
 		glfwPollEvents();
+		if (!player.touchedPortal) {player.usedPortal = false;}
+		player.touchedPortal = false;
 
 		// Get inputs for this frame
 		for (auto &pair : userBindings) {

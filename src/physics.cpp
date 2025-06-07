@@ -114,6 +114,26 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 }
 
 
+bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius, glm::vec2* intersectPoint) {
+	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
+	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
+
+	glm::vec2 lineDir = lineEndV2 - lineStartV2;
+	glm::vec2 lineToCircle = circlePosition - lineStartV2;
+
+	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
+	t = glm::clamp(t, 0.0f, 1.0f);
+
+	glm::vec2 closestPoint = lineStartV2 + t * lineDir;
+	float distToCircle = glm::length(circlePosition - closestPoint);
+
+	if (intersectPoint) {
+		*intersectPoint = closestPoint;
+	}
+	return distToCircle <= radius;
+}
+
+
 
 
 
@@ -323,7 +343,7 @@ void playerMove(
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
 
-		if (wall.type == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
+		if (wall.type == W_TRIGGER || wall.type == W_PORTAL) {continue; /* W_TRIGGER & W_PORTAL can be walked through. */}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
@@ -628,8 +648,8 @@ void updateSpecials(
 					int rIndex = -1;
 					bool LOSBlocked = false;
 
-					for (utils::Wall& thisWall : *wallData) { //Check for LOS to button. Only occurs when valid click is found, so should not impact performance much.
-						rIndex++;
+					for (int rIndex=0; rIndex<validWalls; rIndex++) { //Check for LOS to button. Only occurs when valid click is found, so should not impact performance much.
+						utils::Wall thisWall = wallData->at(rIndex);
 						if ((rIndex == wIndex) || (thisWall.type == W_INVALID)) {continue;}
 						glm::vec2 LOSintersect = raycast(ray, thisWall);
 						float thisDistSQ = glm::dot((LOSintersect-playerPosV2), (LOSintersect-playerPosV2));
@@ -667,6 +687,47 @@ void updateSpecials(
 			}
 
 			case W_PORTAL: {
+				glm::vec2 intersection;
+				bool intersects = circleLineIntersect(wall, glm::vec2(player->position), playerConfig::PLAYER_COLLISION_RADIUS, &intersection);
+				player->touchedPortal |= intersects;
+
+				if (intersects && !(player->usedPortal)) {
+					if (wIndex == wall.data) {break; /* Invalid partner portal. Cannot link to self. */}
+					utils::Wall portalOut = wallData->at(int(wall.data));
+
+					glm::vec2 offset = glm::vec2(player->position) - intersection;
+
+					float inAngle = atan2(wall.direction.y, wall.direction.x);
+					float outAngle = atan2(portalOut.direction.y, portalOut.direction.x);
+					float deltaAngle = outAngle - inAngle;
+
+					float cosA = cos(deltaAngle);
+					float sinA = sin(deltaAngle);
+					glm::vec2 rotatedOffset = {
+						offset.x * cosA - offset.y * sinA,
+						offset.x * sinA + offset.y * cosA
+					};
+
+					glm::vec2 rotatedVelocity = {
+						player->velocity.x * cosA - player->velocity.y * sinA,
+						player->velocity.x * sinA + player->velocity.y * cosA
+					};
+					player->velocity = glm::vec3(rotatedVelocity, player->velocity.z);
+
+					glm::vec2 portalOffset = glm::vec2(portalOut.start) + (intersection - glm::vec2(wall.start));
+					glm::vec2 newPlayerXY = portalOffset + rotatedOffset;
+
+					float dZ = player->position.z - wall.start.z;
+					float newZ = portalOut.start.z + dZ;
+
+					player->position = glm::vec3(newPlayerXY, newZ);
+
+					float camAngle = glm::radians(player->viewAngle);
+					float newAngle = outAngle + (camAngle - inAngle);
+					player->viewAngle = glm::degrees(newAngle);
+
+					player->usedPortal = true;
+				}
 				break;
 			}
 
