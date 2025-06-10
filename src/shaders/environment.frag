@@ -318,6 +318,10 @@ void main() {
 	float rayAngleYaw = radians(playerViewAngle + rayOffset);
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
+	float rPVA = radians(playerViewAngle);
+	vec2 rayDirectionCentre = vec2(sin(rPVA), cos(rPVA));
+	float distMultiplier = dot(rayDirection, rayDirectionCentre);
+
 	Ray fragRay = createRay(playerPosition.xy, rayDirection);
 
 	vec2 rayStart = playerPosition.xy;
@@ -389,6 +393,7 @@ void main() {
 	}
 
 
+	minDistance *= distMultiplier;
 
 
 	if (foundType > 0) { //An intersect was found.
@@ -489,15 +494,14 @@ void main() {
 				fragColour = clamp(fragColour, albedo * DEFAULT_BRIGHTNESS, albedo * 1.75f);
 			}
 		}
+		vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+		imageStore(renderedFrame, framePosition, finalFragColour);
 	} else {
 		vec2 UV = vec2(
 			fract(rayAngleYaw / 6.28318530718f), //Over 2*Pi.
 			1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
 		);
-		fragColour.rgb = texture(skyboxTexture, UV).rgb;
+		vec3 skyAlbedo = texture(skyboxTexture, UV).rgb;
+		imageStore(renderedFrame, framePosition, vec4(skyAlbedo.rgb, maxRayDistance));
 	}
-
-	
-	vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
-	imageStore(renderedFrame, framePosition, finalFragColour);
 }
