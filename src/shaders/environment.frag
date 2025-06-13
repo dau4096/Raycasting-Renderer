@@ -94,7 +94,7 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 vec2 fragPosition;
 vec4 fragColour;
 float zoomEffect;
-float tanVerticalViewAngleOffset;
+//float tanVerticalViewAngleOffset;
 double t, fragZ;
 const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
@@ -209,16 +209,9 @@ vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
 
 
 
-vec3 getVisplaneIntersect(Visplane plane, vec3 originPos) {
+vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
 	float targetZ = (originPos.z - plane.height) * zoomEffect;
 	vec2 position2D;
-
-	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
-
-	float theta = radians(playerViewAngle + rayOffset);
-	vec3 rayDirection = vec3(sin(theta), cos(theta), tanVerticalViewAngleOffset);
-
 
 	/*
 	//Original from getWallUV()
@@ -302,6 +295,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
+	bool lowerHalf = gl_FragCoord.y < (renderResolution.y / 2.0f);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 
@@ -328,7 +322,6 @@ void main() {
 	vec2 rayEnd = vec2(fragRay.end.xy);
 	
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
-	tanVerticalViewAngleOffset = tan(normY * (verticalFOV / 2.0f));
 
 
 
@@ -372,9 +365,16 @@ void main() {
 	//Iterate through all visplanes. (3D)
 	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
-		if (thisPlane.valid <= 0) {break; /* End of valid visplanes */}
 
-		vec3 intersectPoint = getVisplaneIntersect(thisPlane, playerPosition);
+		if (
+			(lowerHalf && thisPlane.height > playerPosition.z) ||
+			(!lowerHalf && thisPlane.height < playerPosition.z)
+		) {
+			//Fragray cannot possibly hit visplane.
+			continue;
+		}
+
+		vec3 intersectPoint = getVisplaneIntersect(thisPlane, playerPosition, rayDirection);
 		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
 		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
 			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
