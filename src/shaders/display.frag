@@ -5,8 +5,8 @@ in vec2 fragTexCoord;
 out vec4 fragColour;
 
 
-layout(binding = 0) uniform sampler2D renderedFrame;
-layout(binding = 1) uniform sampler2D interfaceTexture;
+layout(binding=0) uniform sampler2D renderedFrame;
+layout(binding=1) uniform sampler2D interfaceTexture;
 
 
 uniform float maxRayDistance;

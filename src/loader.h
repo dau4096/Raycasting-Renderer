@@ -4,19 +4,18 @@
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
-#include <array>
 
 
 namespace loader {
 
 	void loadStage(
 		const std::string& stageName, utils::Player* player,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
-		std::array<utils::Light, constants::MAX_LIGHTS>* lightData,
-		std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* textObjectData,
-		std::array<utils::LogicGate, constants::MAX_GATES>* logicGates,
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Sprite>* spriteData,
+		std::vector<utils::Light>* lightData,
+		std::vector<utils::TextObject>* textObjectData,
+		std::vector<utils::LogicGate>* logicGates,
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	);

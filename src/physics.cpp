@@ -12,10 +12,9 @@ float desiredLeanLR = 0.0f, leanLRCurrent = 0.0f;
 float desiredLeanFB = 0.0f, leanFBCurrent = 0.0f;
 
 
-namespace physics {
 
 
-float cross(glm::vec2 a, glm::vec2 b) {
+float cross2D(glm::vec2 a, glm::vec2 b) {
 	return a.x * b.y - a.y * b.x;
 }
 
@@ -25,12 +24,12 @@ bool quickIntersect(glm::vec3 pointA, glm::vec3 pointB, utils::Wall wall, float*
 	glm::vec2 rayDelta = glm::vec2(pointB) - glm::vec2(pointA);
 	glm::vec2 wallDelta = glm::vec2(wall.end) - glm::vec2(wall.start);
 
-	float denom = cross(rayDelta, wallDelta);
+	float denom = cross2D(rayDelta, wallDelta);
 	if (abs(denom) < 1e-4f) {return false;}
 
 	glm::vec2 rel = glm::vec2(wall.start) - glm::vec2(pointA);
-	float t = cross(rel, wallDelta) / denom;
-	float u = cross(rel, rayDelta) / denom;
+	float t = cross2D(rel, wallDelta) / denom;
+	float u = cross2D(rel, rayDelta) / denom;
 
 	if ((t < -1e-4f) || (t > 1.0f + 1e-4f) || (u < -1e-4f) || (u > 1.0f + 1e-4f)) {return false;}
 
@@ -115,8 +114,6 @@ bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radiu
 
 
 
-
-
 float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
 	float sign = (positiveSolution) ? 1.0f : -1.0f;
 	//(-b +/- sqrt(b^2 - 4ac)) / (2a)
@@ -127,11 +124,138 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 
 
 
+namespace specialMotion {
+
+void applyWallVerticalMovement(utils::Wall& wall, float speed, bool enabled) {
+	if (abs(wall.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+	} else if (wall.data < 0) { //Downwards
+		if (enabled && (wall.internal > wall.data)) { //Turned on; moving down.
+			float newInternal = std::max(wall.internal - speed, wall.data);
+			float delta = wall.internal - newInternal;
+			wall.start.z -= delta;
+			wall.end.z -= delta;
+			wall.internal = newInternal;
+
+		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall.internal + speed, 0.0f);
+			float delta = newInternal - wall.internal;
+			wall.start.z += delta;
+			wall.end.z += delta;
+			wall.internal = newInternal;
+		}
+
+	} else { //Upwards
+		if (enabled && (wall.internal < wall.data)) { //Turned on; moving up.
+			float newInternal = std::min(wall.internal + speed, wall.data);
+			float delta = newInternal - wall.internal;
+			wall.start.z += delta;
+			wall.end.z += delta;
+			wall.internal = newInternal;
+
+		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall.internal - speed, 0.0f);
+			float delta = wall.internal - newInternal;
+			wall.start.z -= delta;
+			wall.end.z -= delta;
+			wall.internal = newInternal;
+		}
+	}
+}
+
+void applyWallHorizontalMovement(utils::Wall& wall, float speed, bool enabled) {
+	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall.start) - glm::vec2(wall.end));
+	glm::vec3 wallDir = glm::vec3(wallDir2D.x, wallDir2D.y, 0.0f);
+
+	if (abs(wall.data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+	} else if (wall.data/2.0f < 0) { //Movement toward wall.start.
+		if (enabled && (wall.internal > wall.data/2.0f)) { //Turned on; move toward start.
+			float newInternal = std::max(wall.internal - speed, wall.data/2.0f);
+			float delta = wall.internal - newInternal;
+			wall.start -= wallDir * delta;
+			wall.end -= wallDir * delta;
+			wall.internal = newInternal;
+
+		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall.internal + speed, 0.0f);
+			float delta = newInternal - wall.internal;
+			wall.start += wallDir * delta;
+			wall.end += wallDir * delta;
+			wall.internal = newInternal;
+		}
+
+	} else { //Movement toward wall.end.
+		if (enabled && (wall.internal < wall.data/2.0f)) { //Turned on; move toward end.
+			float newInternal = std::min(wall.internal + speed, wall.data/2.0f);
+			float delta = newInternal - wall.internal;
+			wall.start += wallDir * delta;
+			wall.end += wallDir * delta;
+			wall.internal = newInternal;
+
+		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall.internal - speed, 0.0f);
+			float delta = wall.internal - newInternal;
+			wall.start -= wallDir * delta;
+			wall.end -= wallDir * delta;
+			wall.internal = newInternal;
+		}
+	}
+}
+
+
+void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool enabled) {
+	if (abs(plane.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+
+	} else if (plane.data < 0) { //Moving downwards.
+		if (enabled && (plane.internal > plane.data)) { //Turned on; moving down.
+			float newInternal = std::max(plane.internal - speed, plane.data);
+			float delta = plane.internal - newInternal;
+			plane.height -= delta;
+			plane.internal = newInternal;
+
+		} else if (!enabled && (plane.internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(plane.internal + speed, 0.0f);
+			float delta = newInternal - plane.internal;
+			plane.height += delta;
+			plane.internal = newInternal;
+		}
+
+	} else { //Moving upwards.
+		if (enabled && (plane.internal < plane.data)) { //Turned on; moving up.
+			float newInternal = std::max(plane.internal + speed, 0.0f);
+			float delta = newInternal - plane.internal;
+			plane.height += delta;
+			plane.internal = newInternal;
+
+		} else if (!enabled && (plane.internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::min(plane.internal - speed, plane.data);
+			float delta = plane.internal - newInternal;
+			plane.height -= delta;
+			plane.internal = newInternal;
+		}
+	}
+}
+
+
+}
+
+
+
+
+
+
+namespace physics {
+
 void playerMove(
 		utils::Player *player, float freq,
-		std::array<utils::Wall, constants::MAX_WALLS>*wallData,
-		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Sprite>* spriteData,
+		std::vector<utils::Visplane>* visplaneData
 	) {
 	float speedModifier = 45.0f / freq;
 	//If freq is higher than expected, then speed is reduced.
@@ -455,126 +579,10 @@ void playerMove(
 };
 
 
-void applyWallVerticalMovement(utils::Wall& wall, float speed, bool enabled) {
-	if (abs(wall.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
-		return;
-
-	} else if (wall.data < 0) { //Downwards
-		if (enabled && (wall.internal > wall.data)) { //Turned on; moving down.
-			float newInternal = std::max(wall.internal - speed, wall.data);
-			float delta = wall.internal - newInternal;
-			wall.start.z -= delta;
-			wall.end.z -= delta;
-			wall.internal = newInternal;
-
-		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall.internal + speed, 0.0f);
-			float delta = newInternal - wall.internal;
-			wall.start.z += delta;
-			wall.end.z += delta;
-			wall.internal = newInternal;
-		}
-
-	} else { //Upwards
-		if (enabled && (wall.internal < wall.data)) { //Turned on; moving up.
-			float newInternal = std::min(wall.internal + speed, wall.data);
-			float delta = newInternal - wall.internal;
-			wall.start.z += delta;
-			wall.end.z += delta;
-			wall.internal = newInternal;
-
-		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall.internal - speed, 0.0f);
-			float delta = wall.internal - newInternal;
-			wall.start.z -= delta;
-			wall.end.z -= delta;
-			wall.internal = newInternal;
-		}
-	}
-}
-
-void applyWallHorizontalMovement(utils::Wall& wall, float speed, bool enabled) {
-	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall.start) - glm::vec2(wall.end));
-	glm::vec3 wallDir = glm::vec3(wallDir2D.x, wallDir2D.y, 0.0f);
-
-	if (abs(wall.data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
-		return;
-
-	} else if (wall.data/2.0f < 0) { //Movement toward wall.start.
-		if (enabled && (wall.internal > wall.data/2.0f)) { //Turned on; move toward start.
-			float newInternal = std::max(wall.internal - speed, wall.data/2.0f);
-			float delta = wall.internal - newInternal;
-			wall.start -= wallDir * delta;
-			wall.end -= wallDir * delta;
-			wall.internal = newInternal;
-
-		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall.internal + speed, 0.0f);
-			float delta = newInternal - wall.internal;
-			wall.start += wallDir * delta;
-			wall.end += wallDir * delta;
-			wall.internal = newInternal;
-		}
-
-	} else { //Movement toward wall.end.
-		if (enabled && (wall.internal < wall.data/2.0f)) { //Turned on; move toward end.
-			float newInternal = std::min(wall.internal + speed, wall.data/2.0f);
-			float delta = newInternal - wall.internal;
-			wall.start += wallDir * delta;
-			wall.end += wallDir * delta;
-			wall.internal = newInternal;
-
-		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall.internal - speed, 0.0f);
-			float delta = wall.internal - newInternal;
-			wall.start -= wallDir * delta;
-			wall.end -= wallDir * delta;
-			wall.internal = newInternal;
-		}
-	}
-}
-
-
-void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool enabled) {
-	if (abs(plane.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
-		return;
-
-
-	} else if (plane.data < 0) { //Moving downwards.
-		if (enabled && (plane.internal > plane.data)) { //Turned on; moving down.
-			float newInternal = std::max(plane.internal - speed, plane.data);
-			float delta = plane.internal - newInternal;
-			plane.height -= delta;
-			plane.internal = newInternal;
-
-		} else if (!enabled && (plane.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(plane.internal + speed, 0.0f);
-			float delta = newInternal - plane.internal;
-			plane.height += delta;
-			plane.internal = newInternal;
-		}
-
-	} else { //Moving upwards.
-		if (enabled && (plane.internal < plane.data)) { //Turned on; moving up.
-			float newInternal = std::max(plane.internal + speed, 0.0f);
-			float delta = newInternal - plane.internal;
-			plane.height += delta;
-			plane.internal = newInternal;
-
-		} else if (!enabled && (plane.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::min(plane.internal - speed, plane.data);
-			float delta = plane.internal - newInternal;
-			plane.height -= delta;
-			plane.internal = newInternal;
-		}
-	}
-}
-
-
 
 void updateSpecials(
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Visplane>* visplaneData,
 		utils::Player *player, float freq, bool interactKey
 	) {
 	float speedModifier = 45.0f / freq;
@@ -630,22 +638,22 @@ void updateSpecials(
 			}
 
 			case W_MOVEV_FAST: { //Move vertically, quickly.
-				applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
 				break;
 			}
 
 			case W_MOVEV_SLOW: { //Move vertically, slowly.
-				applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_SLOW * speedModifier, enabled);
+				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_SLOW * speedModifier, enabled);
 				break;
 			}
 
 			case W_MOVEH_FAST: { //Move horizontally (+/- wall direction) quickly.
-				applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
 				break;
 			}
 
 			case W_MOVEH_SLOW: {//Move horizontally (+/- wall direction) slowly.
-				applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
 				break;
 			}
 
@@ -697,12 +705,12 @@ void updateSpecials(
 			}
 
 			case V_MOVEV_FAST: { //Move vertically, quickly.
-				applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
 				break;
 			}
 
 			case V_MOVEV_SLOW: { //Move vertically, slowly.
-				applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_SLOW * speedModifier, enabled);
+				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_SLOW * speedModifier, enabled);
 				break;
 			}
 

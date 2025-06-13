@@ -83,12 +83,15 @@ struct StageData {
 inline StageData stageData;
 
 
-inline int validVisplanes;
-inline int validWalls;
-inline int validSprites;
-inline int validLights;
-inline int validTextObjects;
-inline int validGates;
+//Numbers of valid types.
+inline size_t validVisplanes;
+inline size_t validWalls;
+inline size_t validSprites;
+inline size_t validLights;
+inline size_t validTextObjects;
+inline size_t validGates;
+
+
 
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;

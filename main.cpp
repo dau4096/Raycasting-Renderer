@@ -76,13 +76,13 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 int main() {
 	try { //Catch exceptions
-	Player player;
-	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
-	std::array<utils::Wall, constants::MAX_WALLS> wallData;
-	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
-	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
-	std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS> textObjectData;
-	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
+	utils::Player player;
+	std::vector<utils::Visplane> visplaneData;
+	std::vector<utils::Wall> wallData;
+	std::vector<utils::Sprite> spriteData;
+	std::vector<utils::Light> lightData;
+	std::vector<utils::TextObject> textObjectData;
+	std::vector<utils::LogicGate> logicGates;
 	std::array<int, constants::MAX_FLAGS> flags;
 
 	std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
@@ -126,11 +126,21 @@ int main() {
 	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 
-	GLuint visplaneUBO = render::createVisplaneUBO();
-	GLuint wallUBO = render::createWallUBO();
-	GLuint spriteUBO = render::createSpriteUBO();
-	GLuint lightUBO = render::createLightUBO();
-	GLuint textObjectUBO = render::createTextObjectUBO();
+	GLuint visplaneSSBO = render::createShaderStorageBufferObject(
+		0, sizeof(utils::Visplane) * validVisplanes
+	);
+	GLuint wallSSBO = render::createShaderStorageBufferObject(
+		1, sizeof(utils::Wall) * validWalls
+	);
+	GLuint spriteSSBO = render::createShaderStorageBufferObject(
+		2, sizeof(utils::Sprite) * validSprites
+	);
+	GLuint lightSSBO = render::createShaderStorageBufferObject(
+		3, sizeof(utils::Light) * validLights * 2
+	);
+	GLuint textObjectSSBO = render::createShaderStorageBufferObject(
+		4, sizeof(utils::TextObject) * validTextObjects * 8
+	);
 
 
 	//Environment shader
@@ -250,7 +260,7 @@ int main() {
 
 
 		//Update logic states.
-		for (int index=0; index<constants::MAX_GATES; index++) {
+		for (int index=0; index<validGates; index++) {
 			LogicGate gate = logicGates[index];
 			if (gate.gateType == G_INVALID) {continue;}
 			gate.evaluateState();
@@ -269,13 +279,23 @@ int main() {
 
 
 
-		//Update Dynamic UBOs.
-		render::updateVisplaneUBO(visplaneUBO, &visplaneData);
-		render::updateWallUBO(wallUBO, &wallData);
-		render::updateSpriteUBO(spriteUBO, &spriteData);
-		render::updateLightUBO(lightUBO, &lightData);
-		render::updateTextObjectUBO(textObjectUBO, &textObjectData, &symbolNames);
-		utils::GLErrorcheck("Updating UBOs", true);
+		//Update SSBOs.
+		render::updateShaderStorageBufferObject<utils::VisplaneGPU>(
+			visplaneSSBO, &visplaneData
+		);
+		render::updateShaderStorageBufferObject<utils::WallGPU>(
+			wallSSBO, &wallData
+		);
+		render::updateShaderStorageBufferObject<utils::SpriteGPU>(
+			spriteSSBO, &spriteData
+		);
+		render::updateShaderStorageBufferObject<utils::LightGPU>(
+			lightSSBO, &lightData
+		);
+		render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
+			textObjectSSBO, &textObjectData, &symbolNames
+		);
+		utils::GLErrorcheck("Updating SSBOs", true);
 
 
 

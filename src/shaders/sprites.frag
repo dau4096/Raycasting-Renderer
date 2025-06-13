@@ -38,7 +38,7 @@ uniform int numSprites;
 uniform int numLights;
 
 
-layout(rgba32f, binding = 0) uniform image2D renderedFrame;
+layout(rgba32f, binding=0) uniform image2D renderedFrame;
 
 struct Visplane {
 	vec2 start;			//Visplane Start.
@@ -48,8 +48,8 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std140, binding = 7) uniform visplaneUBO {
-	Visplane visplanes[128];
+layout(std430, binding=0) buffer visplaneSSBO {
+	Visplane visplanes[];
 };
 
 struct Wall {
@@ -59,8 +59,8 @@ struct Wall {
 	int valid;			//Wall Validity.
 	float _padding[2];	//Wall Padding.
 };
-layout(std430, binding = 3) buffer wallUBO {
-	Wall walls[512];
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
 };
 
 struct Sprite {
@@ -70,8 +70,8 @@ struct Sprite {
 	int textureID;	//Sprite Texture ID.
 	int valid;		//Sprite Validity.
 };
-layout(std140, binding = 4) uniform spriteUBO {
-	Sprite sprites[64];
+layout(std430, binding=2) buffer spriteSSBO {
+	Sprite sprites[];
 };
 
 struct Light {
@@ -81,8 +81,8 @@ struct Light {
 	int valid;			//Light Validity.
 	float _padding;		//Light Padding.
 };
-layout(std140, binding = 5) uniform lightUBO {
-	Light lights[128];
+layout(std430, binding=3) buffer lightSSBO {
+	Light lights[];
 };
 
 

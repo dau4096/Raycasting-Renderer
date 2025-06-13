@@ -10,14 +10,14 @@ namespace physics {
 
 	void playerMove(
 		utils::Player *player, float freq,
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Sprite>* spriteData,
+		std::vector<utils::Visplane>* visplaneData
 	);
 
 	void updateSpecials(
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Visplane>* visplaneData,
 		utils::Player *player, float freq, bool interactKey
 	);
 }

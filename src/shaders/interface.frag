@@ -1,11 +1,11 @@
 /* interface.frag */
 #version 460 core
 
-layout(binding = 0) uniform sampler2D renderedFrame;
-layout(binding = 1) uniform sampler2DArray textureArrayEnvironment;
-layout(binding = 2) uniform sampler2DArray textureArrayUI;
-layout(binding = 3) uniform sampler2DArray textureArrayNumeric;
-layout(rgba32f, binding = 0) uniform image2D interfaceTexture;
+layout(binding=0) uniform sampler2D renderedFrame;
+layout(binding=1) uniform sampler2DArray textureArrayEnvironment;
+layout(binding=2) uniform sampler2DArray textureArrayUI;
+layout(binding=3) uniform sampler2DArray textureArrayNumeric;
+layout(rgba32f, binding=0) uniform image2D interfaceTexture;
 
 //CameraData
 uniform float maxRayDistance;
@@ -55,8 +55,8 @@ struct TextObject {
 	vec3 position;  //3D position.
 	float _paddingB;//Padding
 };
-layout(std140, binding = 6) uniform textObjectUBO {
-	TextObject textObjects[32];
+layout(std430, binding=4) buffer textObjectSSBO {
+	TextObject textObjects[];
 };
 
 textArray createTAFromTO(TextObject TO) {

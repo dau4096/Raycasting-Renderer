@@ -37,7 +37,7 @@ uniform int numVisplanes;
 uniform int numLights;
 
 
-layout(rgba32f, binding = 0) uniform image2D renderedFrame;
+layout(rgba32f, binding=0) uniform image2D renderedFrame;
 
 struct Visplane {
 	vec2 start;			//Visplane Start.
@@ -47,8 +47,8 @@ struct Visplane {
 	int valid;			//Visplane Validity.
 	float _padding;		//Visplane Padding
 };
-layout(std140, binding = 7) uniform visplaneUBO {
-	Visplane visplanes[128];
+layout(std430, binding=0) buffer visplaneSSBO {
+	Visplane visplanes[];
 };
 
 struct Wall {
@@ -58,8 +58,8 @@ struct Wall {
 	int textureID;	//Wall Texture.
 	int valid;		//Wall Validity.
 };
-layout(std430, binding = 3) buffer wallUBO {
-	Wall walls[512];
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
 };
 
 struct Light {
@@ -69,8 +69,8 @@ struct Light {
 	int valid;			//Light Validity.
 	float _padding;		//Light Padding.
 };
-layout(std140, binding = 5) uniform lightUBO {
-	Light lights[128];
+layout(std430, binding=3) buffer lightSSBO {
+	Light lights[];
 };
 
 
@@ -168,16 +168,12 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	//xUV calculation.
 	double xUV;
 	vec2 wallDelta = wallEndV2 - wallStartV2;
-	vec2 wallDirection = normalize(wallDelta);
-	dvec2 camRight = dvec2(cos(radians(playerViewAngle)), -sin(radians(playerViewAngle)));
-	bool flipXUV = dot(wallDirection, camRight) < 0.0f;
 	if (abs(wallDelta.y) > abs(wallDelta.x)) {
 		xUV = fract(intersectPoint.y / textureRepeatInterval);
 	} else {
 		xUV = fract(intersectPoint.x / textureRepeatInterval);
 	}
 	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
-	else if (flipXUV) {xUV = 1.0f - xUV;}
 
 
 	//yUV calculation.

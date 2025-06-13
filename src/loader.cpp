@@ -92,8 +92,8 @@ int assignTexture(std::string textureStr, std::array<std::string, display::TEXTU
 
 
 
-template<typename T, std::size_t N>
-std::array<T, N> fetchObjectFromXML(
+template<typename T>
+std::vector<T> fetchObjectFromXML(
 		const pugi::xml_document& doc,
 		const std::string& xpath,
 		std::function<T(
@@ -101,19 +101,19 @@ std::array<T, N> fetchObjectFromXML(
 			std::array<int, constants::MAX_FLAGS>* flags,
 			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 		)> extractor,
-		int* numObjects,
+		size_t* numObjects,
 		std::array<int, constants::MAX_FLAGS>* flags=nullptr,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
 	)
 {
-	std::array<T, N> result{};
+	std::vector<T> result{};
 	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
-	size_t count = std::min(static_cast<size_t>(nodeList.size()), N);
+	size_t count = static_cast<size_t>(nodeList.size());
 	*numObjects = count;
 	
 	for (size_t i = 0; i < count; ++i) {
 		pugi::xml_node node = nodeList[i].node();
-		result[i] = extractor(node, flags, textureNames);
+		result.push_back(extractor(node, flags, textureNames));
 	}
 	return result;
 }
@@ -361,12 +361,12 @@ namespace loader {
 
 void loadStage(
 		const std::string& stageName, utils::Player* player,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
-		std::array<utils::Light, constants::MAX_LIGHTS>* lightData,
-		std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* textObjectData,
-		std::array<utils::LogicGate, constants::MAX_GATES>* logicGates,
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Sprite>* spriteData,
+		std::vector<utils::Light>* lightData,
+		std::vector<utils::TextObject>* textObjectData,
+		std::vector<utils::LogicGate>* logicGates,
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
@@ -380,12 +380,12 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	*visplaneData = fetchObjectFromXML<utils::Visplane, constants::MAX_VISPLANES>(doc, "//visplanes/visplane", extractVisplane, &validVisplanes, flags, textureNames);
-	*wallData = fetchObjectFromXML<utils::Wall, constants::MAX_WALLS>(doc, "//walls/wall", extractWall, &validWalls, flags, textureNames);
-	*spriteData	= fetchObjectFromXML<utils::Sprite, constants::MAX_SPRITES>(doc, "//sprites/sprite", extractSprite, &validSprites, nullptr, textureNames);
-	*lightData = fetchObjectFromXML<utils::Light, constants::MAX_LIGHTS>(doc, "//lights/light", extractLight, &validLights, nullptr, nullptr);
-	*textObjectData = fetchObjectFromXML<utils::TextObject, constants::MAX_TEXT_OBJECTS>(doc, "//objects/textObj", extractTextObject, &validTextObjects, nullptr, nullptr);
-	*logicGates	= fetchObjectFromXML<utils::LogicGate, constants::MAX_GATES>(doc, "//logicGates/logic", extractGate, &validGates, flags, nullptr);
+	*visplaneData = fetchObjectFromXML<utils::Visplane>(doc, "//visplanes/visplane", extractVisplane, &validVisplanes, flags, textureNames);
+	*wallData = fetchObjectFromXML<utils::Wall>(doc, "//walls/wall", extractWall, &validWalls, flags, textureNames);
+	*spriteData	= fetchObjectFromXML<utils::Sprite>(doc, "//sprites/sprite", extractSprite, &validSprites, nullptr, textureNames);
+	*lightData = fetchObjectFromXML<utils::Light>(doc, "//lights/light", extractLight, &validLights, nullptr, nullptr);
+	*textObjectData = fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", extractTextObject, &validTextObjects, nullptr, nullptr);
+	*logicGates	= fetchObjectFromXML<utils::LogicGate>(doc, "//logicGates/logic", extractGate, &validGates, flags, nullptr);
 
 
 	retrieveStageMetaData(doc, player);

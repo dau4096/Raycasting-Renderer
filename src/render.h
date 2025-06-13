@@ -6,44 +6,81 @@
 #include "utils.h"
 #include <array>
 
+
+
 namespace render {
-    GLFWwindow* initializeWindow(int width, int height, const char* title);
-    GLuint createShaderProgram(std::string name, bool hasVertexSource=true);
+	GLFWwindow* initializeWindow(int width, int height, const char* title);
+	GLuint createShaderProgram(std::string name, bool hasVertexSource=true);
 
 
-    void createConstUBO();
+	
+	GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0) {
+		GLuint SSBO;
+		glGenBuffers(1, &SSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, GL_DYNAMIC_DRAW);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, SSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-    GLuint createVisplaneUBO();
-    void updateVisplaneUBO(GLuint visplaneUBO, std::array<utils::Visplane, constants::MAX_VISPLANES>* dataSet);
+		return SSBO;
+	}
 
-    GLuint createWallUBO();
-    void updateWallUBO(GLuint wallUBO, std::array<utils::Wall, constants::MAX_WALLS>* dataSet);
+	template<typename TGPU, typename TCPU>
+	void updateShaderStorageBufferObject(
+			GLuint SSBO,
+			std::vector<TCPU>* dataSetIn,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames //Only used for TOs
+		) {
 
-    GLuint createSpriteUBO();
-    void updateSpriteUBO(GLuint spriteUBO, std::array<utils::Sprite, constants::MAX_SPRITES>* dataSet);
+		size_t singleItemSize = sizeof(TGPU);
+		size_t size = dataSetIn->size();
+		std::vector<TGPU> dataSet;
 
-    GLuint createLightUBO();
-    void updateLightUBO(GLuint lightUBO, std::array<utils::Light, constants::MAX_LIGHTS>* dataSet);
+		for (size_t index=0; index<size; index++) {
+			dataSet.push_back(TGPU(dataSetIn->data() + index, symbolNames));
+		}
 
-    GLuint createTextObjectUBO();
-    void updateTextObjectUBO(
-        GLuint textObjectUBO,
-        std::array<utils::TextObject, constants::MAX_TEXT_OBJECTS>* dataSet,
-        std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
-    );
+		if (size > 0 && !dataSet.empty()) {
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	}
+
+	template<typename TGPU, typename TCPU>
+	void updateShaderStorageBufferObject(
+			GLuint SSBO,
+			std::vector<TCPU>* dataSetIn
+		) {
+
+		size_t singleItemSize = sizeof(TGPU);
+		size_t size = dataSetIn->size();
+		std::vector<TGPU> dataSet;
+
+		for (size_t index=0; index<size; index++) {
+			dataSet.push_back(TGPU(dataSetIn->data() + index));
+		}
+
+		if (size > 0 && !dataSet.empty()) {
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	}
 
 
-    void saveScreenshot(GLuint frameTextureID);
 
-    GLuint createGLImage2D(int width, int height);
-    GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
-    GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env");
+	void saveScreenshot(GLuint frameTextureID);
+
+	GLuint createGLImage2D(int width, int height);
+	GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
+	GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env");
 
 
-    GLuint getVAO();
+	GLuint getVAO();
 
-    float viewBob(float tick, utils::Player player);
-    glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE);
+	float viewBob(float tick, utils::Player player);
+	glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE);
 }
 
 #endif
