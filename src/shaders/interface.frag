@@ -35,7 +35,7 @@ uniform int numTextObjects;
 vec2 fragPosition, tiltedFragPosition;
 ivec2 framePosition;
 vec3 fragColour;
-float fragDepth;
+float fragDepth, chosenDepth = -1.0f;
 float zoomEffect;
 
 const float INF = 0xFFFFFF;
@@ -92,7 +92,7 @@ void drawRect(
 
 	if (overwritePrevious || (fragDepth != -1.0f)) {
 		fragColour = rectColour;
-		fragDepth = -1.0f;
+		fragDepth = chosenDepth;
 	}
 }
 
@@ -105,7 +105,7 @@ void _renderImage(
 		bool outline, vec3 outlineColour,
 		vec4 tintColour
 	) {
-	if ((0 > imageID) /*|| (imageID > 32)*/) {return; /* Invalid imageID */}
+	if (0 > imageID) {return; /* Invalid imageID */}
 	vec2 relativePos = position - thisFragPos;
 
 	if (thisFragPos.x < position.x || thisFragPos.x >= position.x + scale.x ||
@@ -126,12 +126,12 @@ void _renderImage(
 	if (blendAlpha) {
 		fragColour = mix(fragColour, albedo.rgb, albedo.a);
 		if (albedo.a > 0.0f) {
-			fragDepth = -1.0f;
+			fragDepth = chosenDepth;
 		}
 	} else {
 		if (albedo.a >= 0.5f) {
 			fragColour = albedo.rgb;
-			fragDepth = -1.0f;
+			fragDepth = chosenDepth;
 		}
 	}
 }
@@ -279,11 +279,12 @@ void drawTextObjects(float rayAngle) {
 		TextObject thisTO = textObjects[idx];
 
 		if ((thisTO.length > 0.0f) && (thisTO.scale >= 1.0f)) {
-			vec3 delta = playerPosition - thisTO.position;
+			vec2 delta = playerPosition.xy - thisTO.position.xy;
 			float TODepthSQ = dot(delta, delta);
 			if ((TODepthSQ >= (fragDepth*fragDepth)) || (TODepthSQ < minDepthSQ)) {continue; /* Obscured */}
 			
 			float invdistance = inversesqrt(TODepthSQ);
+			chosenDepth = -1.0f / invdistance;
 			float scale = thisTO.scale * invdistance * zoomEffect;
 
 			//X
@@ -294,7 +295,13 @@ void drawTextObjects(float rayAngle) {
 
 			//Y
 			float verticalRatio = (playerPosition.z - thisTO.position.z) * invdistance;
-			float centreY = (interfaceResolution.y / 2.0f) - verticalRatio * interfaceResolution.y * zoomEffect;
+			/*
+			//Original from getWallUV() in environment.frag
+			float projectedYTop = (originPos.z - wallTopZ) / distance;
+			float screenYLow = renderResolution.y * (0.5 - projectedYLow);
+			*/
+			float projCentreY = (playerPosition.z - thisTO.position.z) * invdistance;
+			float centreY = interfaceResolution.y * (0.5f - projCentreY);
 			float charY = centreY - (scale / 2.0f);
 
 			drawText(createTAFromTO(thisTO), vec2(thisTO.centreX, charY), scale, hasBackground, backgroundColour, tiltedFragPosition);
@@ -358,6 +365,6 @@ void main() {
 	}
 
 
-	vec4 finalFragColour = vec4(fragColour.rgb, (fragDepth == -1) ? 1.0f : 0.0f);
+	vec4 finalFragColour = vec4(fragColour.rgb, (fragDepth < 0.0f) ? 1.0f : 0.0f);
 	imageStore(interfaceTexture, framePosition, finalFragColour);
 }
