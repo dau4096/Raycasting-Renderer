@@ -45,19 +45,18 @@ struct Visplane {
 	vec2 end;			//Visplane End.
 	float height;		//Visplane Height.
 	int textureID;		//Visplane Texture.
-	int valid;			//Visplane Validity.
-	float _padding;		//Visplane Padding
+	vec2 _padding;		//Visplane Padding
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
 };
 
 struct Wall {
-	vec3 start;			//Wall Start.
-	vec3 end;			//Wall End.
-	int textureID;		//Wall Texture.
-	int valid;			//Wall Validity.
-	float _padding[2];	//Wall Padding.
+	vec3 start;		//Wall Start.
+	vec3 end;		//Wall End.
+	vec2 direction;	//Wall 2D Direction
+	int textureID;	//Wall Texture.
+	float _padding;	//Wall Validity.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -68,7 +67,7 @@ struct Sprite {
 	float width;	//Sprite Width.
 	float height;	//Sprite Height.
 	int textureID;	//Sprite Texture ID.
-	int valid;		//Sprite Validity.
+	int centreX;	//Sprite Screen Centre.
 };
 layout(std430, binding=2) buffer spriteSSBO {
 	Sprite sprites[];
@@ -78,7 +77,7 @@ struct Light {
 	vec3 position;		//Light Position.
 	vec3 colour;		//Light Colour.
 	float intensity;	//Light Intensity.
-	int valid;			//Light Validity.
+	bool enabled;		//Light Validity.
 	float _padding;		//Light Padding.
 };
 layout(std430, binding=3) buffer lightSSBO {
@@ -257,26 +256,6 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 }
 
 
-float getSpriteScreenX(Sprite thisSprite, float rayAngle) {
-	float f = tan(radians(rayAngle)); //tan(FOV/2)
-	float a = radians(playerViewAngle);
-
-	vec2 dir = vec2(sin(a), cos(a));
-	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
-	vec2 spriteDir = thisSprite.position.xy - playerPosition.xy;
-
-	if (dot(dir, normalize(spriteDir)) < 0.0f) {return 1e30f;}
-
-
-	float invDet = 1.0f / (plane.x * dir.y - dir.x * plane.y);
-
-	float transformX = invDet * (dir.y * spriteDir.x - dir.x * spriteDir.y);
-	float transformY = invDet * (-plane.y * spriteDir.x + plane.x * spriteDir.y);
-
-	return (renderResolution.x / 2.0f) * (1.0f - transformX / transformY);
-}
-
-
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
@@ -310,12 +289,7 @@ void main() {
 		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
-
-		float centrePixelX = getSpriteScreenX(thisSprite, rayAngle);
-		if (centrePixelX == 1e30f) {continue; /* Invalid cpX, probably offscreen. */}
-
-
-		vec2 spriteUV = getSpriteUV(thisSprite, centrePixelX, spriteDistance);
+		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, spriteDistance);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
 		if (drawUV == 1) {
@@ -344,6 +318,7 @@ void main() {
 			vec3 realPosition3D = vec3(closestSprite.position.xy, closestSprite.position.z);
 			for (int idx=0; idx<numLights; idx++) {
 				Light thisLight = lights[idx];
+				if (!thisLight.enabled) {continue;}
 
 				bool inShadow = checkLOS(thisLight.position, closestSprite.position);
 				if (!inShadow) {
@@ -368,7 +343,6 @@ void main() {
 				headLamp.position = playerPosition;
 				headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
 				headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
-				headLamp.valid = 1;
 
 
 				float distance = length(realPosition3D - headLamp.position);

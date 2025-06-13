@@ -173,7 +173,6 @@ namespace utils {
 
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
-	float angleClamp(float value); //Degrees
 
 
 	int RNGc(); //Client
@@ -242,266 +241,16 @@ namespace utils {
 		glm::vec2 dimentions;
 		int channels;
 		unsigned char* data;
-		int valid;
+		bool valid;
 
-		Texture() : dimentions(0.0f, 0.0f), channels(0), data(nullptr), valid(0) {}
+		Texture() : dimentions(0.0f, 0.0f), channels(0), data(nullptr), valid(false) {}
 
 		Texture(glm::vec2 dimentions, int channels, unsigned char* data)
-			: dimentions(dimentions), channels(channels), data(data), valid(1) {}
-	};
-
-
-	struct Visplane {
-		glm::vec2 start;
-		glm::vec2 end;
-		float height;
-		int textureID;
-		int valid;
-		VisplaneType specialType;
-		int* IOPtr;
-		float data;
-		float internal;
-
-		Visplane()
-			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), valid(0), specialType(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
-
-		Visplane(glm::vec2 start, glm::vec2 end, float heightZ, int textureID, VisplaneType specialType=V_NORMAL, int* IOPtr=nullptr, float data=0)
-			: start(start), end(end), height(heightZ), 
-			  textureID(textureID), valid(1),
-			  specialType(specialType),
-			  IOPtr(IOPtr), data(data),
-			  internal(0.0f) {}
-	};
-
-	struct VisplaneGPU {
-		glm::vec2 start;
-		glm::vec2 end;
-		float height;
-		int textureID;
-		int valid;
-		float _padding;
-
-		VisplaneGPU()
-			: start(glm::vec2(0.0f, 0.0f)), end(glm::vec2(0.0f, 0.0f)), height(0.0f),
-			  textureID(0), valid(0),
-			  _padding(0.0f) {}
-
-		VisplaneGPU(Visplane *visplane)
-			: start(visplane->start), end(visplane->end), height(visplane->height),
-			  textureID(visplane->textureID), valid(visplane->valid),
-			  _padding(0.0f) {}
-	};
-
-
-	struct Wall {
-		glm::vec3 start;
-		glm::vec3 end;
-		int textureID;
-		int valid;
-		WallType specialType;
-		int* IOPtr;
-		float data;
-		float internal;
-
-		Wall()
-			: start(0.0f, 0.0f, 0.0f),
-			  end(0.0f, 0.0f, 0.0f),
-			  textureID(0), valid(0),
-			  specialType(W_INVALID),
-			  IOPtr(nullptr), data(0.0f),
-			  internal(0.0f) {}
-
-		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
-			: start(glm::vec3(start.x, start.y, lowZ)),
-			  end(glm::vec3(end.x, end.y, topZ)), 
-			  textureID(textureID), valid(1), 
-			  specialType(specialType), 
-			  IOPtr(IOPtr), data(data), 
-			  internal(0.0f) {}
-
-		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
-			: start(start), end(end), 
-			  textureID(textureID), valid(1), 
-			  specialType(specialType), 
-			  IOPtr(IOPtr), data(data), 
-			  internal(0.0f) {}
-	};
-
-	struct WallGPU {
-		alignas(16) glm::vec3 start;
-		alignas(16) glm::vec3 end;
-		alignas(8) glm::vec2 direction;
-		alignas(4) int textureID;
-		alignas(4) int valid;
-
-		WallGPU()
-			: start(), end(), direction(),
-			  textureID(0), valid(0) {}
-
-		WallGPU(Wall *wall)
-			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)),
-			  textureID(wall->textureID), valid(wall->valid) {}
-	};
-
-
-	struct Sprite {
-		glm::vec3 position;
-		float width, height;
-		int textureID;
-		int valid;
-		int collision;
-		SpriteType type;
-
-		Sprite() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), valid(0), type(SPR_INVALID), collision(false) {}
-
-		Sprite(glm::vec3 position, float width, float height, int textureID, SpriteType type=SPR_DECO, int collision=1)
-			: position(position), width(width), height(height), textureID(textureID), valid(1), type(type), collision(collision) {}
-	};
-
-	struct SpriteGPU {
-		alignas(16) glm::vec3 position;
-		alignas(4) float width;
-		alignas(4) float height;
-		alignas(4) int textureID;
-		alignas(4) int valid;
-
-		SpriteGPU() : position(0.0f, 0.0f, 0.0f), width(0.0f), height(0.0f), textureID(0), valid(0) {}
-
-		SpriteGPU(Sprite* sprite)
-			: position(sprite->position),
-			  width(sprite->width), height(sprite->height),
-			  textureID(sprite->textureID),
-			  valid(sprite->valid) {}
-	};
-
-
-	struct Light {
-		glm::vec3 position;
-		glm::vec3 colour;
-		float intensity;
-		int valid;
-		int* inputPTR;
-
-		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), inputPTR(nullptr) {}
-
-		Light(glm::vec3 position, glm::vec3 colour, float intensity, int* inputPTR=nullptr)
-			: position(position), colour(colour), intensity(intensity), valid(1), inputPTR(inputPTR) {}
-	};
-
-	struct LightGPU {
-		alignas(16) glm::vec3 position;
-		alignas(16) glm::vec3 colour;
-		alignas(4) float intensity;
-		alignas(4) int valid;
-		alignas(4) float _padding;
-
-		LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), valid(0), _padding{0.0f} {}
-
-		LightGPU(Light* light)
-			: position(light->position), colour(light->colour),
-			  intensity(light->intensity),
-			  valid((light->valid) & ((light->inputPTR == nullptr) ? 1 : *(light->inputPTR))),
-			  _padding{0.0f} {}
-	};
-
-
-	struct TextObject {
-		std::string text;
-		glm::vec3 position;
-		int scale;
-		int valid;
-
-		TextObject() : text(""), position(0.0f, 0.0f, 0.0f), scale(0), valid(0) {}
-
-		TextObject(std::string text, glm::vec3 position, int scale)
-			: text(text.substr(0, display::MAX_TEXTOBJECT_CHARACTERS)),
-			  position(position),
-			  scale(scale),
-			  valid(1) {}
-	};
-
-	const std::unordered_map<std::string, int> chMap = {
-		{"|", -3}, {" ", -2},
-		{".", 10}, {"-", 11},
-		{"!", 12}, {"?", 13},
-		{",", 14}, {"'", 15},
-		{"/", 16}, {":", 17},
-		{";", 18}, {"&", 19},
-		{"[", 20}, {"]", 21},
-		{"(", 20}, {")", 21},
-		{"^", 22}
-	};
-
-	static std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> convertTextToIdxArray(
-		const std::string& input,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
-	) {
-		std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> result;
-		result.fill(-1);
-
-		std::string inputUpper = strToUpper(input);
-
-		for (size_t idx=0; (idx<input.size() && idx<display::MAX_TEXTOBJECT_CHARACTERS); ++idx) {
-			std::string ch(1, inputUpper[idx]);
-			int res;
-
-			auto chMapIt = chMap.find(ch);
-			if (chMapIt != chMap.end()) {
-				res = chMapIt->second;
-			} else {
-				auto symNamesIt = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + ch);
-				if (symNamesIt != symbolNames->end()) {
-					res = static_cast<int>(std::distance(symbolNames->begin(), symNamesIt));
-				} else {
-					//Unknown char; show unknown char
-					res = 23;
-				}
-			}
-			result[idx] = res;
-		}
-
-		return result;
-	}
-
-	struct TextObjectGPU {
-		alignas(16) std::array<glm::ivec4, display::MAX_TEXTOBJECT_CHARACTERS / 4> text;
-		
-		alignas(4) int length;
-		alignas(4) int scale;
-		alignas(4) int valid;
-		alignas(4) int _paddingA;
-
-		alignas(16) glm::vec3 position;
-		alignas(4) float _paddingB;
-
-		TextObjectGPU() : text(), position(0.0f, 0.0f, 0.0f), scale(0), valid(0), _paddingA(0), _paddingB(0.0f) {}
-
-		TextObjectGPU(
-			TextObject* textObject,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
-		)	: length(textObject->text.length()),
-			  position(textObject->position),
-			  scale(textObject->scale),
-			  valid(textObject->valid),
-			  _paddingA(0), _paddingB(0.0f)
-		{
-			std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
-			for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
-				text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
-			}
-		}
+			: dimentions(dimentions), channels(channels), data(data), valid(true) {}
 	};
 
 
 
-
-
-	struct Ray {
-		glm::vec2 position, direction, end;
-
-		Ray(glm::vec2 position, glm::vec2 direction, float len=configToFloat("VIEW_MAX_RAY_DIST"))
-			: position(position), direction(direction), end(position + (direction * len)) {}
-	};
 
 
 
@@ -559,6 +308,260 @@ namespace utils {
 				break;
 		}
 	}
+
+
+	static inline int getCentreX(glm::vec3& objPos, Player* player, glm::ivec2 resolution) {
+		glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player->position));
+		float theta = atan2(direction.x, direction.y);
+		float rayDelta = (theta * constants::TO_DEG) - player->viewAngle;
+		if (rayDelta > 180.0f) rayDelta -= 360.0f;
+		if (rayDelta < -180.0f) rayDelta += 360.0f;
+		float centreX = (resolution.x / 2.0f) * ((rayDelta / rayAngle) + 1.0f);
+		return int(round(centreX));
+	}
+
+
+	struct Visplane {
+		glm::vec2 start;
+		glm::vec2 end;
+		float height;
+		int textureID;
+		VisplaneType specialType;
+		int* IOPtr;
+		float data;
+		float internal;
+
+		Visplane()
+			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), specialType(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
+
+		Visplane(glm::vec2 start, glm::vec2 end, float heightZ, int textureID, VisplaneType specialType=V_NORMAL, int* IOPtr=nullptr, float data=0)
+			: start(start), end(end), height(heightZ), 
+			  textureID(textureID),
+			  specialType(specialType),
+			  IOPtr(IOPtr), data(data),
+			  internal(0.0f) {}
+	};
+
+	struct VisplaneGPU {
+		glm::vec2 start;
+		glm::vec2 end;
+		float height;
+		int textureID;
+		glm::vec2 _padding;
+
+		VisplaneGPU()
+			: start(glm::vec2(0.0f, 0.0f)), end(glm::vec2(0.0f, 0.0f)), height(0.0f),
+			  textureID(0), _padding() {}
+
+		VisplaneGPU(Visplane *visplane, Player* player)
+			: start(visplane->start), end(visplane->end), height(visplane->height),
+			  textureID(visplane->textureID), _padding() {}
+	};
+
+
+	struct Wall {
+		glm::vec3 start;
+		glm::vec3 end;
+		int textureID;
+		WallType specialType;
+		int* IOPtr;
+		float data;
+		float internal;
+
+		Wall()
+			: start(0.0f, 0.0f, 0.0f),
+			  end(0.0f, 0.0f, 0.0f),
+			  textureID(0),
+			  specialType(W_INVALID),
+			  IOPtr(nullptr), data(0.0f),
+			  internal(0.0f) {}
+
+		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
+			: start(glm::vec3(start.x, start.y, lowZ)),
+			  end(glm::vec3(end.x, end.y, topZ)), 
+			  textureID(textureID),
+			  specialType(specialType), 
+			  IOPtr(IOPtr), data(data), 
+			  internal(0.0f) {}
+
+		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
+			: start(start), end(end), 
+			  textureID(textureID),
+			  specialType(specialType), 
+			  IOPtr(IOPtr), data(data), 
+			  internal(0.0f) {}
+	};
+
+	struct WallGPU {
+		alignas(16) glm::vec3 start;
+		alignas(16) glm::vec3 end;
+		alignas(8) glm::vec2 direction;
+		alignas(4) int textureID;
+		alignas(4) float _padding;
+
+		WallGPU()
+			: start(), end(), direction(),
+			  textureID(0) {}
+
+		WallGPU(Wall *wall, Player* player)
+			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)),
+			  textureID(wall->textureID) {}
+	};
+
+
+	struct Sprite {
+		glm::vec3 position;
+		float width, height;
+		int textureID;
+		int collision;
+		SpriteType type;
+
+		Sprite() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), type(SPR_INVALID), collision(false) {}
+
+		Sprite(glm::vec3 position, float width, float height, int textureID, SpriteType type=SPR_DECO, int collision=1)
+			: position(position), width(width), height(height), textureID(textureID), type(type), collision(collision) {}
+	};
+
+	struct SpriteGPU {
+		alignas(16) glm::vec3 position;
+		alignas(4) float width;
+		alignas(4) float height;
+		alignas(4) int textureID;
+		alignas(4) int screenCentreX;
+
+		SpriteGPU() : position(0.0f, 0.0f, 0.0f), width(0.0f), height(0.0f), textureID(0), screenCentreX(0) {}
+
+		SpriteGPU(Sprite* sprite, Player* player)
+			: position(sprite->position),
+			  width(sprite->width), height(sprite->height),
+			  textureID(sprite->textureID),
+			  screenCentreX(getCentreX(sprite->position, player, currentRenderResolution)) {}
+	};
+
+
+	struct Light {
+		glm::vec3 position;
+		glm::vec3 colour;
+		float intensity;
+		int* inputPTR;
+
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), inputPTR(nullptr) {}
+
+		Light(glm::vec3 position, glm::vec3 colour, float intensity, int* inputPTR=nullptr)
+			: position(position), colour(colour), intensity(intensity), inputPTR(inputPTR) {}
+	};
+
+	struct LightGPU {
+		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 colour;
+		alignas(4) float intensity;
+		alignas(4) bool enabled;
+		alignas(4) float _padding;
+
+		LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), _padding{0.0f} {}
+
+		LightGPU(Light* light, Player* player)
+			: position(light->position), colour(light->colour),
+			  intensity(light->intensity),
+			  enabled((light->inputPTR == nullptr) ? true : *(light->inputPTR) > 0),
+			  _padding{0.0f} {}
+	};
+
+
+	struct TextObject {
+		std::string text;
+		glm::vec3 position;
+		int scale;
+
+		TextObject() : text(""), position(0.0f, 0.0f, 0.0f), scale(0) {}
+
+		TextObject(std::string text, glm::vec3 position, int scale)
+			: text(text.substr(0, display::MAX_TEXTOBJECT_CHARACTERS)),
+			  position(position),
+			  scale(scale) {}
+	};
+
+	const std::unordered_map<std::string, int> chMap = {
+		{"|", -3}, {" ", -2},
+		{".", 10}, {"-", 11},
+		{"!", 12}, {"?", 13},
+		{",", 14}, {"'", 15},
+		{"/", 16}, {":", 17},
+		{";", 18}, {"&", 19},
+		{"[", 20}, {"]", 21},
+		{"(", 20}, {")", 21},
+		{"^", 22}
+	};
+
+	static std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> convertTextToIdxArray(
+		const std::string& input,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+	) {
+		std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> result;
+		result.fill(-1);
+
+		std::string inputUpper = strToUpper(input);
+
+		for (size_t idx=0; (idx<input.size() && idx<display::MAX_TEXTOBJECT_CHARACTERS); ++idx) {
+			std::string ch(1, inputUpper[idx]);
+			int res;
+
+			auto chMapIt = chMap.find(ch);
+			if (chMapIt != chMap.end()) {
+				res = chMapIt->second;
+			} else {
+				auto symNamesIt = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + ch);
+				if (symNamesIt != symbolNames->end()) {
+					res = static_cast<int>(std::distance(symbolNames->begin(), symNamesIt));
+				} else {
+					//Unknown char; show unknown char
+					res = 23;
+				}
+			}
+			result[idx] = res;
+		}
+
+		return result;
+	}
+
+	struct TextObjectGPU {
+		alignas(16) std::array<glm::ivec4, display::MAX_TEXTOBJECT_CHARACTERS / 4> text;
+		
+		alignas(4) int length;
+		alignas(4) int scale;
+		alignas(4) glm::vec2 _padding;
+
+		alignas(16) glm::vec3 position;
+		alignas(4) int screenCentreX;
+
+		TextObjectGPU() : text(), position(0.0f, 0.0f, 0.0f), scale(0), screenCentreX(0), _padding() {}
+
+		TextObjectGPU(
+			TextObject* textObject, Player* player,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
+		)	: length(textObject->text.length()),
+			  position(textObject->position),
+			  scale(textObject->scale),
+			  screenCentreX(getCentreX(textObject->position, player, display::UI_RESOLUTION)),
+			  _padding()
+		{
+			std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
+			for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
+				text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
+			}
+		}
+	};
+
+
+
+
+
+	struct Ray {
+		glm::vec2 position, direction, end;
+
+		Ray(glm::vec2 position, glm::vec2 direction, float len=configToFloat("VIEW_MAX_RAY_DIST"))
+			: position(position), direction(direction), end(position + (direction * len)) {}
+	};
 }
 
 #endif

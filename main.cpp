@@ -25,7 +25,7 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 	"symbol_4", "symbol_5",
 	"symbol_6", "symbol_7",
 	"symbol_8", "symbol_9",
-	"symbol_DOT", "symbol_DASH",
+	"symbol_DASH", "symbol_DOT",
 	"symbol_EMARK", "symbol_QMARK",
 	"symbol_COMMA", "symbol_QUOTE",
 	"symbol_FSLASH", "symbol_COLON",
@@ -247,12 +247,12 @@ int main() {
 
 
 
-		float rayAngle = (keyMap["USE_VIEWZOOM"]) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
+		rayAngle = (keyMap["USE_VIEWZOOM"]) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
 
 		double cursorXDelta = cursorXPos - cursorXPosPrev;
 		double cursorYDelta = cursorYPos - cursorYPosPrev;
 		player.viewAngle += cursorXDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / display::ZOOM_MULT);
-		player.viewAngle = utils::angleClamp(player.viewAngle);
+		player.viewAngle = fmodf(player.viewAngle + 540.0f, 360.0f) - 180.0f;
 		if (utils::configToBool("VIEW_VLOOK")) {
 			double dY = cursorYDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / display::ZOOM_MULT);
 			player.vLook = glm::clamp(float(player.vLook+dY), -22.5f, 22.5f);
@@ -281,19 +281,19 @@ int main() {
 
 		//Update SSBOs.
 		render::updateShaderStorageBufferObject<utils::VisplaneGPU>(
-			visplaneSSBO, &visplaneData
+			visplaneSSBO, &player, &visplaneData
 		);
 		render::updateShaderStorageBufferObject<utils::WallGPU>(
-			wallSSBO, &wallData
+			wallSSBO, &player, &wallData
 		);
 		render::updateShaderStorageBufferObject<utils::SpriteGPU>(
-			spriteSSBO, &spriteData
+			spriteSSBO, &player, &spriteData
 		);
 		render::updateShaderStorageBufferObject<utils::LightGPU>(
-			lightSSBO, &lightData
+			lightSSBO, &player, &lightData
 		);
 		render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
-			textObjectSSBO, &textObjectData, &symbolNames
+			textObjectSSBO, &player, &textObjectData, &symbolNames
 		);
 		utils::GLErrorcheck("Updating SSBOs", true);
 
@@ -488,10 +488,12 @@ int main() {
 			GLuint screenResLocation = glGetUniformLocation(uiShader, "screenResolution");
 			GLuint freqLocation = glGetUniformLocation(uiShader, "freq");
 			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
+			GLuint showDataLocation = glGetUniformLocation(uiShader, "showData");
 			GLuint numTextObjectsLocation = glGetUniformLocation(uiShader, "numTextObjects");
 			glUniform2i(screenResLocation, currentWindowResolution.x, currentWindowResolution.y);
 			glUniform1i(freqLocation, freq);
-			glUniform1i(showFreqLocation, utils::configToIntBool("META_SHOW_FREQ_UI"));
+			glUniform1i(showFreqLocation, utils::configToBool("META_SHOW_FREQ_UI"));
+			glUniform1i(showDataLocation, utils::configToBool("META_SHOW_DATA"));
 			glUniform1i(numTextObjectsLocation, validVisplanes);
 
 

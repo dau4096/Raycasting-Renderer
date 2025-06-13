@@ -27,7 +27,8 @@ uniform int energy;
 
 //Other
 uniform int freq;
-uniform int showFreq;
+uniform bool showFreq;
+uniform bool showData;
 uniform int numTextObjects;
 
 
@@ -53,7 +54,7 @@ struct TextObject {
 	int valid;		//TextObject validity.
 	int _paddingA;	//Padding
 	vec3 position;  //3D position.
-	float _paddingB;//Padding
+	int centreX;	//Padding
 };
 layout(std430, binding=4) buffer textObjectSSBO {
 	TextObject textObjects[];
@@ -64,6 +65,14 @@ textArray createTAFromTO(TextObject TO) {
 	TA.contents = TO.text;
 	TA.length = TO.length;
 	TA.scale = TO.scale;
+	return TA;
+}
+
+textArray createSingleCharTA(int c, int scale=1) {
+	textArray TA;
+	TA.contents[0].x = c;
+	TA.length = 1;
+	TA.scale = scale;
 	return TA;
 }
 
@@ -87,12 +96,14 @@ void drawRect(
 	}
 }
 
-void renderImage(
+
+void _renderImage(
 		vec2 position, vec2 scale,
-		int imageID, bool blendAlpha=true,
-		sampler2DArray texArray=textureArrayUI,
-		vec2 thisFragPos=fragPosition,
-		bool outline=false, vec3 outlineColour=vec3(0.0f, 0.0f, 0.0f)
+		int imageID, bool blendAlpha,
+		sampler2DArray texArray,
+		vec2 thisFragPos,
+		bool outline, vec3 outlineColour,
+		vec4 tintColour
 	) {
 	if ((0 > imageID) /*|| (imageID > 32)*/) {return; /* Invalid imageID */}
 	vec2 relativePos = position - thisFragPos;
@@ -108,7 +119,7 @@ void renderImage(
 		float(imageID)
 	);
 
-	vec4 albedo = texture(texArray, UV);
+	vec4 albedo = texture(texArray, UV) * tintColour;
 	if (outline) {
 		drawRect(position, scale, outlineColour, thisFragPos);
 	}
@@ -124,10 +135,40 @@ void renderImage(
 		}
 	}
 }
+//Wrappers.
+void renderImage(
+		vec2 position, vec2 scale,
+		int imageID, bool blendAlpha=true,
+		sampler2DArray texArray=textureArrayUI,
+		vec2 thisFragPos=fragPosition,
+		bool outline=false, vec3 outlineColour=vec3(0.0f, 0.0f, 0.0f),
+		vec3 tintColour=vec3(1.0f, 1.0f, 1.0f)
+	) {
+	_renderImage(
+		position, scale, imageID, blendAlpha,
+		texArray, thisFragPos, outline, outlineColour,
+		vec4(tintColour.rgb, 1.0f)
+	);
+}
+void renderImage(
+		vec2 position, vec2 scale,
+		int imageID,
+		vec3 tintColour, bool blendAlpha=true,
+		sampler2DArray texArray=textureArrayUI,
+		vec2 thisFragPos=fragPosition,
+		bool outline=false, vec3 outlineColour=vec3(0.0f, 0.0f, 0.0f)
+	) {
+	_renderImage(
+		position, scale, imageID, blendAlpha,
+		texArray, thisFragPos, outline, outlineColour,
+		vec4(tintColour.rgb, 1.0f)
+	);
+}
 
 
 
-void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] inclusive.
+
+void drawInt(vec2 position, int scale, int value, vec3 tintColour=vec3(1.0f, 1.0f, 1.0f)) { //Values [-99999 <-> 99999] inclusive.
 	int absVal = abs(value);
 	int maxDigits = 5;
 	bool started = false;
@@ -137,7 +178,7 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 
 
 	if (value < 0) {
-		renderImage(position, vec2(scale), 10, false, textureArrayNumeric); //"-"
+		renderImage(position, vec2(scale), 10, tintColour, false, textureArrayNumeric); //"-"
 		position += digitOffset;
 	}
 
@@ -146,7 +187,7 @@ void drawInt(vec2 position, int scale, int value) { //Values [-99999 <-> 99999] 
 
 		if (digit > 0 || started || (i == maxDigits - 1)) {
 			started = true;
-			renderImage(position, vec2(scale), digit, false, textureArrayNumeric); //"[0-9]"
+			renderImage(position, vec2(scale), digit, tintColour, false, textureArrayNumeric); //"[0-9]"
 			position += digitOffset;
 		}
 
@@ -177,7 +218,11 @@ void addVignetteShading() {
 }
 
 
-void drawText(textArray TA, vec2 centre, float scale, bool hasBackground=false, vec3 backgroundColour=vec3(0.0f, 0.0f, 0.0f), vec2 thisFragPos=fragPosition) {
+void _drawText(
+		textArray TA, vec2 centre, float scale,
+		bool hasBackground, vec3 backgroundColour,
+		vec2 thisFragPos, vec3 tintColour
+	) {
 	for (int letterIdx=0; letterIdx<TA.length; letterIdx++) {
 		//Iterate through letters.
 		ivec4 charIvec4 = TA.contents[letterIdx / 4];
@@ -195,31 +240,34 @@ void drawText(textArray TA, vec2 centre, float scale, bool hasBackground=false, 
 			continue;
 		}
 
-		renderImage(charPos, vec2(scale, scale), charIdx, true, textureArrayNumeric, thisFragPos, hasBackground, backgroundColour);
+		renderImage(charPos, vec2(scale, scale), charIdx, true, textureArrayNumeric, thisFragPos, hasBackground, backgroundColour, tintColour);
 	}
 }
-
-
-
-//TextObject stuff.
-float getTOScreenX(TextObject thisTO, float rayAngle) {
-	float f = tan(radians(rayAngle)); //tan(FOV/2)
-	float a = radians(playerViewAngle);
-
-	vec2 dir = vec2(sin(a), cos(a));
-	vec2 plane = vec2(-cos(a) * f, sin(a) * f);
-	vec2 TODir = thisTO.position.xy - playerPosition.xy;
-
-	if (dot(dir, normalize(TODir)) < 0.0f) {return INF;}
-
-
-	float invDet = 1.0f / (plane.x * dir.y - dir.x * plane.y);
-
-	float transformX = invDet * (dir.y * TODir.x - dir.x * TODir.y);
-	float transformY = invDet * (-plane.y * TODir.x + plane.x * TODir.y);
-
-	return (interfaceResolution.x / 2.0f) * (1.0f - transformX / transformY);
+//Wrappers
+void drawText(
+		textArray TA, vec2 centre, float scale,
+		bool hasBackground=false, vec3 backgroundColour=vec3(0.0f, 0.0f, 0.0f),
+		vec2 thisFragPos=fragPosition, vec3 tintColour=vec3(1.0f, 1.0f, 1.0f)
+	) {
+	_drawText(
+		TA, centre, scale,
+		hasBackground, backgroundColour,
+		thisFragPos, tintColour
+	);
 }
+void drawText(
+		textArray TA, vec2 centre, float scale, vec3 tintColour,
+		bool hasBackground=false, vec3 backgroundColour=vec3(0.0f, 0.0f, 0.0f),
+		vec2 thisFragPos=fragPosition
+	) {
+	_drawText(
+		TA, centre, scale,
+		hasBackground, backgroundColour,
+		thisFragPos, tintColour
+	);
+}
+
+
 
 void drawTextObjects(float rayAngle) {
 	if (fragDepth < 0.0f) {return; /* UI Element here */}
@@ -239,9 +287,8 @@ void drawTextObjects(float rayAngle) {
 			float scale = thisTO.scale * invdistance * zoomEffect;
 
 			//X
-			float centreX = getTOScreenX(thisTO, rayAngle);
-			if ((centreX + scale * 0.65f * (thisTO.length / 2.0f) < 0.0f) || 
-				(centreX - scale * 0.65f * (thisTO.length / 2.0f) > interfaceResolution.x)) {
+			if ((thisTO.centreX + scale * 0.65f * (thisTO.length / 2.0f) < 0.0f) || 
+				(thisTO.centreX - scale * 0.65f * (thisTO.length / 2.0f) > interfaceResolution.x)) {
 				continue; // Off-screen horizontally
 			}
 
@@ -250,7 +297,7 @@ void drawTextObjects(float rayAngle) {
 			float centreY = (interfaceResolution.y / 2.0f) - verticalRatio * interfaceResolution.y * zoomEffect;
 			float charY = centreY - (scale / 2.0f);
 
-			drawText(createTAFromTO(thisTO), vec2(centreX, charY), scale, hasBackground, backgroundColour, tiltedFragPosition);
+			drawText(createTAFromTO(thisTO), vec2(thisTO.centreX, charY), scale, hasBackground, backgroundColour, tiltedFragPosition);
 		}
 	}
 }
@@ -273,7 +320,7 @@ void main() {
 	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
 	tiltedFragPosition.y -= (tiltedFragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
-	tiltedFragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
+	tiltedFragPosition.y -= (pitchDecimal * renderResolution.y) / 72.9f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 
 	addVignetteShading();
@@ -283,20 +330,32 @@ void main() {
 
 
 	//Show freq.
-	if (showFreq > 0) {
-		drawInt(vec2(0, 370), int(25.0), freq);
+	if (showFreq) {
+		drawInt(vec2(0, 368), 32, freq);
 	}
 
 
 	//Render stats.
 	renderImage(vec2(-16, -72), vec2(192.0, 192.0), 0);
-	drawInt(vec2(32, 32), int(40.0f), health);
+	drawInt(vec2(32, 32), 40, health);
 
 	renderImage(vec2(460, -72), vec2(192, 192), 1);
-	drawInt(vec2(520, 32), int(40.0f), energy);
+	drawInt(vec2(520, 32), 40, energy);
 
 	drawCrosshair();
 
+
+	if (showData) {
+		const vec3 dataTint = vec3(1.0f, 0.0f, 1.0f);
+		drawInt(vec2(130, 368), 32, int(round(playerPosition.x)), dataTint);
+		drawText(createSingleCharTA(47), vec2(125, 373), 20, dataTint); //X
+		drawInt(vec2(210, 368), 32, int(round(playerPosition.y)), dataTint);
+		drawText(createSingleCharTA(48), vec2(205, 373), 20, dataTint); //Y
+		drawInt(vec2(290, 368), 32, int(round(playerPosition.z)), dataTint);
+		drawText(createSingleCharTA(49), vec2(285, 373), 20, dataTint); //Z
+		drawInt(vec2(440, 368), 32, int(round(playerViewAngle)), dataTint);
+		drawText(createSingleCharTA(24), vec2(435, 373), 20, dataTint); //A
+	}
 
 
 	vec4 finalFragColour = vec4(fragColour.rgb, (fragDepth == -1) ? 1.0f : 0.0f);

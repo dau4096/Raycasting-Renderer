@@ -44,8 +44,7 @@ struct Visplane {
 	vec2 end;			//Visplane End.
 	float height;		//Visplane Height.
 	int textureID;		//Visplane Texture.
-	int valid;			//Visplane Validity.
-	float _padding;		//Visplane Padding
+	vec2 _padding;		//Visplane Padding
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -56,7 +55,7 @@ struct Wall {
 	vec3 end;		//Wall End.
 	vec2 direction;	//Wall 2D Direction
 	int textureID;	//Wall Texture.
-	int valid;		//Wall Validity.
+	float _padding;	//Wall Validity.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -66,7 +65,7 @@ struct Light {
 	vec3 position;		//Light Position.
 	vec3 colour;		//Light Colour.
 	float intensity;	//Light Intensity.
-	int valid;			//Light Validity.
+	bool enabled;		//Light Validity.
 	float _padding;		//Light Padding.
 };
 layout(std430, binding=3) buffer lightSSBO {
@@ -429,6 +428,7 @@ void main() {
 				for (int idx=0; idx<numLights; idx++) {
 					//Iterate through all lights.
 					Light thisLight = lights[idx];
+					if (!thisLight.enabled) {continue;}
 					vec3 delta = closestIntersectPoint - thisLight.position;
 					float distSQ = dot(delta, delta);
 					float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
@@ -456,7 +456,6 @@ void main() {
 					headLamp.position = playerPosition;
 					headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
 					headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
-					headLamp.valid = 1;
 
 
 					vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);

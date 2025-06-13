@@ -55,6 +55,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"META_SHOW_FREQ_CONSOLE", ""},
 	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
+	{"META_SHOW_DATA", ""},
 
 	{"PHYS_NO_COLLIDE", ""},
 };
@@ -96,3 +97,7 @@ inline size_t validGates;
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
+
+
+//Other
+inline float rayAngle;

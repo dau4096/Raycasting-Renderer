@@ -46,6 +46,7 @@
 	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
 	<option function="META_STAGE_NAME" value="dev-quake" />
+	<option function="META_SHOW_DATA" value="TRUE" />
 
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />
 </config>

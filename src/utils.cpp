@@ -27,14 +27,6 @@ float determinant(glm::vec2 vecA, glm::vec2 vecB) {
 }
 
 
-float angleClamp(float value) {
-	if (value < 0.0f) {
-		return 360.0f + value;
-	}
-	return fmod(value, 360.0f);
-}
-
-
 int RNGcIdx = 0, RNGwIdx = 0;
 const unsigned char RNGtbl[256] = {
 	0x00, 0x08, 0x6D, 0xDC, 0xDE, 0xF1, 0x95, 0x6B, 0x4B, 0xF8, 0xFE, 0x8C, 0x10, 0x42, 0x4A, 0x15,

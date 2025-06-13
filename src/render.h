@@ -27,7 +27,7 @@ namespace render {
 
 	template<typename TGPU, typename TCPU>
 	void updateShaderStorageBufferObject(
-			GLuint SSBO,
+			GLuint SSBO, utils::Player* player,
 			std::vector<TCPU>* dataSetIn,
 			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames //Only used for TOs
 		) {
@@ -37,7 +37,7 @@ namespace render {
 		std::vector<TGPU> dataSet;
 
 		for (size_t index=0; index<size; index++) {
-			dataSet.push_back(TGPU(dataSetIn->data() + index, symbolNames));
+			dataSet.push_back(TGPU(dataSetIn->data() + index, player, symbolNames));
 		}
 
 		if (size > 0 && !dataSet.empty()) {
@@ -49,7 +49,7 @@ namespace render {
 
 	template<typename TGPU, typename TCPU>
 	void updateShaderStorageBufferObject(
-			GLuint SSBO,
+			GLuint SSBO, utils::Player* player,
 			std::vector<TCPU>* dataSetIn
 		) {
 
@@ -58,7 +58,7 @@ namespace render {
 		std::vector<TGPU> dataSet;
 
 		for (size_t index=0; index<size; index++) {
-			dataSet.push_back(TGPU(dataSetIn->data() + index));
+			dataSet.push_back(TGPU(dataSetIn->data() + index, player));
 		}
 
 		if (size > 0 && !dataSet.empty()) {
