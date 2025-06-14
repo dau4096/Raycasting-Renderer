@@ -244,10 +244,18 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
 
 
+		if (abs(LOSDelta.z) < EPSILON) {continue;}
+
 		double tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
-		dvec3 intersectPoint = pointA + LOSDirection * tFrac;
-		if ((intersectPoint.x > min(thisPlane.start.x, thisPlane.end.x)) && (intersectPoint.x < max(thisPlane.start.x, thisPlane.end.x)) &&
-			(intersectPoint.y > min(thisPlane.start.y, thisPlane.end.y)) && (intersectPoint.y < max(thisPlane.start.y, thisPlane.end.y))) {
+		if (tFrac <= 0.0 || tFrac >= 1.0) {continue;}
+
+		dvec3 intersectPoint = pointA + LOSDelta * tFrac;
+		if (
+			intersectPoint.x >= min(thisPlane.start.x, thisPlane.end.x) - EPSILON &&
+			intersectPoint.x <= max(thisPlane.start.x, thisPlane.end.x) + EPSILON &&
+			intersectPoint.y >= min(thisPlane.start.y, thisPlane.end.y) - EPSILON &&
+			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON
+		) {
 			return true;
 		}
 	}

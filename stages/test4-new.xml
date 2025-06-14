@@ -1,0 +1,15 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="ui-menu_background" />
+    <texture scale="20.0 20.0" offset="0.5 0.5 0.0" />
+    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="0.0" />
+    <physics gravity="0.486" killPlaneZ="-16.0" />
+    <player startPoint="0.0 0.0 0.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+
+<visplanes>
+    <visplane start="-10.0 -10.0" end="10.0 10.0" height="0.0" texture="classic3" type="V_NORMAL" IOPtr="0" extra="0.0" />
+</visplanes>

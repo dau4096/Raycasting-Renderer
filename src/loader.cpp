@@ -269,6 +269,12 @@ void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player)
 	stageData.skyboxTextureName = skyNode.attribute("skyboxTexture").as_string();
 
 
+	//Texture
+	pugi::xml_node textureNode = getMetaNode(doc, "texture");
+	stageData.textureScale = parseVec2(textureNode.attribute("scale").as_string());
+	stageData.textureOffset = parseVec3(textureNode.attribute("offset").as_string());
+
+
 	//Sun
 	pugi::xml_node sunNode = getMetaNode(doc, "sun");
 	stageData.sunDirection = parseVec3(sunNode.attribute("sunDirection").as_string());
@@ -387,7 +393,8 @@ void loadStage(
 	*textObjectData = fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", extractTextObject, &validTextObjects, nullptr, nullptr);
 	*logicGates	= fetchObjectFromXML<utils::LogicGate>(doc, "//logicGates/logic", extractGate, &validGates, flags, nullptr);
 
-
+	stageData.name = stageName;
+	stageData.filePath = filePath;
 	retrieveStageMetaData(doc, player);
 }
 

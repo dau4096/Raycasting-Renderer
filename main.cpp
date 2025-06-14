@@ -322,10 +322,14 @@ int main() {
 		GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
 		GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
 		GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
+		GLuint texScaleLocation = glGetUniformLocation(envShader, "textureScale");
+		GLuint texOffsetLocation = glGetUniformLocation(envShader, "textureOffset");
 		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
 		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
 		glUniform1f(vFOVLocation, verticalFOV);
 		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
+		glUniform2f(texScaleLocation, stageData.textureScale.x, stageData.textureScale.y);
+		glUniform3f(texOffsetLocation, stageData.textureOffset.x, stageData.textureOffset.y, stageData.textureOffset.z);
 
 		//Player Data
 		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");

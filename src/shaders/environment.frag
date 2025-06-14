@@ -11,6 +11,8 @@ uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
+uniform vec2 textureScale;
+uniform vec3 textureOffset;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -105,7 +107,6 @@ const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
-const float textureRepeatInterval = 2.0f;
 const bool noLighting = false;
 
 
@@ -159,7 +160,6 @@ bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
 
 
 vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
-	const vec2 UVOffset = vec2(0.5f, 0.0f);
 	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
 	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
@@ -168,9 +168,9 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 	double xUV;
 	vec2 wallDelta = wallEndV2 - wallStartV2;
 	if (abs(wallDelta.y) > abs(wallDelta.x)) {
-		xUV = fract(intersectPoint.y / textureRepeatInterval);
+		xUV = fract(intersectPoint.y / textureScale.x);
 	} else {
-		xUV = fract(intersectPoint.x / textureRepeatInterval);
+		xUV = fract(intersectPoint.x / textureScale.x);
 	}
 	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
 
@@ -187,10 +187,10 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 
 	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
 	fragZ = mix(wallLowZ, wallTopZ, a);
-	double yUV = 1.0f - fract(fragZ / textureRepeatInterval);
+	double yUV = 1.0f - fract(fragZ / textureScale.y);
 
 
-	return vec2(xUV, yUV) + UVOffset;
+	return vec2(xUV, yUV) + textureOffset.xz;
 }
 
 
@@ -225,21 +225,20 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
 
 
 vec2 getVisplaneUV(vec3 position3D) {
-	const vec2 UVOffset = vec2(0.5f, 0.5f);
 	bool topHalf = fragPosition.y > renderResolution.y/2;
 	vec2 realPosition = position3D.xy;
 
 	//Take the fractional parts of the position (texture tiles every unit square)
-	float xUV = fract(realPosition.x / textureRepeatInterval);
+	float xUV = fract(realPosition.x / textureScale.x);
 	if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
 	if (!topHalf) {
 		xUV = 1.0f - xUV;
 	}
-	float yUV = fract(realPosition.y / textureRepeatInterval);
+	float yUV = fract(realPosition.y / textureScale.y);
 	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
 	//Texture index depends on top (ceiling) or bottom (floor) half.
 
-	return vec2(xUV, yUV) + UVOffset;
+	return vec2(xUV, yUV) + textureOffset.xy;
 }
 
 
@@ -268,17 +267,18 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
 
 
-		if (abs(LOSDelta.z) < EPSILON) continue;
+		if (abs(LOSDelta.z) < EPSILON) {continue;}
 
 		double tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
-		if (tFrac < 0.0 || tFrac > 1.0) continue;
+		if (tFrac <= 0.0 || tFrac >= 1.0) {continue;}
 
-		dvec3 intersectPoint = pointA + LOSDirection * tFrac;
-		if (intersectPoint.x >= min(thisPlane.start.x, thisPlane.end.x) - EPSILON &&
+		dvec3 intersectPoint = pointA + LOSDelta * tFrac;
+		if (
+			intersectPoint.x >= min(thisPlane.start.x, thisPlane.end.x) - EPSILON &&
 			intersectPoint.x <= max(thisPlane.start.x, thisPlane.end.x) + EPSILON &&
 			intersectPoint.y >= min(thisPlane.start.y, thisPlane.end.y) - EPSILON &&
-			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON)
-		{
+			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON
+		) {
 			return true;
 		}
 	}
@@ -290,7 +290,6 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
-	bool lowerHalf = gl_FragCoord.y < (renderResolution.y / 2.0f);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 
@@ -299,6 +298,7 @@ void main() {
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
 	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
 	fragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
+	bool lowerHalf = fragPosition.y < (renderResolution.y / 2.0f); //If the frag has no possible way to intersect a visplane below (or above) then skip those.
 
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
@@ -349,10 +349,6 @@ void main() {
 			closestIntersectPoint = vec3(intersectPoint.xy, fragZ);
 			closestUV = vec3(wallUV.xy, thisWall.textureID);
 			foundType = 1;
-
-			if (minDistance <= MIN_WALL_DIST) {
-				break; //No closer walls will be found.
-			}
 		}
 		
 	}

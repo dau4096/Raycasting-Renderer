@@ -158,18 +158,44 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
+	int fallbackTextureWidth, fallbackTextureHeight, fallbackTextureChannels;
+	unsigned char* fallbackTextureData = stbi_load(
+		display::FALLBACK_TEXTURE_PATH,
+		&fallbackTextureWidth, &fallbackTextureHeight,
+		&fallbackTextureChannels, 4
+	);
+
+	if (!fallbackTextureData) {
+		std::cerr << "Failed to load fallback texture : " << stbi_failure_reason() << std::endl;
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		glDeleteTextures(1, &textureID);
+		return 0;	
+	}
+
 	int width, height, channels;
+	std::string texturePath = "src/" + subFolder + "/" + textureName + ".png";
 	unsigned char* textureData = stbi_load(
-		("src/" + subFolder + "/" + textureName + ".png").c_str(),
+		texturePath.c_str(),
 		&width, &height,
 		&channels, 4
 	);
 
 	if (!textureData) {
-		std::cerr << "Failed to load texture : " << textureName << ".png : " << stbi_failure_reason() << std::endl;
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glDeleteTextures(1, &textureID);
-		return 0;
+		//Try in folder beside stage XML with same name.
+		texturePath = "stages/tex-" + stageData.name + "/" + textureName + ".png";
+		textureData = stbi_load(
+			texturePath.c_str(),
+			&width, &height,
+			&channels, 4
+		);
+
+		if (!textureData) {
+			//Use fallback texture.
+			textureData = fallbackTextureData;
+			width = fallbackTextureWidth;
+			height = fallbackTextureHeight;
+			channels = fallbackTextureChannels;
+		}
 	}
 
 	if ((expectedWidth != -1 && width != expectedWidth) || (expectedHeight != -1 && height != expectedHeight)) {
@@ -193,6 +219,7 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 
 	return textureID;
 }
+
 
 
 GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env") {
@@ -245,13 +272,23 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 		);
 
 		if (!textureData) {
-			//Use fallback texture.
-			textureData = fallbackTextureData;
-			width = fallbackTextureWidth;
-			height = fallbackTextureHeight;
-			channels = fallbackTextureChannels;
-			reportedTextureName = "FALLBACK_TEXTURE";
-			usedFallback = true;
+			//Try in folder beside stage XML with same name.
+			texturePath = "stages/tex-" + stageData.name + "/" + textureName + ".png";
+			textureData = stbi_load(
+				texturePath.c_str(),
+				&width, &height,
+				&channels, 4
+			);
+
+			if (!textureData) {
+				//Use fallback texture.
+				textureData = fallbackTextureData;
+				width = fallbackTextureWidth;
+				height = fallbackTextureHeight;
+				channels = fallbackTextureChannels;
+				reportedTextureName = "FALLBACK_TEXTURE";
+				usedFallback = true;
+			}
 		}
 
 
