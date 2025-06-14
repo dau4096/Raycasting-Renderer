@@ -93,7 +93,7 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 vec2 fragPosition;
 vec4 fragColour;
 float zoomEffect;
-//float tanVerticalViewAngleOffset;
+mat3 projMatrix;
 double t, fragZ;
 const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
@@ -131,6 +131,28 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall, out double t) {
 	if (t < 0.0 || u < 0.0 || u > 1.0) return INVALIDdv2;
 
 	return origin + t * rayDelta;
+}
+
+
+double getWallDistance(Wall thisWall) {
+	vec2 newStart = (projMatrix * vec3(thisWall.start.xy, 1.0f)).xy;
+	vec2 newEnd = (projMatrix * vec3(thisWall.end.xy, 1.0f)).xy;
+	
+	/* From;
+	 y-y1    x-x1
+	----- = -----
+	y2-y2   x2-x1
+	To (x=0);
+	y = y1 - mx1
+	Where m (gradient) is;
+	Δy / Δx
+	*/
+
+	dvec2 delta = newEnd - newStart;
+	if (abs(delta.x) < EPSILON) {return INF;}
+	double gradient = delta.y / delta.x;
+	double dist = newStart.y - newStart.x * gradient;
+	return dist;
 }
 
 
@@ -306,7 +328,23 @@ void main() {
 	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
 	float rayAngleYaw = radians(playerViewAngle + rayOffset);
 
-	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
+	float sT = sin(rayAngleYaw);
+	float cT = cos(rayAngleYaw);
+
+	projMatrix = mat3(
+	     cT,   -sT,    0.0f,
+	     sT,    cT,    0.0f,
+	     0.0f,  0.0f,  1.0f
+	);
+
+	mat3 translation = mat3(
+	     1.0f,  0.0f, -playerPosition.x,
+	     0.0f,  1.0f, -playerPosition.y,
+	     0.0f,  0.0f,  1.0f
+	);
+	projMatrix *= translation;
+
+	vec2 rayDirection = vec2(sT, cT);
 	float rPVA = radians(playerViewAngle);
 	vec2 rayDirectionCentre = vec2(sin(rPVA), cos(rPVA));
 	float distMultiplier = dot(rayDirection, rayDirectionCentre);
@@ -320,12 +358,34 @@ void main() {
 
 
 
+
+
 	vec3 closestIntersectPoint, closestUV;
 	double minDistance = maxRayDistance;
 	int closestIndex, foundType = 0;
 
 	//Iterate through all the walls. (2D)
 	for (int idx=0; idx<numWalls; idx++) {
+		/*
+		.___________________________________________________________________________________.
+		|Inverse 2D rotation matrix on start and end.										|
+		|Find intersect point directly ahead (horizontal = 0, vertical = distance)			|
+		|Use instead of rayIntersectCheck() and similar. Also works for checkLOS() probably.|
+		|___________________________________________________________________________________|
+		|2D rotation matrix;																|
+		|[ cos(t), -sin(t)																	|
+		|  sin(t),  cos(t)]																	|
+		|x' =  x*cos(t) - y*sin(t)															|
+		|y' =  x*sin(t) + y*cos(t)															|
+		|___________________________________________________________________________________|
+		|Inverse 2D rotation matrix;														|
+		|[ cos(t), sin(t)																	|
+		| -sin(t), cos(t)]																	|
+		|x' =  x*cos(t) + y*sin(t)															|
+		|y' = -x*sin(t) + y*cos(t)															|
+		|___________________________________________________________________________________|
+		'																					'
+		*/
 		Wall thisWall = walls[idx];
 		vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
 		float projStart = dot(rayStart-thisWall.start.xy, wallNormal);
@@ -333,18 +393,15 @@ void main() {
 		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
 
 
-		double t;
-		dvec2 intersectPoint = rayIntersectCheck(fragRay, thisWall, t);
-		if (intersectPoint == INVALIDdv2) {continue; /* Invalid intersect point */}
-		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, playerPosition.z);
-		double wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
+		double wallDistance = getWallDistance(thisWall);
+		dvec2 intersectPoint = rayDirection * wallDistance;
 
 		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition); //Check if inside wall (Valid UV)
 
 
-		if (wallUV != INVALIDv2 && wallDistanceSQ < minDistance*minDistance) {
+		if (wallUV != INVALIDv2 && wallDistance < minDistance) {
 			//Set closest.
-			minDistance = sqrt(wallDistanceSQ);
+			minDistance = wallDistance;
 			closestIndex = idx;
 			closestIntersectPoint = vec3(intersectPoint.xy, fragZ);
 			closestUV = vec3(wallUV.xy, thisWall.textureID);
@@ -388,7 +445,7 @@ void main() {
 	}
 
 
-	minDistance *= distMultiplier;
+	//minDistance *= distMultiplier;
 
 
 	if (foundType > 0) { //An intersect was found.
