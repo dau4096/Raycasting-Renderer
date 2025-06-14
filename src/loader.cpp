@@ -51,15 +51,16 @@ int* managePTR(std::string ptrStr, std::array<int, constants::MAX_FLAGS>* flags)
 
 
 static const std::unordered_map<std::string, int> enumMap = {
-	{"G_INVALID", 0}, 		{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"SPR_INVALID", 0}, 
-	{"G_PASSTHROUGH", 1}, 	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"SPR_DECO", 1}, 
+	//Logic gates 			Walls 					Visplanes 				Sprites 				Displacements
+	{"G_INVALID", 0}, 		{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
+	{"G_PASSTHROUGH", 1}, 	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
 	{"G_AND", 2}, 			{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"SPR_LIGHT", 2}, 
 	{"G_OR", 3}, 			{"W_MOVEV_FAST", 3},	{"V_MOVEV_FAST", 3}, 
 	{"G_NOT", 4}, 			{"W_MOVEV_SLOW", 4},	{"V_MOVEV_SLOW", 4}, 
 	{"G_XOR", 5}, 			{"W_MOVEH_FAST", 5},	{"V_HURT", 5}, 
 	{"G_LATCH", 6}, 		{"W_MOVEH_SLOW", 6},
 	{"G_PULSE", 7}, 		{"W_SWITCH", 7}, 
-	{"G_TOGGLE", 8}
+	{"G_TOGGLE", 8},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -226,7 +227,7 @@ static inline Visplane extractVisplane(
 		getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
 		getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
 		getFloat(node, "height", 0.0f),
-		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
+		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL)),
 		getPTR(node, flags, "IOPtr", nullptr),
 		getFloat(node, "extra", 0.0f)
@@ -245,13 +246,39 @@ static inline Wall extractWall(
 	Wall wall = Wall(
 		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
+		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
 		getPTR(node, flags, "IOPtr", nullptr),
 		getFloat(node, "extra", 0.0f)
 	);
 	
 	return wall;
+}
+
+
+static inline Displacement extractDisplacement(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
+
+	Displacement displacement = Displacement(
+		getVec3(node, "aPos", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getVec3(node, "bPos", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getVec3(node, "cPos", glm::vec3(0.0f, 0.0f, 0.0f)),
+
+		getVec2(node, "aUV", glm::vec2(0.0f, 0.0f)),
+		getVec2(node, "bUV", glm::vec2(0.0f, 0.0f)),
+		getVec2(node, "cUV", glm::vec2(0.0f, 0.0f)),
+
+		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+		getBool(node, "collision", false),
+		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
+		getPTR(node, flags, "IOPtr", nullptr),
+		getFloat(node, "extra", 0.0f)
+	);
+	
+	return displacement;
 }
 
 
@@ -458,6 +485,7 @@ void loadStage(
 		const std::string& stageName, utils::Player* player,
 		std::vector<utils::Visplane>* visplaneData,
 		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Displacement>* displacementData,
 		std::vector<utils::Sprite>* spriteData,
 		std::vector<utils::Light>* lightData,
 		std::vector<utils::TextObject>* textObjectData,
@@ -477,6 +505,7 @@ void loadStage(
 	
 	*visplaneData = xml::fetchObjectFromXML<utils::Visplane>(doc, "//visplanes/visplane", xml::extractVisplane, &validVisplanes, flags, textureNames);
 	*wallData = xml::fetchObjectFromXML<utils::Wall>(doc, "//walls/wall", xml::extractWall, &validWalls, flags, textureNames);
+	*displacementData = xml::fetchObjectFromXML<utils::Displacement>(doc, "//displacements/displacement", xml::extractDisplacement, &validDisplacements, flags, textureNames);
 	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//sprites/sprite", xml::extractSprite, &validSprites, nullptr, textureNames);
 	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//lights/light", xml::extractLight, &validLights, nullptr, nullptr);
 	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects, nullptr, nullptr);

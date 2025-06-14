@@ -50,8 +50,6 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 
 
 bool headLampEnabled = false;
-int tick = 0;
-double verticalFOV;
 GLuint renderedFrameID;
 
 
@@ -79,6 +77,7 @@ int main() {
 	utils::Player player;
 	std::vector<utils::Visplane> visplaneData;
 	std::vector<utils::Wall> wallData;
+	std::vector<utils::Displacement> displacementData;
 	std::vector<utils::Sprite> spriteData;
 	std::vector<utils::Light> lightData;
 	std::vector<utils::TextObject> textObjectData;
@@ -90,7 +89,7 @@ int main() {
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
-		&visplaneData, &wallData,
+		&visplaneData, &wallData, &displacementData,
 		&spriteData, &lightData,
 		&textObjectData,
 		&logicGates, &flags,
@@ -127,19 +126,22 @@ int main() {
 
 
 	GLuint visplaneSSBO = render::createShaderStorageBufferObject(
-		0, sizeof(utils::Visplane) * validVisplanes
+		0, sizeof(utils::VisplaneGPU) * validVisplanes
 	);
 	GLuint wallSSBO = render::createShaderStorageBufferObject(
-		1, sizeof(utils::Wall) * validWalls
+		1, sizeof(utils::WallGPU) * validWalls
 	);
 	GLuint spriteSSBO = render::createShaderStorageBufferObject(
-		2, sizeof(utils::Sprite) * validSprites
+		2, sizeof(utils::SpriteGPU) * validSprites
 	);
 	GLuint lightSSBO = render::createShaderStorageBufferObject(
-		3, sizeof(utils::Light) * validLights * 2
+		3, sizeof(utils::LightGPU) * validLights
 	);
 	GLuint textObjectSSBO = render::createShaderStorageBufferObject(
-		4, sizeof(utils::TextObject) * validTextObjects * 8
+		4, sizeof(utils::TextObjectGPU) * validTextObjects
+	);
+	GLuint displacementSSBO = render::createShaderStorageBufferObject(
+		5, sizeof(utils::DisplacementGPU) * validDisplacements
 	);
 
 
@@ -218,17 +220,17 @@ int main() {
 		if (keyMap["META_RELOAD_STAGE"]) {
 			loader::loadStage(
 				userConfig["META_STAGE_NAME"], &player,
-				&visplaneData, &wallData,
+				&visplaneData, &wallData, &displacementData,
 				&spriteData, &lightData,
 				&textObjectData,
 				&logicGates, &flags,
 				&textureNames
 			);
-		} else if (keyMap["META_RELOAD_ENV"]) {
+		} else if (keyMap["META_RELOAD_ENV"] || utils::configToBool("META_RELOAD_STAGE_ON_TICK")) {
 			utils::Player tmpPlayer;
 			loader::loadStage(
 				userConfig["META_STAGE_NAME"], &tmpPlayer,
-				&visplaneData, &wallData,
+				&visplaneData, &wallData, &displacementData,
 				&spriteData, &lightData,
 				&textObjectData,
 				&logicGates, &flags,
@@ -285,6 +287,9 @@ int main() {
 		);
 		render::updateShaderStorageBufferObject<utils::WallGPU>(
 			wallSSBO, &player, &wallData
+		);
+		render::updateShaderStorageBufferObject<utils::DisplacementGPU>(
+			displacementSSBO, &player, &displacementData
 		);
 		render::updateShaderStorageBufferObject<utils::SpriteGPU>(
 			spriteSSBO, &player, &spriteData
@@ -364,9 +369,11 @@ int main() {
 		//Other
 		GLuint numVisplanesLocation = glGetUniformLocation(envShader, "numVisplanes");
 		GLuint numWallsLocation = glGetUniformLocation(envShader, "numWalls");
+		GLuint numDispsLocation = glGetUniformLocation(envShader, "numDisplacements");
 		GLuint numLightsLocation = glGetUniformLocation(envShader, "numLights");
 		glUniform1i(numVisplanesLocation, validVisplanes);
 		glUniform1i(numWallsLocation, validWalls);
+		glUniform1i(numDispsLocation, validDisplacements);
 		glUniform1i(numLightsLocation, validLights);
 
 

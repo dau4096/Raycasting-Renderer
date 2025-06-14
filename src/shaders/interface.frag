@@ -294,7 +294,6 @@ void drawTextObjects(float rayAngle) {
 			}
 
 			//Y
-			float verticalRatio = (playerPosition.z - thisTO.position.z) * invdistance;
 			/*
 			//Original from getWallUV() in environment.frag
 			float projectedYTop = (originPos.z - wallTopZ) / distance;

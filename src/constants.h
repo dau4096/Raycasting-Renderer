@@ -19,10 +19,11 @@ enum ItemHeld {
 	IH_NONE
 };
 
-enum SpriteType {
-	SPR_INVALID,
-	SPR_DECO,
-	SPR_LIGHT
+enum VisplaneType {
+	V_INVALID, V_NORMAL,
+	V_TRIGGER,
+	V_MOVEV_FAST, V_MOVEV_SLOW,
+	V_HURT
 };
 
 enum WallType {
@@ -33,11 +34,14 @@ enum WallType {
 	W_SWITCH
 };
 
-enum VisplaneType {
-	V_INVALID, V_NORMAL,
-	V_TRIGGER,
-	V_MOVEV_FAST, V_MOVEV_SLOW,
-	V_HURT
+enum DisplacementType {
+	D_INVALID, D_NORMAL
+};
+
+enum SpriteType {
+	SPR_INVALID,
+	SPR_DECO,
+	SPR_LIGHT
 };
 
 enum LogicInput {

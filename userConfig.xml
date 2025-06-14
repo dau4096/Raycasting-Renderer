@@ -30,7 +30,7 @@
 
 	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
 	<option function="VIEW_FOV" value="70.0" />
-	<option function="VIEW_MAX_RAY_DIST" value="256.0" />
+	<option function="VIEW_MAX_RAY_DIST" value="127.0" />
 	<option function="VIEW_SHOW_HUD" value="TRUE" />
 	<option function="VIEW_BOB" value="TRUE" />
 	<option function="VIEW_LEAN" value="TRUE" />
@@ -46,7 +46,8 @@
 	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
 	<option function="META_SHOW_DATA" value="TRUE" />
-	<option function="META_STAGE_NAME" value="test" />
+	<option function="META_STAGE_NAME" value="test4-old" />
+	<option function="META_RELOAD_STAGE_ON_TICK" value="FALSE" />
 
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />
 </config>

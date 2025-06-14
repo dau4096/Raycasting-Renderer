@@ -56,6 +56,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
 	{"META_SHOW_DATA", ""},
+	{"META_RELOAD_STAGE_ON_TICK", ""},
 
 	{"PHYS_NO_COLLIDE", ""},
 };
@@ -95,6 +96,7 @@ inline StageData stageData;
 //Numbers of valid types.
 inline size_t validVisplanes;
 inline size_t validWalls;
+inline size_t validDisplacements;
 inline size_t validSprites;
 inline size_t validLights;
 inline size_t validTextObjects;
@@ -109,3 +111,5 @@ inline glm::ivec2 currentRenderResolution;
 
 //Other
 inline float rayAngle;
+inline float verticalFOV;
+inline size_t tick;

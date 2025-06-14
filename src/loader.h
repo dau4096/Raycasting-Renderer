@@ -12,6 +12,7 @@ namespace loader {
 		const std::string& stageName, utils::Player* player,
 		std::vector<utils::Visplane>* visplaneData,
 		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Displacement>* displacementData,
 		std::vector<utils::Sprite>* spriteData,
 		std::vector<utils::Light>* lightData,
 		std::vector<utils::TextObject>* textObjectData,
