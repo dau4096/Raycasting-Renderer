@@ -2,14 +2,27 @@
 
 <!-- Metadata -->
 <meta>
-    <sky skyboxTexture="ui-menu_background" />
-    <texture scale="20.0 20.0" offset="0.5 0.5 0.0" />
-    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="0.0" />
-    <physics gravity="0.486" killPlaneZ="-16.0" />
-    <player startPoint="0.0 0.0 0.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
+    <sky skyboxTexture="" />
+    <texture scale="1.0 1.0" offset="0.0 0.0 0.0" />
+    <sun sunDirection="1.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
+    <physics gravity="0.486" killPlaneZ="-32.0" />
+    <player startPoint="0.0 -2.0 0.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
 </meta>
 
 
 <visplanes>
-    <visplane start="-10.0 -10.0" end="10.0 10.0" height="0.0" texture="classic3" type="V_NORMAL" IOPtr="0" extra="0.0" />
+    <visplane start="-16.0 -16.0" end="16.0 16.0" height="0.0" texture="classic3" type="V_NORMAL" IOPtr="0" extra="0.0" />
+
+    <!-- Cube -->
+    <visplane start="0.0 0.0" end="1.0 1.0" height="1.0" texture="classic2" type="V_NORMAL" IOPtr="0" extra="0.0" />
+    <visplane start="0.0 0.0" end="1.0 1.0" height="2.0" texture="classic2" type="V_NORMAL" IOPtr="0" extra="0.0" />
 </visplanes>
+
+
+<walls>
+    <!-- Cube -->
+    <wall start="0.0 0.0 1.0" end="1.0 0.0 2.0" texture="classic2" />
+    <wall start="0.0 1.0 1.0" end="1.0 1.0 2.0" texture="classic2" />
+    <wall start="0.0 0.0 1.0" end="0.0 1.0 2.0" texture="classic2" />
+    <wall start="1.0 0.0 1.0" end="1.0 1.0 2.0" texture="classic2" />
+</walls>

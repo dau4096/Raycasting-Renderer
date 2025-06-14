@@ -21,8 +21,8 @@
 
 <walls>
     <!-- Cube -->
-    <wall start="0.0 0.0 1.0" end="1.0 0.0 2.0" texture="classic2" type="W_NORMAL" IOPtr="0" extra="0.0" />
-    <wall start="0.0 1.0 1.0" end="1.0 1.0 2.0" texture="classic2" type="W_NORMAL" IOPtr="0" extra="0.0" />
-    <wall start="0.0 0.0 1.0" end="0.0 1.0 2.0" texture="classic2" type="W_NORMAL" IOPtr="0" extra="0.0" />
-    <wall start="1.0 0.0 1.0" end="1.0 1.0 2.0" texture="classic2" type="W_NORMAL" IOPtr="0" extra="0.0" />
+    <wall start="0.0 0.0 1.0" end="1.0 0.0 2.0" texture="classic2" />
+    <wall start="0.0 1.0 1.0" end="1.0 1.0 2.0" texture="classic2" />
+    <wall start="0.0 0.0 1.0" end="0.0 1.0 2.0" texture="classic2" />
+    <wall start="1.0 0.0 1.0" end="1.0 1.0 2.0" texture="classic2" />
 </walls>

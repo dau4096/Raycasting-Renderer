@@ -2,9 +2,9 @@
 
 <!-- Metadata -->
 <meta>
-    <sky skyboxTexture="default-skybox" />
-    <texture scale="1.0 1.0" offset="0.5 0.5 0.0" />
-    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
+    <sky skyboxTexture="" />
+    <texture scale="1.0 1.0" offset="0.0 0.0 0.0" />
+    <sun sunDirection="1.0 1.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="0.0" />
     <physics gravity="0.486" killPlaneZ="-16.0" />
     <player startPoint="-2.5 -2.5 1.0" startAngle="90.0" initialHealth="MAX" initialEnergy="MAX" />
 </meta>
@@ -12,24 +12,26 @@
 
 <!-- Visplanes -->
 <visplanes>
-	<visplane start="-10.0 -10.0" end="10.0 10.0" height="-1.0" texture="0" type="V_NORMAL" IOPtr="0" extra="0.0" />
+	<visplane start="-10.0 -10.0" end="10.0 10.0" height="-1.0" texture="a" />
 </visplanes>
 
 <!-- Walls -->
 <walls>
-	<wall start="-1.0 -1.0 -1.0" end="1.0 -1.0 1.0" texture="1" type="W_NORMAL" IOPtr="0" extra="0.0" />
+	<wall start="-1.0 -1.0 -1.0" end="1.0 -1.0 1.0" texture="b" />
 </walls>
 
 
 <!-- Sprites -->
 <sprites>
-	<sprite position="0.0 -2.0 0.0" width="0.15" texture="2" type="SPR_DECO" collision="true" />
+	<sprite position="0.0 -4.0 0.0" width="1.0" height="2.0" texture="c" type="SPR_DECO" collision="true" />
+
+	<sprite position="0.0 -2.0 3.0" width="1.0" height="1.0" texture="lamp" type="SPR_LIGHT" collision="false" />
 </sprites>
 
 
 <!-- Lights -->
 <lights>
-	<light position="0.0 0.0 3.0" colour="1.0 1.0 1.0" intensity="7.5" enabled="true" />
+	<light position="0.0 -2.0 3.0" colour="1.0 0.0 0.0" intensity="5.0" enabled="true" />
 </lights>
 
 

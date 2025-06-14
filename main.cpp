@@ -55,7 +55,7 @@ double verticalFOV;
 GLuint renderedFrameID;
 
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -107,7 +107,7 @@ int main() {
 
 
 	GLFWwindow* Window = render::initializeWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
-	glfwSetFramebufferSizeCallback(Window, framebuffer_size_callback);
+	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
 

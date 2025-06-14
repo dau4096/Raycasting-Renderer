@@ -236,17 +236,36 @@ namespace display {
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
 	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback-general.png";
-
-
-	//Sun
-	constexpr glm::vec3 SUN_DIRECTION = glm::vec3(0.0f, 0.0f, 1.0f);
-	constexpr float SUN_INTENSITY = 2.5f;
-	constexpr glm::vec3 SUN_COLOUR = glm::vec3(1.0f, 1.0f, 1.0f) * SUN_INTENSITY;
+	constexpr const char* FALLBACK_SKYBOX_PATH = "src/textures-env/fallback-skybox.png";
 
 
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr int MAX_TEXTOBJECT_CHARACTERS = 64;
+}
+
+namespace initial {
+	//Textures
+	constexpr const char* FALLBACK_TEXTURE_NAME = "fallback-general";
+	constexpr const char* FALLBACK_SKYBOX_NAME = "fallback-skybox";
+	constexpr glm::vec2 TEXTURE_SCALE = glm::vec2(1.0f, 1.0f);
+	constexpr glm::vec3 TEXTURE_OFFSET = glm::vec3(0.0f, 0.0f, 0.0f);
+
+
+	//Sun
+	constexpr glm::vec3 SUN_DIRECTION = glm::vec3(0.0f, 0.0f, 1.0f);
+	constexpr float SUN_INTENSITY = 2.5f;
+	constexpr glm::vec3 SUN_COLOUR = glm::vec3(1.0f, 1.0f, 1.0f);
+
+
+	//Physics
+	constexpr float GRAVITY_ACCEL = 0.486f;
+	constexpr float KILL_PLANE_Z = -16.0f;
+
+
+	//Player
+	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(0.0f, 0.0f, 0.0f);
+	constexpr float PLAYER_START_VANGLE = 0.0f;
 }
 
 namespace playerConfig {

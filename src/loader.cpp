@@ -7,6 +7,8 @@ using namespace glm;
 using namespace pugi;
 
 
+namespace xml {
+
 static inline glm::vec3 parseVec3(const std::string& str) {
 	std::istringstream ss(str);
 	glm::vec3 v;
@@ -89,6 +91,99 @@ int assignTexture(std::string textureStr, std::array<std::string, display::TEXTU
 }
 
 
+//Helper functions;
+
+static inline int getInt(const pugi::xml_node& node, std::string attrName, int defaultValue=0) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return attr.as_int();
+	}
+	return defaultValue;
+}
+
+static inline float getFloat(const pugi::xml_node& node, std::string attrName, float defaultValue=0.0f) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return attr.as_float();
+	}
+	return defaultValue;
+}
+
+static inline std::string getString(const pugi::xml_node& node, std::string attrName, std::string defaultValue="") {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return attr.as_string();
+	}
+	return defaultValue;
+}
+
+static inline bool getBool(const pugi::xml_node& node, std::string attrName, bool defaultValue=false) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		std::string attrValue = utils::strToUpper(attr.as_string());
+		if (attrValue == "TRUE" || attrValue == "T") {
+			return true;
+		} else if (attrValue == "FALSE" || attrValue == "F") {
+			return false;
+		}
+	}
+	return defaultValue;
+}
+
+static inline glm::vec2 getVec2(const pugi::xml_node& node, std::string attrName, glm::vec2 defaultValue=glm::vec2(0.0f, 0.0f)) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return parseVec2(attr.as_string());
+	}
+	return defaultValue;
+}
+
+static inline glm::vec3 getVec3(const pugi::xml_node& node, std::string attrName, glm::vec3 defaultValue=glm::vec3(0.0f, 0.0f, 0.0f)) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return parseVec3(attr.as_string());
+	}
+	return defaultValue;
+}
+
+static inline int getEnum(const pugi::xml_node& node, std::string attrName, int defaultValue=0) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return assignEnum(utils::strToUpper(attr.as_string()));
+	}
+	return defaultValue;
+}
+
+static inline int* getPTR(
+		const pugi::xml_node& node,
+		std::array<int, constants::MAX_FLAGS>* flags,
+		std::string attrName,
+		int* defaultValue=nullptr
+	) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	if (attr) {
+		return managePTR(attr.as_string(), flags);
+	}
+	return defaultValue;
+}
+
+static inline int getTexture(
+		const pugi::xml_node& node,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
+		std::string attrName,
+		const char* defaultValue=display::FALLBACK_TEXTURE_PATH
+	) {
+	pugi::xml_attribute attr = node.attribute(attrName);
+	const char* name;
+	if (attr) {
+		std::string attrValue = attr.as_string();
+		name = attrValue.c_str();
+	} else {
+		name = defaultValue;
+	}
+	return assignTexture(name, textureNames);
+}
+
 
 
 
@@ -111,7 +206,7 @@ std::vector<T> fetchObjectFromXML(
 	size_t count = static_cast<size_t>(nodeList.size());
 	*numObjects = count;
 	
-	for (size_t i = 0; i < count; ++i) {
+	for (size_t i=0; i<count; i++) {
 		pugi::xml_node node = nodeList[i].node();
 		result.push_back(extractor(node, flags, textureNames));
 	}
@@ -126,17 +221,15 @@ static inline Visplane extractVisplane(
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
-	std::string typeStr = strToUpper(node.attribute("type").as_string());
-	std::string flagPTR = node.attribute("IOPtr").as_string();
-	std::string textureStr = node.attribute("texture").as_string();
+
 	Visplane visplane = Visplane(
-		parseVec2(node.attribute("start").as_string()),
-		parseVec2(node.attribute("end").as_string()),
-		node.attribute("height").as_float(),
-		assignTexture(textureStr, textureNames),
-		static_cast<VisplaneType>(assignEnum(typeStr)),
-		managePTR(flagPTR, flags),
-		node.attribute("extra").as_float()
+		getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
+		getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
+		getFloat(node, "height", 0.0f),
+		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
+		static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL)),
+		getPTR(node, flags, "IOPtr", nullptr),
+		getFloat(node, "extra", 0.0f)
 	);
 	
 	return visplane;
@@ -148,18 +241,14 @@ static inline Wall extractWall(
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
-	glm::vec3 start = parseVec3(node.attribute("start").as_string());
-	glm::vec3 end = parseVec3(node.attribute("end").as_string());
-	std::string typeStr = strToUpper(node.attribute("type").as_string());
-	std::string flagPTR = node.attribute("IOPtr").as_string();
-	std::string textureStr = node.attribute("texture").as_string();
+
 	Wall wall = Wall(
-		parseVec3(node.attribute("start").as_string()), 
-		parseVec3(node.attribute("end").as_string()),
-		assignTexture(textureStr, textureNames),
-		static_cast<WallType>(assignEnum(typeStr)),
-		managePTR(flagPTR, flags),
-		node.attribute("extra").as_float()
+		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
+		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
+		getPTR(node, flags, "IOPtr", nullptr),
+		getFloat(node, "extra", 0.0f)
 	);
 	
 	return wall;
@@ -171,15 +260,14 @@ static inline Sprite extractSprite(
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
-	std::string typeStr = strToUpper(node.attribute("type").as_string());
-	std::string textureStr = node.attribute("texture").as_string();
+
 	Sprite sprite = Sprite(
-		parseVec3(node.attribute("position").as_string()),
-		node.attribute("width").as_float(),
-		node.attribute("height").as_float(),
-		assignTexture(textureStr, textureNames),
-		static_cast<SpriteType>(assignEnum(typeStr)),
-		strToUpper(node.attribute("collision").as_string()) == "TRUE"
+		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getFloat(node, "width", 0.0f),
+		getFloat(node, "height", 0.0f),
+		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
+		static_cast<SpriteType>(getEnum(node, "type", SPR_DECO)),
+		getBool(node, "collision", false)
 	);
 	
 	return sprite;
@@ -191,12 +279,12 @@ static inline Light extractLight(
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
-	std::string flagPTR = node.attribute("inputPTR").as_string();
+
 	Light light = Light(
-		parseVec3(node.attribute("position").as_string()),
-		parseVec3(node.attribute("colour").as_string()),
-		node.attribute("intensity").as_int(),
-		managePTR(flagPTR, flags)
+		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getVec3(node, "colour", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getFloat(node, "intensity", 0.0f),
+		getPTR(node, flags, "IOPtr", nullptr)
 	);
 	
 	return light;
@@ -208,11 +296,11 @@ static inline TextObject extractTextObject(
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
-	std::string flagPTR = node.attribute("inputPTR").as_string();
+
 	TextObject textObject = TextObject(
-		node.attribute("text").as_string(),
-		parseVec3(node.attribute("position").as_string()),
-		node.attribute("scale").as_int()
+		getString(node, "text", ""),
+		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
+		getInt(node, "scale", 0)
 	);
 	
 	return textObject;
@@ -224,12 +312,12 @@ static inline LogicGate extractGate(
 		std::array<int, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
-	std::string typeStr = node.attribute("type").as_string();
+
 	LogicGate gate = LogicGate(
-		static_cast<GateType>(assignEnum(typeStr)),
-		managePTR(node.attribute("outputPtr").as_string(), flags),
-		managePTR(node.attribute("inputAPtr").as_string(), flags),
-		managePTR(node.attribute("inputBPtr").as_string(), flags)
+		static_cast<GateType>(getEnum(node, "type", G_PASSTHROUGH)),
+		getPTR(node, flags, "outputPtr", nullptr),
+		getPTR(node, flags, "inputAPtr", nullptr),
+		getPTR(node, flags, "inputBPtr", nullptr)
 	);
 	return gate;
 }
@@ -266,37 +354,37 @@ static inline float handlePlayerHEString(std::string inputSTR, float maxValue) {
 void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player) {
 	//Sky
 	pugi::xml_node skyNode = getMetaNode(doc, "sky");
-	stageData.skyboxTextureName = skyNode.attribute("skyboxTexture").as_string();
+	stageData.skyboxTextureName = getString(skyNode, "skyboxTexture", std::string(initial::FALLBACK_SKYBOX_NAME));
 
 
 	//Texture
 	pugi::xml_node textureNode = getMetaNode(doc, "texture");
-	stageData.textureScale = parseVec2(textureNode.attribute("scale").as_string());
-	stageData.textureOffset = parseVec3(textureNode.attribute("offset").as_string());
+	stageData.textureScale = getVec2(textureNode, "scale", initial::TEXTURE_SCALE);
+	stageData.textureOffset = getVec3(textureNode, "offset", initial::TEXTURE_OFFSET);
 
 
 	//Sun
 	pugi::xml_node sunNode = getMetaNode(doc, "sun");
-	stageData.sunDirection = parseVec3(sunNode.attribute("sunDirection").as_string());
-	float sunIntensity = sunNode.attribute("sunIntensity").as_float();
-	stageData.sunColour = parseVec3(sunNode.attribute("sunColour").as_string()) * sunIntensity;
+	stageData.sunDirection = getVec3(sunNode, "sunDirection", initial::SUN_DIRECTION);
+	float sunIntensity = getFloat(sunNode, "sunIntensity", initial::SUN_INTENSITY);
+	stageData.sunColour = getVec3(sunNode, "sunColour", initial::SUN_COLOUR) * sunIntensity;
 
 
 	//Physics
 	pugi::xml_node physNode = getMetaNode(doc, "physics");
-	stageData.gravity = physNode.attribute("gravity").as_float();
-	stageData.killPlaneZ = physNode.attribute("killPlaneZ").as_float();
+	stageData.gravity = getFloat(physNode, "gravity", initial::GRAVITY_ACCEL);
+	stageData.killPlaneZ = getFloat(physNode, "killPlaneZ", initial::KILL_PLANE_Z);
 
 
 	//Player
 	pugi::xml_node playerNode = getMetaNode(doc, "player");
-	stageData.playerStartPoint = parseVec3(playerNode.attribute("startPoint").as_string());
-	stageData.playerStartAngle = playerNode.attribute("startAngle").as_float();
+	stageData.playerStartPoint = getVec3(playerNode, "startPoint", initial::PLAYER_START_POSITION);
+	stageData.playerStartAngle = getFloat(playerNode, "startAngle", initial::PLAYER_START_VANGLE);
 
-	std::string startHealthStr = playerNode.attribute("initialHealth").as_string();
+	std::string startHealthStr = getString(playerNode, "initialHealth", "MAX");
 	stageData.playerStartHealth = handlePlayerHEString(startHealthStr, playerConfig::PLAYER_MAX_HEALTH);
 
-	std::string startEnergyStr = playerNode.attribute("initialEnergy").as_string();
+	std::string startEnergyStr = getString(playerNode, "initialEnergy", "MAX");
 	stageData.playerStartEnergy = handlePlayerHEString(startEnergyStr, playerConfig::PLAYER_MAX_ENERGY);
 
 	*player = utils::Player();
@@ -350,6 +438,8 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 	}
 }
 
+}
+
 
 static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"TERRIBLE", glm::ivec2(64, 36)},
@@ -359,7 +449,6 @@ static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"HIGH", glm::ivec2(1280, 720)},
 	{"AMAZING", glm::ivec2(1920, 1080)}
 };
-
 
 
 namespace loader {
@@ -386,16 +475,16 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	*visplaneData = fetchObjectFromXML<utils::Visplane>(doc, "//visplanes/visplane", extractVisplane, &validVisplanes, flags, textureNames);
-	*wallData = fetchObjectFromXML<utils::Wall>(doc, "//walls/wall", extractWall, &validWalls, flags, textureNames);
-	*spriteData	= fetchObjectFromXML<utils::Sprite>(doc, "//sprites/sprite", extractSprite, &validSprites, nullptr, textureNames);
-	*lightData = fetchObjectFromXML<utils::Light>(doc, "//lights/light", extractLight, &validLights, nullptr, nullptr);
-	*textObjectData = fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", extractTextObject, &validTextObjects, nullptr, nullptr);
-	*logicGates	= fetchObjectFromXML<utils::LogicGate>(doc, "//logicGates/logic", extractGate, &validGates, flags, nullptr);
+	*visplaneData = xml::fetchObjectFromXML<utils::Visplane>(doc, "//visplanes/visplane", xml::extractVisplane, &validVisplanes, flags, textureNames);
+	*wallData = xml::fetchObjectFromXML<utils::Wall>(doc, "//walls/wall", xml::extractWall, &validWalls, flags, textureNames);
+	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//sprites/sprite", xml::extractSprite, &validSprites, nullptr, textureNames);
+	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//lights/light", xml::extractLight, &validLights, nullptr, nullptr);
+	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects, nullptr, nullptr);
+	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logicGates/logic", xml::extractGate, &validGates, flags, nullptr);
 
 	stageData.name = stageName;
 	stageData.filePath = filePath;
-	retrieveStageMetaData(doc, player);
+	xml::retrieveStageMetaData(doc, player);
 }
 
 
@@ -409,8 +498,8 @@ void loadBindings() {
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 
-	fetchBindingsFromXML(doc);
-	fetchConfigsFromXML(doc);
+	xml::fetchBindingsFromXML(doc);
+	xml::fetchConfigsFromXML(doc);
 
 
 	//Handle render quality setting.
