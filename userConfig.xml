@@ -25,7 +25,7 @@
 
 <!-- Configs -->
 <config>
-	<option function="TURN_SPEED_MOUSE" value="0.25" />
+	<option function="TURN_SPEED_MOUSE" value="0.125" />
 	<option function="TURN_SPEED_KEYBOARD" value="1.0" />
 
 	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />

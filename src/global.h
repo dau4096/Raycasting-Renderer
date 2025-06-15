@@ -111,6 +111,7 @@ inline glm::ivec2 currentRenderResolution;
 
 
 //Other
+inline float zoomEffect;
 inline float rayAngle;
 inline float verticalFOV;
 inline size_t tick;

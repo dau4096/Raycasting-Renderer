@@ -285,8 +285,8 @@ vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
 bool behindCamera(vec4 pt, vec2 proj) {
 	vec2 dir = normalize(pt.xy - playerPosition.xy);
 	return (dot(rayDirectionCentre, dir) < 0.0f) || (
-		proj.x < 0.0f || proj.x > renderResolution.x ||
-		proj.y < 0.0f || proj.y > renderResolution.y
+		proj.x < 0.0f || proj.x > renderResolution.x //||
+		//proj.y < 0.0f || proj.y > renderResolution.y
 	);
 }
 
