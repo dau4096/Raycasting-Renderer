@@ -2,17 +2,19 @@
 
 <!-- Metadata -->
 <meta>
-    <sky skyboxTexture="skybox-generic"/>
-    <texture scale="1.0 1.0" offset="0.0 0.0 0.0" />
-    <sun sunDirection="1.0 0.25 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
-    <physics gravity="0.486" killPlaneZ="-32.0" />
-    <player startPoint="0.0 0.0 0.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
+	<sky skyboxTexture="default-skybox"/>
+	<texture scale="1.0 1.0" offset="0.0 0.0 0.0" />
+	<sun sunDirection="1.0 0.25 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
+	<physics gravity="0.486" killPlaneZ="-32.0" />
+	<player startPoint="0.0 -3.0 0.0" startAngle="-25.0" initialHealth="MAX" initialEnergy="MAX" />
 </meta>
 
 
 <visplanes>
 
-    <visplane start="-8.0 -8.0" end="8.0 8.0" height="0.0" texture="metal" />
+	<visplane start="-8.0 -8.0" end="8.0 8.0" height="0.0" texture="metal" />
+
+	<visplane start="-1.0 -1.0" end="-2.0 -2.0" height="0.25" />
 
 </visplanes>
 
@@ -26,5 +28,5 @@
 </displacements>
 
 <models>
-    <model position="0.0 0.0 0.75" rotation="0.0 0.785 0.0" file="LoPoly_FoodTray" texture="metal2" />
+	<model position="0.0 0.0 0.75" rotation="0.0 0.785 0.0" file="LoPoly_FoodTray" texture="metal2" />
 </models>

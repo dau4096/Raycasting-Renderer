@@ -50,7 +50,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_MAX_FREQ", ""},
 	{"VIEW_NO_INTERFACE", ""},
 
-	{"META_DRAW_UV", ""},
+	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_FREQ_UI", ""},
 	{"META_SHOW_FREQ_CONSOLE", ""},
 	{"META_SHOW_CONSOLE", ""},

@@ -23,7 +23,7 @@ uniform bool zoom;
 uniform ivec2 renderResolution;
 
 //Debug
-uniform int drawUV;
+uniform int debugMode;
 
 //Headlamp
 uniform bool headLampEnabled;
@@ -67,8 +67,7 @@ layout(std430, binding=1) buffer wallSSBO {
 struct Displacement {
 	vec4 vertices[3];
 	vec2 UV[3];
-	int textureID;
-	float _padding;
+	vec4 normal_texID;
 };
 layout(std430, binding=5) buffer displacementSSBO {
 	Displacement displacements[];
@@ -136,7 +135,7 @@ float cross2D(vec2 a, vec2 b) {
 
 
 vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
-	if (drawUV > 0) {
+	if (debugMode == 1) {
 		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
 	if (!fetchTexture || (UV.z < 0)) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
@@ -337,6 +336,9 @@ vec2 getVisplaneUV(vec3 position3D) {
 }
 
 
+
+
+//LOS
 bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	vec3 LOSDelta = pointB - pointA;
 	float distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
@@ -348,7 +350,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	//Iterate through all the walls. (2D)
 	for (int idx=0; idx<numWalls; idx++) {
 		Wall thisWall = walls[idx];
-		if (idx == thisIndex && foundType == 1) {continue; /* Wall is empty or is the index calling the LOS check. */}
+		if (idx == thisIndex && foundType == 1) {continue; /* Wall is the index calling the LOS check. */}
 
 		bool blocked = quickIntersect(pointA, pointB, thisWall);
 		if (blocked) {return true;}
@@ -358,7 +360,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	//Iterate through all visplanes. (3D)
 	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
-		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
+		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is the index calling the LOS check. */}
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
 
 
@@ -377,6 +379,36 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 			return true;
 		}
 	}
+
+	for (int idx=0; idx<numDisplacements; idx++) {
+		Displacement thisDisp = displacements[idx];
+		if (idx == thisIndex && foundType == 3) {continue; /* Displacement is the index calling the LOS check. */}
+
+		vec3 edgeA = thisDisp.vertices[1].xyz - thisDisp.vertices[0].xyz;
+		vec3 edgeB = thisDisp.vertices[2].xyz - thisDisp.vertices[0].xyz;
+		vec3 rayCrossEdgeB = cross(LOSDelta, edgeB);
+		float det = dot(edgeA, rayCrossEdgeB);
+
+		if (det > -EPSILON && det < EPSILON) {continue; /* Near parallel */}
+
+		float invDeterminant = 1.0f / det;
+		vec3 s = pointA - thisDisp.vertices[0].xyz;
+		float u = invDeterminant * dot(s, rayCrossEdgeB);
+	    if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
+	        continue; //No hit.
+	    }
+
+	    vec3 sCrossEdgeA = cross(s, edgeA);
+	    float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
+	    if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
+	    	continue; //No hit.
+	    }
+
+	    float t = invDeterminant * dot(edgeB, sCrossEdgeA);
+	    if (t > EPSILON) {
+	    	return true;
+	    }
+ 	}
 
 	return false;
 }
@@ -522,7 +554,7 @@ void main() {
 					thisDisp.UV[1].xy * barycentricW.y +
 					thisDisp.UV[2].xy * barycentricW.z
 				);
-				closestUV = vec3(UV.xy, thisDisp.textureID);
+				closestUV = vec3(UV.xy, thisDisp.normal_texID.w);
 			}
 		}
 	}
@@ -562,22 +594,16 @@ void main() {
 			}
 		} else if (foundType == 3) {
 			closestDisp = displacements[closestIndex];
-
-			normal = cross(
-				closestDisp.vertices[1].xyz - closestDisp.vertices[0].xyz,
-				closestDisp.vertices[2].xyz - closestDisp.vertices[0].xyz
-			);
-
-			vec3 pDelta = closestDisp.vertices[0].xyz - playerPosition;
-			normal *= -sign(dot(pDelta, normal));
+			normal = closestDisp.normal_texID.xyz;
 		}
 
 		vec4 albedo = fetchUV(closestUV);
 
 		if (albedo != INVALIDv4) {
-			if (noLighting || drawUV > 0) {
+			if (noLighting || debugMode == 1) { //UV and noLighting
 				fragColour = albedo;
-
+			} else if (debugMode == 2) { //Drawing normals.
+				fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
 			} else {
 				vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 				//Light effect

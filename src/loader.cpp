@@ -285,6 +285,11 @@ void loadModel(
 			thisDisp.type = D_NORMAL;
 			thisDisp.IOPtr = nullptr;
 			thisDisp.data = 0.0f;
+
+			thisDisp.normal = glm::normalize(glm::cross(
+				thisDisp.vertices[1] - thisDisp.vertices[0],
+				thisDisp.vertices[2] - thisDisp.vertices[0]
+			));
 			displacementData->push_back(thisDisp);
 		}
 	}
@@ -623,6 +628,12 @@ static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"AMAZING", glm::ivec2(1920, 1080)}
 };
 
+static inline std::unordered_map<std::string, std::string> debugMap = {
+	{"", "0"}, {"NONE", "0"},
+	{"UV", "1"}, {"TEXTURE_UV", "1"},
+	{"NORMALS", "2"}, {"SURFACE_NORMALS", "2"},
+};
+
 
 namespace loader {
 
@@ -682,8 +693,8 @@ void loadBindings() {
 
 	//Handle render quality setting.
 	std::string renderQuality = userConfig["VIEW_RENDER_RESOLUTION_QUALITY"];
-	auto it = resolutionMap.find(renderQuality);
-	if (it != resolutionMap.end()) {
+	auto resolutionIt = resolutionMap.find(renderQuality);
+	if (resolutionIt != resolutionMap.end()) {
 		desiredRenderResolution = resolutionMap[renderQuality];
 	} else {
 		std::cout << ("Invalid render resolution quality: " + renderQuality) << std::endl << "Expected one of:";
@@ -691,6 +702,18 @@ void loadBindings() {
 			std::cout << std::endl << pair.first << " for [" << pair.second.x << " x " << pair.second.y << "]";
 		}
 		desiredRenderResolution = resolutionMap["LOW"];
+	}
+
+	std::string mode = userConfig["META_DEBUG_MODE"];
+	auto debugIt = debugMap.find(mode);
+	if (debugIt != debugMap.end()) {
+		userConfig["META_DEBUG_MODE"] = debugMap[mode];
+	} else {
+		std::cout << ("Invalid debug mode: " + mode) << std::endl << "Expected one of:";
+		for (auto pair : debugMap) {
+			std::cout << std::endl << pair.first;
+		}
+		userConfig["META_DEBUG_MODE"] = debugMap["NONE"];
 	}
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {

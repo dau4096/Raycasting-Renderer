@@ -359,8 +359,8 @@ int main() {
 		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 
 		//Debug
-		GLuint uvLocation = glGetUniformLocation(envShader, "drawUV");
-		glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
+		GLuint debugLocation = glGetUniformLocation(envShader, "debugMode");
+		glUniform1i(debugLocation, utils::configToInt("META_DEBUG_MODE"));
 
 		//Headlamp
 		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
@@ -425,8 +425,8 @@ int main() {
 		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
 
 		//Debug
-		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
-		glUniform1i(uvLocation, utils::configToIntBool("META_DRAW_UV"));
+		GLuint uvLocation = glGetUniformLocation(spriteShader, "drawUV");
+		glUniform1i(uvLocation, utils::configToInt("META_DEBUG_MODE"));
 
 		//Headlamp
 		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");

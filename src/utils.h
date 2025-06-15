@@ -66,30 +66,46 @@ namespace utils {
 	}
 	static inline void printVec2(glm::vec2 vector, std::string name="") {
 		if (isConsoleVisible()) {
-			std::cout << name << " = (" << vector.x << ", " << vector.y << ")" << std::endl;
+			if (name.empty()) {
+				std::cout << "(" << vector.x << ", " << vector.y << ")" << std::endl;
+			} else {
+				std::cout << name << " = (" << vector.x << ", " << vector.y << ")" << std::endl;
+			}
 		}
 	}
 	static inline void printVec3(glm::vec3 vector, std::string name="") {
 		if (isConsoleVisible()) {
-			std::cout << name << " = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+			if (name.empty()) {
+				std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+			} else {
+				std::cout << name << " = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+			}
 		}
 	}
 	static inline void printVec4(glm::vec4 vector, std::string name="") {
 		if (isConsoleVisible()) {
-			std::cout << name << " = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+			if (name.empty()) {
+				std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+			} else {
+				std::cout << name << " = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+			}
 		}
 	}
 	static inline void printMat4(glm::mat4 matrix, std::string name="") {
 		if (isConsoleVisible()) {
-			cout << name << " = [" << endl;
-			for (size_t x=0; x<4; x++) {
-				cout << "	";
-				for (size_t y=0; y<4; y++) {
-					cout << matrix[x][y] << ", ";
-				}
-				cout << endl;
+			if (name.empty()) {
+				std::cout << "[" << std::endl;
+			} else {
+				std::cout << name << " = [" << std::endl;
 			}
-			cout << "]" << endl;
+			for (size_t x=0; x<4; x++) {
+				std::cout << "	";
+				for (size_t y=0; y<4; y++) {
+					std::cout << matrix[x][y] << ", ";
+				}
+				std::cout << std::endl;
+			}
+			std::cout << "]" << std::endl;
 		}
 	}
 	static inline void raise(std::string err) {
@@ -430,20 +446,26 @@ namespace utils {
 	struct Displacement {
 		std::array<glm::vec3, 3> vertices;
 		std::array<glm::vec2, 3> UV;
+		glm::vec3 normal;
 		int textureID;
 		DisplacementType type;
 		int* IOPtr;
 		float data;
 		float internal;
 
-		Displacement() : vertices(), UV(), textureID(0), type(D_INVALID), data(0.0f), internal(0.0f) {}
+		Displacement() : vertices(), UV(), normal(), textureID(0), type(D_INVALID), data(0.0f), internal(0.0f) {}
 
 		Displacement(
 				glm::vec3 vA, glm::vec3 vB, glm::vec3 vC,
 				glm::vec2 uvA, glm::vec2 uvB, glm::vec2 uvC,
 				int texID, DisplacementType type, int* ptr, float data
 			) : vertices{vA, vB, vC}, UV{uvA, uvB, uvC}, textureID(texID),
-				type(type), IOPtr(ptr), data(data), internal(0.0f) {}
+				type(type), IOPtr(ptr), data(data), internal(0.0f) {
+					normal = glm::normalize(glm::cross(
+						vB - vA,
+						vC - vA
+					));
+				}
 
 		Displacement(
 				std::array<glm::vec3, 3>& verts, std::array<glm::vec2, 3>& texCoords,
@@ -454,23 +476,28 @@ namespace utils {
 						vertices[index] = verts.at(index);
 						UV[index] = texCoords.at(index);
 					}
+					normal = glm::normalize(glm::cross(
+						verts[1] - verts[0],
+						verts[2] - verts[0]
+					));
 				}
 	};
 
 	struct DisplacementGPU {
 		alignas(16) std::array<glm::vec4, 3> vertices;
 		alignas(8) std::array<glm::vec2, 3> UV;
-		alignas(4) int textureID;
-		alignas(4) float _padding;
+		alignas(16) glm::vec4 normal_texID;
 
-		DisplacementGPU() : vertices(), UV(), textureID(0), _padding(0.0f) {}
+		DisplacementGPU() : vertices(), UV(), normal_texID() {}
 
-		DisplacementGPU(Displacement* disp, Player* player)
-			: textureID(disp->textureID), _padding(0.0f) {
+		DisplacementGPU(Displacement* disp, Player* player) {
 				for (size_t index=0; index<3; index++) {
 					vertices[index] = glm::vec4(disp->vertices.at(index), 0.0f);
 					UV[index] = disp->UV.at(index);
 				}
+				glm::vec3 pDelta = disp->vertices[0] - player->position;
+				glm::vec3 normal = disp->normal * -glm::sign(glm::dot(pDelta, disp->normal));
+				normal_texID = glm::vec4(normal, disp->textureID);
 			}
 	};
 

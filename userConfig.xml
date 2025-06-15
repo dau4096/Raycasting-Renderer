@@ -41,7 +41,7 @@
 	<option function="VIEW_MAX_FREQ" value="75.0" />
 	<option function="VIEW_NO_INTERFACE" value="FALSE" />
 
-	<option function="META_DRAW_UV" value="FALSE" />
+	<option function="META_DEBUG_MODE" value="NONE" />
 	<option function="META_SHOW_FREQ_UI" value="TRUE" />
 	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
