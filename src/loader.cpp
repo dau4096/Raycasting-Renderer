@@ -272,7 +272,6 @@ static inline Displacement extractDisplacement(
 		getVec2(node, "cUV", glm::vec2(0.0f, 0.0f)),
 
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
-		getBool(node, "collision", false),
 		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
 		getPTR(node, flags, "IOPtr", nullptr),
 		getFloat(node, "extra", 0.0f)
@@ -471,7 +470,9 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"TERRIBLE", glm::ivec2(64, 36)},
 	{"AWFUL", glm::ivec2(256, 144)},
-	{"LOW", glm::ivec2(640, 400)},
+	{"CALCULATOR", glm::ivec2(384, 216)},
+	{"DS", glm::ivec2(400, 240)},
+	{"LOW", glm::ivec2(640, 360)},
 	{"MEDIUM", glm::ivec2(960, 540)},
 	{"HIGH", glm::ivec2(1280, 720)},
 	{"AMAZING", glm::ivec2(1920, 1080)}

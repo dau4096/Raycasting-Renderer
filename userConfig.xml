@@ -47,7 +47,8 @@
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
 	<option function="META_SHOW_DATA" value="TRUE" />
 	<option function="META_STAGE_NAME" value="test4-old" />
-	<option function="META_RELOAD_STAGE_ON_TICK" value="FALSE" />
+	<option function="META_DYNAMIC_UPD" value="FALSE" />
+	<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" value="FALSE" />
 
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />
 </config>

@@ -104,6 +104,7 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 
 
 vec2 fragPosition;
+vec2 rayDirectionCentre;
 vec4 fragColour;
 float zoomEffect;
 float halfFOV;
@@ -129,6 +130,27 @@ float cross2D(vec2 a, vec2 b) {
 	return a.x * b.y - a.y * b.x;
 }
 
+
+
+
+
+
+vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
+	if (drawUV > 0) {
+		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
+	}
+	if (!fetchTexture) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
+	return texture(textureArray, UV);
+}
+
+
+
+
+
+
+
+
+//Walls
 dvec2 rayIntersectCheck(Ray ray, Wall wall, out double t) {
 	dvec2 origin = ray.position;
 	dvec2 rayDelta = ray.end - ray.position;
@@ -168,7 +190,48 @@ bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
 }
 
 
-//Displacement stuff
+vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
+	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
+	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
+	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
+
+	//xUV calculation.
+	double xUV;
+	vec2 wallDelta = wallEndV2 - wallStartV2;
+	if (abs(wallDelta.y) > abs(wallDelta.x)) {
+		xUV = fract(intersectPoint.y / textureScale.x);
+	} else {
+		xUV = fract(intersectPoint.x / textureScale.x);
+	}
+	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
+
+
+	//yUV calculation.
+	double distance = length(originPos.xy - intersectPoint) / zoomEffect;
+	double projectedYLow = (originPos.z - wallLowZ) / distance;
+	double projectedYTop = (originPos.z - wallTopZ) / distance;
+
+	double screenYLow = renderResolution.y * (0.5 - projectedYLow);
+	double screenYTop = renderResolution.y * (0.5 - projectedYTop);
+
+	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALIDv2;}
+
+	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
+	fragZ = mix(wallLowZ, wallTopZ, a);
+	double yUV = 1.0f - fract(fragZ / textureScale.y);
+
+
+	return vec2(xUV, yUV) + textureOffset.xz;
+}
+
+
+
+
+
+
+
+
+//Displacements
 vec2 getScreenPosition(vec3 position3D) {
 	vec2 delta = position3D.xy - playerPosition.xy;
 
@@ -220,56 +283,22 @@ vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
 	return vec3(a,b,c);
 }
 
-
-
-
-
-
-vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
-	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
-	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
-	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
-
-	//xUV calculation.
-	double xUV;
-	vec2 wallDelta = wallEndV2 - wallStartV2;
-	if (abs(wallDelta.y) > abs(wallDelta.x)) {
-		xUV = fract(intersectPoint.y / textureScale.x);
-	} else {
-		xUV = fract(intersectPoint.x / textureScale.x);
-	}
-	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
-
-
-	//yUV calculation.
-	double distance = length(originPos.xy - intersectPoint) / zoomEffect;
-	double projectedYLow = (originPos.z - wallLowZ) / distance;
-	double projectedYTop = (originPos.z - wallTopZ) / distance;
-
-	double screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	double screenYTop = renderResolution.y * (0.5 - projectedYTop);
-
-	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALIDv2;}
-
-	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
-	fragZ = mix(wallLowZ, wallTopZ, a);
-	double yUV = 1.0f - fract(fragZ / textureScale.y);
-
-
-	return vec2(xUV, yUV) + textureOffset.xz;
-}
-
-
-vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
-	if (drawUV > 0) {
-		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
-	}
-	if (!fetchTexture) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
-	return texture(textureArray, UV);
+bool behindCamera(vec4 pt, vec2 proj) {
+	vec2 dir = normalize(pt.xy - playerPosition.xy);
+	return (dot(rayDirectionCentre, dir) < 0.0f) || (
+		proj.x < 0.0f || proj.x > renderResolution.x ||
+		proj.y < 0.0f || proj.y > renderResolution.y
+	);
 }
 
 
 
+
+
+
+
+
+//Visplanes
 vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
 	float targetZ = (originPos.z - plane.height) * zoomEffect;
 	vec2 position2D;
@@ -353,6 +382,12 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 }
 
 
+
+
+
+
+
+
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
@@ -374,7 +409,7 @@ void main() {
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	float rPVA = radians(playerViewAngle);
-	vec2 rayDirectionCentre = vec2(sin(rPVA), cos(rPVA));
+	rayDirectionCentre = vec2(sin(rPVA), cos(rPVA));
 	float distMultiplier = dot(rayDirection, rayDirectionCentre);
 
 	Ray fragRay = createRay(playerPosition.xy, rayDirection);
@@ -386,8 +421,14 @@ void main() {
 
 
 
+
+
+
+
+
+	//Find closest intersect
 	vec3 closestIntersectPoint, closestUV;
-	double minDistance = maxRayDistance;
+	double minDistanceSQ = maxRayDistance * maxRayDistance;
 	int closestIndex, foundType = 0;
 
 	//Iterate through all the walls. (2D)
@@ -408,9 +449,9 @@ void main() {
 		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition); //Check if inside wall (Valid UV)
 
 
-		if (wallUV != INVALIDv2 && wallDistanceSQ < minDistance*minDistance) {
+		if (wallUV != INVALIDv2 && wallDistanceSQ < minDistanceSQ) {
 			//Set closest.
-			minDistance = 1.0f / inversesqrt(wallDistanceSQ);
+			minDistanceSQ = wallDistanceSQ;
 			closestIndex = idx;
 			closestIntersectPoint = vec3(intersectPoint.xy, fragZ);
 			closestUV = vec3(wallUV.xy, thisWall.textureID);
@@ -440,8 +481,8 @@ void main() {
 		}
 
 		float vPlaneDistanceSQ = dot(playerPosition.xy - intersectPoint.xy, playerPosition.xy - intersectPoint.xy); //Cheaper length() call
-		if (vPlaneDistanceSQ < minDistance*minDistance) {
-			minDistance = 1.0f / inversesqrt(vPlaneDistanceSQ);
+		if (vPlaneDistanceSQ < minDistanceSQ) {
+			minDistanceSQ = vPlaneDistanceSQ;
 			closestIntersectPoint = intersectPoint;
 			closestIndex = idx;
 			foundType = 2;
@@ -450,12 +491,15 @@ void main() {
 	}
 
 
+	//Iterate through all displacements. (pseudo-3D)
 	for (int idx=0; idx<numDisplacements; idx++) {
 		Displacement thisDisp = displacements[idx];
 
 		vec2 pA = getScreenPosition(thisDisp.vertices[0].xyz);
 		vec2 pB = getScreenPosition(thisDisp.vertices[1].xyz);
 		vec2 pC = getScreenPosition(thisDisp.vertices[2].xyz);
+
+		if (behindCamera(thisDisp.vertices[0], pA) && behindCamera(thisDisp.vertices[1], pB) && behindCamera(thisDisp.vertices[2], pC)) {continue;}
 
 		if (inDisplacement(pA, pB, pC)) {
 			vec3 barycentricW = barycentricWeights(pA, pB, pC);
@@ -467,8 +511,8 @@ void main() {
 			vec2 delta = pos3D.xy - playerPosition.xy;
 			float distanceSQ = dot(delta, delta);
 
-			if (distanceSQ < minDistance*minDistance) {
-				minDistance = 1.0f / inversesqrt(distanceSQ);
+			if (distanceSQ < minDistanceSQ) {
+				minDistanceSQ = distanceSQ;
 				closestIndex = idx;
 				closestIntersectPoint = pos3D;
 				foundType = 3;
@@ -483,10 +527,15 @@ void main() {
 		}
 	}
 
-
-	minDistance *= distMultiplier;
-
-
+	double minDistance = distMultiplier * (1.0f / inversesqrt(minDistanceSQ));
+	
+	
+	
+	
+	
+	
+	
+	//Lighting
 	if (foundType > 0) { //An intersect was found.
 		Wall closestWall;
 		Visplane closestPlane;

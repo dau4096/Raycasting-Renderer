@@ -56,7 +56,8 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
 	{"META_SHOW_DATA", ""},
-	{"META_RELOAD_STAGE_ON_TICK", ""},
+	{"META_DYNAMIC_UPD", ""},
+	{"META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES", ""},
 
 	{"PHYS_NO_COLLIDE", ""},
 };

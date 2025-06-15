@@ -413,21 +413,18 @@ namespace utils {
 		std::array<glm::vec3, 3> vertices;
 		std::array<glm::vec2, 3> UV;
 		int textureID;
-		bool collision;
 		DisplacementType type;
 		int* IOPtr;
 		float data;
 		float internal;
 
-		Displacement() : vertices(), UV(), textureID(0), collision(false), type(D_INVALID), data(0.0f), internal(0.0f) {}
+		Displacement() : vertices(), UV(), textureID(0), type(D_INVALID), data(0.0f), internal(0.0f) {}
 
 		Displacement(
 				glm::vec3 vA, glm::vec3 vB, glm::vec3 vC,
 				glm::vec2 uvA, glm::vec2 uvB, glm::vec2 uvC,
-				int texID, bool collis,
-				DisplacementType type, int* ptr, float data
-			) : vertices{vA, vB, vC}, UV{uvA, uvB, uvC},
-				textureID(texID), collision(collis),
+				int texID, DisplacementType type, int* ptr, float data
+			) : vertices{vA, vB, vC}, UV{uvA, uvB, uvC}, textureID(texID),
 				type(type), IOPtr(ptr), data(data), internal(0.0f) {}
 	};
 

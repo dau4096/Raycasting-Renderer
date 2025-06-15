@@ -226,7 +226,11 @@ int main() {
 				&logicGates, &flags,
 				&textureNames
 			);
-		} else if (keyMap["META_RELOAD_ENV"] || utils::configToBool("META_RELOAD_STAGE_ON_TICK")) {
+			if (utils::configToBool("META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES")) {
+				textureArrayEnvironment = render::createTexture2DArray(textureNames);
+				skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+			}
+		} else if (keyMap["META_RELOAD_ENV"] || utils::configToBool("META_DYNAMIC_UPD")) {
 			utils::Player tmpPlayer;
 			loader::loadStage(
 				userConfig["META_STAGE_NAME"], &tmpPlayer,
@@ -236,6 +240,10 @@ int main() {
 				&logicGates, &flags,
 				&textureNames
 			);
+			if (utils::configToBool("META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES")) {
+				textureArrayEnvironment = render::createTexture2DArray(textureNames);
+				skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+			}
 		}
 
 

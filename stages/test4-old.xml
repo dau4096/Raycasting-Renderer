@@ -28,6 +28,6 @@
 </walls>
 
 <displacements>
-    <displacement aPos="1.0 -1.0 0.0" aUV="1.0 1.0" bPos="1.0 -3.0 0.0" bUV="0.0 1.0" cPos="-1.0 -3.0 2.0" cUV="0.0 0.0" texture="classic" collision="TRUE" />
-    <displacement aPos="1.0 -1.0 0.0" aUV="1.0 1.0" bPos="-1.0 -3.0 2.0" bUV="0.0 0.0" cPos="-1.0 -1.0 2.0" cUV="1.0 0.0" texture="classic" collision="TRUE" />
+    <displacement aPos="1.0 -1.0 0.0" aUV="1.0 1.0" bPos="1.0 -3.0 0.0" bUV="0.0 1.0" cPos="-1.0 -3.0 2.0" cUV="0.0 0.0" texture="classic" />
+    <displacement aPos="1.0 -1.0 0.0" aUV="1.0 1.0" bPos="-1.0 -3.0 2.0" bUV="0.0 0.0" cPos="-1.0 -1.0 2.0" cUV="1.0 0.0" texture="classic" />
 </displacements>
