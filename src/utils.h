@@ -64,14 +64,32 @@ namespace utils {
 			std::cout << str << std::endl;
 		}
 	}
-	static inline void printVec2(glm::vec2 vector) {
+	static inline void printVec2(glm::vec2 vector, std::string name="") {
 		if (isConsoleVisible()) {
-			std::cout << "(" << vector.x << ", " << vector.y << ")" << std::endl;
+			std::cout << name << " = (" << vector.x << ", " << vector.y << ")" << std::endl;
 		}
 	}
-	static inline void printVec3(glm::vec3 vector) {
+	static inline void printVec3(glm::vec3 vector, std::string name="") {
 		if (isConsoleVisible()) {
-			std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+			std::cout << name << " = (" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+		}
+	}
+	static inline void printVec4(glm::vec4 vector, std::string name="") {
+		if (isConsoleVisible()) {
+			std::cout << name << " = (" << vector.x << ", " << vector.y << ", " << vector.z << ", " << vector.w << ")" << std::endl;
+		}
+	}
+	static inline void printMat4(glm::mat4 matrix, std::string name="") {
+		if (isConsoleVisible()) {
+			cout << name << " = [" << endl;
+			for (size_t x=0; x<4; x++) {
+				cout << "	";
+				for (size_t y=0; y<4; y++) {
+					cout << matrix[x][y] << ", ";
+				}
+				cout << endl;
+			}
+			cout << "]" << endl;
 		}
 	}
 	static inline void raise(std::string err) {
@@ -426,6 +444,17 @@ namespace utils {
 				int texID, DisplacementType type, int* ptr, float data
 			) : vertices{vA, vB, vC}, UV{uvA, uvB, uvC}, textureID(texID),
 				type(type), IOPtr(ptr), data(data), internal(0.0f) {}
+
+		Displacement(
+				std::array<glm::vec3, 3>& verts, std::array<glm::vec2, 3>& texCoords,
+				int texID, DisplacementType type, int* ptr, float data
+			) : textureID(texID), type(type), IOPtr(ptr),
+				data(data), internal(0.0f) {
+					for (size_t index=0; index<3; index++) {
+						vertices[index] = verts.at(index);
+						UV[index] = texCoords.at(index);
+					}
+				}
 	};
 
 	struct DisplacementGPU {

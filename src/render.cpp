@@ -182,7 +182,7 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 
 	if (!textureData) {
 		//Try in folder beside stage XML with same name.
-		texturePath = "stages/tex-" + stageData.name + "/" + textureName + ".png";
+		texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
 		textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -273,7 +273,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 
 		if (!textureData) {
 			//Try in folder beside stage XML with same name.
-			texturePath = "stages/tex-" + stageData.name + "/" + textureName + ".png";
+			texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
 			textureData = stbi_load(
 				texturePath.c_str(),
 				&width, &height,

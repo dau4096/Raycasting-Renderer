@@ -1,13 +1,15 @@
+#define TINYOBJLOADER_IMPLEMENTATION
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
+#include "tiny_obj_loader.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
 using namespace pugi;
 
 
-namespace xml {
+namespace xmlFallbackAttribFunc {
 
 static inline glm::vec3 parseVec3(const std::string& str) {
 	std::istringstream ss(str);
@@ -185,7 +187,133 @@ static inline int getTexture(
 	return assignTexture(name, textureNames);
 }
 
+}
 
+using namespace xmlFallbackAttribFunc;
+
+
+
+namespace models {
+
+
+
+
+static glm::mat4 getModelMat4(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
+	glm::mat4 translationMat = glm::mat4(
+		1.0f, 	0.0f, 	0.0f, 	pos.x,
+		0.0f, 	1.0f, 	0.0f, 	pos.y,
+		0.0f, 	0.0f, 	1.0f, 	pos.z,
+		0.0f, 	0.0f, 	0.0f, 	1.0f
+	);
+
+	float sx = sin(rot.x), cx = cos(rot.x);
+	float sy = sin(rot.y), cy = cos(rot.y);
+	float sz = sin(rot.z), cz = cos(rot.z);
+	glm::mat4 rotationMat = glm::mat4(
+		cy*cz, cy*sz, -sy, 0.0f,
+		sx*sy*cz-cx*sz, sx*sy*sz+cx*cz, sx*cy, 0.0f,
+		cx*sy*cz+sx*sz, cx*sy*sz-sx*cz, cx*cy, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	);
+
+	glm::mat4 scaleMat = glm::mat4(
+		scale.x,	0.0f, 		0.0f,		0.0f, 
+		0.0f, 		scale.y,	0.0f, 		0.0f, 
+		0.0f, 		0.0f, 		scale.z,	0.0f, 
+		0.0f, 		0.0f, 		0.0f, 		1.0f
+	);
+
+	return rotationMat * scaleMat * translationMat;
+}
+
+
+void loadModel(
+		const std::string& modelFilePath, 
+		std::vector<utils::Displacement>* displacementData,
+		int textureID,
+		glm::vec3 position=glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3 rotation=glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3 scale=glm::vec3(1.0f, 1.0f, 1.0f)
+	) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn;
+
+	glm::mat4 modelMatrix = getModelMat4(position, rotation, scale); //Matrix seems wrong; renders fine when matrix NOT involved.
+
+	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, modelFilePath.c_str(), nullptr, true);
+
+	if (!warn.empty()) std::cout << "TinyOBJ warning: " << warn << std::endl;
+	if (!ret) return;
+
+
+	for (const auto& shape : shapes) {
+		std::unordered_map<int, int> indexMap;
+
+		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+			int fv = shape.mesh.num_face_vertices[f];
+			if (fv != 3) {continue; /* Invalid. */}
+
+			Displacement thisDisp;
+			for (size_t v = 0; v < fv; v++) {
+				tinyobj::index_t idx = shape.mesh.indices[f * fv + v];
+
+				glm::vec4 pos4 = glm::vec4(
+					attrib.vertices[3 * idx.vertex_index + 0],
+					attrib.vertices[3 * idx.vertex_index + 1],
+					attrib.vertices[3 * idx.vertex_index + 2],
+					1.0f
+				);
+
+				glm::vec3 pos = glm::vec3(pos4 * modelMatrix);
+
+				glm::vec2 uv = glm::vec2(0.0f, 0.0f);
+				if (idx.texcoord_index >= 0) {
+					uv = glm::vec2(
+						attrib.texcoords[2 * idx.texcoord_index + 0],
+						attrib.texcoords[2 * idx.texcoord_index + 1]
+					);
+				} else {
+					textureID = -1;
+				}
+
+				thisDisp.vertices[v] = pos;
+				thisDisp.UV[v] = uv;
+			}
+			thisDisp.textureID = textureID;
+			thisDisp.type = D_NORMAL;
+			thisDisp.IOPtr = nullptr;
+			thisDisp.data = 0.0f;
+			displacementData->push_back(thisDisp);
+		}
+	}
+
+	validDisplacements = displacementData->size();
+}
+
+
+void convertOBJIntoDisplacements(
+		const pugi::xml_node& node,
+		std::vector<utils::Displacement>* displacementData,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
+	glm::vec3 modelPosition = getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 modelRotation = getVec3(node, "rotation", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 modelScale = getVec3(node, "scale", glm::vec3(1.0f, 1.0f, 1.0f));
+	std::string modelFileName = getString(node, "file", "");
+	int textureID = getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME);
+
+	if (!modelFileName.empty()) {
+		std::string modelFilePath = "stages/assets-" + utils::strToUpper(userConfig["META_STAGE_NAME"]) + "/" + modelFileName + ".obj";
+		loadModel(modelFilePath, displacementData, textureID, modelPosition, modelRotation, modelScale);
+	}
+}
+
+}
+
+
+namespace xml {
 
 
 template<typename T>
@@ -346,6 +474,23 @@ static inline LogicGate extractGate(
 		getPTR(node, flags, "inputBPtr", nullptr)
 	);
 	return gate;
+}
+
+
+
+void loadModels(
+		pugi::xml_document& doc,
+		const std::string& xpath,
+		std::vector<utils::Displacement>* displacementData,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	
+	for (size_t i=0; i<count; i++) {
+		pugi::xml_node node = nodeList[i].node();
+		models::convertOBJIntoDisplacements(node, displacementData, textureNames);
+	}
 }
 
 
@@ -511,6 +656,9 @@ void loadStage(
 	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//lights/light", xml::extractLight, &validLights, nullptr, nullptr);
 	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects, nullptr, nullptr);
 	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logicGates/logic", xml::extractGate, &validGates, flags, nullptr);
+
+	xml::loadModels(doc, "//models/model", displacementData, textureNames);
+
 
 	stageData.name = stageName;
 	stageData.filePath = filePath;
