@@ -119,7 +119,7 @@ int main() {
 
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	GLuint interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames);
+	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames, "textures-env", true);
 	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
 	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
 	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
@@ -331,9 +331,10 @@ int main() {
 
 		//Uniforms
 		render::bindCommonUniforms(envShader, &player);
-		//Headlamp
+		//Other
 		render::bindUniformValue(envShader, "headLampEnabled", headLampEnabled);
 		render::bindUniformValue(envShader, "headLampFlicker", lightFlickerRNG);
+		render::bindUniformValue(envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -351,7 +352,7 @@ int main() {
 
 		//Uniforms
 		render::bindCommonUniforms(spriteShader, &player);
-		//Headlamp
+		//Other
 		render::bindUniformValue(spriteShader, "headLampEnabled", headLampEnabled);
 		render::bindUniformValue(spriteShader, "headLampFlicker", lightFlickerRNG);
 
@@ -378,6 +379,9 @@ int main() {
 			//UI-Specific
 			render::bindUniformValue(uiShader, "showFreq", utils::configToBool("META_SHOW_FREQ_UI"));
 			render::bindUniformValue(uiShader, "showData", utils::configToBool("META_SHOW_DATA"));
+			render::bindUniformValue(uiShader, "health", player.health);
+			render::bindUniformValue(uiShader, "energy", player.energy);
+			render::bindUniformValue(uiShader, "freq", freq);
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);

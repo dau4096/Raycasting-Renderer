@@ -277,8 +277,8 @@ namespace playerConfig {
 	constexpr float MOVE_SPEED_BASE = 0.05f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
-	constexpr float MOVE_SPEED_SLIDE_ADD = 0.125f;
-	constexpr float SLIDE_THRESHOLD = MOVE_SPEED_BASE * 1.5f;
+	constexpr float MOVE_SPEED_SLIDE_ADD = 0.5f;
+	constexpr float SLIDE_THRESHOLD = MOVE_SPEED_BASE * 1.125f;
 	constexpr float JUMP_INIT_SPEED = 0.25f;
 	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.5f;
 	constexpr int MAX_JUMPS = 2; //Double jumps allowed.

@@ -45,6 +45,8 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_LEAN", ""},
 	{"VIEW_VLOOK", ""},
 	{"VIEW_SMOOTHING", ""},
+	{"VIEW_MIPMAPPING", ""},
+	{"VIEW_TEXTURE_QUALITY", ""},
 	{"VIEW_ANTIALIAS_LEVEL", ""},
 	{"VIEW_LUMINANCE_QUANTISATION", ""},
 	{"VIEW_MAX_FREQ", ""},

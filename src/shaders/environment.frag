@@ -13,6 +13,7 @@ uniform float verticalFOV;
 uniform float zoomFactor;
 uniform vec2 textureScale;
 uniform vec3 textureOffset;
+uniform bool useMipMapping;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -119,6 +120,49 @@ const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
 const bool noLighting = false;
+const bool blendMipMap = true;
+const bool forceMipMapLevel = false;
+const float forcedMipMapLevel = 0.0f;
+const bool debugMipMapLevel = false;
+
+const float mipMapLevels = 7.0f;
+const float minMipMapDistance = 5.0f;
+
+
+
+
+
+
+vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition, bool fetchTexture=true) {
+	if (debugMode == 1) {
+		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
+	}
+	if (!fetchTexture || (UV.z < 0)) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
+	if (!useMipMapping) {
+		return textureLod(textureArray, UV, 0.0f);
+	}
+	if (forceMipMapLevel) {
+		return textureLod(textureArray, UV, forcedMipMapLevel);
+	}
+
+	//Linear, uses MM1 from minMipMapDistance and so on.
+	float depthComponent = (mipMapLevels * 2.0f / maxRayDistance) * (float(distance) - minMipMapDistance);
+	//Walls facing camera appear sharper, visplanes at grazing angles appear smoother etc.
+	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
+	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, mipMapLevels); 
+
+	if (debugMipMapLevel) {
+		return vec4(LODIndex / mipMapLevels, fract(LODIndex), 0.0f, 1.0f);
+	}
+	vec4 mipMapColour = textureLod(textureArray, UV, ceil(LODIndex));
+	if (!blendMipMap) {
+		return mipMapColour;
+	}
+	vec4 MipMapMinusOneColour = textureLod(textureArray, UV, ceil(LODIndex) - 1.0f);
+	return mix(MipMapMinusOneColour, mipMapColour, fract(LODIndex));
+}
+
+
 
 
 //GLSL Cross only works on vec3.
@@ -128,21 +172,6 @@ double cross2D(dvec2 a, dvec2 b) {
 float cross2D(vec2 a, vec2 b) {
 	return a.x * b.y - a.y * b.x;
 }
-
-
-
-
-
-
-vec4 fetchUV(vec3 UV, bool fetchTexture=true) {
-	if (debugMode == 1) {
-		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
-	}
-	if (!fetchTexture || (UV.z < 0)) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
-	return texture(textureArray, UV);
-}
-
-
 
 
 
@@ -597,79 +626,77 @@ void main() {
 			normal = closestDisp.normal_texID.xyz;
 		}
 
-		vec4 albedo = fetchUV(closestUV);
+		vec4 albedo = fetchUV(closestUV, minDistance, normal, closestIntersectPoint);
 
-		if (albedo != INVALIDv4) {
-			if (noLighting || debugMode == 1) { //UV and noLighting
-				fragColour = albedo;
-			} else if (debugMode == 2) { //Drawing normals.
-				fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
-			} else {
-				vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
-				//Light effect
-				for (int idx=0; idx<numLights; idx++) {
-					//Iterate through all lights.
-					Light thisLight = lights[idx];
-					if (!thisLight.enabled) {continue;}
-					vec3 delta = closestIntersectPoint - thisLight.position;
-					float distSQ = dot(delta, delta);
-					float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-					if (attenuation < 0.0f) {continue;}
-					vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
-					float normalDot = dot(normal, lightDir);
-					if (normalDot <= EPSILON) {continue;}
+		if (noLighting || debugMode == 1) { //UV and noLighting
+			fragColour = albedo;
+		} else if (debugMode == 2) { //Drawing normals.
+			fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
+		} else {
+			vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
+			//Light effect
+			for (int idx=0; idx<numLights; idx++) {
+				//Iterate through all lights.
+				Light thisLight = lights[idx];
+				if (!thisLight.enabled) {continue;}
+				vec3 delta = closestIntersectPoint - thisLight.position;
+				float distSQ = dot(delta, delta);
+				float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
+				if (attenuation < 0.0f) {continue;}
+				vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
+				float normalDot = dot(normal, lightDir);
+				if (normalDot <= EPSILON) {continue;}
 
-					
-					//Shadow Checks
-					bool inShadow = checkLOS(thisLight.position, closestIntersectPoint, closestIndex, foundType);
+				
+				//Shadow Checks
+				bool inShadow = checkLOS(thisLight.position, closestIntersectPoint, closestIndex, foundType);
 
-					if (!inShadow) {
-						vec3 lightContribution = thisLight.colour * attenuation;
-						vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
+				if (!inShadow) {
+					vec3 lightContribution = thisLight.colour * attenuation;
+					vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
 
-						fragColour += litColour;
-					}
-				}
-
-
-				//Headlamp Effect
-				if (headLampEnabled) {
-					Light headLamp;
-					headLamp.position = playerPosition;
-					headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
-					headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
-
-
-					vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
-					float normalDot = dot(normal, lightDir);
-
-					if (normalDot >= 0.0f) {
-						float distance = length(closestIntersectPoint - headLamp.position);
-						float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-						float brightness = clamp(attenuation, 0.0f, 1.0f);
-
-						vec3 lightContribution = headLamp.colour * brightness;
-						vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
-
-						fragColour += litColour;
-					}
-				}
-
-
-				//Sun Effect
-				float sunNormalDot = dot(normal, normalize(sunDirection));
-				vec3 offset = normal * 0.01f;
-				bool sunBlocked = checkLOS(closestIntersectPoint + offset, closestIntersectPoint + offset + sunDirection * maxRayDistance, closestIndex, foundType);
-				if ((sunNormalDot >= 0.0f) && !sunBlocked) {
-					float sunNormalContrib = (sunNormalDot * 0.5f) + 0.5f;
-					vec4 litColour = vec4(albedo.rgb * sunColour.rgb * sunNormalContrib, 1.0f);
 					fragColour += litColour;
 				}
-
-
-				//Minimum/Maximum brightness.
-				fragColour = clamp(fragColour, albedo * DEFAULT_BRIGHTNESS, albedo * 1.75f);
 			}
+
+
+			//Headlamp Effect
+			if (headLampEnabled) {
+				Light headLamp;
+				headLamp.position = playerPosition;
+				headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
+				headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
+
+
+				vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
+				float normalDot = dot(normal, lightDir);
+
+				if (normalDot >= 0.0f) {
+					float distance = length(closestIntersectPoint - headLamp.position);
+					float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
+					float brightness = clamp(attenuation, 0.0f, 1.0f);
+
+					vec3 lightContribution = headLamp.colour * brightness;
+					vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
+
+					fragColour += litColour;
+				}
+			}
+
+
+			//Sun Effect
+			float sunNormalDot = dot(normal, normalize(sunDirection));
+			vec3 offset = normal * 0.01f;
+			bool sunBlocked = checkLOS(closestIntersectPoint + offset, closestIntersectPoint + offset + sunDirection * maxRayDistance, closestIndex, foundType);
+			if ((sunNormalDot >= 0.0f) && !sunBlocked) {
+				float sunNormalContrib = (sunNormalDot * 0.5f) + 0.5f;
+				vec4 litColour = vec4(albedo.rgb * sunColour.rgb * sunNormalContrib, 1.0f);
+				fragColour += litColour;
+			}
+
+
+			//Minimum/Maximum brightness.
+			fragColour = clamp(fragColour, albedo * DEFAULT_BRIGHTNESS, albedo * 1.75f);
 		}
 		vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
 		imageStore(renderedFrame, framePosition, finalFragColour);

@@ -32,8 +32,9 @@ uniform vec3 sunDirection;
 uniform vec3 sunColour;
 
 //Other
-uniform int numWalls;
 uniform int numVisplanes;
+uniform int numWalls;
+uniform int numDisplacements;
 uniform int numSprites;
 uniform int numLights;
 
@@ -60,6 +61,15 @@ struct Wall {
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
+};
+
+struct Displacement {
+	vec4 vertices[3];
+	vec2 UV[3];
+	vec4 normal_texID;
+};
+layout(std430, binding=5) buffer displacementSSBO {
+	Displacement displacements[];
 };
 
 struct Sprite {
@@ -114,74 +124,37 @@ const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 
 const bool noLighting = false;
 
+const float mipMapLevels = 7.0f;
+const float minMipMapDistance = 5.0f;
 
 
-dvec2 rayIntersectCheck(Ray ray, Wall wall) {
-	dvec2 wallStartV2 = wall.start.xy;
-	dvec2 wallEndV2 = wall.end.xy;
 
-	dvec2 r = ray.end - ray.position;
-	dvec2 s = wallEndV2 - wallStartV2;
-
-	double denom = r.x * s.y - r.y * s.x;
-	if (abs(denom) < EPSILON) return INVALIDdv2;
-
-	dvec2 diff = wallStartV2 - ray.position;
-	double t = (diff.x * s.y - diff.y * s.x) / denom;
-	double u = (diff.x * r.y - diff.y * r.x) / denom;
-
-	if (t < 0.0f || u < 0.0f || u > 1.0f) return INVALIDdv2;
-
-	return ray.position + t * r;
+//GLSL Cross only works on vec3.
+double cross2D(dvec2 a, dvec2 b) {
+	return a.x * b.y - a.y * b.x;
+}
+float cross2D(vec2 a, vec2 b) {
+	return a.x * b.y - a.y * b.x;
 }
 
+bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
+	vec2 rayDelta = pointB.xy - pointA.xy;
+	vec2 wallDelta = wall.end.xy - wall.start.xy;
 
+	float denom = cross2D(rayDelta, wallDelta);
+	if (abs(denom) < 1e-4f) {return false;}
 
-bool wallIntersectQuick(vec3 start, vec3 end, Wall wall) {
-	vec2 wallDirection = normalize(wall.start.xy - wall.end.xy);
-	vec2 wallNormal = vec2(-wallDirection.y, wallDirection.x);
+	vec2 rel = wall.start.xy - pointA.xy;
+	float t = cross2D(rel, wallDelta) / denom;
+	float u = cross2D(rel, rayDelta) / denom;
 
-	float startProj = dot(start.xy - wall.start.xy, wallNormal);
-	float endProj = dot(end.xy - wall.start.xy, wallNormal);
-	if (startProj * endProj >= 0.0f) {return false;}
-	if (sign(startProj) == sign(endProj)) {return false;}
+	if ((t < -1e-4f) || (t > 1.0f + 1e-4f) || (u < -1e-4f) || (u > 1.0f + 1e-4f)) {return false;}
 
-	float denom = endProj - startProj;
-	if (abs(denom) < EPSILON) return false;
-	float alpha = startProj / denom;
+	float z = pointA.z + (pointB.z - pointA.z) * t;
 
-	if (alpha < 0.0f || alpha > 1.0f) {return false;}
-
-	float thisZ = mix(start.z, end.z, alpha);
-	return (thisZ >= wall.start.z - EPSILON) && (thisZ <= wall.end.z + EPSILON);
+	return (min(wall.start.z, wall.end.z) - 1e-4f <= z) && (z <= max(wall.start.z, wall.end.z) + 1e-4f);
 }
 
-
-vec3 getVisplaneIntersect(Visplane plane, vec3 originPos) {
-	float targetZ = (originPos.z - plane.height) * zoomEffect;
-	vec2 position2D;
-
-	float halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
-
-	float theta = radians(playerViewAngle + rayOffset);
-	vec3 rayDirection = vec3(sin(theta), cos(theta), tanVerticalViewAngleOffset);
-
-
-	/*
-	//Original from getWallUV()
-	float projectedYTop = (originPos.z - wallTopZ) / distance;
-	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	*/
-
-	float antiProjection = 0.5f - (fragPosition.y/renderResolution.y);
-	if (abs(antiProjection) < EPSILON) {return INVALIDv3; /* Avoids DivZero error */}
-	float t = targetZ / antiProjection;
-	if (t < 0.0f) {return INVALIDv3; /* Behind origin */}
-	position2D = originPos.xy + rayDirection.xy * t;
-
-	return vec3(position2D.xy, plane.height);
-}
 
 
 vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
@@ -192,14 +165,12 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 	float distance = length(playerPosition.xy - thisSprite.position.xy) / zoomEffect;
 	float projectedYLow = (playerPosition.z - spriteFootZ) / distance;
 	float projectedYTop = (playerPosition.z - spriteHeadZ) / distance;
-
+	
 	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
 	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
 
-
 	float spriteHeight = screenYTop - screenYLow;
 	float spriteWidth = thisSprite.width * spriteHeight;
-	//spriteWidth = (zoom) ? spriteWidth * zoomFactor : spriteWidth;
 	spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
 
 
@@ -222,25 +193,25 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	vec3 LOSDelta = pointB - pointA;
 	float distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
-	float distToTarget = sqrt(distToTargetSQ);
-	dvec3 LOSDirection = normalize(LOSDelta);
-	Ray LOSRay = createRay(pointA.xy, normalize(LOSDelta.xy), distToTarget);
+	float distToTargetInv = inversesqrt(distToTargetSQ);
+	vec3 LOSDirection = LOSDelta * distToTargetInv;
+	Ray LOSRay = createRay(pointA.xy, LOSDirection.xy, 1.0f / distToTargetInv);
 
 
 	//Iterate through all the walls. (2D)
 	for (int idx=0; idx<numWalls; idx++) {
 		Wall thisWall = walls[idx];
-		if (idx == thisIndex && foundType == 1) {continue; /* Wall is empty or is the index calling the LOS check. */}
+		if (idx == thisIndex && foundType == 1) {continue; /* Wall is the index calling the LOS check. */}
 
-		bool intersect = wallIntersectQuick(pointA, pointB, thisWall);
-		if (intersect) {return true;}
+		bool blocked = quickIntersect(pointA, pointB, thisWall);
+		if (blocked) {return true;}
 	}
 
 
 	//Iterate through all visplanes. (3D)
 	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
-		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is not valid or is the index calling the LOS check. */}
+		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is the index calling the LOS check. */}
 		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
 
 
@@ -259,6 +230,36 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 			return true;
 		}
 	}
+
+	for (int idx=0; idx<numDisplacements; idx++) {
+		Displacement thisDisp = displacements[idx];
+		if (idx == thisIndex && foundType == 3) {continue; /* Displacement is the index calling the LOS check. */}
+
+		vec3 edgeA = thisDisp.vertices[1].xyz - thisDisp.vertices[0].xyz;
+		vec3 edgeB = thisDisp.vertices[2].xyz - thisDisp.vertices[0].xyz;
+		vec3 rayCrossEdgeB = cross(LOSDelta, edgeB);
+		float det = dot(edgeA, rayCrossEdgeB);
+
+		if (det > -EPSILON && det < EPSILON) {continue; /* Near parallel */}
+
+		float invDeterminant = 1.0f / det;
+		vec3 s = pointA - thisDisp.vertices[0].xyz;
+		float u = invDeterminant * dot(s, rayCrossEdgeB);
+	    if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
+	        continue; //No hit.
+	    }
+
+	    vec3 sCrossEdgeA = cross(s, edgeA);
+	    float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
+	    if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
+	    	continue; //No hit.
+	    }
+
+	    float t = invDeterminant * dot(edgeB, sCrossEdgeA);
+	    if (t > EPSILON) {
+	    	return true;
+	    }
+ 	}
 
 	return false;
 }
@@ -304,7 +305,9 @@ void main() {
 			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
 			closestSprite = thisSprite;
 		} else {
-			vec4 alphaTexture = texture(textureArray, vec3(spriteUV.xy, float(thisSprite.textureID)));
+			//Linear, uses MM1 from minMipMapDistance and so on.
+			float LODIndex = clamp((mipMapLevels * 2.0f / maxRayDistance) * (float(spriteDistance) - minMipMapDistance), 0.0, mipMapLevels); 
+			vec4 alphaTexture = textureLod(textureArray, vec3(spriteUV.xy, float(thisSprite.textureID)), floor(LODIndex));
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 			albedo = alphaTexture.rgb;
 			spriteHit = true;

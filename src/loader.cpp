@@ -623,15 +623,23 @@ static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"CALCULATOR", glm::ivec2(384, 216)},
 	{"DS", glm::ivec2(400, 240)},
 	{"LOW", glm::ivec2(640, 360)},
-	{"MEDIUM", glm::ivec2(960, 540)},
+	{"MEDIUM", glm::ivec2(960, 540)}, {"", glm::ivec2(960, 540)}, //Blank option.
 	{"HIGH", glm::ivec2(1280, 720)},
 	{"AMAZING", glm::ivec2(1920, 1080)}
 };
 
-static inline std::unordered_map<std::string, std::string> debugMap = {
-	{"", "0"}, {"NONE", "0"},
-	{"UV", "1"}, {"TEXTURE_UV", "1"},
-	{"NORMALS", "2"}, {"SURFACE_NORMALS", "2"},
+static inline std::unordered_map<std::string, int> debugMap = {
+	{"", 0}, {"NONE", 0},
+	{"UV", 1}, {"TEXTURE_UV", 1},
+	{"NORMALS", 2}, {"SURFACE_NORMALS", 2},
+};
+
+static inline std::unordered_map<std::string, int> texMipMap = {
+	{"", 0}, {"HIGH", 0},
+	{"MEDIUM", 1},
+	{"LOW", 2},
+	{"AWFUL", 3},
+	{"TERRIBLE", 4}
 };
 
 
@@ -699,6 +707,7 @@ void loadBindings() {
 	} else {
 		std::cout << ("Invalid render resolution quality: " + renderQuality) << std::endl << "Expected one of:";
 		for (auto pair : resolutionMap) {
+			if (pair.first.empty()) {continue; /* Blank option */}
 			std::cout << std::endl << pair.first << " for [" << pair.second.x << " x " << pair.second.y << "]";
 		}
 		desiredRenderResolution = resolutionMap["LOW"];
@@ -707,13 +716,29 @@ void loadBindings() {
 	std::string mode = userConfig["META_DEBUG_MODE"];
 	auto debugIt = debugMap.find(mode);
 	if (debugIt != debugMap.end()) {
-		userConfig["META_DEBUG_MODE"] = debugMap[mode];
+		userConfig["META_DEBUG_MODE"] = std::to_string(debugMap[mode]);
 	} else {
 		std::cout << ("Invalid debug mode: " + mode) << std::endl << "Expected one of:";
 		for (auto pair : debugMap) {
+			if (pair.first.empty()) {continue; /* Blank option */}
 			std::cout << std::endl << pair.first;
 		}
-		userConfig["META_DEBUG_MODE"] = debugMap["NONE"];
+		userConfig["META_DEBUG_MODE"] = std::to_string(debugMap["NONE"]);
+	}
+
+	std::string quality = userConfig["VIEW_TEXTURE_QUALITY"];
+	auto mipIt = texMipMap.find(quality);
+	if (mipIt != texMipMap.end()) {
+		userConfig["VIEW_TEXTURE_QUALITY"] = std::to_string(texMipMap[quality]);
+	} else {
+		std::cout << ("Invalid texture quality: " + quality) << std::endl << "Expected one of:";
+		for (auto pair : texMipMap) {
+			if (pair.first.empty()) {continue; /* Blank option */}
+			int mipLevel = pair.second;
+			glm::ivec2 mipRes = glm::vec2(display::TEXTURE_RESOLUTION) / static_cast<float>(pow(2, mipLevel));
+			std::cout << std::endl << pair.first << " for [" << mipRes.x << " x " << mipRes.y << "]";
+		}
+		userConfig["VIEW_TEXTURE_QUALITY"] = std::to_string(texMipMap["HIGH"]);
 	}
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
