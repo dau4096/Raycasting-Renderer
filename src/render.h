@@ -70,6 +70,110 @@ namespace render {
 
 
 
+	//Uniforms; [Many overloads]
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, bool value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform1i(location, value);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, size_t value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform1i(location, value);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, int value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform1i(location, value);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, float value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform1f(location, value);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec2 value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform2i(location, value.x, value.y);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec2 value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform2f(location, value.x, value.y);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec3 value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform3i(location, value.x, value.y, value.z);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec3 value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform3f(location, value.x, value.y, value.z);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec4 value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform4i(location, value.x, value.y, value.z, value.w);
+		}
+	}
+	static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec4 value) {
+		GLuint location = glGetUniformLocation(shaderProgram, uniformName);
+		if (location >= 0) {
+			glUniform4f(location, value.x, value.y, value.z, value.w);
+		}
+	}
+	static void bindCommonUniforms(GLuint shaderProgram, utils::Player* player) {
+		//Applies value if shader has uniform of matching name.
+
+		//Camera Data
+		bindUniformValue(shaderProgram, "maxRayDistance", utils::configToFloat("VIEW_MAX_RAY_DIST"));
+		bindUniformValue(shaderProgram, "maxRayAngle", utils::configToFloat("VIEW_FOV") / 2.0f);
+		bindUniformValue(shaderProgram, "verticalFOV", verticalFOV);
+		bindUniformValue(shaderProgram, "zoomFactor", display::ZOOM_MULT);
+		bindUniformValue(shaderProgram, "textureScale", stageData.textureScale);
+		bindUniformValue(shaderProgram, "textureOffset", stageData.textureOffset);
+		bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
+
+		//Player Data
+		bindUniformValue(shaderProgram, "playerPosition", player->cameraPosition);
+		bindUniformValue(shaderProgram, "playerViewAngle", player->viewAngle);
+		bindUniformValue(shaderProgram, "playerViewRoll", player->viewRoll);
+		bindUniformValue(shaderProgram, "playerViewPitch", player->viewPitch);
+
+		//Debug
+		bindUniformValue(shaderProgram, "debugMode", utils::configToInt("META_DEBUG_MODE"));
+
+		//Sun
+		bindUniformValue(shaderProgram, "sunDirection", stageData.sunDirection);
+		bindUniformValue(shaderProgram, "sunColour", stageData.sunColour);
+
+		//Other
+		bindUniformValue(shaderProgram, "numVisplanes", validVisplanes);
+		bindUniformValue(shaderProgram, "numWalls", validWalls);
+		bindUniformValue(shaderProgram, "numDisplacements", validDisplacements);
+		bindUniformValue(shaderProgram, "numSprites", validSprites);
+		bindUniformValue(shaderProgram, "numLights", validLights);
+		bindUniformValue(shaderProgram, "numTextObjects", validTextObjects);
+
+		//Resolutions
+		bindUniformValue(shaderProgram, "screenResolution", currentWindowResolution);
+		bindUniformValue(shaderProgram, "renderResolution", currentRenderResolution);
+		bindUniformValue(shaderProgram, "interfaceResolution", display::UI_RESOLUTION);
+		bindUniformValue(shaderProgram, "skyboxResolution", display::SKYBOX_RESOLUTION);
+		bindUniformValue(shaderProgram, "textureResolution", display::TEXTURE_RESOLUTION);
+	}
+
+
+
 	void saveScreenshot(GLuint frameTextureID);
 
 	GLuint createGLImage2D(int width, int height);

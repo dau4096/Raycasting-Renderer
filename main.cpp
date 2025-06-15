@@ -329,61 +329,11 @@ int main() {
 		glBindTextureUnit(0, textureArrayEnvironment);
 		glBindTextureUnit(1, skyboxTextureID);
 
-
-		//Camera Data
-		GLuint maxVDistLocation = glGetUniformLocation(envShader, "maxRayDistance");
-		GLuint maxRAngleLocation = glGetUniformLocation(envShader, "maxRayAngle");
-		GLuint vFOVLocation = glGetUniformLocation(envShader, "verticalFOV");
-		GLuint zoomFactorLocation = glGetUniformLocation(envShader, "zoomFactor");
-		GLuint texScaleLocation = glGetUniformLocation(envShader, "textureScale");
-		GLuint texOffsetLocation = glGetUniformLocation(envShader, "textureOffset");
-		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
-		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
-		glUniform1f(vFOVLocation, verticalFOV);
-		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
-		glUniform2f(texScaleLocation, stageData.textureScale.x, stageData.textureScale.y);
-		glUniform3f(texOffsetLocation, stageData.textureOffset.x, stageData.textureOffset.y, stageData.textureOffset.z);
-
-		//Player Data
-		GLuint playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
-		GLuint playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
-		GLuint playerRollLocation = glGetUniformLocation(envShader, "playerViewRoll");
-		GLuint playerPitchLocation = glGetUniformLocation(envShader, "playerViewPitch");
-		GLuint zoomLocation = glGetUniformLocation(envShader, "zoom");
-		GLuint renderResLocation = glGetUniformLocation(envShader, "renderResolution");
-		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1f(playerRollLocation, player.viewRoll);
-		glUniform1f(playerPitchLocation, player.viewPitch);
-		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
-
-		//Debug
-		GLuint debugLocation = glGetUniformLocation(envShader, "debugMode");
-		glUniform1i(debugLocation, utils::configToInt("META_DEBUG_MODE"));
-
+		//Uniforms
+		render::bindCommonUniforms(envShader, &player);
 		//Headlamp
-		GLuint lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
-		GLuint lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
-		glUniform1i(lightLocation, headLampEnabled);
-		glUniform1i(lightFlickerLocation, lightFlickerRNG);
-
-		//Sun
-		GLuint sunDirLocation = glGetUniformLocation(envShader, "sunDirection");
-		GLuint sunColourLocation = glGetUniformLocation(envShader, "sunColour");
-		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
-		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
-
-		//Other
-		GLuint numVisplanesLocation = glGetUniformLocation(envShader, "numVisplanes");
-		GLuint numWallsLocation = glGetUniformLocation(envShader, "numWalls");
-		GLuint numDispsLocation = glGetUniformLocation(envShader, "numDisplacements");
-		GLuint numLightsLocation = glGetUniformLocation(envShader, "numLights");
-		glUniform1i(numVisplanesLocation, validVisplanes);
-		glUniform1i(numWallsLocation, validWalls);
-		glUniform1i(numDispsLocation, validDisplacements);
-		glUniform1i(numLightsLocation, validLights);
-
+		render::bindUniformValue(envShader, "headLampEnabled", headLampEnabled);
+		render::bindUniformValue(envShader, "headLampFlicker", lightFlickerRNG);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -399,57 +349,11 @@ int main() {
 
 		glBindTextureUnit(0, textureArrayEnvironment);
 
-
-		//Camera Data
-		maxVDistLocation = glGetUniformLocation(spriteShader, "maxRayDistance");
-		maxRAngleLocation = glGetUniformLocation(spriteShader, "maxRayAngle");
-		vFOVLocation = glGetUniformLocation(spriteShader, "verticalFOV");
-		zoomFactorLocation = glGetUniformLocation(spriteShader, "zoomFactor");
-		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
-		glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
-		glUniform1f(vFOVLocation, verticalFOV);
-		glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
-
-		//Player Data
-		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
-		playerRollLocation = glGetUniformLocation(spriteShader, "playerViewRoll");
-		playerPitchLocation = glGetUniformLocation(spriteShader, "playerViewPitch");
-		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
-		renderResLocation = glGetUniformLocation(spriteShader, "renderResolution");
-		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1f(playerRollLocation, player.viewRoll);
-		glUniform1f(playerPitchLocation, player.viewPitch);
-		glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
-
-		//Debug
-		GLuint uvLocation = glGetUniformLocation(spriteShader, "drawUV");
-		glUniform1i(uvLocation, utils::configToInt("META_DEBUG_MODE"));
-
+		//Uniforms
+		render::bindCommonUniforms(spriteShader, &player);
 		//Headlamp
-		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(spriteShader, "headLampFlicker");
-		glUniform1i(lightLocation, headLampEnabled);
-		glUniform1i(lightFlickerLocation, lightFlickerRNG);
-
-		//Sun
-		sunDirLocation = glGetUniformLocation(spriteShader, "sunDirection");
-		sunColourLocation = glGetUniformLocation(spriteShader, "sunColour");
-		glUniform3f(sunDirLocation, stageData.sunDirection.x, stageData.sunDirection.y, stageData.sunDirection.z);
-		glUniform3f(sunColourLocation, stageData.sunColour.x, stageData.sunColour.y, stageData.sunColour.z);
-
-		//Other
-		numVisplanesLocation = glGetUniformLocation(spriteShader, "numVisplanes");
-		numWallsLocation = glGetUniformLocation(spriteShader, "numWalls");
-		GLuint numSpritesLocation = glGetUniformLocation(spriteShader, "numSprites");
-		numLightsLocation = glGetUniformLocation(spriteShader, "numLights");
-		glUniform1i(numVisplanesLocation, validVisplanes);
-		glUniform1i(numWallsLocation, validWalls);
-		glUniform1i(numSpritesLocation, validSprites);
-		glUniform1i(numLightsLocation, validLights);
-
+		render::bindUniformValue(spriteShader, "headLampEnabled", headLampEnabled);
+		render::bindUniformValue(spriteShader, "headLampFlicker", lightFlickerRNG);
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -469,52 +373,11 @@ int main() {
 			glBindTextureUnit(2, textureArrayUI); //UI Textures
 			glBindTextureUnit(3, textureArrayNumeric); //0-9 Textures.
 
-
-
-			//Camera Data
-			maxVDistLocation = glGetUniformLocation(uiShader, "maxRayDistance");
-			maxRAngleLocation = glGetUniformLocation(uiShader, "maxRayAngle");
-			zoomFactorLocation = glGetUniformLocation(uiShader, "zoomFactor");
-			GLuint interfaceResLocation = glGetUniformLocation(uiShader, "interfaceResolution");
-			renderResLocation = glGetUniformLocation(uiShader, "renderResolution");
-			glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
-			glUniform1f(maxRAngleLocation, utils::configToFloat("VIEW_FOV") / 2.0f);
-			glUniform1f(zoomFactorLocation, display::ZOOM_MULT);
-			glUniform2i(interfaceResLocation, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-			glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
-
-			//Player Data
-			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
-			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
-			playerRollLocation = glGetUniformLocation(uiShader, "playerViewRoll");
-			playerPitchLocation = glGetUniformLocation(uiShader, "playerViewPitch");
-			zoomLocation = glGetUniformLocation(uiShader, "zoom");
-			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-			glUniform1f(playerAngleLocation, player.viewAngle);
-			glUniform1f(playerRollLocation, player.viewRoll);
-			glUniform1f(playerPitchLocation, player.viewPitch);
-			glUniform1i(zoomLocation, keyMap["USE_VIEWZOOM"]);
-
-			//Player Data.
-			GLuint vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
-			GLuint healthLocation = glGetUniformLocation(uiShader, "health");
-			GLuint energyLocation = glGetUniformLocation(uiShader, "energy");
-			glUniform4f(vignetteColourLocation, tintData.x, tintData.y, tintData.z, tintData.w);
-			glUniform1i(healthLocation, player.health);
-			glUniform1i(energyLocation, player.energy);
-
-			//Assorted other data.
-			GLuint screenResLocation = glGetUniformLocation(uiShader, "screenResolution");
-			GLuint freqLocation = glGetUniformLocation(uiShader, "freq");
-			GLuint showFreqLocation = glGetUniformLocation(uiShader, "showFreq");
-			GLuint showDataLocation = glGetUniformLocation(uiShader, "showData");
-			GLuint numTextObjectsLocation = glGetUniformLocation(uiShader, "numTextObjects");
-			glUniform2i(screenResLocation, currentWindowResolution.x, currentWindowResolution.y);
-			glUniform1i(freqLocation, freq);
-			glUniform1i(showFreqLocation, utils::configToBool("META_SHOW_FREQ_UI"));
-			glUniform1i(showDataLocation, utils::configToBool("META_SHOW_DATA"));
-			glUniform1i(numTextObjectsLocation, validVisplanes);
-
+			//Uniforms
+			render::bindCommonUniforms(uiShader, &player);
+			//UI-Specific
+			render::bindUniformValue(uiShader, "showFreq", utils::configToBool("META_SHOW_FREQ_UI"));
+			render::bindUniformValue(uiShader, "showData", utils::configToBool("META_SHOW_DATA"));
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
@@ -532,22 +395,12 @@ int main() {
 		glBindTextureUnit(0, renderedFrameID);
 		glBindTextureUnit(1, interfaceID);
 
-
-		//Assorted other data.
-		maxVDistLocation = glGetUniformLocation(displayShader, "maxRayDistance");
-		GLuint screenResLocation = glGetUniformLocation(displayShader, "screenResolution");
-		renderResLocation = glGetUniformLocation(displayShader, "renderResolution");
-		GLuint antiAliasLocation = glGetUniformLocation(displayShader, "antiAliasingLevel");
-		GLuint smoothingLocation = glGetUniformLocation(displayShader, "smoothingEnabled");
-		GLuint quantLocation = glGetUniformLocation(displayShader, "quantisingLevel");
-		glUniform2i(screenResLocation, currentWindowResolution.x, currentWindowResolution.y);
-		glUniform2i(renderResLocation, currentRenderResolution.x, currentRenderResolution.y);
-		glUniform1f(maxVDistLocation, utils::configToFloat("VIEW_MAX_RAY_DIST"));
-		glUniform1i(antiAliasLocation, utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
-		glUniform1i(smoothingLocation, utils::configToBool("VIEW_SMOOTHING"));
-		glUniform1i(quantLocation, utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
-
-
+		//Uniforms
+		render::bindCommonUniforms(displayShader, &player);
+		//Display specific data.
+		render::bindUniformValue(displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
+		render::bindUniformValue(displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
+		render::bindUniformValue(displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
