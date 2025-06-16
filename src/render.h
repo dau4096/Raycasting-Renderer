@@ -10,7 +10,7 @@
 
 namespace render {
 	GLFWwindow* initializeWindow(int width, int height, const char* title);
-	GLuint createShaderProgram(std::string name, bool hasVertexSource=true);
+	GLuint createShaderProgram(std::string name, bool isComputeShader=false, bool hasVertexSource=true);
 
 
 	
@@ -170,6 +170,7 @@ namespace render {
 		bindUniformValue(shaderProgram, "interfaceResolution", display::UI_RESOLUTION);
 		bindUniformValue(shaderProgram, "skyboxResolution", display::SKYBOX_RESOLUTION);
 		bindUniformValue(shaderProgram, "textureResolution", display::TEXTURE_RESOLUTION);
+		bindUniformValue(shaderProgram, "shadowMapResolution", shadowMapResolution);
 	}
 
 
@@ -180,6 +181,10 @@ namespace render {
 	GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
 	GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false);
 
+	//Shadows
+	GLuint createShadowMaps(
+		std::function<void(GLuint shaderProgram, utils::Player* player)> uniformBindingFunc
+	);
 
 	GLuint getVAO();
 

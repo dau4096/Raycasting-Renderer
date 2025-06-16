@@ -110,6 +110,7 @@ inline size_t validGates;
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
+inline glm::ivec2 shadowMapResolution;
 
 
 //Other

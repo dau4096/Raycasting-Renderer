@@ -115,16 +115,6 @@ int main() {
 	utils::GLErrorcheck("Window Creation", true);
 
 
-
-
-	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	GLuint interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames, "textures-env", true);
-	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
-	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
-	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
-
-
 	GLuint visplaneSSBO = render::createShaderStorageBufferObject(
 		0, sizeof(utils::VisplaneGPU) * validVisplanes
 	);
@@ -143,19 +133,51 @@ int main() {
 	GLuint displacementSSBO = render::createShaderStorageBufferObject(
 		5, sizeof(utils::DisplacementGPU) * validDisplacements
 	);
+	//Update SSBOs for shadowmapping.
+	render::updateShaderStorageBufferObject<utils::VisplaneGPU>(
+		visplaneSSBO, &player, &visplaneData
+	);
+	render::updateShaderStorageBufferObject<utils::WallGPU>(
+		wallSSBO, &player, &wallData
+	);
+	render::updateShaderStorageBufferObject<utils::DisplacementGPU>(
+		displacementSSBO, &player, &displacementData
+	);
+	render::updateShaderStorageBufferObject<utils::SpriteGPU>(
+		spriteSSBO, &player, &spriteData
+	);
+	render::updateShaderStorageBufferObject<utils::LightGPU>(
+		lightSSBO, &player, &lightData
+	);
+	render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
+		textObjectSSBO, &player, &textObjectData, &symbolNames
+	);
+	utils::GLErrorcheck("Updating SSBOs [Initialisation]", true);
+
+
+
+
+	//Create textures and arrays;
+	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	GLuint interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
+	GLuint textureArrayEnvironment = render::createTexture2DArray(textureNames, "textures-env", true);
+	GLuint textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
+	GLuint textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
+	GLuint skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	GLuint shadowMapsID = render::createShadowMaps(render::bindCommonUniforms);
 
 
 	//Environment shader
-	GLuint envShader = render::createShaderProgram("environment", false);
+	GLuint envShader = render::createShaderProgram("environment", false, false);
 
 	//Sprite Shader
-	GLuint spriteShader = render::createShaderProgram("sprites", false);
+	GLuint spriteShader = render::createShaderProgram("sprites", false, false);
 
 	//uiShader
-	GLuint uiShader = render::createShaderProgram("interface", false);
+	GLuint uiShader = render::createShaderProgram("interface", false, false);
 
 	//Display Shader
-	GLuint displayShader = render::createShaderProgram("display");
+	GLuint displayShader = render::createShaderProgram("display", false, true);
 
 
 
@@ -308,7 +330,7 @@ int main() {
 		render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
 			textObjectSSBO, &player, &textObjectData, &symbolNames
 		);
-		utils::GLErrorcheck("Updating SSBOs", true);
+		utils::GLErrorcheck("Updating SSBOs [Running]", true);
 
 
 
@@ -328,6 +350,7 @@ int main() {
 
 		glBindTextureUnit(0, textureArrayEnvironment);
 		glBindTextureUnit(1, skyboxTextureID);
+		glBindTextureUnit(2, shadowMapsID);
 
 		//Uniforms
 		render::bindCommonUniforms(envShader, &player);

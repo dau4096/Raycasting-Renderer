@@ -71,18 +71,23 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 }
 
 
-GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
-	GLuint vertexShader;
-	if (hasVertexSource) {
-		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\"+ name +".vert");
-	} else {
-		vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\generic.vert");
-	}
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src\\shaders\\"+ name +".frag");
-
+GLuint createShaderProgram(std::string name, bool isComputeShader=false, bool hasVertexSource=true) {
 	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
+	GLuint computeShader, vertexShader, fragmentShader;
+	if (isComputeShader) {
+		computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + name + ".comp");
+		glAttachShader(shaderProgram, computeShader);
+	} else {
+		if (hasVertexSource) {
+			vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/" + name + ".vert");
+		} else {
+			vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/generic.vert");
+		}
+		fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/" + name + ".frag");
+		glAttachShader(shaderProgram, vertexShader);
+		glAttachShader(shaderProgram, fragmentShader);
+	}
+
 	glLinkProgram(shaderProgram);
 
 	GLint success;
@@ -93,8 +98,12 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 		raise("Error: Program linking failed;\n" + string(infolog));
 	}
 
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
+	if (isComputeShader) {
+		glDeleteShader(computeShader);
+	} else {
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+	}
 
 	return shaderProgram;
 }
@@ -322,6 +331,59 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 
 	return sheetArrayID;
 }
+
+
+
+
+//Shadows
+GLuint createShadowMaps(
+		std::function<void(GLuint shaderProgram, utils::Player* player)> uniformBindingFunc
+	) {
+	shadowMapResolution = glm::ivec2(720, 360);
+	utils::Player tmpPlayer = utils::Player();
+
+	//Create array.
+	GLuint shadowMapArray;
+	glGenTextures(1, &shadowMapArray);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, shadowMapArray);
+	glTexStorage3D(
+		GL_TEXTURE_2D_ARRAY, 1, GL_RG32F,
+		shadowMapResolution.x, shadowMapResolution.y,
+		validLights
+	);
+
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	utils::GLErrorcheck("Shadowmap Creation [Shadows]", true);
+
+
+	//Create shadow shader
+	GLuint shadowShader = createShaderProgram("shadow", true, false);
+	utils::GLErrorcheck("Shader compilation [Shadows]", true);
+
+
+	//Draw to maps.
+	glUseProgram(shadowShader);
+	glBindImageTexture(0, shadowMapArray, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RG32F);
+	uniformBindingFunc(shadowShader, &tmpPlayer);
+	glDispatchCompute(
+		(shadowMapResolution.x + 15) / 16,
+		(shadowMapResolution.y + 15) / 16,
+		validLights
+	);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	utils::GLErrorcheck("Shadowmap rendering [Shadows]", true);
+
+	return shadowMapArray;
+}
+
+
+
 
 
 

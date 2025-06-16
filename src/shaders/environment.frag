@@ -5,6 +5,7 @@
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
 layout(binding=1) uniform sampler2D skyboxTexture;
+layout(binding=2) uniform sampler2DArray shadowMapTexture;
 
 //CameraData
 uniform float maxRayDistance;
@@ -21,7 +22,6 @@ uniform float playerViewRoll;
 uniform float playerViewPitch;
 uniform vec3 playerPosition;
 uniform bool zoom;
-uniform ivec2 renderResolution;
 
 //Debug
 uniform int debugMode;
@@ -39,6 +39,8 @@ uniform int numVisplanes;
 uniform int numWalls;
 uniform int numDisplacements;
 uniform int numLights;
+uniform ivec2 renderResolution;
+uniform ivec2 shadowMapResolution;
 
 
 layout(rgba32f, binding=0) uniform image2D renderedFrame;
@@ -423,21 +425,21 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		float invDeterminant = 1.0f / det;
 		vec3 s = pointA - thisDisp.vertices[0].xyz;
 		float u = invDeterminant * dot(s, rayCrossEdgeB);
-	    if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
-	        continue; //No hit.
-	    }
+		if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
+			continue; //No hit.
+		}
 
-	    vec3 sCrossEdgeA = cross(s, edgeA);
-	    float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
-	    if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
-	    	continue; //No hit.
-	    }
+		vec3 sCrossEdgeA = cross(s, edgeA);
+		float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
+		if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
+			continue; //No hit.
+		}
 
-	    float t = invDeterminant * dot(edgeB, sCrossEdgeA);
-	    if (t > EPSILON) {
-	    	return true;
-	    }
- 	}
+		float t = invDeterminant * dot(edgeB, sCrossEdgeA);
+		if (t > EPSILON) {
+			return true;
+		}
+	}
 
 	return false;
 }
@@ -633,23 +635,35 @@ void main() {
 		} else if (debugMode == 2) { //Drawing normals.
 			fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
 		} else {
-			vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
 			//Light effect
+			vec2 halfShadowMapResolution = vec2(shadowMapResolution) / 2.0f;
 			for (int idx=0; idx<numLights; idx++) {
 				//Iterate through all lights.
 				Light thisLight = lights[idx];
 				if (!thisLight.enabled) {continue;}
-				vec3 delta = closestIntersectPoint - thisLight.position;
-				float distSQ = dot(delta, delta);
+				vec3 toFrag = closestIntersectPoint - thisLight.position;
+				float distSQ = dot(toFrag, toFrag);
 				float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
 				if (attenuation < 0.0f) {continue;}
-				vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
-				float normalDot = dot(normal, lightDir);
+				vec3 fragDir = normalize(toFrag);
+				float normalDot = dot(normal, -fragDir);
 				if (normalDot <= EPSILON) {continue;}
 
 				
 				//Shadow Checks
-				bool inShadow = checkLOS(thisLight.position, closestIntersectPoint, closestIndex, foundType);
+				float yawDeg = 2.0f * degrees(atan(-fragDir.x, -fragDir.y));
+				float pitchDeg = 2.0f * degrees(asin(fragDir.z));
+				vec2 shadowCoord = vec2(
+					(yawDeg + 360.0f) / 720.0f,
+					(pitchDeg + 180.0f) / 360.0f
+				);
+				vec2 shadowData = texture(shadowMapTexture, vec3(shadowCoord, idx)).rg;
+				float lightDistance2SQRT = shadowData.r;
+				int shadowingIdx = int(shadowData.g);
+				float bias = 0.01f * sqrt(distSQ);
+				//Cannot cast shadow on self, distance must be <= to shadow dist.
+				bool isShadowCaster = ((foundType == 1) && (closestIndex == shadowingIdx)) || ((foundType == 2) && (closestIndex == -shadowingIdx));
+				bool inShadow = !isShadowCaster && (inversesqrt(inversesqrt(distSQ)) - lightDistance2SQRT + bias > 0.0f);
 
 				if (!inShadow) {
 					vec3 lightContribution = thisLight.colour * attenuation;

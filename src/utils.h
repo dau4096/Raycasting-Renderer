@@ -431,7 +431,7 @@ namespace utils {
 		alignas(16) glm::vec3 end;
 		alignas(8) glm::vec2 direction;
 		alignas(4) int textureID;
-		alignas(4) float _padding;
+		alignas(4) bool special;
 
 		WallGPU()
 			: start(), end(), direction(),
