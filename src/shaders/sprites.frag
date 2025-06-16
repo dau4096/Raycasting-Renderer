@@ -161,10 +161,11 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
 	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
-	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
-	float distance = length(playerPosition.xy - thisSprite.position.xy) / zoomEffect;
-	float projectedYLow = (playerPosition.z - spriteFootZ) / distance;
-	float projectedYTop = (playerPosition.z - spriteHeadZ) / distance;
+	vec2 delta = playerPosition.xy - thisSprite.position.xy;
+	float invdistance = inversesqrt(max(dot(delta, delta), 1e-4f));
+
+	float projectedYLow = (playerPosition.z - spriteFootZ) * invdistance * zoomEffect;
+	float projectedYTop = (playerPosition.z - spriteHeadZ) * invdistance * zoomEffect;
 	
 	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
 	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
@@ -272,10 +273,11 @@ void main() {
 	float fragDepth = imageLoad(renderedFrame, framePosition).a;
 
 
+	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
 	//Negative is upward; so subtract.
-	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
+	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f) * zoomEffect;
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
-	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
+	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f) * zoomEffect;
 	fragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 	
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;

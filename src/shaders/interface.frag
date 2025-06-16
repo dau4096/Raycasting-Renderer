@@ -299,7 +299,7 @@ void drawTextObjects(float rayAngle) {
 			float projectedYTop = (originPos.z - wallTopZ) / distance;
 			float screenYLow = renderResolution.y * (0.5 - projectedYLow);
 			*/
-			float projCentreY = (playerPosition.z - thisTO.position.z) * invdistance;
+			float projCentreY = (playerPosition.z - thisTO.position.z) * invdistance * zoomEffect;
 			float centreY = interfaceResolution.y * (0.5f - projCentreY);
 			float charY = centreY - (scale / 2.0f);
 
