@@ -65,7 +65,7 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 	);
 
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (currentRenderResolution.x / currentRenderResolution.y));
+	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
 
 
@@ -163,8 +163,8 @@ int main() {
 	glDisable(GL_DEPTH_TEST);
 	GLuint VAO = render::getVAO();
 
-	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (currentRenderResolution.x / currentRenderResolution.y));
-
+	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
 
 	utils::GLErrorcheck("Initialisation", true);
 
@@ -227,6 +227,7 @@ int main() {
 				&textureNames
 			);
 			if (utils::configToBool("META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES")) {
+				glDeleteTextures(1, &textureArrayEnvironment);
 				textureArrayEnvironment = render::createTexture2DArray(textureNames);
 				skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 			}
@@ -241,6 +242,7 @@ int main() {
 				&textureNames
 			);
 			if (utils::configToBool("META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES")) {
+				glDeleteTextures(1, &textureArrayEnvironment);
 				textureArrayEnvironment = render::createTexture2DArray(textureNames);
 				skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 			}
@@ -420,10 +422,8 @@ int main() {
 		}
 
 
-
-		while (glfwGetTime() - frameStart < (1.0f/utils::configToFloat("VIEW_MAX_FREQ"))) {}
-		double totalTime = (glfwGetTime() - frameStart);
-		freq = floor(1/totalTime);
+		while (glfwGetTime() - frameStart < maxFrameTime) {}
+		freq = floor(1.0f / (glfwGetTime() - frameStart));
 		if (utils::configToBool("META_SHOW_FREQ_CONSOLE")) {
 			std::cout << freq << std::endl;
 		}
@@ -432,6 +432,10 @@ int main() {
 		cursorYPosPrev = cursorYPos;
 	}
 
+	//Cleanup OpenGL.
+	glDeleteTextures(1, &textureArrayEnvironment);
+
+
 	glfwDestroyWindow(Window);
 	glfwTerminate();
 	return 0;
@@ -439,10 +443,16 @@ int main() {
 
 	//Catch exceptions.
 	} catch (const std::exception& e) {
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
 		pause();
 		return -1;
 	} catch (...) {
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
 		std::cerr << "An unspecified exception was thrown." << std::endl;
 		pause();
 		return -1;

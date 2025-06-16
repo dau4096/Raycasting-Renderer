@@ -121,6 +121,9 @@ namespace utils {
 		GLenum GLError;
 		GLError = glGetError();
 		if (GLError != GL_NO_ERROR) {
+			if (!utils::isConsoleVisible()) {
+				utils::showConsole();
+			}
 			std::cerr << location << " | OpenGL error; " << GLError << std::endl;
 			if (shouldPause) {pause();}
 		}
@@ -368,8 +371,8 @@ namespace utils {
 		Visplane()
 			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), specialType(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
 
-		Visplane(glm::vec2 start, glm::vec2 end, float heightZ, int textureID, VisplaneType specialType=V_NORMAL, int* IOPtr=nullptr, float data=0)
-			: start(start), end(end), height(heightZ), 
+		Visplane(glm::vec2 s, glm::vec2 e, float heightZ, int textureID, VisplaneType specialType=V_NORMAL, int* IOPtr=nullptr, float data=0)
+			: start(glm::min(s, e)), end(glm::max(s, e)), height(heightZ), 
 			  textureID(textureID),
 			  specialType(specialType),
 			  IOPtr(IOPtr), data(data),

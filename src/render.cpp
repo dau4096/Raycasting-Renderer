@@ -62,6 +62,9 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 	GLint success;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if (!success) {
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
 		char infolog[512];
 		glGetShaderInfoLog(shader, 512, nullptr, infolog);
 		raise("Error: Shader compilation failed;\n" + string(infolog));
@@ -88,6 +91,9 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 	GLint success;
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
 	if (!success) {
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
 		char infolog[512];
 		glGetProgramInfoLog(shaderProgram, 512, nullptr, infolog);
 		raise("Error: Program linking failed;\n" + string(infolog));
