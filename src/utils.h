@@ -649,9 +649,6 @@ namespace utils {
 	};
 
 
-
-
-
 	struct Ray {
 		glm::vec2 position, direction, end;
 

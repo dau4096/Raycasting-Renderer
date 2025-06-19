@@ -9,7 +9,7 @@ namespace physics {
 	bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius);
 
 	void playerMove(
-		utils::Player *player, float freq,
+		utils::Player *player,
 		std::vector<utils::Wall>* wallData,
 		std::vector<utils::Sprite>* spriteData,
 		std::vector<utils::Visplane>* visplaneData
@@ -18,7 +18,7 @@ namespace physics {
 	void updateSpecials(
 		std::vector<utils::Wall>* wallData,
 		std::vector<utils::Visplane>* visplaneData,
-		utils::Player *player, float freq, bool interactKey
+		utils::Player *player, bool interactKey
 	);
 }
 

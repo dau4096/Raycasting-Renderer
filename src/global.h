@@ -51,6 +51,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_LUMINANCE_QUANTISATION", ""},
 	{"VIEW_MAX_FREQ", ""},
 	{"VIEW_NO_INTERFACE", ""},
+	{"VIEW_VSYNC", ""},
 
 	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_FREQ_UI", ""},
@@ -113,6 +114,7 @@ inline glm::ivec2 currentRenderResolution;
 
 
 //Other
+inline float freq;
 inline float zoomEffect;
 inline float rayAngle;
 inline float verticalFOV;

@@ -252,7 +252,7 @@ void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool ena
 namespace physics {
 
 void playerMove(
-		utils::Player *player, float freq,
+		utils::Player *player,
 		std::vector<utils::Wall>* wallData,
 		std::vector<utils::Sprite>* spriteData,
 		std::vector<utils::Visplane>* visplaneData
@@ -583,7 +583,7 @@ void playerMove(
 void updateSpecials(
 		std::vector<utils::Wall>* wallData,
 		std::vector<utils::Visplane>* visplaneData,
-		utils::Player *player, float freq, bool interactKey
+		utils::Player *player, bool interactKey
 	) {
 	float speedModifier = 45.0f / freq;
 	//If freq is higher than expected, then speed is reduced.

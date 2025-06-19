@@ -24,6 +24,7 @@
 #include <C:/Users/User/Documents/code/.cpp/pugixml/pugixml.hpp>
 
 //Include std subheaders.
+#include <bits/stdc++.h>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
