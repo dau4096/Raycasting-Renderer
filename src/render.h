@@ -135,8 +135,7 @@ namespace render {
 		//Applies value if shader has uniform of matching name.
 
 		//Camera Data
-		bindUniformValue(shaderProgram, "maxRayDistance", utils::configToFloat("VIEW_MAX_RAY_DIST"));
-		bindUniformValue(shaderProgram, "maxRayAngle", utils::configToFloat("VIEW_FOV") / 2.0f);
+		bindUniformValue(shaderProgram, "maxRayDistance", utils::configToFloat("VIEW_MAX_DIST"));
 		bindUniformValue(shaderProgram, "verticalFOV", verticalFOV);
 		bindUniformValue(shaderProgram, "zoomFactor", display::ZOOM_MULT);
 		bindUniformValue(shaderProgram, "textureScale", stageData.textureScale);
@@ -152,24 +151,9 @@ namespace render {
 		//Debug
 		bindUniformValue(shaderProgram, "debugMode", utils::configToInt("META_DEBUG_MODE"));
 
-		//Sun
-		bindUniformValue(shaderProgram, "sunDirection", stageData.sunDirection);
-		bindUniformValue(shaderProgram, "sunColour", stageData.sunColour);
-
-		//Other
-		bindUniformValue(shaderProgram, "numVisplanes", validVisplanes);
-		bindUniformValue(shaderProgram, "numWalls", validWalls);
-		bindUniformValue(shaderProgram, "numDisplacements", validDisplacements);
-		bindUniformValue(shaderProgram, "numSprites", validSprites);
-		bindUniformValue(shaderProgram, "numLights", validLights);
-		bindUniformValue(shaderProgram, "numTextObjects", validTextObjects);
-
 		//Resolutions
 		bindUniformValue(shaderProgram, "screenResolution", currentWindowResolution);
-		bindUniformValue(shaderProgram, "renderResolution", currentRenderResolution);
-		bindUniformValue(shaderProgram, "interfaceResolution", display::UI_RESOLUTION);
 		bindUniformValue(shaderProgram, "skyboxResolution", display::SKYBOX_RESOLUTION);
-		bindUniformValue(shaderProgram, "textureResolution", display::TEXTURE_RESOLUTION);
 	}
 
 
@@ -182,6 +166,14 @@ namespace render {
 
 
 	GLuint getVAO();
+	GLuint createVAO(
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Displacement>* displacementData,
+		std::vector<utils::Sprite>* spriteData,
+		std::vector<utils::TextObject>* textObjectData,
+		size_t* numTris, utils::Player* player
+	);
 
 	float viewBob(float tick, utils::Player player);
 	glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE);

@@ -379,26 +379,11 @@ namespace utils {
 			  internal(0.0f) {}
 	};
 
-	struct VisplaneGPU {
-		glm::vec2 start;
-		glm::vec2 end;
-		float height;
-		int textureID;
-		glm::vec2 _padding;
-
-		VisplaneGPU()
-			: start(glm::vec2(0.0f, 0.0f)), end(glm::vec2(0.0f, 0.0f)), height(0.0f),
-			  textureID(0), _padding() {}
-
-		VisplaneGPU(Visplane *visplane, Player* player)
-			: start(visplane->start), end(visplane->end), height(visplane->height),
-			  textureID(visplane->textureID), _padding() {}
-	};
-
 
 	struct Wall {
 		glm::vec3 start;
 		glm::vec3 end;
+		glm::vec2 direction;
 		int textureID;
 		WallType specialType;
 		int* IOPtr;
@@ -408,6 +393,7 @@ namespace utils {
 		Wall()
 			: start(0.0f, 0.0f, 0.0f),
 			  end(0.0f, 0.0f, 0.0f),
+			  direction(0.0f, 0.0f),
 			  textureID(0),
 			  specialType(W_INVALID),
 			  IOPtr(nullptr), data(0.0f),
@@ -415,7 +401,8 @@ namespace utils {
 
 		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
 			: start(glm::vec3(start.x, start.y, lowZ)),
-			  end(glm::vec3(end.x, end.y, topZ)), 
+			  end(glm::vec3(end.x, end.y, topZ)),
+			  direction(glm::normalize(glm::vec2(end - start))),
 			  textureID(textureID),
 			  specialType(specialType), 
 			  IOPtr(IOPtr), data(data), 
@@ -423,26 +410,11 @@ namespace utils {
 
 		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
 			: start(start), end(end), 
+			  direction(glm::normalize(glm::vec2(end - start))),			  
 			  textureID(textureID),
 			  specialType(specialType), 
 			  IOPtr(IOPtr), data(data), 
 			  internal(0.0f) {}
-	};
-
-	struct WallGPU {
-		alignas(16) glm::vec3 start;
-		alignas(16) glm::vec3 end;
-		alignas(8) glm::vec2 direction;
-		alignas(4) int textureID;
-		alignas(4) float _padding;
-
-		WallGPU()
-			: start(), end(), direction(),
-			  textureID(0) {}
-
-		WallGPU(Wall *wall, Player* player)
-			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)),
-			  textureID(wall->textureID) {}
 	};
 
 
@@ -486,24 +458,6 @@ namespace utils {
 				}
 	};
 
-	struct DisplacementGPU {
-		alignas(16) std::array<glm::vec4, 3> vertices;
-		alignas(8) std::array<glm::vec2, 3> UV;
-		alignas(16) glm::vec4 normal_texID;
-
-		DisplacementGPU() : vertices(), UV(), normal_texID() {}
-
-		DisplacementGPU(Displacement* disp, Player* player) {
-				for (size_t index=0; index<3; index++) {
-					vertices[index] = glm::vec4(disp->vertices.at(index), 0.0f);
-					UV[index] = disp->UV.at(index);
-				}
-				glm::vec3 pDelta = disp->vertices[0] - player->position;
-				glm::vec3 normal = disp->normal * -glm::sign(glm::dot(pDelta, disp->normal));
-				normal_texID = glm::vec4(normal, disp->textureID);
-			}
-	};
-
 
 	struct Sprite {
 		glm::vec3 position;
@@ -518,22 +472,6 @@ namespace utils {
 			: position(position), width(width), height(height), textureID(textureID), type(type), collision(collision) {}
 	};
 
-	struct SpriteGPU {
-		alignas(16) glm::vec3 position;
-		alignas(4) float width;
-		alignas(4) float height;
-		alignas(4) int textureID;
-		alignas(4) int screenCentreX;
-
-		SpriteGPU() : position(0.0f, 0.0f, 0.0f), width(0.0f), height(0.0f), textureID(0), screenCentreX(0) {}
-
-		SpriteGPU(Sprite* sprite, Player* player)
-			: position(sprite->position),
-			  width(sprite->width), height(sprite->height),
-			  textureID(sprite->textureID),
-			  screenCentreX(getCentreX(sprite->position, player, currentRenderResolution)) {}
-	};
-
 
 	struct Light {
 		glm::vec3 position;
@@ -545,22 +483,6 @@ namespace utils {
 
 		Light(glm::vec3 position, glm::vec3 colour, float intensity, int* inputPTR=nullptr)
 			: position(position), colour(colour), intensity(intensity), inputPTR(inputPTR) {}
-	};
-
-	struct LightGPU {
-		alignas(16) glm::vec3 position;
-		alignas(16) glm::vec3 colour;
-		alignas(4) float intensity;
-		alignas(4) bool enabled;
-		alignas(4) float _padding;
-
-		LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), _padding{0.0f} {}
-
-		LightGPU(Light* light, Player* player)
-			: position(light->position), colour(light->colour),
-			  intensity(light->intensity),
-			  enabled((light->inputPTR == nullptr) ? true : *(light->inputPTR) > 0),
-			  _padding{0.0f} {}
 	};
 
 
@@ -619,34 +541,6 @@ namespace utils {
 
 		return result;
 	}
-
-	struct TextObjectGPU {
-		alignas(16) std::array<glm::ivec4, display::MAX_TEXTOBJECT_CHARACTERS / 4> text;
-		
-		alignas(4) int length;
-		alignas(4) int scale;
-		alignas(4) glm::vec2 _padding;
-
-		alignas(16) glm::vec3 position;
-		alignas(4) int screenCentreX;
-
-		TextObjectGPU() : text(), position(0.0f, 0.0f, 0.0f), scale(0), screenCentreX(0), _padding() {}
-
-		TextObjectGPU(
-			TextObject* textObject, Player* player,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
-		)	: length(textObject->text.length()),
-			  position(textObject->position),
-			  scale(textObject->scale),
-			  screenCentreX(getCentreX(textObject->position, player, display::UI_RESOLUTION)),
-			  _padding()
-		{
-			std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
-			for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
-				text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
-			}
-		}
-	};
 
 
 	struct Ray {

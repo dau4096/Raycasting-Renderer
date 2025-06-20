@@ -364,7 +364,7 @@ void playerMove(
 			cos((player->viewAngle) * constants::TO_RAD)
 		);
 		float leanDotFB = glm::dot(glm::normalize(lateralMovement), fDir);
-		desiredLeanFB = leanDotFB * playerConfig::LATERAL_VIEW_LEAN;
+		desiredLeanFB = -leanDotFB * playerConfig::LATERAL_VIEW_LEAN;
 	} else {
 		desiredLeanLR = 0.0f;
 		desiredLeanFB = 0.0f;

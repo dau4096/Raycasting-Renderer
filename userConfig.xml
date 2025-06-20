@@ -30,7 +30,7 @@
 
 	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
 	<option function="VIEW_FOV" value="70.0" />
-	<option function="VIEW_MAX_RAY_DIST" value="127.0" />
+	<option function="VIEW_MAX_DIST" value="127.0" />
 	<option function="VIEW_SHOW_HUD" value="TRUE" />
 	<option function="VIEW_BOB" value="TRUE" />
 	<option function="VIEW_LEAN" value="TRUE" />

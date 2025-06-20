@@ -115,14 +115,14 @@ void saveScreenshot(GLuint frameTextureID) {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTextureID, 0);
 
-	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
+	std::vector<unsigned char> pixels(currentWindowResolution.x * currentWindowResolution.y * 3);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(0, 0, currentRenderResolution.x, currentRenderResolution.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	glReadPixels(0, 0, currentWindowResolution.x, currentWindowResolution.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
 
 	//Flip image vertically.
-	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
-		for (int x = 0; x < currentRenderResolution.x * 3; ++x) {
-			std::swap(pixels[y * currentRenderResolution.x * 3 + x], pixels[(currentRenderResolution.y - 1 - y) * currentRenderResolution.x * 3 + x]);
+	for (int y = 0; y < currentWindowResolution.y / 2; ++y) {
+		for (int x = 0; x < currentWindowResolution.x * 3; ++x) {
+			std::swap(pixels[y * currentWindowResolution.x * 3 + x], pixels[(currentWindowResolution.y - 1 - y) * currentWindowResolution.x * 3 + x]);
 		}
 	}
 
@@ -130,8 +130,8 @@ void saveScreenshot(GLuint frameTextureID) {
 
 	stbi_write_png(
 		("screenshots/" + timeStr + ".png").c_str(),
-		currentRenderResolution.x, currentRenderResolution.y,
-		3, pixels.data(), currentRenderResolution.x*3
+		currentWindowResolution.x, currentWindowResolution.y,
+		3, pixels.data(), currentWindowResolution.x*3
 	);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -345,30 +345,28 @@ GLuint getVAO() {
 		2, 3, 1,
 	};
 
-	// Create VAO (Vertex Array Object) to store all vertex state
+	//Create VAO
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
-	// Create VBO (Vertex Buffer Object) to store vertex data
+	//Create VBO
 	GLuint VBO;
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	// Fill the buffer with vertex data (positions + texture coordinates)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+	//Create EBO
 	GLuint EBO;
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	// Define the position attribute (location = 0)
+	//Define position attr
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	// Define the texture coordinate attribute (location = 1)
+	//Define UV attr
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
@@ -377,6 +375,155 @@ GLuint getVAO() {
 
 	return VAO;
 }
+
+
+template<typename T>
+static inline void combineVectors(std::vector<T>* A, std::vector<T>& B) {
+	A->insert(A->end(), B.begin(), B.end());
+}
+
+GLuint createVAO(
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::vector<utils::Displacement>* displacementData,
+		std::vector<utils::Sprite>* spriteData,
+		std::vector<utils::TextObject>* textObjectData,
+		size_t* numTris, utils::Player* player
+	) {
+	std::vector<float> vertices;
+	std::vector<GLuint> indices;
+	GLuint currentIndex = 0;
+
+
+	for (size_t idx=0; idx<validVisplanes; idx++) {
+		utils::Visplane thisVisplane = visplaneData->at(idx);
+		std::vector<float> vertexData = {
+			thisVisplane.start.x, 	thisVisplane.start.y,	thisVisplane.height, 	-1.0f, -1.0f, static_cast<float>(thisVisplane.textureID), 1.0f,
+			thisVisplane.end.x, 	thisVisplane.start.y,	thisVisplane.height, 	-1.0f, -1.0f, static_cast<float>(thisVisplane.textureID), 1.0f,
+			thisVisplane.end.x, 	thisVisplane.end.y,		thisVisplane.height, 	-1.0f, -1.0f, static_cast<float>(thisVisplane.textureID), 1.0f,
+			thisVisplane.start.x, 	thisVisplane.end.y,		thisVisplane.height, 	-1.0f, -1.0f, static_cast<float>(thisVisplane.textureID), 1.0f,
+		};
+		std::vector<GLuint> indexData = {
+			currentIndex, currentIndex + 1, currentIndex + 2,
+			currentIndex, currentIndex + 2, currentIndex + 3
+		};
+
+		currentIndex += 4; //4 vertices for Visplanes
+
+		combineVectors(&vertices, vertexData);
+		combineVectors(&indices, indexData);
+	}
+
+
+	for (size_t idx=0; idx<validWalls; idx++) {
+		utils::Wall thisWall = wallData->at(idx);
+		float TYPEIDX = (abs(thisWall.direction.x) > abs(thisWall.direction.y)) ? 2.0f : 3.0f;
+		std::vector<float> vertexData = {
+			thisWall.start.x, 	thisWall.start.y,	thisWall.start.z, 	-1.0f, -1.0f, static_cast<float>(thisWall.textureID), TYPEIDX,
+			thisWall.end.x, 	thisWall.end.y,		thisWall.start.z, 	-1.0f, -1.0f, static_cast<float>(thisWall.textureID), TYPEIDX,
+			thisWall.end.x, 	thisWall.end.y,		thisWall.end.z,		-1.0f, -1.0f, static_cast<float>(thisWall.textureID), TYPEIDX,
+			thisWall.start.x, 	thisWall.start.y,	thisWall.end.z, 	-1.0f, -1.0f, static_cast<float>(thisWall.textureID), TYPEIDX,
+		};
+		std::vector<GLuint> indexData = {
+			currentIndex, currentIndex + 1, currentIndex + 2,
+			currentIndex, currentIndex + 2, currentIndex + 3
+		};
+
+		currentIndex += 4; //4 vertices for Walls
+
+		combineVectors(&vertices, vertexData);
+		combineVectors(&indices, indexData);
+	}
+
+
+	for (size_t idx=0; idx<validDisplacements; idx++) {
+		utils::Displacement thisDisp = displacementData->at(idx);
+		std::vector<float> vertexData = {
+			thisDisp.vertices.at(0).x, thisDisp.vertices.at(0).y, thisDisp.vertices.at(0).z, thisDisp.UV.at(0).x, thisDisp.UV.at(0).y, static_cast<float>(thisDisp.textureID), 4.0f,
+			thisDisp.vertices.at(1).x, thisDisp.vertices.at(1).y, thisDisp.vertices.at(1).z, thisDisp.UV.at(1).x, thisDisp.UV.at(1).y, static_cast<float>(thisDisp.textureID), 4.0f,
+			thisDisp.vertices.at(2).x, thisDisp.vertices.at(2).y, thisDisp.vertices.at(2).z, thisDisp.UV.at(2).x, thisDisp.UV.at(2).y, static_cast<float>(thisDisp.textureID), 4.0f,
+		};
+		std::vector<GLuint> indexData = {
+			currentIndex, currentIndex + 1, currentIndex + 2
+		};
+
+		currentIndex += 3; //3 Vertices for Displacements
+
+		combineVectors(&vertices, vertexData);
+		combineVectors(&indices, indexData);
+	}
+
+
+	float angle = (player->viewAngle + 90.0f) * constants::TO_RAD;
+	glm::vec3 right = glm::vec3(sin(angle), cos(angle), 0.0f);
+	for (size_t idx=0; idx<validSprites; idx++) {
+		utils::Sprite thisSprite = spriteData->at(idx);
+		glm::vec3 leftPos = thisSprite.position - right;
+		glm::vec3 rightPos = thisSprite.position + right;
+		float lowZ = thisSprite.position.z - (thisSprite.height / 2.0f);
+		float highZ = thisSprite.position.z + (thisSprite.height / 2.0f);
+
+		std::vector<float> vertexData = {
+			leftPos.x, 		leftPos.y,		lowZ, 	0.0f, 0.0f, static_cast<float>(thisSprite.textureID), 5.0f,
+			rightPos.x, 	rightPos.y,		lowZ, 	1.0f, 0.0f, static_cast<float>(thisSprite.textureID), 5.0f,
+			rightPos.x, 	rightPos.y,		highZ,	1.0f, 1.0f, static_cast<float>(thisSprite.textureID), 5.0f,
+			leftPos.x, 		leftPos.y,		highZ, 	0.0f, 1.0f, static_cast<float>(thisSprite.textureID), 5.0f,
+		};
+		std::vector<GLuint> indexData = {
+			currentIndex, currentIndex + 1, currentIndex + 2,
+			currentIndex, currentIndex + 2, currentIndex + 3
+		};
+
+		currentIndex += 4; //4 Vertices for Sprites
+
+		combineVectors(&vertices, vertexData);
+		combineVectors(&indices, indexData);
+	}
+
+
+	*numTris = indices.size();
+
+
+	//Create VAO
+	GLuint VAO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	//Create VBO
+	GLuint VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+	//Create EBO
+	GLuint EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
+
+	//Define position attr
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	//Define UV attr
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	//Define UV attr
+	glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	if (dev::SHOW_BUFFER_SIZES) {
+		std::cout << "Created VAO with " << vertices.size()/7 << " vertices and " << indices.size() << " indices" << std::endl;
+	}
+	return VAO;
+}
+
+
+
 
 
 

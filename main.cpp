@@ -57,11 +57,8 @@ utils::Player player;
 bool headLampEnabled = false;
 bool interactKey = false, shouldTakeScreenshot = false;
 int lightFlickerRNG;
-GLuint renderedFrameID, interfaceID;
-GLuint envShader, spriteShader, uiShader, displayShader; //Shaders
+GLuint skyShader, triShader; //Shaders
 GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric; //Textures
-GLuint visplaneSSBO, wallSSBO, spriteSSBO, lightSSBO, textObjectSSBO, displacementSSBO; //Storage Buffers
-GLuint VAO;
 
 
 void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
@@ -70,13 +67,9 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	glEnable(GL_BLEND);
 
 	currentWindowResolution = glm::ivec2(width, height);
-	currentRenderResolution = glm::ivec2(
-		glm::min(width, desiredRenderResolution.x),
-		glm::min(height, desiredRenderResolution.y)
-	);
 
-	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentWindowResolution.y) / float(currentWindowResolution.x)));
+	aspectRatio = float(width) / float(height);
 }
 
 void APIENTRY openGLErrorCallback(
@@ -131,57 +124,35 @@ void APIENTRY openGLErrorCallback(
 
 
 
+std::vector<utils::Visplane> visplaneData;
+std::vector<utils::Wall> wallData;
+std::vector<utils::Displacement> displacementData;
+std::vector<utils::Sprite> spriteData;
+std::vector<utils::Light> lightData;
+std::vector<utils::TextObject> textObjectData;
+size_t numTris;
+
+
 std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 void prepareOpenGL() {
 	//OpenGL setup;
-	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 	textureArrayEnvironment = render::createTexture2DArray(textureNames, "textures-env", true);
 	textureArrayUI = render::createTexture2DArray(UIImageNames, "textures-sym");
 	textureArrayNumeric = render::createTexture2DArray(symbolNames, "textures-sym");
 	skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
-
-	visplaneSSBO = render::createShaderStorageBufferObject(
-		0, sizeof(utils::VisplaneGPU) * validVisplanes
-	);
-	wallSSBO = render::createShaderStorageBufferObject(
-		1, sizeof(utils::WallGPU) * validWalls
-	);
-	spriteSSBO = render::createShaderStorageBufferObject(
-		2, sizeof(utils::SpriteGPU) * validSprites
-	);
-	lightSSBO = render::createShaderStorageBufferObject(
-		3, sizeof(utils::LightGPU) * validLights
-	);
-	textObjectSSBO = render::createShaderStorageBufferObject(
-		4, sizeof(utils::TextObjectGPU) * validTextObjects
-	);
-	displacementSSBO = render::createShaderStorageBufferObject(
-		5, sizeof(utils::DisplacementGPU) * validDisplacements
-	);
-
-
-	//Environment shader
-	envShader = render::createShaderProgram("environment", false);
-
-	//Sprite Shader
-	spriteShader = render::createShaderProgram("sprites", false);
-
-	//uiShader
-	uiShader = render::createShaderProgram("interface", false);
-
-	//Display Shader
-	displayShader = render::createShaderProgram("display");
-
-
+	skyShader = render::createShaderProgram("sky", false);
+	triShader = render::createShaderProgram("triangle", true);
 
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-	glDisable(GL_DEPTH_TEST);
-	VAO = render::getVAO();
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1.0f, 1.0f);
+	glEnable(GL_BLEND);
 
-	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
-	
+	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentWindowResolution.y) / float(currentWindowResolution.x)));
+	aspectRatio = float(currentWindowResolution.x) / float(currentWindowResolution.y);
 
 	//Debug settings
 	glEnable(GL_DEBUG_OUTPUT);
@@ -194,148 +165,77 @@ void prepareOpenGL() {
 
 
 void renderFrame() {
-	//Update resolution
-	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
-	if (headLampEnabled) {
-		lightFlickerRNG = utils::RNGc();
-	}
-	glm::vec4 tintData = render::manageScreenTint(0, player.state);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	//Create VAOs;
+	GLuint screenspaceVAO = render::getVAO();
+	GLuint envVAO = render::createVAO(&visplaneData, &wallData, &displacementData, &spriteData, &textObjectData, &numTris, &player);
+
+	//Matrices
 	float viewBob = (utils::configToBool("VIEW_BOB")) ? render::viewBob(tick, player) : 0.0f;
 	player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
+	float yawRadians = player.viewAngle * constants::TO_RAD;
+	float pitchRadians = player.viewPitch * constants::TO_RAD;
+	glm::vec3 viewDirection = glm::vec3(
+		sin(yawRadians) * cos(pitchRadians),
+		cos(yawRadians) * cos(pitchRadians),
+		sin(pitchRadians)
+	);
+
+	glm::mat4 modelMatrix = glm::mat4(1.0f);
+	glm::mat4 viewMatrix = glm::lookAt(player.cameraPosition, player.cameraPosition + viewDirection, glm::vec3(0.0f, 0.0f, 1.0f)); //+Z is up.
+	glm::mat4 projMatrix = glm::perspective(utils::configToFloat("VIEW_FOV") / zoomEffect, aspectRatio, display::Z_NEAR, utils::configToFloat("VIEW_MAX_DIST"));
+	glm::mat4 pvmMatrix = projMatrix * viewMatrix * modelMatrix;
 
 
-	//Environment Shader.
-	glUseProgram(envShader);
-	glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	//Sky shader
+	glDepthMask(GL_FALSE);
+	glDisable(GL_DEPTH_TEST);
+	glUseProgram(skyShader);
+	glBindTextureUnit(0, skyboxTextureID);
+
+	//Uniforms
+	render::bindCommonUniforms(skyShader, &player);
+
+	glBindVertexArray(screenspaceVAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(0);
+	utils::GLErrorcheck("Sky Shader", true);
+
+
+	//Environment triangle Shader.
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+	glUseProgram(triShader);
 
 	glBindTextureUnit(0, textureArrayEnvironment);
-	glBindTextureUnit(1, skyboxTextureID);
 
 	//Uniforms
-	render::bindCommonUniforms(envShader, &player);
+	render::bindCommonUniforms(triShader, &player);
+
+	//MVPMatrix;
+	GLint pvmMatrixLocation = glGetUniformLocation(triShader, "pvmMatrix");
+	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(pvmMatrix));
+
 	//Other
-	render::bindUniformValue(envShader, "headLampEnabled", headLampEnabled);
-	render::bindUniformValue(envShader, "headLampFlicker", lightFlickerRNG);
-	render::bindUniformValue(envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	render::bindUniformValue(triShader, "headLampEnabled", headLampEnabled);
+	render::bindUniformValue(triShader, "headLampFlicker", lightFlickerRNG);
+	render::bindUniformValue(triShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(envVAO);
+	glDrawElements(GL_TRIANGLES, (GLsizei)numTris, GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-	utils::GLErrorcheck("Environment Shader", true);
-
-
-	//Sprite Shader.
-	glUseProgram(spriteShader);
-	glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-
-	glBindTextureUnit(0, textureArrayEnvironment);
-
-	//Uniforms
-	render::bindCommonUniforms(spriteShader, &player);
-	//Other
-	render::bindUniformValue(spriteShader, "headLampEnabled", headLampEnabled);
-	render::bindUniformValue(spriteShader, "headLampFlicker", lightFlickerRNG);
-
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-	glBindVertexArray(0);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-	utils::GLErrorcheck("Sprite Shader", true);
-
-
-	//UI Shader.
-	if (utils::configToBool("VIEW_SHOW_HUD")) {
-		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-		glUseProgram(uiShader);
-		glBindTextureUnit(0, renderedFrameID);
-		glBindImageTexture(0, interfaceID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		glBindTextureUnit(1, textureArrayEnvironment); //World Textures
-		glBindTextureUnit(2, textureArrayUI); //UI Textures
-		glBindTextureUnit(3, textureArrayNumeric); //0-9 Textures.
-
-		//Uniforms
-		render::bindCommonUniforms(uiShader, &player);
-		//UI-Specific
-		render::bindUniformValue(uiShader, "showFreq", utils::configToBool("META_SHOW_FREQ_UI"));
-		render::bindUniformValue(uiShader, "showData", utils::configToBool("META_SHOW_DATA"));
-		render::bindUniformValue(uiShader, "health", player.health);
-		render::bindUniformValue(uiShader, "energy", player.energy);
-		render::bindUniformValue(uiShader, "freq", int(round(freq)));
-		render::bindUniformValue(uiShader, "tint", tintData);
-
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("UI Shader", true);
-	}		
-
-	//Update resolution
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-
-	//Display Shader and update screen.
-	glUseProgram(displayShader);
-	glBindTextureUnit(0, renderedFrameID);
-	glBindTextureUnit(1, interfaceID);
-
-	//Uniforms
-	render::bindCommonUniforms(displayShader, &player);
-	//Display specific data.
-	render::bindUniformValue(displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
-	render::bindUniformValue(displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
-	render::bindUniformValue(displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
-
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-	glBindVertexArray(0);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	utils::GLErrorcheck("Triangle Shader", true);
 
 	glfwSwapBuffers(Window);
-	utils::GLErrorcheck("Display Shader", true);
-
-
-	if (shouldTakeScreenshot) {
-		render::saveScreenshot(renderedFrameID);
-	}
 }
 
 
 
 
 
-std::vector<utils::Visplane> visplaneData;
-std::vector<utils::Wall> wallData;
-std::vector<utils::Displacement> displacementData;
-std::vector<utils::Sprite> spriteData;
-std::vector<utils::Light> lightData;
-std::vector<utils::TextObject> textObjectData;
 std::vector<utils::LogicGate> logicGates;
 std::array<int, constants::MAX_FLAGS> flags;
-
-void updateSSBOS() {
-	//Update SSBOs.
-	render::updateShaderStorageBufferObject<utils::VisplaneGPU>(
-		visplaneSSBO, &player, &visplaneData
-	);
-	render::updateShaderStorageBufferObject<utils::WallGPU>(
-		wallSSBO, &player, &wallData
-	);
-	render::updateShaderStorageBufferObject<utils::DisplacementGPU>(
-		displacementSSBO, &player, &displacementData
-	);
-	render::updateShaderStorageBufferObject<utils::SpriteGPU>(
-		spriteSSBO, &player, &spriteData
-	);
-	render::updateShaderStorageBufferObject<utils::LightGPU>(
-		lightSSBO, &player, &lightData
-	);
-	render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
-		textObjectSSBO, &player, &textObjectData, &symbolNames
-	);
-	utils::GLErrorcheck("Updating SSBOs", true);
-}
 
 void computeFrame(bool* CPUDone) {
 	//Update logic states.
@@ -413,7 +313,7 @@ void handleInputs() {
 
 	//Meta controls
 	if (keyMap["META_FREECURSOR"]) {
-		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			
+		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	} else {
 		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
@@ -444,7 +344,7 @@ void handleInputs() {
 	player.viewAngle = fmodf(player.viewAngle + 540.0f, 360.0f) - 180.0f;
 	if (utils::configToBool("VIEW_VLOOK")) {
 		double dY = cursorYDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-		player.vLook = glm::clamp(float(player.vLook+dY), -22.5f, 22.5f);
+		player.vLook = glm::clamp(float(player.vLook-dY), -89.00f, 89.00f);
 	}
 }
 
@@ -465,16 +365,11 @@ int main() {
 
 
 	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
-	currentRenderResolution = glm::ivec2(
-		glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
-		glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
-	);
 
 
 	Window = render::initializeWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
-	glEnable(GL_BLEND);
 	bool vsync = utils::configToBool("VIEW_VSYNC");
 	if (vsync) {
 		glfwSwapInterval(1);
@@ -500,7 +395,6 @@ int main() {
 		handleInputs();
 		if (keyMap["META_EXIT"]) {break; /* Quit Immediately */}
 
-		updateSSBOS();
 		std::thread threadCPU(computeFrame, &CPUDone);
 		threadCPU.join();
 		renderFrame();

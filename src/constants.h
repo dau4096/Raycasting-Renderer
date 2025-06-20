@@ -246,6 +246,8 @@ namespace display {
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr int MAX_TEXTOBJECT_CHARACTERS = 64;
+
+	constexpr float Z_NEAR = 0.01f;
 }
 
 namespace initial {
@@ -304,4 +306,5 @@ namespace playerConfig {
 
 namespace dev {
 	//Assorted DEV/DEBUG constants
+	constexpr bool SHOW_BUFFER_SIZES = false;
 }

@@ -700,6 +700,7 @@ void loadBindings() {
 
 
 	//Handle render quality setting.
+	/*
 	std::string renderQuality = userConfig["VIEW_RENDER_RESOLUTION_QUALITY"];
 	auto resolutionIt = resolutionMap.find(renderQuality);
 	if (resolutionIt != resolutionMap.end()) {
@@ -707,11 +708,12 @@ void loadBindings() {
 	} else {
 		std::cout << ("Invalid render resolution quality: " + renderQuality) << std::endl << "Expected one of:";
 		for (auto pair : resolutionMap) {
-			if (pair.first.empty()) {continue; /* Blank option */}
+			if (pair.first.empty()) {continue; / Blank option /}
 			std::cout << std::endl << pair.first << " for [" << pair.second.x << " x " << pair.second.y << "]";
 		}
 		desiredRenderResolution = resolutionMap["LOW"];
 	}
+	*/
 
 	std::string mode = userConfig["META_DEBUG_MODE"];
 	auto debugIt = debugMap.find(mode);

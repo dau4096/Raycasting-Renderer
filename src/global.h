@@ -38,7 +38,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 
 	{"VIEW_RENDER_RESOLUTION_QUALITY", ""},
 	{"VIEW_FOV", ""},
-	{"VIEW_MAX_RAY_DIST", ""},
+	{"VIEW_MAX_DIST", ""},
 	{"VIEW_SHOW_HUD", ""},
 	{"VIEW_DRAW_UV", ""},
 	{"VIEW_BOB", ""},
@@ -109,8 +109,6 @@ inline size_t validGates;
 
 
 inline glm::ivec2 currentWindowResolution;
-inline glm::ivec2 desiredRenderResolution;
-inline glm::ivec2 currentRenderResolution;
 
 
 //Other
@@ -118,4 +116,5 @@ inline float freq;
 inline float zoomEffect;
 inline float rayAngle;
 inline float verticalFOV;
+inline float aspectRatio;
 inline size_t tick;
