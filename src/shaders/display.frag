@@ -5,9 +5,10 @@ in vec2 fragTexCoord;
 out vec4 fragColour;
 
 
-layout(binding=0) uniform sampler2D renderedFrame;
+layout(binding=0) uniform sampler2D renderedFrameSampler2D;
 layout(binding=1) uniform sampler2D interfaceTexture;
 layout(binding=2) uniform sampler2D lightMap;
+layout(rgba32f, binding=0) uniform image2D renderedFrameImage2D;
 
 
 //Camera
@@ -19,6 +20,7 @@ uniform ivec2 renderResolution;
 uniform int antiAliasingLevel;
 uniform bool smoothingEnabled;
 uniform int quantisingLevel;
+uniform bool screenshotHasHUD;
 
 
 const float EPSILON = 1e-4f;
@@ -32,7 +34,7 @@ vec4 antiAliasFunc() {
 	const float edgeThreshold = 1.0f;
 
     vec2 baseUV = getUV(gl_FragCoord.xy);
-    vec4 centrePX = texture(renderedFrame, baseUV);
+    vec4 centrePX = texture(renderedFrameSampler2D, baseUV);
     float centreDepth = centrePX.a;
 
     float minDepth = centreDepth, maxDepth = centreDepth;
@@ -43,7 +45,7 @@ vec4 antiAliasFunc() {
 	for (int dx=-antiAliasingLevel; dx<=antiAliasingLevel; dx++) {
 		for (int dy=-antiAliasingLevel; dy<=antiAliasingLevel; dy++) {
             vec2 UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-            vec4 sampledPX = texture(renderedFrame, UV);
+            vec4 sampledPX = texture(renderedFrameSampler2D, UV);
 
             float depth = sampledPX.a;
             if (depth < 0.0) {continue; /* fragment was UI */}
@@ -69,7 +71,7 @@ vec4 quantisingFunc(vec2 mainUV) {
 	float delta = 255.0f / (quantisingLevel - 1.0f);
 
 	//https://en.wikipedia.org/wiki/Quantization_(image_processing)#Grayscale_quantization
-	vec4 albedo = texture(renderedFrame, mainUV);
+	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
 	if ((albedo.a == -1.0f) || (albedo.a >= maxRayDistance)) {return albedo; /* UI Element */}
 	vec3 qVal = floor(floor((albedo.rgb * 255.0f) / delta) * delta + (delta/2.0f)) / 255.0f;
 
@@ -86,7 +88,7 @@ vec4 smoothingFunc() {
 	for (int dx=-1; dx<=1; dx++) {
 		for (int dy=-1; dy<=1; dy++) {
 			UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-			albedo = texture(renderedFrame, UV);
+			albedo = texture(renderedFrameSampler2D, UV);
 			if (albedo.a != -1) {
 				n++;
 				colourSum += albedo.rgb;
@@ -95,7 +97,7 @@ vec4 smoothingFunc() {
 	}
 
 	UV = getUV(gl_FragCoord.xy);
-	vec4 centrePX = texture(renderedFrame, UV);
+	vec4 centrePX = texture(renderedFrameSampler2D, UV);
 	if (n > 0) {
 		return vec4(colourSum / float(n), centrePX.a);
 	} else {
@@ -107,7 +109,7 @@ vec4 smoothingFunc() {
 void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
-	vec4 albedo = texture(renderedFrame, mainUV);
+	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
 	if (albedo.a >= maxRayDistance) {
 		resultant = vec4(albedo.rgb, 1.0f);
 	} else {
@@ -126,6 +128,13 @@ void main() {
 	}
 
 
+	ivec2 framePosition = ivec2((gl_FragCoord.xy * vec2(renderResolution)) / vec2(screenResolution));
+	if (!screenshotHasHUD) {
+		imageStore(renderedFrameImage2D, framePosition, vec4(resultant.rgb, 1.0f));
+	}
 	vec4 interfaceColour = texture(interfaceTexture, mainUV);
 	fragColour = vec4(mix(resultant.rgb, interfaceColour.rgb, interfaceColour.a), 1.0f);
+	if (screenshotHasHUD) {
+		imageStore(renderedFrameImage2D, framePosition, fragColour);
+	}
 }

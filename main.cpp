@@ -317,6 +317,7 @@ void renderFrame() {
 	glBindTextureUnit(0, renderedFrameID);
 	glBindTextureUnit(1, interfaceID);
 	glBindTextureUnit(2, shadowMapID);
+	glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
 	render::bindCommonUniforms(displayShader, &player);
@@ -324,6 +325,7 @@ void renderFrame() {
 	render::bindUniformValue(displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 	render::bindUniformValue(displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
 	render::bindUniformValue(displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
+	render::bindUniformValue(displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
 
 	renderingGeneric("Display Shader");
 	glfwSwapBuffers(Window);

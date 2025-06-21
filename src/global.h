@@ -50,7 +50,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_ANTIALIAS_LEVEL", ""},
 	{"VIEW_LUMINANCE_QUANTISATION", ""},
 	{"VIEW_MAX_FREQ", ""},
-	{"VIEW_NO_INTERFACE", ""},
+	{"VIEW_INTERFACE_IN_SCREENSHOT", ""},
 	{"VIEW_VSYNC", ""},
 	{"VIEW_SHADOW_QUALITY", ""},
 
