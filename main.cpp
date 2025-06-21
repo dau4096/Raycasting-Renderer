@@ -344,34 +344,36 @@ void renderFrame(double blendingAlpha) {
 
 
 
-std::vector<utils::Visplane> visplaneData;
-std::vector<utils::Wall> wallData;
-std::vector<utils::Displacement> displacementData;
-std::vector<utils::Sprite> spriteData;
-std::vector<utils::Light> lightData;
-std::vector<utils::TextObject> textObjectData;
+//Data must be synced between updateSSBOs() and the physics thread.
+utils::DataSet stateA, stateB;
+utils::DataSet* physicsData = &stateA;
+utils::DataSet* graphicsData = &stateB;
+std::mutex stateSwapMutex;
+
+//Non-synced data.
 std::vector<utils::LogicGate> logicGates;
 std::array<int, constants::MAX_FLAGS> flags;
 
-void updateSSBOS() {
+
+void updateSSBOs(utils::DataSet* localGraphicsData) {
 	//Update SSBOs.
 	render::updateShaderStorageBufferObject<utils::VisplaneGPU>(
-		visplaneSSBO, &player, &visplaneData
+		visplaneSSBO, &player, &(localGraphicsData->visplaneData)
 	);
 	render::updateShaderStorageBufferObject<utils::WallGPU>(
-		wallSSBO, &player, &wallData
+		wallSSBO, &player, &(localGraphicsData->wallData)
 	);
 	render::updateShaderStorageBufferObject<utils::DisplacementGPU>(
-		displacementSSBO, &player, &displacementData
+		displacementSSBO, &player, &(localGraphicsData->displacementData)
 	);
 	render::updateShaderStorageBufferObject<utils::SpriteGPU>(
-		spriteSSBO, &player, &spriteData
+		spriteSSBO, &player, &(localGraphicsData->spriteData)
 	);
 	render::updateShaderStorageBufferObject<utils::LightGPU>(
-		lightSSBO, &player, &lightData
+		lightSSBO, &player, &(localGraphicsData->lightData)
 	);
 	render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
-		textObjectSSBO, &player, &textObjectData, &symbolNames
+		textObjectSSBO, &player, &(localGraphicsData->textObjectData), &symbolNames
 	);
 	utils::GLErrorcheck("Updating SSBOs", true);
 }
@@ -394,10 +396,16 @@ void physicsLoop(bool* physicsReady) {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
+		physics::updateSpecials(&(physicsData->wallData), &(physicsData->visplaneData), &player, interactKey);
 
-		physics::playerMove(&player, &wallData, &spriteData, &visplaneData);
+		physics::playerMove(&player, &(physicsData->wallData), &(physicsData->spriteData), &(physicsData->visplaneData));
 
+
+		//Update states;
+		{
+			std::lock_guard<std::mutex> lock(stateSwapMutex);
+			std::swap(physicsData, graphicsData);
+		}
 
 		float dt = glfwGetTime() - tickStart;
 		tickrate = floor(1.0f / dt);
@@ -421,20 +429,20 @@ inline void reloadLevel(const bool resetPlayer=false) {
 	if (resetPlayer) {
 		loader::loadStage(
 			userConfig["META_STAGE_NAME"], &player,
-			&visplaneData, &wallData, &displacementData,
-			&spriteData, &lightData,
-			&textObjectData,
-			&logicGates, &flags,
+			&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
+			&(physicsData->spriteData), &(physicsData->lightData),
+			&(physicsData->textObjectData),
+			&(physicsData->logicGates), &(physicsData->flags),
 			&textureNames
 		);
 	} else {
 		utils::Player tmpPlayer;
 		loader::loadStage(
 			userConfig["META_STAGE_NAME"], &tmpPlayer,
-			&visplaneData, &wallData, &displacementData,
-			&spriteData, &lightData,
-			&textObjectData,
-			&logicGates, &flags,
+			&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
+			&(physicsData->spriteData), &(physicsData->lightData),
+			&(physicsData->textObjectData),
+			&(physicsData->logicGates), &(physicsData->flags),
 			&textureNames
 		);
 	}
@@ -443,6 +451,7 @@ inline void reloadLevel(const bool resetPlayer=false) {
 		textureArrayEnvironment = render::createTexture2DArray(textureNames);
 		skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	}
+	*graphicsData = *physicsData;
 }
 
 void handleInputs() {
@@ -453,7 +462,8 @@ void handleInputs() {
 		std::string functionName = pair.first;
 		int keyEnum = pair.second;
 		if (keyEnum == -1) {
-			raise(functionName + " was not bound to a key!");
+			std::cout << functionName  << " was not bound to a key!" << std::endl;;
+			continue;
 		}
 
 		int keyState = glfwGetKey(Window, keyEnum);
@@ -476,7 +486,7 @@ void handleInputs() {
 
 	//Meta controls
 	if (keyMap["META_FREECURSOR"]) {
-		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			
+		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	} else {
 		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
@@ -527,10 +537,10 @@ int main() {
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
-		&visplaneData, &wallData, &displacementData,
-		&spriteData, &lightData,
-		&textObjectData,
-		&logicGates, &flags,
+		&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
+		&(physicsData->spriteData), &(physicsData->lightData),
+		&(physicsData->textObjectData),
+		&(physicsData->logicGates), &(physicsData->flags),
 		&textureNames
 	);
 
@@ -557,7 +567,8 @@ int main() {
 	utils::GLErrorcheck("Window Creation", true);
 
 	prepareOpenGL();
-	updateSSBOS();
+	*graphicsData = *physicsData;
+	updateSSBOs(graphicsData);
 	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
 
 
@@ -575,9 +586,13 @@ int main() {
 		if (keyMap["META_EXIT"]) {break; /* Quit Immediately */}
 
 
-		if (physicsReady) {
-			updateSSBOS();
+
+		utils::DataSet* localGraphicsData = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(stateSwapMutex);
+			localGraphicsData = graphicsData;
 		}
+		updateSSBOs(localGraphicsData);
 		renderFrame(blendingAlpha);
 		glfwSwapBuffers(Window);
 
