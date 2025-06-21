@@ -57,6 +57,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_FREQ_UI", ""},
 	{"META_SHOW_FREQ_CONSOLE", ""},
+	{"META_SHOW_DT_CONSOLE", ""},
 	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
 	{"META_SHOW_DATA", ""},

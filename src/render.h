@@ -178,7 +178,7 @@ namespace render {
 
 	void saveScreenshot(GLuint frameTextureID);
 
-	GLuint createGLImage2D(int width, int height, GLint internalFormat=GL_RGBA32F);
+	GLuint createGLImage2D(int width, int height, GLint internalFormat=GL_RGBA32F, GLint samplingType=GL_NEAREST, GLint edgeSampling=GL_REPEAT);
 	GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
 	GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false);
 

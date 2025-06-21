@@ -79,7 +79,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	positionMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	normalMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
-	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
+	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y, GL_RGBA32F, GL_LINEAR);
 	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
 
@@ -144,7 +144,7 @@ void prepareOpenGL() {
 	interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 	positionMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	normalMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
-	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
+	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y, GL_RGBA32F, GL_LINEAR);
 
 	//Textures
 	textureArrayEnvironment = render::createTexture2DArray(textureNames, "textures-env", true);
@@ -543,6 +543,9 @@ int main() {
 		while (!(CPUDone)) {std::this_thread::yield();}
 
 
+		if (utils::configToBool("META_SHOW_DT_CONSOLE")) {
+			std::cout << "Frame #" << tick << " took " << (glfwGetTime() - frameStart) * 1000.0f << "ms" << endl;
+		}
 		if (!vsync) {
 			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		}
