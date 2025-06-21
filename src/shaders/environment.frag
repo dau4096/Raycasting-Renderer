@@ -11,6 +11,7 @@ uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
+uniform bool zoom;
 uniform vec2 textureScale;
 uniform vec3 textureOffset;
 uniform bool useMipMapping;
@@ -20,7 +21,6 @@ uniform float playerViewAngle;
 uniform float playerViewRoll;
 uniform float playerViewPitch;
 uniform vec3 playerPosition;
-uniform bool zoom;
 uniform ivec2 renderResolution;
 
 //Debug
@@ -39,9 +39,13 @@ uniform int numVisplanes;
 uniform int numWalls;
 uniform int numDisplacements;
 uniform int numLights;
+uniform float shadowMapQuality;
 
 
 layout(rgba32f, binding=0) uniform image2D renderedFrame;
+layout(rgba32f, binding=1) uniform image2D positionMap;
+layout(rgba32f, binding=2) uniform image2D normalMap;
+
 
 struct Visplane {
 	vec2 start;			//Visplane Start.
@@ -74,17 +78,6 @@ layout(std430, binding=5) buffer displacementSSBO {
 	Displacement displacements[];
 };
 
-struct Light {
-	vec3 position;		//Light Position.
-	vec3 colour;		//Light Colour.
-	float intensity;	//Light Intensity.
-	bool enabled;		//Light Validity.
-	float _padding;		//Light Padding.
-};
-layout(std430, binding=3) buffer lightSSBO {
-	Light lights[];
-};
-
 
 
 
@@ -113,13 +106,11 @@ const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
 const float MIN_WALL_DIST = 0.125f;
-const float DEFAULT_BRIGHTNESS = 0.175f;
 const dvec2 INVALIDdv2 = dvec2(INF, INF);
 const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
-const bool noLighting = false;
 const bool blendMipMap = true;
 const bool forceMipMapLevel = false;
 const float forcedMipMapLevel = 0.0f;
@@ -196,25 +187,6 @@ dvec2 rayIntersectCheck(Ray ray, Wall wall, out double t) {
 	if (t < 0.0 || u < 0.0 || u > 1.0) return INVALIDdv2;
 
 	return origin + t * rayDelta;
-}
-
-
-bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
-	vec2 rayDelta = pointB.xy - pointA.xy;
-	vec2 wallDelta = wall.end.xy - wall.start.xy;
-
-	float denom = cross2D(rayDelta, wallDelta);
-	if (abs(denom) < 1e-4f) {return false;}
-
-	vec2 rel = wall.start.xy - pointA.xy;
-	float t = cross2D(rel, wallDelta) / denom;
-	float u = cross2D(rel, rayDelta) / denom;
-
-	if ((t < -1e-4f) || (t > 1.0f + 1e-4f) || (u < -1e-4f) || (u > 1.0f + 1e-4f)) {return false;}
-
-	float z = pointA.z + (pointB.z - pointA.z) * t;
-
-	return (min(wall.start.z, wall.end.z) - 1e-4f <= z) && (z <= max(wall.start.z, wall.end.z) + 1e-4f);
 }
 
 
@@ -313,16 +285,8 @@ vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
 
 bool behindCamera(vec4 pt, vec2 proj) {
 	vec2 dir = normalize(pt.xy - playerPosition.xy);
-	return (dot(rayDirectionCentre, dir) < 0.0f) || (
-		proj.x < 0.0f || proj.x > renderResolution.x //||
-		//proj.y < 0.0f || proj.y > renderResolution.y
-	);
+	return (dot(rayDirectionCentre, dir) < 0.0f) || (proj.x < 0.0f || proj.x > renderResolution.x);
 }
-
-
-
-
-
 
 
 
@@ -346,7 +310,6 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
 	return vec3(position2D.xy, plane.height);
 }
 
-
 vec2 getVisplaneUV(vec3 position3D) {
 	bool topHalf = fragPosition.y > renderResolution.y/2;
 	vec2 realPosition = position3D.xy;
@@ -367,92 +330,12 @@ vec2 getVisplaneUV(vec3 position3D) {
 
 
 
-//LOS
-bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
-	vec3 LOSDelta = pointB - pointA;
-	float distToTargetSQ = dot(LOSDelta.xy, LOSDelta.xy);
-	float distToTargetInv = inversesqrt(distToTargetSQ);
-	dvec3 LOSDirection = LOSDelta * distToTargetInv;
-	Ray LOSRay = createRay(pointA.xy, LOSDirection.xy, 1.0f / distToTargetInv);
-
-
-	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<numWalls; idx++) {
-		Wall thisWall = walls[idx];
-		if (idx == thisIndex && foundType == 1) {continue; /* Wall is the index calling the LOS check. */}
-
-		bool blocked = quickIntersect(pointA, pointB, thisWall);
-		if (blocked) {return true;}
-	}
-
-
-	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<numVisplanes; idx++) {
-		Visplane thisPlane = visplanes[idx];
-		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is the index calling the LOS check. */}
-		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
-
-
-		if (abs(LOSDelta.z) < EPSILON) {continue;}
-
-		double tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
-		if (tFrac <= 0.0 || tFrac >= 1.0) {continue;}
-
-		dvec3 intersectPoint = pointA + LOSDelta * tFrac;
-		if (
-			intersectPoint.x >= min(thisPlane.start.x, thisPlane.end.x) - EPSILON &&
-			intersectPoint.x <= max(thisPlane.start.x, thisPlane.end.x) + EPSILON &&
-			intersectPoint.y >= min(thisPlane.start.y, thisPlane.end.y) - EPSILON &&
-			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON
-		) {
-			return true;
-		}
-	}
-
-	for (int idx=0; idx<numDisplacements; idx++) {
-		Displacement thisDisp = displacements[idx];
-		if (idx == thisIndex && foundType == 3) {continue; /* Displacement is the index calling the LOS check. */}
-
-		vec3 edgeA = thisDisp.vertices[1].xyz - thisDisp.vertices[0].xyz;
-		vec3 edgeB = thisDisp.vertices[2].xyz - thisDisp.vertices[0].xyz;
-		vec3 rayCrossEdgeB = cross(LOSDelta, edgeB);
-		float det = dot(edgeA, rayCrossEdgeB);
-
-		if (det > -EPSILON && det < EPSILON) {continue; /* Near parallel */}
-
-		float invDeterminant = 1.0f / det;
-		vec3 s = pointA - thisDisp.vertices[0].xyz;
-		float u = invDeterminant * dot(s, rayCrossEdgeB);
-	    if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
-	        continue; //No hit.
-	    }
-
-	    vec3 sCrossEdgeA = cross(s, edgeA);
-	    float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
-	    if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
-	    	continue; //No hit.
-	    }
-
-	    float t = invDeterminant * dot(edgeB, sCrossEdgeA);
-	    if (t > EPSILON) {
-	    	return true;
-	    }
- 	}
-
-	return false;
-}
-
-
-
-
-
-
-
 
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
@@ -592,16 +475,15 @@ void main() {
 	
 	
 	
-	
-	
-	
-	
-	//Lighting
+
+
+
 	if (foundType > 0) { //An intersect was found.
 		Wall closestWall;
 		Visplane closestPlane;
 		Displacement closestDisp;
 		vec3 normal;
+		int typeFlag;
 		if (foundType == 1) { //Wall
 			closestWall = walls[closestIndex];
 
@@ -612,6 +494,7 @@ void main() {
 				closestUV.x *= -1;
 			}
 			normal = vec3(normalv2.xy, 0.0f);
+			typeFlag = 0x1;
 
 		} else if (foundType == 2) { //Visplane
 			closestPlane = visplanes[closestIndex];
@@ -621,82 +504,26 @@ void main() {
 			} else {
 				normal = vec3(0.0f, 0.0f, 1.0f);
 			}
+			typeFlag = 0x2;
+
 		} else if (foundType == 3) {
 			closestDisp = displacements[closestIndex];
 			normal = closestDisp.normal_texID.xyz;
+			typeFlag = 0x3;
 		}
 
 		vec4 albedo = fetchUV(closestUV, minDistance, normal, closestIntersectPoint);
+		if (shouldDrawToPositionMap) {
+			int idx = (closestIndex << 2) | typeFlag;
+			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+			imageStore(positionMap, thisFramePosition, vec4(closestIntersectPoint, float(idx)));
+			imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));
+		}
 
-		if (noLighting || debugMode == 1) { //UV and noLighting
-			fragColour = albedo;
-		} else if (debugMode == 2) { //Drawing normals.
+		if (debugMode == 2) { //Drawing normals.
 			fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
 		} else {
-			vec3 intersect3D = vec3(closestIntersectPoint.xy, 0.0f);
-			//Light effect
-			for (int idx=0; idx<numLights; idx++) {
-				//Iterate through all lights.
-				Light thisLight = lights[idx];
-				if (!thisLight.enabled) {continue;}
-				vec3 delta = closestIntersectPoint - thisLight.position;
-				float distSQ = dot(delta, delta);
-				float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-				if (attenuation < 0.0f) {continue;}
-				vec3 lightDir = normalize(thisLight.position - closestIntersectPoint);
-				float normalDot = dot(normal, lightDir);
-				if (normalDot <= EPSILON) {continue;}
-
-				
-				//Shadow Checks
-				bool inShadow = checkLOS(thisLight.position, closestIntersectPoint, closestIndex, foundType);
-
-				if (!inShadow) {
-					vec3 lightContribution = thisLight.colour * attenuation;
-					vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
-
-					fragColour += litColour;
-				}
-			}
-
-
-			//Headlamp Effect
-			if (headLampEnabled) {
-				Light headLamp;
-				headLamp.position = playerPosition;
-				headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
-				headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
-
-
-				vec3 lightDir = normalize(headLamp.position - closestIntersectPoint);
-				float normalDot = dot(normal, lightDir);
-
-				if (normalDot >= 0.0f) {
-					float distance = length(closestIntersectPoint - headLamp.position);
-					float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-					float brightness = clamp(attenuation, 0.0f, 1.0f);
-
-					vec3 lightContribution = headLamp.colour * brightness;
-					vec4 litColour = vec4(albedo.rgb * lightContribution, 1.0f);
-
-					fragColour += litColour;
-				}
-			}
-
-
-			//Sun Effect
-			float sunNormalDot = dot(normal, normalize(sunDirection));
-			vec3 offset = normal * 0.01f;
-			bool sunBlocked = checkLOS(closestIntersectPoint + offset, closestIntersectPoint + offset + sunDirection * maxRayDistance, closestIndex, foundType);
-			if ((sunNormalDot >= 0.0f) && !sunBlocked) {
-				float sunNormalContrib = (sunNormalDot * 0.5f) + 0.5f;
-				vec4 litColour = vec4(albedo.rgb * sunColour.rgb * sunNormalContrib, 1.0f);
-				fragColour += litColour;
-			}
-
-
-			//Minimum/Maximum brightness.
-			fragColour = clamp(fragColour, albedo * DEFAULT_BRIGHTNESS, albedo * 1.75f);
+			fragColour = albedo;
 		}
 		vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
 		imageStore(renderedFrame, framePosition, finalFragColour);
@@ -706,6 +533,11 @@ void main() {
 			1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
 		);
 		vec3 skyAlbedo = texture(skyboxTexture, UV).rgb;
+		if (shouldDrawToPositionMap) {
+			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+			imageStore(positionMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+			imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		}
 		imageStore(renderedFrame, framePosition, vec4(skyAlbedo.rgb, maxRayDistance));
 	}
 }

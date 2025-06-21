@@ -617,7 +617,7 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 }
 
 
-static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
+static std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"TERRIBLE", glm::ivec2(64, 36)},
 	{"AWFUL", glm::ivec2(256, 144)},
 	{"CALCULATOR", glm::ivec2(384, 216)},
@@ -628,19 +628,94 @@ static inline std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"AMAZING", glm::ivec2(1920, 1080)}
 };
 
-static inline std::unordered_map<std::string, int> debugMap = {
+static std::unordered_map<std::string, int> debugMap = {
 	{"", 0}, {"NONE", 0},
 	{"UV", 1}, {"TEXTURE_UV", 1},
 	{"NORMALS", 2}, {"SURFACE_NORMALS", 2},
 };
 
-static inline std::unordered_map<std::string, int> texMipMap = {
+static std::unordered_map<std::string, int> texMipMap = {
 	{"", 0}, {"HIGH", 0},
 	{"MEDIUM", 1},
 	{"LOW", 2},
 	{"AWFUL", 3},
 	{"TERRIBLE", 4}
 };
+
+static std::unordered_map<std::string, float> shadowQualityMap = {
+	{"FULL", 1.0f}, {"1/1", 1.0f},
+	{"HALF", 0.5f}, {"1/2", 0.5f}, {"", 0.5f},
+	{"QUARTER", 0.25f}, {"1/4", 0.25f},
+	{"EIGHTH", 0.125f}, {"1/8", 0.125f}
+};
+
+
+//Has pointer
+template<typename T>
+static inline void setConfigFromStringOptionsMap(
+		std::string configName,
+		std::unordered_map<std::string, T>* map,
+		const std::string& defaultValue,
+		T* outPTR
+	) {
+	std::string keyString = userConfig[configName];
+	auto it = map->find(keyString);
+	if (it != map->end()) {
+		*outPTR = it->second;
+	} else {
+		std::cout << ("Invalid config value: " + keyString) << std::endl << "Expected one of:";
+		for (const auto& pair : *map) {
+			if (pair.first.empty()) {continue; /* Blank option */}
+			if constexpr (std::is_same_v<T, glm::ivec2>) {
+				std::cout << " for [" << pair.second.x << " x " << pair.second.y << "]";
+			} else if constexpr (std::is_same_v<T, glm::ivec3>) {
+				std::cout << " for [" << pair.second.x << " x " << pair.second.y << " x " << pair.second.z << "]";
+			} else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_arithmetic_v<T>) {
+				std::cout << " for " << pair.second;
+			} else {
+				// Fallback for other types
+				std::cout << " (unprintable value type)";
+			}
+		}
+
+		auto fallback = map->at(defaultValue);
+		*outPTR = fallback;
+	}
+
+}
+
+//No pointer
+template<typename T>
+static inline void setConfigFromStringOptionsMap(
+		std::string configName,
+		std::unordered_map<std::string, T>* map,
+		const std::string& defaultValue
+	) {
+	std::string keyString = userConfig[configName];
+	auto it = map->find(keyString);
+	if (it != map->end()) {
+		userConfig[configName] = std::to_string(it->second);
+	} else {
+		std::cout << ("Invalid config value: " + keyString) << std::endl << "Expected one of:";
+		for (const auto& pair : *map) {
+			if (pair.first.empty()) {continue; /* Blank option */}
+			if constexpr (std::is_same_v<T, glm::ivec2>) {
+				std::cout << " for [" << pair.second.x << " x " << pair.second.y << "]";
+			} else if constexpr (std::is_same_v<T, glm::ivec3>) {
+				std::cout << " for [" << pair.second.x << " x " << pair.second.y << " x " << pair.second.z << "]";
+			} else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_arithmetic_v<T>) {
+				std::cout << " for " << pair.second;
+			} else {
+				// Fallback for other types
+				std::cout << " (unprintable value type)";
+			}
+		}
+
+		auto fallback = map->at(defaultValue);
+		userConfig[configName] = std::to_string(fallback);
+	}
+
+}
 
 
 namespace loader {
@@ -699,47 +774,11 @@ void loadBindings() {
 	xml::fetchConfigsFromXML(doc);
 
 
-	//Handle render quality setting.
-	std::string renderQuality = userConfig["VIEW_RENDER_RESOLUTION_QUALITY"];
-	auto resolutionIt = resolutionMap.find(renderQuality);
-	if (resolutionIt != resolutionMap.end()) {
-		desiredRenderResolution = resolutionMap[renderQuality];
-	} else {
-		std::cout << ("Invalid render resolution quality: " + renderQuality) << std::endl << "Expected one of:";
-		for (auto pair : resolutionMap) {
-			if (pair.first.empty()) {continue; /* Blank option */}
-			std::cout << std::endl << pair.first << " for [" << pair.second.x << " x " << pair.second.y << "]";
-		}
-		desiredRenderResolution = resolutionMap["LOW"];
-	}
-
-	std::string mode = userConfig["META_DEBUG_MODE"];
-	auto debugIt = debugMap.find(mode);
-	if (debugIt != debugMap.end()) {
-		userConfig["META_DEBUG_MODE"] = std::to_string(debugMap[mode]);
-	} else {
-		std::cout << ("Invalid debug mode: " + mode) << std::endl << "Expected one of:";
-		for (auto pair : debugMap) {
-			if (pair.first.empty()) {continue; /* Blank option */}
-			std::cout << std::endl << pair.first;
-		}
-		userConfig["META_DEBUG_MODE"] = std::to_string(debugMap["NONE"]);
-	}
-
-	std::string quality = userConfig["VIEW_TEXTURE_QUALITY"];
-	auto mipIt = texMipMap.find(quality);
-	if (mipIt != texMipMap.end()) {
-		userConfig["VIEW_TEXTURE_QUALITY"] = std::to_string(texMipMap[quality]);
-	} else {
-		std::cout << ("Invalid texture quality: " + quality) << std::endl << "Expected one of:";
-		for (auto pair : texMipMap) {
-			if (pair.first.empty()) {continue; /* Blank option */}
-			int mipLevel = pair.second;
-			glm::ivec2 mipRes = glm::vec2(display::TEXTURE_RESOLUTION) / static_cast<float>(pow(2, mipLevel));
-			std::cout << std::endl << pair.first << " for [" << mipRes.x << " x " << mipRes.y << "]";
-		}
-		userConfig["VIEW_TEXTURE_QUALITY"] = std::to_string(texMipMap["HIGH"]);
-	}
+	//Handle settings that can have multiple string inputs, which map to other values.
+	setConfigFromStringOptionsMap("VIEW_RENDER_RESOLUTION_QUALITY", &resolutionMap, "LOW", &desiredRenderResolution);
+	setConfigFromStringOptionsMap("META_DEBUG_MODE", &debugMap, "NONE");
+	setConfigFromStringOptionsMap("VIEW_TEXTURE_QUALITY", &texMipMap, "LOW");
+	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();

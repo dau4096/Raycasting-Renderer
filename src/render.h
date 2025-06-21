@@ -163,10 +163,12 @@ namespace render {
 		bindUniformValue(shaderProgram, "numSprites", validSprites);
 		bindUniformValue(shaderProgram, "numLights", validLights);
 		bindUniformValue(shaderProgram, "numTextObjects", validTextObjects);
+		bindUniformValue(shaderProgram, "shadowMapQuality", 1.0f / utils::configToFloat("VIEW_SHADOW_QUALITY"));
 
 		//Resolutions
 		bindUniformValue(shaderProgram, "screenResolution", currentWindowResolution);
 		bindUniformValue(shaderProgram, "renderResolution", currentRenderResolution);
+		bindUniformValue(shaderProgram, "shadowResolution", currentShadowResolution);
 		bindUniformValue(shaderProgram, "interfaceResolution", display::UI_RESOLUTION);
 		bindUniformValue(shaderProgram, "skyboxResolution", display::SKYBOX_RESOLUTION);
 		bindUniformValue(shaderProgram, "textureResolution", display::TEXTURE_RESOLUTION);
@@ -176,7 +178,7 @@ namespace render {
 
 	void saveScreenshot(GLuint frameTextureID);
 
-	GLuint createGLImage2D(int width, int height);
+	GLuint createGLImage2D(int width, int height, GLint internalFormat=GL_RGBA32F);
 	GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
 	GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false);
 

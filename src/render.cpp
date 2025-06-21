@@ -141,12 +141,12 @@ void saveScreenshot(GLuint frameTextureID) {
 
 
 
-GLuint createGLImage2D(int width, int height) {
+GLuint createGLImage2D(int width, int height, GLint internalFormat=GL_RGBA32F) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, width, height);
+	glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, width, height);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

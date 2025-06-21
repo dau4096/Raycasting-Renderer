@@ -7,11 +7,15 @@ out vec4 fragColour;
 
 layout(binding=0) uniform sampler2D renderedFrame;
 layout(binding=1) uniform sampler2D interfaceTexture;
+layout(binding=2) uniform sampler2D lightMap;
 
 
+//Camera
 uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform ivec2 renderResolution;
+
+//Other
 uniform int antiAliasingLevel;
 uniform bool smoothingEnabled;
 uniform int quantisingLevel;
@@ -103,7 +107,13 @@ vec4 smoothingFunc() {
 void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
-	resultant = vec4(texture(renderedFrame, mainUV).rgb, 1.0f);
+	vec4 albedo = texture(renderedFrame, mainUV);
+	if (albedo.a >= maxRayDistance) {
+		resultant = vec4(albedo.rgb, 1.0f);
+	} else {
+		vec3 brightness = texture(lightMap, mainUV).rgb;
+		resultant = vec4(albedo.rgb * brightness, 1.0f);
+	}
 
 	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not adequate. Works based on luminance.
 		resultant = quantisingFunc(mainUV);

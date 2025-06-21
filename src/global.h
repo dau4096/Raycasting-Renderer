@@ -52,6 +52,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_MAX_FREQ", ""},
 	{"VIEW_NO_INTERFACE", ""},
 	{"VIEW_VSYNC", ""},
+	{"VIEW_SHADOW_QUALITY", ""},
 
 	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_FREQ_UI", ""},
@@ -111,6 +112,7 @@ inline size_t validGates;
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
+inline glm::ivec2 currentShadowResolution;
 
 
 //Other
