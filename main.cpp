@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-//#define GL_DEBUG_OUTPUT
+#pragma execution_character_set("utf-8")
 
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
@@ -54,6 +54,7 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 
 GLFWwindow* Window;
 utils::Player player;
+std::atomic<bool> runPhysics = true;
 bool headLampEnabled = false;
 bool interactKey = false, shouldTakeScreenshot = false;
 int lightFlickerRNG;
@@ -62,6 +63,7 @@ GLuint envShader, spriteShader, lightingShader, uiShader, displayShader; //Shade
 GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric; //Textures
 GLuint visplaneSSBO, wallSSBO, spriteSSBO, lightSSBO, textObjectSSBO, displacementSSBO; //Storage Buffers
 GLuint VAO;
+
 
 
 void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
@@ -82,6 +84,8 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y, GL_RGBA32F, GL_LINEAR);
 	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
+
+
 
 void APIENTRY openGLErrorCallback(
 		GLenum source,
@@ -219,7 +223,7 @@ inline void renderingGeneric(const std::string& shaderName="") {
 	}
 }
 
-void renderFrame() {
+void renderFrame(double blendingAlpha) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 	if (headLampEnabled) {
@@ -227,7 +231,8 @@ void renderFrame() {
 	}
 	glm::vec4 tintData = render::manageScreenTint(0, player.state);
 	float viewBob = (utils::configToBool("VIEW_BOB")) ? render::viewBob(tick, player) : 0.0f;
-	player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
+	glm::vec3 interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
+	player.cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
 
@@ -299,11 +304,13 @@ void renderFrame() {
 		//Uniforms
 		render::bindCommonUniforms(uiShader, &player);
 		//UI-Specific
-		render::bindUniformValue(uiShader, "showFreq", utils::configToBool("META_SHOW_FREQ_UI"));
+		render::bindUniformValue(uiShader, "showFramerate", utils::configToBool("META_SHOW_FRAMERATE_UI"));
+		render::bindUniformValue(uiShader, "framerate", int(round(framerate)));
+		render::bindUniformValue(uiShader, "showTickrate", utils::configToBool("META_SHOW_TICKRATE_UI"));
+		render::bindUniformValue(uiShader, "tickrate", int(round(tickrate)));
 		render::bindUniformValue(uiShader, "showData", utils::configToBool("META_SHOW_DATA"));
 		render::bindUniformValue(uiShader, "health", player.health);
 		render::bindUniformValue(uiShader, "energy", player.energy);
-		render::bindUniformValue(uiShader, "freq", int(round(freq)));
 		render::bindUniformValue(uiShader, "tint", tintData);
 
 		renderingGeneric("UI Shader");
@@ -328,15 +335,12 @@ void renderFrame() {
 	render::bindUniformValue(displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
 
 	renderingGeneric("Display Shader");
-	glfwSwapBuffers(Window);
 
 
 	if (shouldTakeScreenshot) {
 		render::saveScreenshot(renderedFrameID);
 	}
 }
-
-
 
 
 
@@ -372,24 +376,48 @@ void updateSSBOS() {
 	utils::GLErrorcheck("Updating SSBOs", true);
 }
 
-void computeFrame(bool* CPUDone) {
-	//Update logic states.
-	for (int index=0; index<validGates; index++) {
-		LogicGate gate = logicGates[index];
-		if (gate.gateType == G_INVALID) {continue;}
-		gate.evaluateState();
-		logicGates[index] = gate;
-	}
-	physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
 
-	physics::playerMove(&player, &wallData, &spriteData, &visplaneData);
-	*CPUDone = true;
+double tickStart;
+void physicsLoop(bool* physicsReady) {
+	double maxTickTime = 1.0f/constants::PHYSICS_FREQUENCY;
+
+	tick = 0;
+	while (runPhysics) {
+		tickStart = glfwGetTime();
+		*physicsReady = false;
+		player.prevPosition = player.position;
+
+		//Update logic states.
+		for (int index=0; index<validGates; index++) {
+			LogicGate gate = logicGates[index];
+			if (gate.gateType == G_INVALID) {continue;}
+			gate.evaluateState();
+			logicGates[index] = gate;
+		}
+		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
+
+		physics::playerMove(&player, &wallData, &spriteData, &visplaneData);
+
+
+		float dt = glfwGetTime() - tickStart;
+		tickrate = floor(1.0f / dt);
+		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {
+			std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;
+		}
+		if constexpr (dev::SHOW_PHYSICS_DT) {
+			std::cout << "Tick #" << tick << " took " << std::setprecision(6) << (dt * 1e6f) << "µs / Hypothetical tickrate: " << static_cast<int>(1.0f / dt) << endl;
+		}
+
+		*physicsReady = true;
+		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
+		tick++;
+	}
 }
 
 
 
 double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
-static inline void reloadLevel(const bool resetPlayer=false) {
+inline void reloadLevel(const bool resetPlayer=false) {
 	if (resetPlayer) {
 		loader::loadStage(
 			userConfig["META_STAGE_NAME"], &player,
@@ -484,10 +512,18 @@ void handleInputs() {
 }
 
 
-
+std::thread physicsThread;
+inline void stopPhysics() {
+	runPhysics = false;
+	if (physicsThread.joinable()) {
+		physicsThread.join();
+	}
+}
 
 int main() {
 	try { //Catch exceptions
+	SetConsoleOutputCP(65001); //CP_UTF8
+
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
@@ -521,47 +557,52 @@ int main() {
 	utils::GLErrorcheck("Window Creation", true);
 
 	prepareOpenGL();
+	updateSSBOS();
 	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
 
 
 	//Threads;
-	bool CPUDone;
+	bool physicsReady;
+	physicsThread = std::thread(physicsLoop, &physicsReady);
+	tickStart = glfwGetTime();
 
-
+	frame = 0;
 	while (!glfwWindowShouldClose(Window)) {
-		tick++;
-		CPUDone = false;
-
 		double frameStart = glfwGetTime();
+		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY;
+
 		handleInputs();
 		if (keyMap["META_EXIT"]) {break; /* Quit Immediately */}
 
-		updateSSBOS();
-		std::thread threadCPU(computeFrame, &CPUDone);
-		threadCPU.join();
-		renderFrame();
-		while (!(CPUDone)) {std::this_thread::yield();}
+
+		if (physicsReady) {
+			updateSSBOS();
+		}
+		renderFrame(blendingAlpha);
+		glfwSwapBuffers(Window);
 
 
+		float dt = glfwGetTime() - frameStart;
 		if (utils::configToBool("META_SHOW_DT_CONSOLE")) {
-			std::cout << "Frame #" << tick << " took " << (glfwGetTime() - frameStart) * 1000.0f << "ms" << endl;
+			std::cout << "Frame #" << frame << " took " << std::setprecision(2) << (dt * 1e3f) << "ms / Hypothetical framerate: " << static_cast<int>(1.0f / dt) << endl;
 		}
 		if (!vsync) {
 			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		}
-		freq = floor(1.0f / (glfwGetTime() - frameStart));
-		if (utils::configToBool("META_SHOW_FREQ_CONSOLE")) {
-			std::cout << freq << std::endl;
+		framerate = floor(1.0f / (glfwGetTime() - frameStart));
+		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {
+			std::cout << "Framerate: " << framerate << "Hz" << std::endl;
 		}
 
 		cursorXPosPrev = cursorXPos;
 		cursorYPosPrev = cursorYPos;
+		frame++;
 	}
 
 	//Cleanup OpenGL.
 	glDeleteTextures(1, &textureArrayEnvironment);
 
-
+	stopPhysics();
 	glfwDestroyWindow(Window);
 	glfwTerminate();
 	return 0;
@@ -569,6 +610,7 @@ int main() {
 
 	//Catch exceptions.
 	} catch (const std::exception& e) {
+		stopPhysics();
 		if (!utils::isConsoleVisible()) {
 			utils::showConsole();
 		}
@@ -576,6 +618,7 @@ int main() {
 		pause();
 		return -1;
 	} catch (...) {
+		stopPhysics();
 		if (!utils::isConsoleVisible()) {
 			utils::showConsole();
 		}

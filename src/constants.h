@@ -207,6 +207,7 @@ namespace constants {
 
 
 	//Sim Constants
+	constexpr float PHYSICS_FREQUENCY = 45.0f;
 	constexpr float GRAVITY_ACCEL = 0.486f;
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
 	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
@@ -304,4 +305,6 @@ namespace playerConfig {
 
 namespace dev {
 	//Assorted DEV/DEBUG constants
+	constexpr bool SHOW_PHYSICS_TICKRATE = false;
+	constexpr bool SHOW_PHYSICS_DT = false;
 }

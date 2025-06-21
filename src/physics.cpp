@@ -257,9 +257,6 @@ void playerMove(
 		std::vector<utils::Sprite>* spriteData,
 		std::vector<utils::Visplane>* visplaneData
 	) {
-	float speedModifier = 45.0f / freq;
-	//If freq is higher than expected, then speed is reduced.
-	//If freq is lower than expected, then speed is increased.
 
 	Player playerCopy = *player;
 
@@ -299,8 +296,7 @@ void playerMove(
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
 
-	maxV *= speedModifier;
-	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV) * speedModifier;
+	playerSpeed = glm::clamp(maxV / playerSpeed, 0.0f, maxV);
 
 	// Determine the movement vector based on key presses
 	if (!player->sliding) {
@@ -568,14 +564,12 @@ void playerMove(
 		player->velocity.z *= constants::AIR_FRICT_SLIDE_COEFF;
 	}
 
-	player->velocity.z -= stageData.gravity / freq;
+	player->velocity.z -= stageData.gravity / constants::PHYSICS_FREQUENCY;
 	player->position += player->velocity;
 
 	if (isVec3NaN(player->position) || isVec3NaN(player->velocity)) {
 		*player = playerCopy; //Revert back.
 	}
-
-	return;
 };
 
 
@@ -585,9 +579,6 @@ void updateSpecials(
 		std::vector<utils::Visplane>* visplaneData,
 		utils::Player *player, bool interactKey
 	) {
-	float speedModifier = 45.0f / freq;
-	//If freq is higher than expected, then speed is reduced.
-	//If freq is lower than expected, then speed is increased.
 
 
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
@@ -638,22 +629,22 @@ void updateSpecials(
 			}
 
 			case W_MOVEV_FAST: { //Move vertically, quickly.
-				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
 			case W_MOVEV_SLOW: { //Move vertically, slowly.
-				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_SLOW * speedModifier, enabled);
+				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
 				break;
 			}
 
 			case W_MOVEH_FAST: { //Move horizontally (+/- wall direction) quickly.
-				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
 			case W_MOVEH_SLOW: {//Move horizontally (+/- wall direction) slowly.
-				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
@@ -705,18 +696,18 @@ void updateSpecials(
 			}
 
 			case V_MOVEV_FAST: { //Move vertically, quickly.
-				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_FAST * speedModifier, enabled);
+				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
 			case V_MOVEV_SLOW: { //Move vertically, slowly.
-				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_SLOW * speedModifier, enabled);
+				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
 				break;
 			}
 
 			case V_HURT: {
 				if (planeTouch) {
-					float hurt = plane.data * speedModifier;
+					float hurt = plane.data;
 					utils::hurtPlayer(player, hurt);
 				}
 				break;

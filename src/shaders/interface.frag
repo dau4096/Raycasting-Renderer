@@ -26,8 +26,10 @@ uniform int health;
 uniform int energy;
 
 //Other
-uniform int freq;
-uniform bool showFreq;
+uniform bool showFramerate;
+uniform int framerate;
+uniform bool showTickrate;
+uniform int tickrate;
 uniform bool showData;
 uniform int numTextObjects;
 
@@ -335,9 +337,14 @@ void main() {
 	drawTextObjects(rayAngle);
 
 
-	//Show freq.
-	if (showFreq) {
-		drawInt(vec2(0, 368), 32, freq);
+	//Show framerate / tickrate.
+	int tickrateYPosition = 368;
+	if (showFramerate) {
+		drawInt(vec2(0, 368), 32, framerate);
+		tickrateYPosition -= 32;
+	}
+	if (showTickrate) {
+		drawInt(vec2(0, tickrateYPosition), 32, tickrate);
 	}
 
 

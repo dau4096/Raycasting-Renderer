@@ -46,8 +46,9 @@
 	<option function="VIEW_VSYNC" value="FALSE" />
 
 	<option function="META_DEBUG_MODE" value="NONE" />
-	<option function="META_SHOW_FREQ_UI" value="TRUE" />
-	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
+	<option function="META_SHOW_FRAMERATE_UI" value="TRUE" />
+	<option function="META_SHOW_TICKRATE_UI" value="FALSE" />
+	<option function="META_SHOW_FRAMERATE_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_DT_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
 	<option function="META_SHOW_DATA" value="FALSE" />

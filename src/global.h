@@ -55,8 +55,9 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_SHADOW_QUALITY", ""},
 
 	{"META_DEBUG_MODE", ""},
-	{"META_SHOW_FREQ_UI", ""},
-	{"META_SHOW_FREQ_CONSOLE", ""},
+	{"META_SHOW_TICKRATE_UI", ""},
+	{"META_SHOW_FRAMERATE_UI", ""},
+	{"META_SHOW_FRAMERATE_CONSOLE", ""},
 	{"META_SHOW_DT_CONSOLE", ""},
 	{"META_SHOW_CONSOLE", ""},
 	{"META_STAGE_NAME", ""},
@@ -117,8 +118,10 @@ inline glm::ivec2 currentShadowResolution;
 
 
 //Other
-inline float freq;
+inline float framerate;
+inline float tickrate;
 inline float zoomEffect;
 inline float rayAngle;
 inline float verticalFOV;
+inline size_t frame;
 inline size_t tick;
