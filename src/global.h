@@ -53,6 +53,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_INTERFACE_IN_SCREENSHOT", ""},
 	{"VIEW_VSYNC", ""},
 	{"VIEW_SHADOW_QUALITY", ""},
+	{"VIEW_ALLOW_TRANSPARENCY", ""},
 
 	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_TICKRATE_UI", ""},

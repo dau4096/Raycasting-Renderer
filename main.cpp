@@ -251,6 +251,7 @@ void renderFrame(double blendingAlpha) {
 	render::bindUniformValue(envShader, "headLampEnabled", headLampEnabled);
 	render::bindUniformValue(envShader, "headLampFlicker", lightFlickerRNG);
 	render::bindUniformValue(envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	render::bindUniformValue(envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
 	renderingGeneric("Environment Shader");
 
@@ -432,7 +433,7 @@ inline void reloadLevel(const bool resetPlayer=false) {
 			&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
 			&(physicsData->spriteData), &(physicsData->lightData),
 			&(physicsData->textObjectData),
-			&(physicsData->logicGates), &(physicsData->flags),
+			&logicGates, &flags,
 			&textureNames
 		);
 	} else {
@@ -442,7 +443,7 @@ inline void reloadLevel(const bool resetPlayer=false) {
 			&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
 			&(physicsData->spriteData), &(physicsData->lightData),
 			&(physicsData->textObjectData),
-			&(physicsData->logicGates), &(physicsData->flags),
+			&logicGates, &flags,
 			&textureNames
 		);
 	}
@@ -540,7 +541,7 @@ int main() {
 		&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
 		&(physicsData->spriteData), &(physicsData->lightData),
 		&(physicsData->textObjectData),
-		&(physicsData->logicGates), &(physicsData->flags),
+		&logicGates, &flags,
 		&textureNames
 	);
 

@@ -40,6 +40,7 @@ uniform int numWalls;
 uniform int numDisplacements;
 uniform int numLights;
 uniform float shadowMapQuality;
+uniform bool allowTransparency;
 
 
 layout(rgba32f, binding=0) uniform image2D renderedFrame;
@@ -77,6 +78,50 @@ struct Displacement {
 layout(std430, binding=5) buffer displacementSSBO {
 	Displacement displacements[];
 };
+
+
+
+struct IntersectionData {
+	vec3 position;
+	vec3 UV;
+	double distanceSQ;
+	int index, foundType;
+};
+IntersectionData stack[3];
+int topOfStack = 0;
+
+void pushStack(IntersectionData data) {
+	int insertIdx = topOfStack;
+
+	for (int i=0; i<topOfStack; i++) {
+		if (data.distanceSQ < stack[i].distanceSQ) {
+			insertIdx = i;
+			break;
+		}
+	}
+
+	if (topOfStack < 3) {
+		topOfStack++;
+	}
+	for (int i=topOfStack-1; i>insertIdx; i--) {
+		stack[i] = stack[i-1];
+	}
+
+	stack[insertIdx] = data;
+}
+
+
+bool popStack(out IntersectionData data) {
+	if (topOfStack > 0) {
+		data = stack[0];
+		for (int i=0; i<topOfStack - 1; i++) {
+			stack[i] = stack[i+1];
+		}
+		topOfStack--;
+		return true;
+	}
+	return false;
+}
 
 
 
@@ -348,9 +393,9 @@ void main() {
 
 
 	//Find closest intersect
-	vec3 closestIntersectPoint, closestUV;
-	double minDistanceSQ = maxRayDistance * maxRayDistance;
-	int closestIndex, foundType = 0;
+	IntersectionData thisIntersect;
+	thisIntersect.distanceSQ = maxRayDistance * maxRayDistance;
+	bool foundObject = false;
 
 	//Iterate through all the walls. (2D)
 	for (int idx=0; idx<numWalls; idx++) {
@@ -378,13 +423,15 @@ void main() {
 		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition); //Check if inside wall (Valid UV)
 
 
-		if (wallUV != INVALIDv2 && wallDistanceSQ < minDistanceSQ) {
+		if (wallUV != INVALIDv2) {
 			//Set closest.
-			minDistanceSQ = wallDistanceSQ;
-			closestIndex = idx;
-			closestIntersectPoint = vec3(intersectPoint.xy, fragZ);
-			closestUV = vec3(wallUV.xy, thisWall.textureID);
-			foundType = 1;
+			thisIntersect.distanceSQ = wallDistanceSQ;
+			thisIntersect.index = idx;
+			thisIntersect.position = vec3(intersectPoint.xy, fragZ);
+			thisIntersect.UV = vec3(wallUV.xy, thisWall.textureID);
+			thisIntersect.foundType = 1;
+			pushStack(thisIntersect);
+			foundObject = true;
 		}
 		
 	}
@@ -410,13 +457,13 @@ void main() {
 		}
 
 		float vPlaneDistanceSQ = dot(playerPosition.xy - intersectPoint.xy, playerPosition.xy - intersectPoint.xy); //Cheaper length() call
-		if (vPlaneDistanceSQ < minDistanceSQ) {
-			minDistanceSQ = vPlaneDistanceSQ;
-			closestIntersectPoint = intersectPoint;
-			closestIndex = idx;
-			foundType = 2;
-			closestUV = vec3(getVisplaneUV(intersectPoint), thisPlane.textureID);
-		}
+		thisIntersect.distanceSQ = vPlaneDistanceSQ;
+		thisIntersect.position = intersectPoint;
+		thisIntersect.index = idx;
+		thisIntersect.foundType = 2;
+		thisIntersect.UV = vec3(getVisplaneUV(intersectPoint), thisPlane.textureID);
+		pushStack(thisIntersect);
+		foundObject = true;
 	}
 
 
@@ -440,89 +487,106 @@ void main() {
 			vec2 delta = pos3D.xy - playerPosition.xy;
 			float distanceSQ = dot(delta, delta);
 
-			if (distanceSQ < minDistanceSQ) {
-				minDistanceSQ = distanceSQ;
-				closestIndex = idx;
-				closestIntersectPoint = pos3D;
-				foundType = 3;
+			
+			thisIntersect.distanceSQ = distanceSQ;
+			thisIntersect.index = idx;
+			thisIntersect.position = pos3D;
+			thisIntersect.foundType = 3;
 
-				vec2 UV = (
-					thisDisp.UV[0].xy * barycentricW.x +
-					thisDisp.UV[1].xy * barycentricW.y +
-					thisDisp.UV[2].xy * barycentricW.z
-				);
-				closestUV = vec3(UV.xy, thisDisp.normal_texID.w);
-			}
+			vec2 UV = (
+				thisDisp.UV[0].xy * barycentricW.x +
+				thisDisp.UV[1].xy * barycentricW.y +
+				thisDisp.UV[2].xy * barycentricW.z
+			);
+			thisIntersect.UV = vec3(UV.xy, thisDisp.normal_texID.w);
+			pushStack(thisIntersect);
+			foundObject = true;
 		}
 	}
 
-	double minDistance = distMultiplier * (1.0f / inversesqrt(minDistanceSQ));
-	
+
 	
 	
 
 
 
-	if (foundType > 0) { //An intersect was found.
-		Wall closestWall;
-		Visplane closestPlane;
-		Displacement closestDisp;
+	if (foundObject) { //An intersect was found.
+		IntersectionData validIntersect;
+		bool success = true;
 		vec3 normal;
 		int typeFlag;
-		if (foundType == 1) { //Wall
-			closestWall = walls[closestIndex];
+		vec4 albedo;
+		double minDistance;
+		bool trueFound = false;
+		while (success) {
+			success = popStack(validIntersect);
+			
+			Wall closestWall;
+			Visplane closestPlane;
+			Displacement closestDisp;
+			if (validIntersect.foundType == 1) { //Wall
+				closestWall = walls[validIntersect.index];
 
-			vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
-			vec2 normalv2 = vec2(wallDirection.y, -wallDirection.x);
-			if (dot(normalv2, playerPosition.xy - closestIntersectPoint.xy) < 0.0) {
-				normalv2 *= -1;
-				closestUV.x *= -1;
+				vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
+				vec2 normalv2 = vec2(wallDirection.y, -wallDirection.x);
+				if (dot(normalv2, playerPosition.xy - validIntersect.position.xy) < 0.0) {
+					normalv2 *= -1;
+					validIntersect.UV.x *= -1;
+				}
+				normal = vec3(normalv2.xy, 0.0f);
+				typeFlag = 0x1;
+
+			} else if (validIntersect.foundType == 2) { //Visplane
+				closestPlane = visplanes[validIntersect.index];
+
+				if (closestPlane.height > playerPosition.z) {
+					normal = vec3(0.0f, 0.0f, -1.0f);
+				} else {
+					normal = vec3(0.0f, 0.0f, 1.0f);
+				}
+				typeFlag = 0x2;
+
+			} else if (validIntersect.foundType == 3) {
+				closestDisp = displacements[validIntersect.index];
+				normal = closestDisp.normal_texID.xyz;
+				typeFlag = 0x3;
 			}
-			normal = vec3(normalv2.xy, 0.0f);
-			typeFlag = 0x1;
 
-		} else if (foundType == 2) { //Visplane
-			closestPlane = visplanes[closestIndex];
+			minDistance = distMultiplier / inversesqrt(validIntersect.distanceSQ);
+			albedo = fetchUV(validIntersect.UV, minDistance, normal, validIntersect.position);
+			if ((albedo.a < 0.5f) && (allowTransparency)) {continue;}
+			if (shouldDrawToPositionMap) {
+				int idx = (validIntersect.index << 2) | typeFlag;
+				ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+				imageStore(positionMap, thisFramePosition, vec4(validIntersect.position, float(idx)));
+				imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));
+			}
+			trueFound = true;
+			break;
 
-			if (closestPlane.height > playerPosition.z) {
-				normal = vec3(0.0f, 0.0f, -1.0f);
+		}
+
+		if (trueFound) {
+			if (debugMode == 2) { //Drawing normals.
+				fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
 			} else {
-				normal = vec3(0.0f, 0.0f, 1.0f);
+				fragColour = albedo;
 			}
-			typeFlag = 0x2;
-
-		} else if (foundType == 3) {
-			closestDisp = displacements[closestIndex];
-			normal = closestDisp.normal_texID.xyz;
-			typeFlag = 0x3;
+			vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+			imageStore(renderedFrame, framePosition, finalFragColour);
+			return;
 		}
-
-		vec4 albedo = fetchUV(closestUV, minDistance, normal, closestIntersectPoint);
-		if (shouldDrawToPositionMap) {
-			int idx = (closestIndex << 2) | typeFlag;
-			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-			imageStore(positionMap, thisFramePosition, vec4(closestIntersectPoint, float(idx)));
-			imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));
-		}
-
-		if (debugMode == 2) { //Drawing normals.
-			fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
-		} else {
-			fragColour = albedo;
-		}
-		vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
-		imageStore(renderedFrame, framePosition, finalFragColour);
-	} else {
-		vec2 UV = vec2(
-			fract(rayAngleYaw / 6.28318530718f), //Over 2*Pi.
-			1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
-		);
-		vec3 skyAlbedo = texture(skyboxTexture, UV).rgb;
-		if (shouldDrawToPositionMap) {
-			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-			imageStore(positionMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
-			imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
-		}
-		imageStore(renderedFrame, framePosition, vec4(skyAlbedo.rgb, maxRayDistance));
 	}
+
+	vec2 UV = vec2(
+		fract(rayAngleYaw / 6.28318530718f), //Over 2*Pi.
+		1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
+	);
+	vec3 skyAlbedo = texture(skyboxTexture, UV).rgb;
+	if (shouldDrawToPositionMap) {
+		ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+		imageStore(positionMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+	}
+	imageStore(renderedFrame, framePosition, vec4(skyAlbedo.rgb, maxRayDistance));
 }
