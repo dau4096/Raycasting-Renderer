@@ -170,35 +170,12 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-dvec2 rayIntersectCheck(Ray ray, Wall wall, out double t) {
-	dvec2 origin = ray.position;
-	dvec2 rayDelta = ray.end - ray.position;
-
-	dvec2 wallOrigin = wall.start.xy;
-	dvec2 wallDir = wall.end.xy - wallOrigin;
-
-	double rayDeltaCrosswallDirInv = 1.0f / cross2D(rayDelta, wallDir);
-	if (abs(rayDeltaCrosswallDirInv) < EPSILON) {return INVALIDdv2; /* Ray and wall are parallel */}
-
-	dvec2 orDir = wallOrigin - origin;
-	t = cross2D(orDir, wallDir) * rayDeltaCrosswallDirInv;
-	double u = cross2D(orDir, rayDelta) * rayDeltaCrosswallDirInv;
-
-	if (t < 0.0 || u < 0.0 || u > 1.0) return INVALIDdv2;
-
-	return origin + t * rayDelta;
-}
-
-
 vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
-	vec2 wallStartV2 = vec2(thisWall.start.x, thisWall.start.y);
-	vec2 wallEndV2 = vec2(thisWall.end.x, thisWall.end.y);
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 	//xUV calculation.
 	double xUV;
-	vec2 wallDelta = wallEndV2 - wallStartV2;
-	if (abs(wallDelta.y) > abs(wallDelta.x)) {
+	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
 		xUV = fract(intersectPoint.y / textureScale.x);
 	} else {
 		xUV = fract(intersectPoint.x / textureScale.x);
@@ -383,10 +360,18 @@ void main() {
 		float projEnd = dot(rayEnd-thisWall.start.xy, wallNormal);
 		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
 
+		double t = (projStart) / (projEnd - projStart);
+		dvec2 intersectPoint = playerPosition.xy - rayDirection.xy * t * maxRayDistance;
+		vec2 minWall = min(thisWall.start.xy, thisWall.end.xy);
+		vec2 maxWall = max(thisWall.start.xy, thisWall.end.xy);
+		if (
+		    intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+		    intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y
+		) {
+			//Outside of valid wall segment.
+			continue;
+		}
 
-		double t;
-		dvec2 intersectPoint = rayIntersectCheck(fragRay, thisWall, t);
-		if (intersectPoint == INVALIDdv2) {continue; /* Invalid intersect point */}
 		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, playerPosition.z);
 		double wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
 
