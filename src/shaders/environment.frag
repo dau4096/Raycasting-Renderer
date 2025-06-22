@@ -9,7 +9,6 @@ layout(binding=1) uniform sampler2D skyboxTexture;
 //CameraData
 uniform float maxRayDistance;
 uniform float maxRayAngle;
-uniform float verticalFOV;
 uniform float zoomFactor;
 uniform bool zoom;
 uniform vec2 textureScale;
@@ -26,19 +25,10 @@ uniform ivec2 renderResolution;
 //Debug
 uniform int debugMode;
 
-//Headlamp
-uniform bool headLampEnabled;
-uniform int headLampFlicker;
-
-//Sun
-uniform vec3 sunDirection;
-uniform vec3 sunColour;
-
 //Other
 uniform int numVisplanes;
 uniform int numWalls;
 uniform int numDisplacements;
-uniform int numLights;
 uniform float shadowMapQuality;
 uniform bool allowTransparency;
 
@@ -229,9 +219,10 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 
 
 	//yUV calculation.
-	double distance = length(originPos.xy - intersectPoint) / zoomEffect;
-	double projectedYLow = (originPos.z - wallLowZ) / distance;
-	double projectedYTop = (originPos.z - wallTopZ) / distance;
+	dvec2 delta = originPos.xy - intersectPoint.xy;
+	double invDistance = inversesqrt(dot(delta, delta)) * zoomEffect;
+	double projectedYLow = (originPos.z - wallLowZ) * invDistance;
+	double projectedYTop = (originPos.z - wallTopZ) * invDistance;
 
 	double screenYLow = renderResolution.y * (0.5 - projectedYLow);
 	double screenYTop = renderResolution.y * (0.5 - projectedYTop);
@@ -272,8 +263,8 @@ vec2 getScreenPosition(vec3 position3D) {
 	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
 	*/
 
-	float invdistance = inversesqrt(max(dot(delta, delta), 1e-4f));
-	float projCentreY = (playerPosition.z - position3D.z) * invdistance * zoomEffect;
+	float invDistance = inversesqrt(max(dot(delta, delta), 1e-4f));
+	float projCentreY = (playerPosition.z - position3D.z) * invDistance * zoomEffect;
 	float Y = renderResolution.y * (0.5f - projCentreY);
 
 	return vec2(X, Y);
@@ -333,18 +324,11 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
 }
 
 vec2 getVisplaneUV(vec3 position3D) {
-	bool topHalf = fragPosition.y > renderResolution.y/2;
-	vec2 realPosition = position3D.xy;
-
 	//Take the fractional parts of the position (texture tiles every unit square)
-	float xUV = fract(realPosition.x / textureScale.x);
+	float xUV = fract(position3D.x / textureScale.x);
 	if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
-	if (!topHalf) {
-		xUV = 1.0f - xUV;
-	}
-	float yUV = fract(realPosition.y / textureScale.y);
+	float yUV = fract(position3D.y / textureScale.y);
 	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
-	//Texture index depends on top (ceiling) or bottom (floor) half.
 
 	return vec2(xUV, yUV) + textureOffset.xy;
 }

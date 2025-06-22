@@ -11,9 +11,9 @@ uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
+uniform bool useMipMapping;
 
 //Player Data
-uniform float playerViewAngle;
 uniform float playerViewRoll;
 uniform float playerViewPitch;
 uniform vec3 playerPosition;
@@ -21,22 +21,10 @@ uniform bool zoom;
 uniform ivec2 renderResolution;
 
 //Debug
-uniform int drawUV;
-
-//Headlamp
-uniform bool headLampEnabled;
-uniform int headLampFlicker;
-
-//Sun
-uniform vec3 sunDirection;
-uniform vec3 sunColour;
+uniform int debugMode;
 
 //Other
-uniform int numVisplanes;
-uniform int numWalls;
-uniform int numDisplacements;
 uniform int numSprites;
-uniform int numLights;
 uniform float shadowMapQuality;
 
 
@@ -71,8 +59,42 @@ const vec2 INVALIDv2 = vec2(1e30f, 1e30f);
 const dvec2 INVALIDdv2 = dvec2(INF, INF);
 const vec3 INVALIDv3 = vec3(1e30f, 1e30f, 1e30f);
 
+const bool blendMipMap = true;
+const bool forceMipMapLevel = false;
+const float forcedMipMapLevel = 0.0f;
+const bool debugMipMapLevel = false;
+
 const float mipMapLevels = 7.0f;
 const float minMipMapDistance = 5.0f;
+
+
+
+vec4 fetchUV(vec3 UV, double distance, bool fetchTexture=true) {
+	if (debugMode == 1) {
+		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
+	}
+	if (!fetchTexture || (UV.z < 0)) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
+	if (!useMipMapping) {
+		return textureLod(textureArray, UV, 0.0f);
+	}
+	if (forceMipMapLevel) {
+		return textureLod(textureArray, UV, forcedMipMapLevel);
+	}
+
+	//Linear, uses MM1 from minMipMapDistance and so on.
+	float depthComponent = (mipMapLevels * 2.0f / maxRayDistance) * (float(distance) - minMipMapDistance);
+	float LODIndex = clamp(depthComponent, 0.0, mipMapLevels); 
+
+	if (debugMipMapLevel) {
+		return vec4(LODIndex / mipMapLevels, fract(LODIndex), 0.0f, 1.0f);
+	}
+	vec4 mipMapColour = textureLod(textureArray, UV, ceil(LODIndex));
+	if (!blendMipMap) {
+		return mipMapColour;
+	}
+	vec4 MipMapMinusOneColour = textureLod(textureArray, UV, ceil(LODIndex) - 1.0f);
+	return mix(MipMapMinusOneColour, mipMapColour, fract(LODIndex));
+}
 
 
 
@@ -140,21 +162,22 @@ void main() {
 	for (int index=0; index<numSprites; index++) {
 		Sprite thisSprite = sprites[index];
 
+		vec2 delta = playerPosition.xy - thisSprite.position.xy;
+		float spriteDistanceSQ = dot(delta, delta);
 
-		float spriteDistance = length(playerPosition.xy - thisSprite.position.xy);
-
-		if (spriteDistance >= fragDepth || spriteDistance > maxRayDistance) {continue; /* Too far to see onscreen. */}
+		if (spriteDistanceSQ >= fragDepth*fragDepth || spriteDistanceSQ > maxRayDistance*maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
-		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, spriteDistance);
+		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, spriteDistanceSQ);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
-		if (drawUV == 1) {
+		fragDepth = 1.0f / inversesqrt(spriteDistanceSQ);
+		if (debugMode == 1) { //DrawUV
 			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
+		} else if (debugMode == 2) { //DrawNormals
+			albedo = vec3(delta.xy, 0.0f);
 		} else {
-			//Linear, uses MM1 from minMipMapDistance and so on.
-			float LODIndex = clamp((mipMapLevels * 2.0f / maxRayDistance) * (float(spriteDistance) - minMipMapDistance), 0.0, mipMapLevels); 
-			vec4 alphaTexture = textureLod(textureArray, vec3(spriteUV.xy, float(thisSprite.textureID)), floor(LODIndex));
+			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, thisSprite.textureID), fragDepth);
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 			albedo = alphaTexture.rgb;
 		}
@@ -162,7 +185,6 @@ void main() {
 		spriteHit = true;
 		closestSprite = thisSprite;
 		closestIndex = index;
-		fragDepth = spriteDistance;
 	}
 
 

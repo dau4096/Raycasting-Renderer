@@ -247,9 +247,6 @@ void renderFrame(double blendingAlpha) {
 
 	//Uniforms
 	render::bindCommonUniforms(envShader, &player);
-	//Other
-	render::bindUniformValue(envShader, "headLampEnabled", headLampEnabled);
-	render::bindUniformValue(envShader, "headLampFlicker", lightFlickerRNG);
 	render::bindUniformValue(envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	render::bindUniformValue(envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
@@ -267,9 +264,7 @@ void renderFrame(double blendingAlpha) {
 
 	//Uniforms
 	render::bindCommonUniforms(spriteShader, &player);
-	//Other
-	render::bindUniformValue(spriteShader, "headLampEnabled", headLampEnabled);
-	render::bindUniformValue(spriteShader, "headLampFlicker", lightFlickerRNG);
+	render::bindUniformValue(envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
 	renderingGeneric("Sprite Shader");
 
@@ -285,6 +280,8 @@ void renderFrame(double blendingAlpha) {
 
 	//Uniforms;
 	render::bindCommonUniforms(lightingShader, &player);
+	render::bindUniformValue(spriteShader, "headLampEnabled", headLampEnabled);
+	render::bindUniformValue(spriteShader, "headLampFlicker", lightFlickerRNG);
 
 	renderingGeneric("Shadow Shader");
 
@@ -329,7 +326,7 @@ void renderFrame(double blendingAlpha) {
 
 	//Uniforms
 	render::bindCommonUniforms(displayShader, &player);
-	//Display specific data.
+	//Display-Specific
 	render::bindUniformValue(displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 	render::bindUniformValue(displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
 	render::bindUniformValue(displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
