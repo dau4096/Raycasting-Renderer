@@ -307,4 +307,5 @@ namespace dev {
 	//Assorted DEV/DEBUG constants
 	constexpr bool SHOW_PHYSICS_TICKRATE = false;
 	constexpr bool SHOW_PHYSICS_DT = false;
+	constexpr bool PAUSE_ON_OPENGL_ERROR = true;
 }

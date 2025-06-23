@@ -743,15 +743,15 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	*visplaneData = xml::fetchObjectFromXML<utils::Visplane>(doc, "//visplanes/visplane", xml::extractVisplane, &validVisplanes, flags, textureNames);
-	*wallData = xml::fetchObjectFromXML<utils::Wall>(doc, "//walls/wall", xml::extractWall, &validWalls, flags, textureNames);
-	*displacementData = xml::fetchObjectFromXML<utils::Displacement>(doc, "//displacements/displacement", xml::extractDisplacement, &validDisplacements, flags, textureNames);
-	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//sprites/sprite", xml::extractSprite, &validSprites, nullptr, textureNames);
-	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//lights/light", xml::extractLight, &validLights, nullptr, nullptr);
+	*visplaneData = xml::fetchObjectFromXML<utils::Visplane>(doc, "//environment/visplane", xml::extractVisplane, &validVisplanes, flags, textureNames);
+	*wallData = xml::fetchObjectFromXML<utils::Wall>(doc, "//environment/wall", xml::extractWall, &validWalls, flags, textureNames);
+	*displacementData = xml::fetchObjectFromXML<utils::Displacement>(doc, "//environment/displacement", xml::extractDisplacement, &validDisplacements, flags, textureNames);
+	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//objects/sprite", xml::extractSprite, &validSprites, nullptr, textureNames);
+	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//objects/light", xml::extractLight, &validLights, nullptr, nullptr);
 	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects, nullptr, nullptr);
-	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logicGates/logic", xml::extractGate, &validGates, flags, nullptr);
+	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates, flags, nullptr);
 
-	xml::loadModels(doc, "//models/model", displacementData, textureNames);
+	xml::loadModels(doc, "//environment/model", displacementData, textureNames);
 
 
 	stageData.name = stageName;

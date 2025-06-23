@@ -134,7 +134,9 @@ void APIENTRY openGLErrorCallback(
 	} std::cout << std::endl;
 	std::cout << std::endl;
 
-	utils::pause();
+	if (dev::PAUSE_ON_OPENGL_ERROR) {
+		utils::pause();
+	}
 }
 
 
@@ -235,7 +237,6 @@ void renderFrame(double blendingAlpha) {
 	player.cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
-
 	//Environment Shader.
 	glUseProgram(envShader);
 	glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -264,7 +265,7 @@ void renderFrame(double blendingAlpha) {
 
 	//Uniforms
 	render::bindCommonUniforms(spriteShader, &player);
-	render::bindUniformValue(envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	render::bindUniformValue(spriteShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
 	renderingGeneric("Sprite Shader");
 

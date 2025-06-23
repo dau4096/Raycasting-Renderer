@@ -10,24 +10,20 @@
 </meta>
 
 
-<visplanes>
+<environment>
+    
     <visplane start="-16.0 -16.0" end="16.0 16.0" height="0.0" texture="classic3" />
 
     <!-- Cube -->
     <visplane start="0.0 0.0" end="1.0 1.0" height="1.0" texture="classic2" />
     <visplane start="0.0 0.0" end="1.0 1.0" height="2.0" texture="classic2" />
-</visplanes>
-
-
-<walls>
-    <!-- Cube -->
     <wall start="0.0 0.0 1.0" end="1.0 0.0 2.0" texture="classic2" />
     <wall start="0.0 1.0 1.0" end="1.0 1.0 2.0" texture="classic2" />
     <wall start="0.0 0.0 1.0" end="0.0 1.0 2.0" texture="classic2" />
     <wall start="1.0 0.0 1.0" end="1.0 1.0 2.0" texture="classic2" />
-</walls>
 
-<displacements>
+    <!-- Slope -->
     <displacement aPos="1.0 -1.0 0.0" aUV="1.0 1.0" bPos="1.0 -3.0 0.0" bUV="0.0 1.0" cPos="-1.0 -3.0 2.0" cUV="0.0 0.0" texture="classic" />
     <displacement aPos="1.0 -1.0 0.0" aUV="1.0 1.0" bPos="-1.0 -3.0 2.0" bUV="0.0 0.0" cPos="-1.0 -1.0 2.0" cUV="1.0 0.0" texture="classic" />
-</displacements>
+
+</environment>
