@@ -13,12 +13,12 @@
 <environment>
 
 	<!-- Floor and shadow-checking plane -->
-	<visplane start="-8.0 -8.0" end="8.0 8.0" height="0.0" texture="metal" />
+	<visplane start="-8.0 -8.0" end="8.0 8.0" height="0.0" texture="metal2" />
 	<visplane start="-1.0 -1.0" end="-2.0 -2.0" height="0.25" />
 
 
 	<!-- Randomuser78's low poly food tray model    -->
 	<!-- Has become a sort of testing model for me. -->
-	<model position="0.0 0.0 0.75" rotation="0.0 0.785 0.0" file="LoPoly_FoodTray" texture="metal2" />
+	<model position="0.0 0.0 0.75" rotation="0.0 0.785 0.0" file="LoPoly_FoodTray" texture="metal" />
 
 </environment>

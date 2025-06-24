@@ -98,12 +98,10 @@ vec4 fetchUV(vec3 UV, double distance, bool fetchTexture=true) {
 
 
 
-vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float depth) {
+vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance, float depth) {
 	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
-	vec2 delta = playerPosition.xy - thisSprite.position.xy;
-	float invdistance = inversesqrt(max(dot(delta, delta), 1e-4f));
 
 	float projectedYLow = (playerPosition.z - spriteFootZ) * invdistance * zoomEffect;
 	float projectedYTop = (playerPosition.z - spriteHeadZ) * invdistance * zoomEffect;
@@ -168,10 +166,11 @@ void main() {
 		if (spriteDistanceSQ >= fragDepth*fragDepth || spriteDistanceSQ > maxRayDistance*maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
-		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, spriteDistanceSQ);
+		float invdistance = inversesqrt(spriteDistanceSQ);
+		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, invdistance, spriteDistanceSQ);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
-		fragDepth = 1.0f / inversesqrt(spriteDistanceSQ);
+		fragDepth = 1.0f / invdistance;
 		if (debugMode == 1) { //DrawUV
 			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
 		} else if (debugMode == 2) { //DrawNormals

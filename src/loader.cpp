@@ -401,8 +401,8 @@ static inline Displacement extractDisplacement(
 		getVec3(node, "cPos", glm::vec3(0.0f, 0.0f, 0.0f)),
 
 		getVec2(node, "aUV", glm::vec2(0.0f, 0.0f)),
-		getVec2(node, "bUV", glm::vec2(0.0f, 0.0f)),
-		getVec2(node, "cUV", glm::vec2(0.0f, 0.0f)),
+		getVec2(node, "bUV", glm::vec2(1.0f, 0.0f)),
+		getVec2(node, "cUV", glm::vec2(1.0f, 1.0f)),
 
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
@@ -422,8 +422,8 @@ static inline Sprite extractSprite(
 
 	Sprite sprite = Sprite(
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getFloat(node, "width", 0.0f),
-		getFloat(node, "height", 0.0f),
+		getFloat(node, "width", 1.0f),
+		getFloat(node, "height", 1.0f),
 		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
 		static_cast<SpriteType>(getEnum(node, "type", SPR_DECO)),
 		getBool(node, "collision", false)
@@ -441,8 +441,8 @@ static inline Light extractLight(
 
 	Light light = Light(
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getVec3(node, "colour", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getFloat(node, "intensity", 0.0f),
+		getVec3(node, "colour", glm::vec3(1.0f, 1.0f, 1.0f)),
+		getFloat(node, "intensity", 1.0f),
 		getPTR(node, flags, "IOPtr", nullptr)
 	);
 	
