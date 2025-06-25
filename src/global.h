@@ -75,9 +75,6 @@ struct StageData {
 	std::string name;
 	std::string filePath;
 
-	glm::vec2 textureScale;
-	glm::vec3 textureOffset;
-
 	std::string skyboxTextureName;
 	glm::vec3 sunDirection, sunColour;
 	
@@ -91,7 +88,6 @@ struct StageData {
 
 	StageData()
 		: name("<NONE>"), filePath(""),
-		  textureScale(1.0f, 1.0f), textureOffset(0.0f, 0.0f, 0.0f),
 		  skyboxTextureName("fallback-skybox"),
 		  sunDirection(0.0f, 0.0f, 1.0f), sunColour(1.0f, 1.0f, 1.0f),
 		  gravity(0.486), killPlaneZ(-64.0f),

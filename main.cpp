@@ -225,6 +225,7 @@ inline void renderingGeneric(const std::string& shaderName="") {
 	}
 }
 
+
 void renderFrame(double blendingAlpha) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);

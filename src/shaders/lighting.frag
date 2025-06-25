@@ -37,22 +37,23 @@ layout(binding=2) uniform sampler2DArray textureArray;
 layout(rgba32f, binding=0) uniform image2D lightMap;
 
 struct Visplane {
-	vec2 start;			//Visplane Start.
-	vec2 end;			//Visplane End.
-	float height;		//Visplane Height.
-	int textureID;		//Visplane Texture.
-	vec2 _padding;		//Visplane Padding
+	vec2 start;			//2D start point
+	vec2 end;			//2D end point
+	float height;		//1D height (Z)
+	int textureID;		//Texture ID
+	uint textureData;	//Texture formatting data.
+	float _padding;		//Buffer Padding
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
 };
 
 struct Wall {
-	vec3 start;		//Wall Start.
-	vec3 end;		//Wall End.
-	vec2 direction;	//Wall 2D Direction
-	int textureID;	//Wall Texture.
-	float _padding;	//Wall Validity.
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	int textureID;		//Texture ID
+	uint textureData;	//Texture formatting data
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -96,6 +97,43 @@ const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
 
 
+void unpackTextureFormattingBits(
+		uint inputBits, out bvec2 isWorldspace,
+		out vec2 textureScale, out vec2 textureOffset
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	isWorldspace.x; (bool) [0 / 1]
+		1000 0000 0000 0000 0000 0000 0000 0000
+	- isWorldspace.y; (bool) [0 / 1]
+		0100 0000 0000 0000 0000 0000 0000 0000
+	- textureScale.x; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0011 1111 1100 0000 0000 0000 0000 0000
+	- textureScale.y; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0000 0000 0011 1111 1100 0000 0000 0000
+	- textureOffset.x; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0011 1111 1000 0000
+	- textureOffset.y; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0000 0000 0111 1111
+	*/
+
+	isWorldspace = bvec2(
+		bool(inputBits & 0x80000000),
+		bool(inputBits & 0x40000000)
+	);
+
+	textureScale = vec2(
+		float((inputBits >> 22) & 0xFF),
+		float((inputBits >> 14) & 0xFF)
+	) / 16.0f;
+
+	textureOffset = vec2(
+		float((inputBits >> 7) & 0x7F),
+		float((inputBits >> 0) & 0x7F)
+	) / 128.0f;
+}
+
 
 
 
@@ -129,36 +167,81 @@ bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
 	return (min(wall.start.z, wall.end.z) - 1e-4f <= z) && (z <= max(wall.start.z, wall.end.z) + 1e-4f);
 }
 
-vec2 getWallUV(Wall thisWall, vec3 position3D) {
+vec2 getWallUV(Wall thisWall, dvec3 intersectPoint3D) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
+
+	bvec2 useWorldSpace;
+	vec2 textureScale;
+	vec2 textureOffset;
+	unpackTextureFormattingBits(
+		thisWall.textureData, useWorldSpace,
+		textureScale, textureOffset
+	);
+
+
+
 	//xUV calculation.
-	float xUV;
-	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-		xUV = fract(position3D.y / textureScale.x);
+	double xUV;
+	if (useWorldSpace.x) {
+		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+			xUV = fract(intersectPoint3D.y / textureScale.x);
+		} else {
+			xUV = fract(intersectPoint3D.x / textureScale.x);
+		}
+		if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
 	} else {
-		xUV = fract(position3D.x / textureScale.x);
+		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+			xUV = (intersectPoint3D.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
+		} else {
+			xUV = (intersectPoint3D.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
+		}
+		xUV = fract(xUV / textureScale.x);
 	}
-	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
 
 
 	//yUV calculation.
-	float yUV = fract(position3D.z / textureScale.y);
-	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+	double yUV;
+	if (useWorldSpace.y) {
+		yUV = fract(intersectPoint3D.z / textureScale.y);
+		if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+	} else {
 
+	}
+	
 
-	return vec2(xUV, yUV) + textureOffset.xz;
+	return vec2(xUV, yUV) + textureOffset.xy;
 }
 
 
 
 //Visplanes
-vec2 getVisplaneUV(vec3 position3D) {
-	//Take the fractional parts of the position (texture tiles every unit square)
-	float xUV = fract(position3D.x / textureScale.x);
-	if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
-	float yUV = fract(position3D.y / textureScale.y);
-	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
+	bvec2 useWorldSpace;
+	vec2 textureScale;
+	vec2 textureOffset;
+	unpackTextureFormattingBits(
+		plane.textureData, useWorldSpace,
+		textureScale, textureOffset
+	);
+
+	float xUV;
+	if (useWorldSpace.x) {
+		xUV = fract(position3D.x / textureScale.x);
+		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
+	} else {
+		xUV = (position3D.x - plane.start.x) / (plane.end.x - plane.start.x);
+		xUV = fract(xUV / textureScale.x);
+	}
+
+	float yUV;
+	if (useWorldSpace.y) {
+		yUV = fract(position3D.y / textureScale.y);
+		if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+	} else {
+		yUV = (position3D.y - plane.start.y) / (plane.end.y - plane.start.y);
+		yUV = fract(yUV / textureScale.y);
+	}
 
 	return vec2(xUV, yUV) + textureOffset.xy;
 }
@@ -239,7 +322,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON
 		) {
 			if (allowTransparency) {
-				vec2 UV = getVisplaneUV(vec3(intersectPoint));
+				vec2 UV = getVisplaneUV(vec3(intersectPoint), thisPlane);
 				if (textureLod(textureArray, vec3(UV.xy, thisPlane.textureID), 0.0f).a >= 0.5f) {
 					return true;
 				}

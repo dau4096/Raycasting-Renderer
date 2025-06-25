@@ -60,11 +60,12 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"G_PULSE", 7}, 		{"W_MOVEZ_FAST", 7},	{"V_MOVEZ_FAST", 7},
 	{"G_TOGGLE", 8},		{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8},
 							{"W_SWITCH", 9},		{"V_HURT", 9},
+							{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
 };
 
 int assignEnum(const std::string& enumStr) {
 	auto it = enumMap.find(enumStr);
-	if (it != enumMap.end()) return it->second;
+	if (it != enumMap.end()) {return it->second;}
 	raise("Unknown Enum: " + enumStr);
 	return -1;
 }
@@ -360,7 +361,11 @@ static inline Visplane extractVisplane(
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL)),
 		getPTR(node, flags, "flag", nullptr),
-		getFloat(node, "extra", 0.0f)
+		getFloat(node, "extra", 0.0f),
+		getBool(node, "useWorldUVX", true),
+		getBool(node, "useWorldUVY", true),
+		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
+		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
 	);
 	
 	return visplane;
@@ -380,7 +385,11 @@ static inline Wall extractWall(
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
 		getPTR(node, flags, "flag", nullptr),
 		getFloat(node, "extra", 0.0f),
-		getTexture(node, textureNames, "altTexture", initial::FALLBACK_TEXTURE_NAME)
+		getTexture(node, textureNames, "altTexture", initial::FALLBACK_TEXTURE_NAME),
+		getBool(node, "useWorldUVX", true),
+		getBool(node, "useWorldUVY", true),
+		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
+		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
 	);
 	
 	return wall;
@@ -529,12 +538,6 @@ void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player)
 	//Sky
 	pugi::xml_node skyNode = getMetaNode(doc, "sky");
 	stageData.skyboxTextureName = getString(skyNode, "skyboxTexture", std::string(initial::FALLBACK_SKYBOX_NAME));
-
-
-	//Texture
-	pugi::xml_node textureNode = getMetaNode(doc, "texture");
-	stageData.textureScale = getVec2(textureNode, "scale", initial::TEXTURE_SCALE);
-	stageData.textureOffset = getVec3(textureNode, "offset", initial::TEXTURE_OFFSET);
 
 
 	//Sun

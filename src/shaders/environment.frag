@@ -11,8 +11,6 @@ uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float zoomFactor;
 uniform bool zoom;
-uniform vec2 textureScale;
-uniform vec3 textureOffset;
 uniform bool useMipMapping;
 
 //PlayerData
@@ -39,31 +37,32 @@ layout(rgba32f, binding=2) uniform image2D normalMap;
 
 
 struct Visplane {
-	vec2 start;			//Visplane Start.
-	vec2 end;			//Visplane End.
-	float height;		//Visplane Height.
-	int textureID;		//Visplane Texture.
-	vec2 _padding;		//Visplane Padding
+	vec2 start;			//2D start point
+	vec2 end;			//2D end point
+	float height;		//1D height (Z)
+	int textureID;		//Texture ID
+	uint textureData;	//Texture formatting data.
+	float _padding;		//Buffer Padding
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
 };
 
 struct Wall {
-	vec3 start;		//Wall Start.
-	vec3 end;		//Wall End.
-	vec2 direction;	//Wall 2D Direction
-	int textureID;	//Wall Texture.
-	float _padding;	//Wall Validity.
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	int textureID;		//Texture ID
+	uint textureData;	//Texture formatting data
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
 };
 
 struct Displacement {
-	vec4 vertices[3];
-	vec2 UV[3];
-	vec4 normal_texID;
+	vec4 vertices[3];	//3D Vertices
+	vec2 UV[3];			//2D UV coordinates per vertex
+	vec4 normal_texID;	//Normal and texture ID packed together
 };
 layout(std430, binding=5) buffer displacementSSBO {
 	Displacement displacements[];
@@ -72,10 +71,11 @@ layout(std430, binding=5) buffer displacementSSBO {
 
 
 struct IntersectionData {
-	vec3 position;
-	vec3 UV;
-	double distanceSQ;
-	int index, foundType;
+	vec3 position;		//3D intersect location
+	vec3 UV;			//UV & texture ID
+	double distanceSQ;	//Distance from camera, squared
+	int index;			//The index of the found object
+	int foundType;		//The type of the found object
 };
 IntersectionData stack[3];
 int topOfStack = 0;
@@ -158,6 +158,46 @@ const float minMipMapDistance = 5.0f;
 
 
 
+void unpackTextureFormattingBits(
+		uint inputBits, out bvec2 isWorldspace,
+		out vec2 textureScale, out vec2 textureOffset
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	isWorldspace.x; (bool) [0 / 1]
+		1000 0000 0000 0000 0000 0000 0000 0000
+	- isWorldspace.y; (bool) [0 / 1]
+		0100 0000 0000 0000 0000 0000 0000 0000
+	- textureScale.x; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0011 1111 1100 0000 0000 0000 0000 0000
+	- textureScale.y; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0000 0000 0011 1111 1100 0000 0000 0000
+	- textureOffset.x; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0011 1111 1000 0000
+	- textureOffset.y; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0000 0000 0111 1111
+	*/
+
+	isWorldspace = bvec2(
+		bool(inputBits & 0x80000000),
+		bool(inputBits & 0x40000000)
+	);
+
+	textureScale = vec2(
+		float((inputBits >> 22) & 0xFF),
+		float((inputBits >> 14) & 0xFF)
+	) / 16.0f;
+
+	textureOffset = vec2(
+		float((inputBits >> 7) & 0x7F),
+		float((inputBits >> 0) & 0x7F)
+	) / 128.0f;
+}
+
+
+
+
 
 vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition, bool fetchTexture=true) {
 	if (debugMode == 1) {
@@ -205,22 +245,41 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
+vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, double wallDistanceSQ) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
+
+
+	bvec2 useWorldSpace;
+	vec2 textureScale;
+	vec2 textureOffset;
+	unpackTextureFormattingBits(
+		thisWall.textureData, useWorldSpace,
+		textureScale, textureOffset
+	);
+
+
 
 	//xUV calculation.
 	double xUV;
-	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-		xUV = fract(intersectPoint.y / textureScale.x);
+	if (useWorldSpace.x) {
+		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+			xUV = fract(intersectPoint.y / textureScale.x);
+		} else {
+			xUV = fract(intersectPoint.x / textureScale.x);
+		}
+		if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
 	} else {
-		xUV = fract(intersectPoint.x / textureScale.x);
+		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+			xUV = (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
+		} else {
+			xUV = (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
+		}
+		xUV = fract(xUV / textureScale.x);
 	}
-	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
 
 
 	//yUV calculation.
-	dvec2 delta = originPos.xy - intersectPoint.xy;
-	double invDistance = inversesqrt(dot(delta, delta)) * zoomEffect;
+	double invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
 	double projectedYLow = (originPos.z - wallLowZ) * invDistance;
 	double projectedYTop = (originPos.z - wallTopZ) * invDistance;
 
@@ -231,10 +290,15 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos) {
 
 	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
 	fragZ = mix(wallLowZ, wallTopZ, a);
-	double yUV = 1.0f - fract(fragZ / textureScale.y);
+	double yUV;
+	if (useWorldSpace.y) {
+		yUV = 1.0f - fract(fragZ / textureScale.y);
+	} else {
+		yUV = 1.0f - (a / textureScale.y);
+	}
+	
 
-
-	return vec2(xUV, yUV) + textureOffset.xz;
+	return vec2(xUV, yUV) + textureOffset.xy;
 }
 
 
@@ -270,12 +334,16 @@ vec2 getScreenPosition(vec3 position3D) {
 	return vec2(X, Y);
 }
 
+
 float sign2(vec2 a, vec2 b, vec2 c) {
 	return (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
 }
+
+
 float edge(vec2 a, vec2 b, vec2 c) {
 	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
 }
+
 
 bool inDisplacement(vec2 v1, vec2 v2, vec2 v3) {
 	float d1 = sign2(fragPosition, v1, v2);
@@ -288,6 +356,7 @@ bool inDisplacement(vec2 v1, vec2 v2, vec2 v3) {
 	return !(hasNegative && hasPositive);
 }
 
+
 vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
 	float areaABC = edge(v1, v2, v3);
 	float a = edge(fragPosition, v2, v3)/areaABC;
@@ -296,10 +365,15 @@ vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
 	return vec3(a,b,c);
 }
 
+
 bool behindCamera(vec4 pt, vec2 proj) {
 	vec2 dir = normalize(pt.xy - playerPosition.xy);
 	return (dot(rayDirectionCentre, dir) < 0.0f) || (proj.x < 0.0f || proj.x > renderResolution.x);
 }
+
+
+
+
 
 
 
@@ -323,12 +397,33 @@ vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
 	return vec3(position2D.xy, plane.height);
 }
 
-vec2 getVisplaneUV(vec3 position3D) {
-	//Take the fractional parts of the position (texture tiles every unit square)
-	float xUV = fract(position3D.x / textureScale.x);
-	if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
-	float yUV = fract(position3D.y / textureScale.y);
-	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+
+vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
+	bvec2 useWorldSpace;
+	vec2 textureScale;
+	vec2 textureOffset;
+	unpackTextureFormattingBits(
+		plane.textureData, useWorldSpace,
+		textureScale, textureOffset
+	);
+
+	float xUV;
+	if (useWorldSpace.x) {
+		xUV = fract(position3D.x / textureScale.x);
+		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
+	} else {
+		xUV = (position3D.x - plane.start.x) / (plane.end.x - plane.start.x);
+		xUV = fract(xUV / textureScale.x);
+	}
+
+	float yUV;
+	if (useWorldSpace.y) {
+		yUV = fract(position3D.y / textureScale.y);
+		if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+	} else {
+		yUV = (position3D.y - plane.start.y) / (plane.end.y - plane.start.y);
+		yUV = fract(yUV / textureScale.y);
+	}
 
 	return vec2(xUV, yUV) + textureOffset.xy;
 }
@@ -404,7 +499,7 @@ void main() {
 		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, playerPosition.z);
 		double wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
 
-		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition); //Check if inside wall (Valid UV)
+		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition, wallDistanceSQ); //Check if inside wall (Valid UV)
 
 
 		if (wallUV != INVALIDv2) {
@@ -445,7 +540,7 @@ void main() {
 		thisIntersect.position = intersectPoint;
 		thisIntersect.index = idx;
 		thisIntersect.foundType = 2;
-		thisIntersect.UV = vec3(getVisplaneUV(intersectPoint), thisPlane.textureID);
+		thisIntersect.UV = vec3(getVisplaneUV(intersectPoint, thisPlane), thisPlane.textureID);
 		pushStack(thisIntersect);
 		foundObject = true;
 	}

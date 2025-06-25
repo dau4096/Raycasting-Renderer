@@ -25,7 +25,7 @@ enum VisplaneType {
 	V_MOVEX_FAST, V_MOVEX_SLOW,
 	V_MOVEY_FAST, V_MOVEY_SLOW,
 	V_MOVEZ_FAST, V_MOVEZ_SLOW,
-	V_HURT
+	V_HURT, V_PASSTHROUGH
 };
 
 enum WallType {
@@ -34,7 +34,7 @@ enum WallType {
 	W_MOVED_FAST, W_MOVED_SLOW,
 	W_MOVEN_FAST, W_MOVEN_SLOW,
 	W_MOVEZ_FAST, W_MOVEZ_SLOW,
-	W_SWITCH
+	W_SWITCH, W_PASSTHROUGH
 };
 
 enum DisplacementType {

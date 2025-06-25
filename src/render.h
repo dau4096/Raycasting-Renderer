@@ -139,8 +139,6 @@ namespace render {
 		bindUniformValue(shaderProgram, "maxRayAngle", utils::configToFloat("VIEW_FOV") / 2.0f);
 		bindUniformValue(shaderProgram, "verticalFOV", verticalFOV);
 		bindUniformValue(shaderProgram, "zoomFactor", display::ZOOM_MULT);
-		bindUniformValue(shaderProgram, "textureScale", stageData.textureScale);
-		bindUniformValue(shaderProgram, "textureOffset", stageData.textureOffset);
 		bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
 
 		//Player Data

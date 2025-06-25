@@ -570,10 +570,10 @@ void playerMove(
 	float playerFootZ = player->position.z - (player->height/2.0f);
 	float playerHeadZ = player->position.z + (player->height/2.0f);
 
-
 	//Vertical Calculations;
 	for (int vIndex=0; vIndex<validVisplanes; vIndex++) {
 		utils::Visplane vPlane = visplaneData->at(vIndex);
+		if ((vPlane.type == V_INVALID) || (vPlane.type == V_PASSTHROUGH)) {continue;}
 
 		bool inPlaneXYRange = !(
 			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.x, vPlane.end.x))
@@ -618,8 +618,8 @@ void playerMove(
 
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
+		if ((wall.type == W_INVALID) || (wall.type == W_TRIGGER) || (wall.type == W_PASSTHROUGH)) {continue; /* These types can be walked through. */}
 
-		if (wall.type == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
@@ -760,7 +760,7 @@ void updateSpecials(
 
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
-		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL)) {continue;}
+		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL) || (wall.type == W_PASSTHROUGH)) {continue;}
 		bool enabled = *(wall.IOPtr);
 
 		switch(wall.type) {
@@ -835,7 +835,7 @@ void updateSpecials(
 
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
 		utils::Visplane vPlane = visplaneData->at(vIndex);
-		if ((vPlane.type == V_INVALID) || (vPlane.type == V_NORMAL)) {continue;}
+		if ((vPlane.type == V_INVALID) || (vPlane.type == V_NORMAL) || (vPlane.type == V_PASSTHROUGH)) {continue;}
 		bool enabled = *(vPlane.IOPtr);
 
 
