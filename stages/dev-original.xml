@@ -22,9 +22,9 @@
 	<visplane start="6.0 -3.0" end="8.0 -4.0" height="1.28572" texture="osa" />
 	<visplane start="6.0 -2.0" end="8.0 -3.0" height="0.85715" texture="osa" />
 	<visplane start="6.0 -1.0" end="8.0 -2.0" height="0.42858" texture="osa" />
-	<visplane start="-0.5 -13.0" end="0.5 -14.0" height="0.125" texture="tabs=fish" type="V_TRIGGER" IOPtr="3" extra="0.0" />
-	<visplane start="-3.0 -7.0" end="-5.0 -5.0" height="0.1" texture="piloten" type="V_MOVEV_SLOW" IOPtr="3" extra="1.0" />
-	<visplane start="-5.0 -5.0" end="-3.0 -3.0" height="0.25" texture="tabs=fish" type="V_TRIGGER" IOPtr="3" extra="0.0" />
+	<visplane start="-0.5 -13.0" end="0.5 -14.0" height="0.125" texture="tabs=fish" type="V_TRIGGER" flag="3" extra="0.0" />
+	<visplane start="-3.0 -7.0" end="-5.0 -5.0" height="0.1" texture="piloten" type="V_MOVEV_SLOW" flag="3" extra="1.0" />
+	<visplane start="-5.0 -5.0" end="-3.0 -3.0" height="0.25" texture="tabs=fish" type="V_TRIGGER" flag="3" extra="0.0" />
 	<visplane start="10.0 10.0" end="-10.0 40.0" height="0.0" texture="b" />
 
 	<!-- Walls -->

@@ -22,15 +22,18 @@ enum ItemHeld {
 enum VisplaneType {
 	V_INVALID, V_NORMAL,
 	V_TRIGGER,
-	V_MOVEV_FAST, V_MOVEV_SLOW,
+	V_MOVEX_FAST, V_MOVEX_SLOW,
+	V_MOVEY_FAST, V_MOVEY_SLOW,
+	V_MOVEZ_FAST, V_MOVEZ_SLOW,
 	V_HURT
 };
 
 enum WallType {
 	W_INVALID, W_NORMAL,
 	W_TRIGGER,
-	W_MOVEV_FAST, W_MOVEV_SLOW,
-	W_MOVEH_FAST, W_MOVEH_SLOW,
+	W_MOVED_FAST, W_MOVED_SLOW,
+	W_MOVEN_FAST, W_MOVEN_SLOW,
+	W_MOVEZ_FAST, W_MOVEZ_SLOW,
 	W_SWITCH
 };
 
@@ -193,8 +196,8 @@ inline const std::unordered_map<std::string, int> keyNameToGLFW = {
 
 
 namespace constants {
-	static int C_TRUE = 1;
-	static int C_FALSE = 0;
+	static bool C_TRUE = true;
+	static bool C_FALSE = false;
 
 
 	//Mathematical Constants
@@ -207,7 +210,7 @@ namespace constants {
 
 
 	//Sim Constants
-	constexpr float PHYSICS_FREQUENCY = 45.0f;
+	constexpr float PHYSICS_FREQUENCY = 60.0f;
 	constexpr float GRAVITY_ACCEL = 0.486f;
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
 	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
@@ -259,7 +262,7 @@ namespace initial {
 
 	//Sun
 	constexpr glm::vec3 SUN_DIRECTION = glm::vec3(0.0f, 0.0f, 1.0f);
-	constexpr float SUN_INTENSITY = 2.5f;
+	constexpr float SUN_INTENSITY = 1.75f;
 	constexpr glm::vec3 SUN_COLOUR = glm::vec3(1.0f, 1.0f, 1.0f);
 
 
@@ -275,7 +278,7 @@ namespace initial {
 
 namespace playerConfig {
 	//Physics speed values
-	constexpr float MOVE_SPEED_BASE = 0.05f;
+	constexpr float MOVE_SPEED_BASE = 0.0375f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
 	constexpr float MOVE_SPEED_SLIDE_ADD = 0.5f;

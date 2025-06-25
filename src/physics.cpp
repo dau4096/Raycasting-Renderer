@@ -124,119 +124,296 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 
 
 
-namespace specialMotion {
+bool didHitSwitch(utils::Player* player, size_t switchIdx, std::vector<utils::Wall>* wallData) {
+	glm::vec2 dir = glm::vec2(sin(player->viewAngle * constants::TO_RAD), cos(player->viewAngle * constants::TO_RAD));
+	glm::vec2 interactDelta = dir * playerConfig::PLAYER_INTERACT_RAY_DIST;
+	glm::vec2 playerV2 = glm::vec2(player->position);
+	glm::vec2 end = playerV2 + interactDelta;
+	float camPosZ = player->position.z + (player->height / 3.0f);
 
-void applyWallVerticalMovement(utils::Wall& wall, float speed, bool enabled) {
-	if (abs(wall.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
-		return;
+	bool closestWasSwitch = false;
+	float minDistanceSQ = playerConfig::PLAYER_INTERACT_RAY_DIST*playerConfig::PLAYER_INTERACT_RAY_DIST;
 
-	} else if (wall.data < 0) { //Downwards
-		if (enabled && (wall.internal > wall.data)) { //Turned on; moving down.
-			float newInternal = std::max(wall.internal - speed, wall.data);
-			float delta = wall.internal - newInternal;
-			wall.start.z -= delta;
-			wall.end.z -= delta;
-			wall.internal = newInternal;
+	//Iterate through all the walls. (2D)
+	for (size_t idx=0; idx<validWalls; idx++) {
+		utils::Wall thisWall = wallData->at(idx);
+		glm::vec2 wallStartV2 = glm::vec2(thisWall.start);
+		glm::vec2 wallEndV2 = glm::vec2(thisWall.end);
+		glm::vec2 direction = glm::normalize(wallEndV2 - wallStartV2);
+		glm::vec2 wallNormal = glm::vec2(-direction.y, direction.x);
 
-		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall.internal + speed, 0.0f);
-			float delta = newInternal - wall.internal;
-			wall.start.z += delta;
-			wall.end.z += delta;
-			wall.internal = newInternal;
+		//Check if ray even crosses wall in 2D.
+		float projStart = glm::dot(playerV2 - wallStartV2, wallNormal);
+		float projEnd = glm::dot(end - wallStartV2, wallNormal);
+		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
+
+		//Calculate t-value
+		float t = (projStart) / (projEnd - projStart);
+		glm::vec2 intersectPoint = playerV2 - interactDelta * t;
+		glm::vec3 minWall = glm::min(thisWall.start, thisWall.end);
+		glm::vec3 maxWall = glm::max(thisWall.start, thisWall.end);
+		if (
+		    intersectPoint.x + EPSILON < minWall.x || intersectPoint.x - EPSILON > maxWall.x ||
+		    intersectPoint.y + EPSILON < minWall.y || intersectPoint.y - EPSILON > maxWall.y ||
+		    camPosZ + EPSILON < minWall.z || camPosZ - EPSILON > maxWall.z
+		) {
+			//Outside of valid wall segment.
+			continue;
 		}
 
-	} else { //Upwards
-		if (enabled && (wall.internal < wall.data)) { //Turned on; moving up.
-			float newInternal = std::min(wall.internal + speed, wall.data);
-			float delta = newInternal - wall.internal;
-			wall.start.z += delta;
-			wall.end.z += delta;
-			wall.internal = newInternal;
+		glm::vec2 d = intersectPoint - playerV2;
+		float distSQ = glm::dot(d, d);
+		if (distSQ >= minDistanceSQ) {continue;}
 
-		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall.internal - speed, 0.0f);
-			float delta = wall.internal - newInternal;
-			wall.start.z -= delta;
-			wall.end.z -= delta;
-			wall.internal = newInternal;
-		}
+		minDistanceSQ = distSQ;
+		closestWasSwitch = idx == switchIdx;
 	}
+
+	return closestWasSwitch;
 }
 
-void applyWallHorizontalMovement(utils::Wall& wall, float speed, bool enabled) {
-	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall.start) - glm::vec2(wall.end));
+
+
+namespace specialMotion {
+
+
+//Walls
+void applyWallDirectionalMovement(utils::Wall* wall, float speed, bool enabled) {
+	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall->start) - glm::vec2(wall->end));
 	glm::vec3 wallDir = glm::vec3(wallDir2D.x, wallDir2D.y, 0.0f);
 
-	if (abs(wall.data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+	if (abs(wall->data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
 		return;
 
-	} else if (wall.data/2.0f < 0) { //Movement toward wall.start.
-		if (enabled && (wall.internal > wall.data/2.0f)) { //Turned on; move toward start.
-			float newInternal = std::max(wall.internal - speed, wall.data/2.0f);
-			float delta = wall.internal - newInternal;
-			wall.start -= wallDir * delta;
-			wall.end -= wallDir * delta;
-			wall.internal = newInternal;
+	} else if (wall->data/2.0f < 0) { //Movement toward wall.start.
+		if (enabled && (wall->internal > wall->data/2.0f)) { //Turned on; move toward start.
+			float newInternal = std::max(wall->internal - speed, wall->data/2.0f);
+			float delta = wall->internal - newInternal;
+			wall->start -= wallDir * delta;
+			wall->end -= wallDir * delta;
+			wall->internal = newInternal;
 
-		} else if (!enabled && (wall.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall.internal + speed, 0.0f);
-			float delta = newInternal - wall.internal;
-			wall.start += wallDir * delta;
-			wall.end += wallDir * delta;
-			wall.internal = newInternal;
+		} else if (!enabled && (wall->internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal + speed, 0.0f);
+			float delta = newInternal - wall->internal;
+			wall->start += wallDir * delta;
+			wall->end += wallDir * delta;
+			wall->internal = newInternal;
 		}
 
 	} else { //Movement toward wall.end.
-		if (enabled && (wall.internal < wall.data/2.0f)) { //Turned on; move toward end.
-			float newInternal = std::min(wall.internal + speed, wall.data/2.0f);
-			float delta = newInternal - wall.internal;
-			wall.start += wallDir * delta;
-			wall.end += wallDir * delta;
-			wall.internal = newInternal;
+		if (enabled && (wall->internal < wall->data/2.0f)) { //Turned on; move toward end.
+			float newInternal = std::min(wall->internal + speed, wall->data/2.0f);
+			float delta = newInternal - wall->internal;
+			wall->start += wallDir * delta;
+			wall->end += wallDir * delta;
+			wall->internal = newInternal;
 
-		} else if (!enabled && (wall.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall.internal - speed, 0.0f);
-			float delta = wall.internal - newInternal;
-			wall.start -= wallDir * delta;
-			wall.end -= wallDir * delta;
-			wall.internal = newInternal;
+		} else if (!enabled && (wall->internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal - speed, 0.0f);
+			float delta = wall->internal - newInternal;
+			wall->start -= wallDir * delta;
+			wall->end -= wallDir * delta;
+			wall->internal = newInternal;
 		}
 	}
 }
 
 
-void applyVisplaneVerticalMovement(utils::Visplane& plane, float speed, bool enabled) {
-	if (abs(plane.data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+void applyWallNormalMovement(utils::Wall* wall, float speed, bool enabled) {
+	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall->start) - glm::vec2(wall->end));
+	glm::vec3 wallNormal = glm::vec3(-wallDir2D.y, wallDir2D.x, 0.0f);
+
+	if (abs(wall->data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+	} else if (wall->data/2.0f < 0) { //Movement toward wall.start.
+		if (enabled && (wall->internal > wall->data/2.0f)) { //Turned on; move toward start.
+			float newInternal = std::max(wall->internal - speed, wall->data/2.0f);
+			float delta = wall->internal - newInternal;
+			wall->start -= wallNormal * delta;
+			wall->end -= wallNormal * delta;
+			wall->internal = newInternal;
+
+		} else if (!enabled && (wall->internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal + speed, 0.0f);
+			float delta = newInternal - wall->internal;
+			wall->start += wallNormal * delta;
+			wall->end += wallNormal * delta;
+			wall->internal = newInternal;
+		}
+
+	} else { //Movement toward wall.end.
+		if (enabled && (wall->internal < wall->data/2.0f)) { //Turned on; move toward end.
+			float newInternal = std::min(wall->internal + speed, wall->data/2.0f);
+			float delta = newInternal - wall->internal;
+			wall->start += wallNormal * delta;
+			wall->end += wallNormal * delta;
+			wall->internal = newInternal;
+
+		} else if (!enabled && (wall->internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal - speed, 0.0f);
+			float delta = wall->internal - newInternal;
+			wall->start -= wallNormal * delta;
+			wall->end -= wallNormal * delta;
+			wall->internal = newInternal;
+		}
+	}
+}
+
+
+void applyWallZMovement(utils::Wall* wall, float speed, bool enabled) {
+	if (abs(wall->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+	} else if (wall->data < 0) { //Downwards
+		if (enabled && (wall->internal > wall->data)) { //Turned on; moving down.
+			float newInternal = std::max(wall->internal - speed, wall->data);
+			float delta = wall->internal - newInternal;
+			wall->start.z -= delta;
+			wall->end.z -= delta;
+			wall->internal = newInternal;
+
+		} else if (!enabled && (wall->internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal + speed, 0.0f);
+			float delta = newInternal - wall->internal;
+			wall->start.z += delta;
+			wall->end.z += delta;
+			wall->internal = newInternal;
+		}
+
+	} else { //Upwards
+		if (enabled && (wall->internal < wall->data)) { //Turned on; moving up.
+			float newInternal = std::min(wall->internal + speed, wall->data);
+			float delta = newInternal - wall->internal;
+			wall->start.z += delta;
+			wall->end.z += delta;
+			wall->internal = newInternal;
+
+		} else if (!enabled && (wall->internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal - speed, 0.0f);
+			float delta = wall->internal - newInternal;
+			wall->start.z -= delta;
+			wall->end.z -= delta;
+			wall->internal = newInternal;
+		}
+	}
+}
+
+
+
+//Visplanes
+void applyVisplaneXMovement(utils::Visplane* vPlane, float speed, bool enabled) {
+	if (abs(vPlane->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
 		return;
 
 
-	} else if (plane.data < 0) { //Moving downwards.
-		if (enabled && (plane.internal > plane.data)) { //Turned on; moving down.
-			float newInternal = std::max(plane.internal - speed, plane.data);
-			float delta = plane.internal - newInternal;
-			plane.height -= delta;
-			plane.internal = newInternal;
+	} else if (vPlane->data < 0) { //Moving downwards.
+		if (enabled && (vPlane->internal > vPlane->data)) { //Turned on; moving down.
+			float newInternal = std::max(vPlane->internal - speed, vPlane->data);
+			float delta = vPlane->internal - newInternal;
+			vPlane->start.x -= delta;
+			vPlane->end.x -= delta;
+			vPlane->internal = newInternal;
 
-		} else if (!enabled && (plane.internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(plane.internal + speed, 0.0f);
-			float delta = newInternal - plane.internal;
-			plane.height += delta;
-			plane.internal = newInternal;
+		} else if (!enabled && (vPlane->internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal + speed, 0.0f);
+			float delta = newInternal - vPlane->internal;
+			vPlane->start.x += delta;
+			vPlane->end.x += delta;
+			vPlane->internal = newInternal;
 		}
 
 	} else { //Moving upwards.
-		if (enabled && (plane.internal < plane.data)) { //Turned on; moving up.
-			float newInternal = std::max(plane.internal + speed, 0.0f);
-			float delta = newInternal - plane.internal;
-			plane.height += delta;
-			plane.internal = newInternal;
+		if (enabled && (vPlane->internal < vPlane->data)) { //Turned on; moving up.
+			float newInternal = std::max(vPlane->internal + speed, 0.0f);
+			float delta = newInternal - vPlane->internal;
+			vPlane->start.x += delta;
+			vPlane->end.x += delta;
+			vPlane->internal = newInternal;
 
-		} else if (!enabled && (plane.internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::min(plane.internal - speed, plane.data);
-			float delta = plane.internal - newInternal;
-			plane.height -= delta;
-			plane.internal = newInternal;
+		} else if (!enabled && (vPlane->internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal - speed, vPlane->data);
+			float delta = vPlane->internal - newInternal;
+			vPlane->start.x -= delta;
+			vPlane->end.x -= delta;
+			vPlane->internal = newInternal;
+		}
+	}
+}
+
+
+void applyVisplaneYMovement(utils::Visplane* vPlane, float speed, bool enabled) {
+	if (abs(vPlane->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+
+	} else if (vPlane->data < 0) { //Moving downwards.
+		if (enabled && (vPlane->internal > vPlane->data)) { //Turned on; moving down.
+			float newInternal = std::max(vPlane->internal - speed, vPlane->data);
+			float delta = vPlane->internal - newInternal;
+			vPlane->start.y -= delta;
+			vPlane->end.y -= delta;
+			vPlane->internal = newInternal;
+
+		} else if (!enabled && (vPlane->internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal + speed, 0.0f);
+			float delta = newInternal - vPlane->internal;
+			vPlane->start.y += delta;
+			vPlane->end.y += delta;
+			vPlane->internal = newInternal;
+		}
+
+	} else { //Moving upwards.
+		if (enabled && (vPlane->internal < vPlane->data)) { //Turned on; moving up.
+			float newInternal = std::max(vPlane->internal + speed, 0.0f);
+			float delta = newInternal - vPlane->internal;
+			vPlane->start.y += delta;
+			vPlane->end.y += delta;
+			vPlane->internal = newInternal;
+
+		} else if (!enabled && (vPlane->internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal - speed, vPlane->data);
+			float delta = vPlane->internal - newInternal;
+			vPlane->start.y -= delta;
+			vPlane->end.y -= delta;
+			vPlane->internal = newInternal;
+		}
+	}
+}
+
+
+void applyVisplaneZMovement(utils::Visplane* vPlane, float speed, bool enabled) {
+	if (abs(vPlane->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+
+	} else if (vPlane->data < 0) { //Moving downwards.
+		if (enabled && (vPlane->internal > vPlane->data)) { //Turned on; moving down.
+			float newInternal = std::max(vPlane->internal - speed, vPlane->data);
+			float delta = vPlane->internal - newInternal;
+			vPlane->height -= delta;
+			vPlane->internal = newInternal;
+
+		} else if (!enabled && (vPlane->internal < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal + speed, 0.0f);
+			float delta = newInternal - vPlane->internal;
+			vPlane->height += delta;
+			vPlane->internal = newInternal;
+		}
+
+	} else { //Moving upwards.
+		if (enabled && (vPlane->internal < vPlane->data)) { //Turned on; moving up.
+			float newInternal = std::min(vPlane->internal + speed, vPlane->data);
+			float delta = newInternal - vPlane->internal;
+			vPlane->height += delta;
+			vPlane->internal = newInternal;
+
+		} else if (!enabled && (vPlane->internal > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(vPlane->internal - speed, 0.0f);
+			float delta = vPlane->internal - newInternal;
+			vPlane->height -= delta;
+			vPlane->internal = newInternal;
 		}
 	}
 }
@@ -396,29 +573,29 @@ void playerMove(
 
 	//Vertical Calculations;
 	for (int vIndex=0; vIndex<validVisplanes; vIndex++) {
-		utils::Visplane plane = visplaneData->at(vIndex);
+		utils::Visplane vPlane = visplaneData->at(vIndex);
 
 		bool inPlaneXYRange = !(
-			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.x, plane.end.x))
-			|| (player->position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(plane.start.x, plane.end.x))
-			|| (player->position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.y, plane.end.y))
-			|| (player->position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(plane.start.y, plane.end.y))
+			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.x, vPlane.end.x))
+			|| (player->position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.x, vPlane.end.x))
+			|| (player->position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.y, vPlane.end.y))
+			|| (player->position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.y, vPlane.end.y))
 		); // !outOfRange.
-		bool abovePlane = player->position.z >= plane.height;
+		bool abovePlane = player->position.z >= vPlane.height;
 
 		if (inPlaneXYRange) {
 			//If ΔZ < 0.42857u then allow player to climb up (stairs, ledge)
-			float stepUpZ = plane.height - playerFootZ;
+			float stepUpZ = vPlane.height - playerFootZ;
 			if (stepUpZ <= constants::MAX_STEP_HEIGHT && stepUpZ >= 0.0f) {
 				player->position.z += stepUpZ;
 				player->velocity.z = 0.0f;
 				touchingFloorCheck = true;
-			} else if (abovePlane && playerFootZ < plane.height) {
-				player->position.z = plane.height + (player->height/2.0f);
+			} else if (abovePlane && playerFootZ < vPlane.height) {
+				player->position.z = vPlane.height + (player->height/2.0f);
 				player->velocity.z = 0.0f;
 				touchingFloorCheck = true;
-			} else if (!abovePlane && playerHeadZ > plane.height) {
-				player->position.z = plane.height - (player->height/2.0f);
+			} else if (!abovePlane && playerHeadZ > vPlane.height) {
+				player->position.z = vPlane.height - (player->height/2.0f);
 				player->velocity.z = 0.0f;
 			}
 		}
@@ -442,7 +619,7 @@ void playerMove(
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
 
-		if (wall.specialType == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
+		if (wall.type == W_TRIGGER) {continue; /* W_TRIGGER can be walked through. */}
 		bool playerZCheckWall = !(
 			(playerHeadZ < min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > max(wall.start.z, wall.end.z))
@@ -577,16 +754,16 @@ void playerMove(
 void updateSpecials(
 		std::vector<utils::Wall>* wallData,
 		std::vector<utils::Visplane>* visplaneData,
-		utils::Player *player, bool interactKey
+		utils::Player* player, bool interactKey
 	) {
 
 
-	for (int wIndex=0; wIndex<validWalls; wIndex++) {
+	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
-		if ((wall.specialType == W_INVALID) || (wall.specialType == W_NORMAL)) {continue;}
-		bool enabled = *(wall.IOPtr) == 1;
+		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL)) {continue;}
+		bool enabled = *(wall.IOPtr);
 
-		switch(wall.specialType) {
+		switch(wall.type) {
 			case W_TRIGGER: {
 				float playerFootZ = player->position.z - (player->height/2.0f);
 				float playerHeadZ = player->position.z + (player->height/2.0f);
@@ -601,50 +778,50 @@ void updateSpecials(
 				);
 
 				if (touchingWallCheck && playerZCheckWall) {
-					*(wall.IOPtr) = 1;
+					*(wall.IOPtr) = true;
 				} else {
-					*(wall.IOPtr) = 0;
+					*(wall.IOPtr) = false;
 				}
 				break;
 			}
 
 			case W_SWITCH: { //Check for interaction with wall.
 				if (interactKey) {
-					float distSQ;
-					bool hitSwitch = quickIntersect(
-						player->position,
-						player->position + playerConfig::PLAYER_INTERACT_RAY_DIST*glm::vec3(sin(player->viewAngle*constants::TO_RAD), cos(player->viewAngle*constants::TO_RAD), 0.0f),
-						wall,
-						&distSQ
-					);
-					//cout << distSQ << endl;
-					if ((distSQ > 1e-2f) && (distSQ < playerConfig::PLAYER_INTERACT_RAY_DIST*playerConfig::PLAYER_INTERACT_RAY_DIST)) {
-						wall.internal = (wall.internal > 0) ? 0 : 1;
-						//cout << "happened" << endl;
+					if (didHitSwitch(player, wIndex, wallData)) {
+						*(wall.IOPtr) = !(*(wall.IOPtr));
 					}
 				}
-				*(wall.IOPtr) = wall.internal;
-				//cout << wall.internal << endl << endl;
+				//cout << *(wall.IOPtr) << endl;
 				break;
 			}
 
-			case W_MOVEV_FAST: { //Move vertically, quickly.
-				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+			case W_MOVED_FAST: { //Move horizontally (+/- wall direction) quickly.
+				specialMotion::applyWallDirectionalMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
-			case W_MOVEV_SLOW: { //Move vertically, slowly.
-				specialMotion::applyWallVerticalMovement(wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+			case W_MOVED_SLOW: {//Move horizontally (+/- wall direction) slowly.
+				specialMotion::applyWallDirectionalMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
 				break;
 			}
 
-			case W_MOVEH_FAST: { //Move horizontally (+/- wall direction) quickly.
-				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+			case W_MOVEN_FAST: { //Move horizontally (+/- wall direction) quickly.
+				specialMotion::applyWallNormalMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
-			case W_MOVEH_SLOW: {//Move horizontally (+/- wall direction) slowly.
-				specialMotion::applyWallHorizontalMovement(wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+			case W_MOVEN_SLOW: {//Move horizontally (+/- wall direction) slowly.
+				specialMotion::applyWallNormalMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				break;
+			}
+
+			case W_MOVEZ_FAST: { //Move vertically, quickly.
+				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				break;
+			}
+
+			case W_MOVEZ_SLOW: { //Move vertically, slowly.
+				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
 				break;
 			}
 
@@ -652,62 +829,83 @@ void updateSpecials(
 				break;
 			}
 		}
+		wallData->at(wIndex) = wall;
 	}
 
 
-	for (int vIndex=0; vIndex<validVisplanes; vIndex++) {
-		utils::Visplane plane = visplaneData->at(vIndex);
-		if ((plane.specialType == V_INVALID) || (plane.specialType == V_NORMAL)) {continue;}
-		bool enabled = logicToBool(*(plane.IOPtr));
+	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
+		utils::Visplane vPlane = visplaneData->at(vIndex);
+		if ((vPlane.type == V_INVALID) || (vPlane.type == V_NORMAL)) {continue;}
+		bool enabled = *(vPlane.IOPtr);
 
 
 		bool inPlaneXYRange = !(
-			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.x, plane.end.x))
-			|| (player->position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(plane.start.x, plane.end.x))
-			|| (player->position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(plane.start.y, plane.end.y))
-			|| (player->position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(plane.start.y, plane.end.y))
+			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.x, vPlane.end.x))
+			|| (player->position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.x, vPlane.end.x))
+			|| (player->position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.y, vPlane.end.y))
+			|| (player->position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.y, vPlane.end.y))
 		); // !outOfRange.
-		bool abovePlane = player->position.z >= plane.height;
+		bool abovePlane = player->position.z >= vPlane.height;
 		bool planeTouch = false;
 
 		if (inPlaneXYRange) {
 			float playerFootZ = player->position.z - (player->height/2.0f);
 			float playerHeadZ = player->position.z + (player->height/2.0f);
 			//If ΔZ < 0.42857u then allow player to climb up (stairs, ledge)
-			float stepUpZ = plane.height - playerFootZ;
+			float stepUpZ = vPlane.height - playerFootZ;
 			if (stepUpZ <= constants::MAX_STEP_HEIGHT && stepUpZ >= 0.0f) {
 				planeTouch = true;
-			} else if (abovePlane && playerFootZ < plane.height) {
+			} else if (abovePlane && playerFootZ < vPlane.height) {
 				planeTouch = true;
-			} else if (!abovePlane && playerHeadZ > plane.height) {
+			} else if (!abovePlane && playerHeadZ > vPlane.height) {
 				planeTouch = true;
 			}
 		}
 
 
-		switch(plane.specialType) {
+		switch(vPlane.type) {
 			case V_TRIGGER: {
 				if (planeTouch) {
-					*(plane.IOPtr) = 1;
+					*(vPlane.IOPtr) = true;
 				} else {
-					*(plane.IOPtr) = 0;
+					*(vPlane.IOPtr) = false;
 				}
 				break;
 			}
 
-			case V_MOVEV_FAST: { //Move vertically, quickly.
-				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+			case V_MOVEX_FAST: { //Move vertically, quickly.
+				specialMotion::applyVisplaneXMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
 				break;
 			}
 
-			case V_MOVEV_SLOW: { //Move vertically, slowly.
-				specialMotion::applyVisplaneVerticalMovement(plane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+			case V_MOVEX_SLOW: { //Move vertically, slowly.
+				specialMotion::applyVisplaneXMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				break;
+			}
+
+			case V_MOVEY_FAST: { //Move vertically, quickly.
+				specialMotion::applyVisplaneYMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				break;
+			}
+
+			case V_MOVEY_SLOW: { //Move vertically, slowly.
+				specialMotion::applyVisplaneYMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				break;
+			}
+
+			case V_MOVEZ_FAST: { //Move vertically, quickly.
+				specialMotion::applyVisplaneZMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				break;
+			}
+
+			case V_MOVEZ_SLOW: { //Move vertically, slowly.
+				specialMotion::applyVisplaneZMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
 				break;
 			}
 
 			case V_HURT: {
 				if (planeTouch) {
-					float hurt = plane.data;
+					float hurt = vPlane.data;
 					utils::hurtPlayer(player, hurt);
 				}
 				break;
@@ -717,6 +915,7 @@ void updateSpecials(
 				break;
 			}
 		}
+		visplaneData->at(vIndex) = vPlane;
 	}
 }
 

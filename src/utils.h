@@ -12,36 +12,39 @@ using namespace std;
 
 
 namespace logicFunctions {
-	static void LGF_AND(int* A, int* B, int* Q, int* internalState) {*Q = (*A) & (*B);}
-	static void LGF_OR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) | (*B);}
-	static void LGF_NOT(int* A, int* B, int* Q, int* internalState) {*Q = ~(*A);}
-	static void LGF_XOR(int* A, int* B, int* Q, int* internalState) {*Q = (*A) ^ (*B);}
+	static void LGF_AND(bool* A, bool* B, bool* Q, bool* internalState) {*Q = (*A) && (*B);}
+	static void LGF_OR(bool* A, bool* B, bool* Q, bool* internalState) {*Q = (*A) || (*B);}
+	static void LGF_NOT(bool* A, bool* B, bool* Q, bool* internalState) {*Q = !(*A);}
+	static void LGF_XOR(bool* A, bool* B, bool* Q, bool* internalState) {*Q = (*A) != (*B);}
 
-	static void LGF_LATCH(int* A, int* B, int* Q, int* internalState) { //Swap between 1 and 0 with A and B.
-		if (((*A) & (*B)) > 0) {
+	static void LGF_LATCH(bool* A, bool* B, bool* Q, bool* internalState) { //Swap between 1 and 0 with A and B.
+		if ((*A) && (*B)) {
 			//internalState remains unchanged; both inputs counteract each other's change.
-		} else if ((*A) > 0) {
+		} else if (*A) {
 			*internalState = 1;
-		} else if ((*B) > 0) {
+		} else if (*B) {
 			*internalState = 0;
 		}
 		*Q = *internalState;
 	}
 
-	static void LGF_PULSE(int* A, int* B, int* Q, int* internalState) { //If A is 1, return 1 for a single frame.
-		if (((*internalState) < 1) && ((*A) == 1)) {*Q = 1;}
-		else {*Q = 0;}
+	static void LGF_PULSE(bool* A, bool* B, bool* Q, bool* internalState) { //If A is 1, return 1 for a single frame.
+		if ((*internalState) && (*A)) {
+			*Q = 1;
+		} else {
+			*Q = 0;
+		}
 		*internalState = *A;
 	}
 
-	static void LGF_TOGGLE(int* A, int* B, int* Q, int* internalState) { //Toggles between 1 and 0 if A is 1.
-		if ((*A) == 1) {
-			*internalState = ((*internalState) < 1) ? 1 : 0;
+	static void LGF_TOGGLE(bool* A, bool* B, bool* Q, bool* internalState) { //Toggles between 1 and 0 if A is 1.
+		if (*A) {
+			*internalState = !(*internalState);
 		}
 		*Q = *internalState;
 	}
 
-	static void LGF_PASSTHROUGH(int* A, int* B, int* Q, int* internalState) {*Q = *A;}
+	static void LGF_PASSTHROUGH(bool* A, bool* B, bool* Q, bool* internalState) {*Q = *A;}
 }
 
 
@@ -220,10 +223,10 @@ namespace utils {
 
 	class LogicGate {
 		private:
-			std::function<void(int*, int*, int*, int*)> evalGate;
-			int* inputA;
-			int* inputB;
-			int* output;
+			std::function<void(bool*, bool*, bool*, bool*)> evalGate;
+			bool* inputA;
+			bool* inputB;
+			bool* output;
 
 			void _assignEvalFunction() {
 				switch (this->gateType) {
@@ -240,7 +243,7 @@ namespace utils {
 
 		public:
 			GateType gateType;
-			int internalState;
+			bool internalState;
 
 			LogicGate() {
 				this->gateType = G_INVALID;
@@ -253,7 +256,7 @@ namespace utils {
 				this->internalState = 0;
 			}
 
-			LogicGate(GateType gateType, int* output, int* inputA, int* inputB=nullptr) {
+			LogicGate(GateType gateType, bool* output, bool* inputA, bool* inputB=nullptr) {
 				//Has optional inputB.
 				this->gateType = gateType;
 				_assignEvalFunction();
@@ -362,19 +365,19 @@ namespace utils {
 		glm::vec2 start;
 		glm::vec2 end;
 		float height;
-		int textureID;
-		VisplaneType specialType;
-		int* IOPtr;
+		GLuint textureID;
+		VisplaneType type;
+		bool* IOPtr;
 		float data;
 		float internal;
 
 		Visplane()
-			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), specialType(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
+			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
 
-		Visplane(glm::vec2 s, glm::vec2 e, float heightZ, int textureID, VisplaneType specialType=V_NORMAL, int* IOPtr=nullptr, float data=0)
+		Visplane(glm::vec2 s, glm::vec2 e, float heightZ, GLuint textureID, VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0)
 			: start(glm::min(s, e)), end(glm::max(s, e)), height(heightZ), 
 			  textureID(textureID),
-			  specialType(specialType),
+			  type(type),
 			  IOPtr(IOPtr), data(data),
 			  internal(0.0f) {}
 	};
@@ -399,34 +402,46 @@ namespace utils {
 	struct Wall {
 		glm::vec3 start;
 		glm::vec3 end;
-		int textureID;
-		WallType specialType;
-		int* IOPtr;
+		std::pair<GLuint, GLuint> textures;
+		WallType type;
+		bool* IOPtr;
 		float data;
 		float internal;
 
 		Wall()
 			: start(0.0f, 0.0f, 0.0f),
 			  end(0.0f, 0.0f, 0.0f),
-			  textureID(0),
-			  specialType(W_INVALID),
+			  textures(),
+			  type(W_INVALID),
 			  IOPtr(nullptr), data(0.0f),
 			  internal(0.0f) {}
 
-		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
+		Wall(glm::vec2 start, glm::vec2 end, float lowZ, float topZ, GLuint textureID0, WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f, GLuint textureID1=-1)
 			: start(glm::vec3(start.x, start.y, lowZ)),
 			  end(glm::vec3(end.x, end.y, topZ)), 
-			  textureID(textureID),
-			  specialType(specialType), 
+			  type(type), 
 			  IOPtr(IOPtr), data(data), 
-			  internal(0.0f) {}
+			  internal(0.0f) {
+			  	textures.first = textureID0;
+			  	if (textureID1 == -1) {
+			  		textures.second = textureID0;
+			  	} else {
+			  		textures.second = textureID1;
+			  	}
+			  }
 
-		Wall(glm::vec3 start, glm::vec3 end, int textureID, WallType specialType=W_NORMAL, int* IOPtr=nullptr, float data=0.0f)
-			: start(start), end(end), 
-			  textureID(textureID),
-			  specialType(specialType), 
+		Wall(glm::vec3 start, glm::vec3 end, GLuint textureID0, WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f, GLuint textureID1=-1)
+			: start(start), end(end),
+			  type(type), 
 			  IOPtr(IOPtr), data(data), 
-			  internal(0.0f) {}
+			  internal(0.0f) {
+			  	textures.first = textureID0;
+			  	if (textureID1 == -1) {
+			  		textures.second = textureID0;
+			  	} else {
+			  		textures.second = textureID1;
+			  	}			  	
+			  }
 	};
 
 	struct WallGPU {
@@ -438,11 +453,16 @@ namespace utils {
 
 		WallGPU()
 			: start(), end(), direction(),
-			  textureID(0) {}
+			  textureID(-1) {}
 
 		WallGPU(Wall *wall, Player* player)
-			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)),
-			  textureID(wall->textureID) {}
+			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)) {
+				if ((wall->type == W_SWITCH) && (wall->internal > 0.0f)) {
+					textureID = wall->textures.second;
+				} else {
+					textureID = wall->textures.first;
+				}
+			}
 	};
 
 
@@ -452,7 +472,7 @@ namespace utils {
 		glm::vec3 normal;
 		int textureID;
 		DisplacementType type;
-		int* IOPtr;
+		bool* IOPtr;
 		float data;
 		float internal;
 
@@ -461,7 +481,7 @@ namespace utils {
 		Displacement(
 				glm::vec3 vA, glm::vec3 vB, glm::vec3 vC,
 				glm::vec2 uvA, glm::vec2 uvB, glm::vec2 uvC,
-				int texID, DisplacementType type, int* ptr, float data
+				GLuint texID, DisplacementType type, bool* ptr, float data
 			) : vertices{vA, vB, vC}, UV{uvA, uvB, uvC}, textureID(texID),
 				type(type), IOPtr(ptr), data(data), internal(0.0f) {
 					normal = glm::normalize(glm::cross(
@@ -472,7 +492,7 @@ namespace utils {
 
 		Displacement(
 				std::array<glm::vec3, 3>& verts, std::array<glm::vec2, 3>& texCoords,
-				int texID, DisplacementType type, int* ptr, float data
+				GLuint texID, DisplacementType type, bool* ptr, float data
 			) : textureID(texID), type(type), IOPtr(ptr),
 				data(data), internal(0.0f) {
 					for (size_t index=0; index<3; index++) {
@@ -508,13 +528,13 @@ namespace utils {
 	struct Sprite {
 		glm::vec3 position;
 		float width, height;
-		int textureID;
-		int collision;
+		GLuint textureID;
+		bool collision;
 		SpriteType type;
 
 		Sprite() : position(0.0f, 0.0f, 0.0f), width(0.0f), textureID(0), type(SPR_INVALID), collision(false) {}
 
-		Sprite(glm::vec3 position, float width, float height, int textureID, SpriteType type=SPR_DECO, int collision=1)
+		Sprite(glm::vec3 position, float width, float height, GLuint textureID, SpriteType type=SPR_DECO, bool collision=1)
 			: position(position), width(width), height(height), textureID(textureID), type(type), collision(collision) {}
 	};
 
@@ -539,12 +559,12 @@ namespace utils {
 		glm::vec3 position;
 		glm::vec3 colour;
 		float intensity;
-		int* inputPTR;
+		bool* IOPtr;
 
-		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), inputPTR(nullptr) {}
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), IOPtr(nullptr) {}
 
-		Light(glm::vec3 position, glm::vec3 colour, float intensity, int* inputPTR=nullptr)
-			: position(position), colour(colour), intensity(intensity), inputPTR(inputPTR) {}
+		Light(glm::vec3 position, glm::vec3 colour, float intensity, bool* IOPtr=nullptr)
+			: position(position), colour(colour), intensity(intensity), IOPtr(IOPtr) {}
 	};
 
 	struct LightGPU {
@@ -559,7 +579,7 @@ namespace utils {
 		LightGPU(Light* light, Player* player)
 			: position(light->position), colour(light->colour),
 			  intensity(light->intensity),
-			  enabled((light->inputPTR == nullptr) ? true : *(light->inputPTR) > 0),
+			  enabled((light->IOPtr) ? *(light->IOPtr) : true),
 			  _padding{0.0f} {}
 	};
 

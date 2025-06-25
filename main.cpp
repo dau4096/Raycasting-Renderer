@@ -56,7 +56,7 @@ GLFWwindow* Window;
 utils::Player player;
 std::atomic<bool> runPhysics = true;
 bool headLampEnabled = false;
-bool interactKey = false, shouldTakeScreenshot = false;
+bool interactKey = false, prevInteract = false, shouldTakeScreenshot = false;
 int lightFlickerRNG;
 GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, shadowMapID;
 GLuint envShader, spriteShader, lightingShader, uiShader, displayShader; //Shaders
@@ -354,7 +354,7 @@ std::mutex stateSwapMutex;
 
 //Non-synced data.
 std::vector<utils::LogicGate> logicGates;
-std::array<int, constants::MAX_FLAGS> flags;
+std::array<bool, constants::MAX_FLAGS> flags;
 
 
 void updateSSBOs(utils::DataSet* localGraphicsData) {
@@ -390,6 +390,11 @@ void physicsLoop(bool* physicsReady) {
 		tickStart = glfwGetTime();
 		*physicsReady = false;
 		player.prevPosition = player.position;
+
+		//1-frame inputs;
+		interactKey = keyMap["USE_INTERACT"] && !prevInteract;
+		prevInteract = keyMap["USE_INTERACT"];
+
 
 		//Update logic states.
 		for (int index=0; index<validGates; index++) {
@@ -470,15 +475,11 @@ void handleInputs() {
 
 		int keyState = glfwGetKey(Window, keyEnum);
 		if (keyState == GLFW_PRESS) {
-			//Handle specific on-press type use-cases.
 			if (functionName == "USE_HEADLAMP" && !keyMap["USE_HEADLAMP"]) {
 				headLampEnabled = !headLampEnabled;
 			}
-			interactKey = (functionName == "USE_INTERACT") && (!keyMap["USE_INTERACT"]);
 			shouldTakeScreenshot = (functionName == "META_SCREENSHOT") && (!keyMap["META_SCREENSHOT"]);
-
 			keyMap[functionName] = true;
-
 
 		} else if (keyState == GLFW_RELEASE) {
 			keyMap[functionName] = false;
@@ -545,7 +546,6 @@ int main() {
 		&logicGates, &flags,
 		&textureNames
 	);
-
 
 	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	currentRenderResolution = glm::ivec2(

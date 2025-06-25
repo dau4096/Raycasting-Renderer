@@ -17,7 +17,7 @@ namespace loader {
 		std::vector<utils::Light>* lightData,
 		std::vector<utils::TextObject>* textObjectData,
 		std::vector<utils::LogicGate>* logicGates,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	);
 

@@ -26,7 +26,10 @@ static inline glm::vec2 parseVec2(const std::string& str) {
 };
 
 
-int* managePTR(std::string ptrStr, std::array<int, constants::MAX_FLAGS>* flags) {
+
+std::unordered_map<std::string, bool*> flagList;
+size_t flagIndex = 0;
+bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flags) {
 	std::string ptrStrUpper = strToUpper(ptrStr);
 	if ((ptrStrUpper == "TRUE") || (ptrStrUpper == "ALWAYS")) {
 		return &(constants::C_TRUE);
@@ -34,20 +37,13 @@ int* managePTR(std::string ptrStr, std::array<int, constants::MAX_FLAGS>* flags)
 		return &(constants::C_FALSE);
 	}
 
-	try {
-		int flagIndex = std::stoi(ptrStr);
-		if ((flagIndex < 0) || (flagIndex > (constants::MAX_FLAGS-1))) {
-			raise("Pointer string: [" + ptrStr + "] was not an integer flag index, [0 -> " + std::to_string(constants::MAX_FLAGS) + "] (inclusive).");
-		}
-		return &((*flags)[flagIndex]);
-
-
-	} catch (const std::invalid_argument& err) {
-		raise("Pointer string: [" + ptrStr + "] was not an integer flag index, [0 -> " + std::to_string(constants::MAX_FLAGS) + "] (inclusive).");
-	} catch (const std::out_of_range& err) {
-		raise("Pointer string: [" + ptrStr + "] was not an integer flag index, [0 -> " + std::to_string(constants::MAX_FLAGS) + "] (inclusive).");
+	auto it = flagList.find(ptrStrUpper);
+	if (it == flagList.end()) {
+		bool* ptr = &(*flags)[flagIndex++];
+		flagList[ptrStrUpper] = ptr;
+		return ptr;
 	}
-	return &(constants::C_FALSE);
+	return it->second;
 };
 
 
@@ -57,12 +53,13 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"G_INVALID", 0}, 		{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
 	{"G_PASSTHROUGH", 1}, 	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
 	{"G_AND", 2}, 			{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"SPR_LIGHT", 2}, 
-	{"G_OR", 3}, 			{"W_MOVEV_FAST", 3},	{"V_MOVEV_FAST", 3}, 
-	{"G_NOT", 4}, 			{"W_MOVEV_SLOW", 4},	{"V_MOVEV_SLOW", 4}, 
-	{"G_XOR", 5}, 			{"W_MOVEH_FAST", 5},	{"V_HURT", 5}, 
-	{"G_LATCH", 6}, 		{"W_MOVEH_SLOW", 6},
-	{"G_PULSE", 7}, 		{"W_SWITCH", 7}, 
-	{"G_TOGGLE", 8},
+	{"G_OR", 3}, 			{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 
+	{"G_NOT", 4}, 			{"W_MOVED_SLOW", 4},	{"V_MOVEX_SLOW", 4}, 
+	{"G_XOR", 5}, 			{"W_MOVEN_FAST", 5},	{"V_MOVEY_FAST", 5}, 
+	{"G_LATCH", 6}, 		{"W_MOVEN_SLOW", 6},	{"V_MOVEY_SLOW", 6},
+	{"G_PULSE", 7}, 		{"W_MOVEZ_FAST", 7},	{"V_MOVEZ_FAST", 7},
+	{"G_TOGGLE", 8},		{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8},
+							{"W_SWITCH", 9},		{"V_HURT", 9},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -157,11 +154,11 @@ static inline int getEnum(const pugi::xml_node& node, std::string attrName, int 
 	return defaultValue;
 }
 
-static inline int* getPTR(
+static inline bool* getPTR(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::string attrName,
-		int* defaultValue=nullptr
+		bool* defaultValue=nullptr
 	) {
 	pugi::xml_attribute attr = node.attribute(attrName);
 	if (attr) {
@@ -327,11 +324,11 @@ std::vector<T> fetchObjectFromXML(
 		const std::string& xpath,
 		std::function<T(
 			const pugi::xml_node&,
-			std::array<int, constants::MAX_FLAGS>* flags,
+			std::array<bool, constants::MAX_FLAGS>* flags,
 			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 		)> extractor,
 		size_t* numObjects,
-		std::array<int, constants::MAX_FLAGS>* flags=nullptr,
+		std::array<bool, constants::MAX_FLAGS>* flags=nullptr,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
 	)
 {
@@ -352,7 +349,7 @@ std::vector<T> fetchObjectFromXML(
 
 static inline Visplane extractVisplane(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -362,7 +359,7 @@ static inline Visplane extractVisplane(
 		getFloat(node, "height", 0.0f),
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL)),
-		getPTR(node, flags, "IOPtr", nullptr),
+		getPTR(node, flags, "flag", nullptr),
 		getFloat(node, "extra", 0.0f)
 	);
 	
@@ -372,7 +369,7 @@ static inline Visplane extractVisplane(
 
 static inline Wall extractWall(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -381,8 +378,9 @@ static inline Wall extractWall(
 		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
-		getPTR(node, flags, "IOPtr", nullptr),
-		getFloat(node, "extra", 0.0f)
+		getPTR(node, flags, "flag", nullptr),
+		getFloat(node, "extra", 0.0f),
+		getTexture(node, textureNames, "altTexture", initial::FALLBACK_TEXTURE_NAME)
 	);
 	
 	return wall;
@@ -391,7 +389,7 @@ static inline Wall extractWall(
 
 static inline Displacement extractDisplacement(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -406,7 +404,7 @@ static inline Displacement extractDisplacement(
 
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
-		getPTR(node, flags, "IOPtr", nullptr),
+		getPTR(node, flags, "flag", nullptr),
 		getFloat(node, "extra", 0.0f)
 	);
 	
@@ -416,7 +414,7 @@ static inline Displacement extractDisplacement(
 
 static inline Sprite extractSprite(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -435,7 +433,7 @@ static inline Sprite extractSprite(
 
 static inline Light extractLight(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -443,7 +441,7 @@ static inline Light extractLight(
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getVec3(node, "colour", glm::vec3(1.0f, 1.0f, 1.0f)),
 		getFloat(node, "intensity", 1.0f),
-		getPTR(node, flags, "IOPtr", nullptr)
+		getPTR(node, flags, "flag", nullptr)
 	);
 	
 	return light;
@@ -452,7 +450,7 @@ static inline Light extractLight(
 
 static inline TextObject extractTextObject(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -468,7 +466,7 @@ static inline TextObject extractTextObject(
 
 static inline LogicGate extractGate(
 		const pugi::xml_node& node,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
@@ -730,7 +728,7 @@ void loadStage(
 		std::vector<utils::Light>* lightData,
 		std::vector<utils::TextObject>* textObjectData,
 		std::vector<utils::LogicGate>* logicGates,
-		std::array<int, constants::MAX_FLAGS>* flags,
+		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 	std::string filePath = "stages/" + stageName + ".xml";
