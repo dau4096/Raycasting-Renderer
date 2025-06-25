@@ -325,10 +325,10 @@ void main() {
 	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 
 	//Negative is upward; so subtract.
-	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f);
-	tiltedFragPosition.y -= (tiltedFragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
-	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f);
-	tiltedFragPosition.y -= (pitchDecimal * renderResolution.y) / 72.9f; //Scaling to resolution. 10px per degree if it's 540px tall.
+	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f) * zoomEffect;
+	tiltedFragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
+	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f) * zoomEffect;
+	tiltedFragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 
 	addVignetteShading();
@@ -338,9 +338,9 @@ void main() {
 
 
 	//Show framerate / tickrate.
-	int tickrateYPosition = 368;
+	int tickrateYPosition = 508;
 	if (showFramerate) {
-		drawInt(vec2(0, 368), 32, framerate);
+		drawInt(vec2(0, tickrateYPosition), 32, framerate);
 		tickrateYPosition -= 32;
 	}
 	if (showTickrate) {
@@ -352,8 +352,8 @@ void main() {
 	renderImage(vec2(-16, -72), vec2(192.0, 192.0), 0);
 	drawInt(vec2(32, 32), 40, health);
 
-	renderImage(vec2(460, -72), vec2(192, 192), 1);
-	drawInt(vec2(520, 32), 40, energy);
+	renderImage(vec2(780, -72), vec2(192, 192), 1);
+	drawInt(vec2(840, 32), 40, energy);
 
 	drawCrosshair();
 
