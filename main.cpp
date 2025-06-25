@@ -271,20 +271,23 @@ void renderFrame(double blendingAlpha) {
 
 
 
-	//Shadow Shader
+	//Lighting Shader
 	glViewport(0, 0, currentShadowResolution.x, currentShadowResolution.y);
 	glUseProgram(lightingShader);
 
 	glBindTextureUnit(0, positionMapID);
 	glBindTextureUnit(1, normalMapID);
+	glBindTextureUnit(2, textureArrayEnvironment);
 	glBindImageTexture(0, shadowMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms;
 	render::bindCommonUniforms(lightingShader, &player);
-	render::bindUniformValue(spriteShader, "headLampEnabled", headLampEnabled);
-	render::bindUniformValue(spriteShader, "headLampFlicker", lightFlickerRNG);
+	render::bindUniformValue(lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+	render::bindUniformValue(lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	render::bindUniformValue(lightingShader, "headLampEnabled", headLampEnabled);
+	render::bindUniformValue(lightingShader, "headLampFlicker", lightFlickerRNG);
 
-	renderingGeneric("Shadow Shader");
+	renderingGeneric("Lighting Shader");
 
 
 

@@ -4,6 +4,9 @@
 
 //CameraData
 uniform float maxRayDistance;
+uniform vec2 textureScale;
+uniform vec3 textureOffset;
+uniform bool useMipMapping;
 
 //PlayerData
 uniform vec3 playerPosition;
@@ -25,10 +28,12 @@ uniform int numWalls;
 uniform int numDisplacements;
 uniform int numLights;
 uniform ivec2 shadowResolution;
+uniform bool allowTransparency;
 
 
 layout(binding=0) uniform sampler2D positionMap;
 layout(binding=1) uniform sampler2D normalMap;
+layout(binding=2) uniform sampler2DArray textureArray;
 layout(rgba32f, binding=0) uniform image2D lightMap;
 
 struct Visplane {
@@ -124,6 +129,57 @@ bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
 	return (min(wall.start.z, wall.end.z) - 1e-4f <= z) && (z <= max(wall.start.z, wall.end.z) + 1e-4f);
 }
 
+vec2 getWallUV(Wall thisWall, vec3 position3D) {
+	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
+
+	//xUV calculation.
+	float xUV;
+	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+		xUV = fract(position3D.y / textureScale.x);
+	} else {
+		xUV = fract(position3D.x / textureScale.x);
+	}
+	if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
+
+
+	//yUV calculation.
+	float yUV = fract(position3D.z / textureScale.y);
+	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+
+
+	return vec2(xUV, yUV) + textureOffset.xz;
+}
+
+
+
+//Visplanes
+vec2 getVisplaneUV(vec3 position3D) {
+	//Take the fractional parts of the position (texture tiles every unit square)
+	float xUV = fract(position3D.x / textureScale.x);
+	if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
+	float yUV = fract(position3D.y / textureScale.y);
+	if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
+
+	return vec2(xUV, yUV) + textureOffset.xy;
+}
+
+
+
+//Displacements
+float edge(vec2 a, vec2 b, vec2 c) {
+	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+}
+
+vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
+	float areaABC = edge(v1, v2, v3);
+	float a = edge(fragPosition, v2, v3)/areaABC;
+	float b = edge(fragPosition, v3, v1)/areaABC;
+	float c = 1.0f - a - b;
+	return vec3(a,b,c);
+}
+
+
+
 
 
 //LOS
@@ -134,9 +190,32 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	for (int idx=0; idx<numWalls; idx++) {
 		Wall thisWall = walls[idx];
 		if (idx == thisIndex && foundType == 1) {continue; /* Wall is the index calling the LOS check. */}
+		vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+		float projStart = dot(pointA.xy-thisWall.start.xy, wallNormal);
+		float projEnd = dot(pointB.xy-thisWall.start.xy, wallNormal);
+		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
 
-		bool blocked = quickIntersect(pointA, pointB, thisWall);
-		if (blocked) {return true;}
+		double t = (projStart) / (projEnd - projStart);
+		dvec3 intersectPoint = pointA - LOSDelta * t;
+		vec3 minWall = min(thisWall.start, thisWall.end);
+		vec3 maxWall = max(thisWall.start, thisWall.end);
+		if (
+		    intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+		    intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y ||
+		    intersectPoint.z + EPSILON_ALT < minWall.z || intersectPoint.z - EPSILON_ALT > maxWall.z
+		) {
+			//Outside of valid wall segment.
+			continue;
+		}
+
+		if (allowTransparency) {
+			vec2 UV = getWallUV(thisWall, vec3(intersectPoint));
+			if (textureLod(textureArray, vec3(UV.xy, thisWall.textureID), 0.0f).a >= 0.5f) {
+				return true;
+			}
+		} else {
+			return true;
+		}
 	}
 
 
@@ -159,7 +238,14 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 			intersectPoint.y >= min(thisPlane.start.y, thisPlane.end.y) - EPSILON &&
 			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON
 		) {
-			return true;
+			if (allowTransparency) {
+				vec2 UV = getVisplaneUV(vec3(intersectPoint));
+				if (textureLod(textureArray, vec3(UV.xy, thisPlane.textureID), 0.0f).a >= 0.5f) {
+					return true;
+				}
+			} else {
+				return true;
+			}
 		}
 	}
 
