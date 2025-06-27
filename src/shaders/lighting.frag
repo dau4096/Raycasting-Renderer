@@ -64,7 +64,7 @@ struct Displacement {
 	vec2 UV[3];
 	vec4 normal_texID;
 };
-layout(std430, binding=5) buffer displacementSSBO {
+layout(std430, binding=4) buffer displacementSSBO {
 	Displacement displacements[];
 };
 

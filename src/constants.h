@@ -227,7 +227,10 @@ namespace constants {
 
 
 	//Maximum quantities of each type.
-	constexpr int MAX_FLAGS = 256;
+	constexpr size_t MAX_FLAGS = 256;
+	constexpr size_t MAX_VERTEX_BYTES = 16384;
+	constexpr size_t MAX_INDEX_BYTES = 16384;
+	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 1;
 
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
@@ -242,14 +245,14 @@ namespace display {
 	//Texture Standardisation
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
-	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 64;
+	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback-general.png";
 	constexpr const char* FALLBACK_SKYBOX_PATH = "src/textures-env/fallback-skybox.png";
 
 
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
-	constexpr int MAX_TEXTOBJECT_CHARACTERS = 64;
+	constexpr size_t MAX_TEXTOBJECT_CHARACTERS = 64;
 }
 
 namespace initial {

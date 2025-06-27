@@ -211,6 +211,11 @@ namespace utils {
 	static inline bool isVec2NaN(glm::vec2 v) {return (std::isnan(v.x) || std::isnan(v.y));}
 	static inline bool isVec3NaN(glm::vec3 v) {return (std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z));}
 
+	template<typename T>
+	static inline void combineVectors(std::vector<T>* A, std::vector<T>& B) {
+		A->insert(A->end(), B.begin(), B.end());
+	}
+
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
 
@@ -661,76 +666,40 @@ namespace utils {
 			  scale(scale) {}
 	};
 
-	const std::unordered_map<std::string, int> chMap = {
-		{"|", -3}, {" ", -2},
-		{"-", 10}, {".", 11},
-		{"!", 12}, {"?", 13},
-		{",", 14}, {"'", 15},
-		{"/", 16}, {":", 17},
-		{";", 18}, {"&", 19},
-		{"[", 20}, {"]", 21},
-		{"(", 20}, {")", 21},
-		{"^", 22}
+	static const std::unordered_map<char, int> chMap = {
+		{'|', -3}, {' ', -2},
+		{'-', 10}, {'.', 11},
+		{'!', 12}, {'?', 13},
+		{',', 14}, {'\'', 15},
+		{'/', 16}, {':', 17},
+		{';', 18}, {'&', 19},
+		{'[', 20}, {']', 21},
+		{'(', 20}, {')', 21},
+		{'^', 22}
 	};
 
-	static std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> convertTextToIdxArray(
-		const std::string& input,
+	static int convertTextToIdx(
+		const char input,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
 	) {
-		std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> result;
-		result.fill(-1);
+		char ch = toupper(input);
+		int result;
 
-		std::string inputUpper = strToUpper(input);
-
-		for (size_t idx=0; (idx<input.size() && idx<display::MAX_TEXTOBJECT_CHARACTERS); ++idx) {
-			std::string ch(1, inputUpper[idx]);
-			int res;
-
-			auto chMapIt = chMap.find(ch);
-			if (chMapIt != chMap.end()) {
-				res = chMapIt->second;
+		auto chMapIt = chMap.find(ch);
+		if (chMapIt != chMap.end()) {
+			result = chMapIt->second;
+		} else {
+			auto symNamesIt = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + std::string(1, ch));
+			if (symNamesIt != symbolNames->end()) {
+				result = static_cast<int>(std::distance(symbolNames->begin(), symNamesIt));
 			} else {
-				auto symNamesIt = std::find(symbolNames->begin(), symbolNames->end(), "symbol_" + ch);
-				if (symNamesIt != symbolNames->end()) {
-					res = static_cast<int>(std::distance(symbolNames->begin(), symNamesIt));
-				} else {
-					//Unknown char; show unknown char
-					res = 23;
-				}
+				//Unknown char; show unknown char
+				result = 23;
 			}
-			result[idx] = res;
 		}
 
 		return result;
 	}
-
-	struct TextObjectGPU {
-		alignas(16) std::array<glm::ivec4, display::MAX_TEXTOBJECT_CHARACTERS / 4> text;
-		
-		alignas(4) int length;
-		alignas(4) int scale;
-		alignas(4) glm::vec2 _padding;
-
-		alignas(16) glm::vec3 position;
-		alignas(4) int screenCentreX;
-
-		TextObjectGPU() : text(), position(0.0f, 0.0f, 0.0f), scale(0), screenCentreX(0), _padding() {}
-
-		TextObjectGPU(
-			TextObject* textObject, Player* player,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames
-		)	: length(textObject->text.length()),
-			  position(textObject->position),
-			  scale(textObject->scale),
-			  screenCentreX(getCentreX(textObject->position, player, display::UI_RESOLUTION)),
-			  _padding()
-		{
-			std::array<int, display::MAX_TEXTOBJECT_CHARACTERS> flat = convertTextToIdxArray(textObject->text, symbolNames);
-			for (size_t i = 0; i < display::MAX_TEXTOBJECT_CHARACTERS / 4; ++i) {
-				text[i] = glm::ivec4(flat[i * 4 + 0], flat[i * 4 + 1], flat[i * 4 + 2], flat[i * 4 + 3]);
-			}
-		}
-	};
 
 
 
@@ -749,6 +718,27 @@ namespace utils {
 
 		Ray(glm::vec2 position, glm::vec2 direction, float len=configToFloat("VIEW_MAX_RAY_DIST"))
 			: position(position), direction(direction), end(position + (direction * len)) {}
+	};
+
+
+
+	struct UIElement {
+		GLuint textureID;
+		int* iPtr;
+		float* fPtr;
+		glm::vec2 position;
+		glm::vec2 scale;
+
+		UIElement() : textureID(), iPtr(nullptr), fPtr(nullptr), position(), scale() {}
+
+		UIElement(glm::vec2 pos, glm::vec2 scale, GLuint textureID)
+			: position(pos), scale(scale), textureID(textureID), iPtr(nullptr), fPtr(nullptr) {}
+
+		UIElement(glm::vec2 pos, glm::vec2 scale, int* ptr)
+			: position(pos), scale(scale), textureID(0), iPtr(ptr), fPtr(nullptr) {}
+
+		UIElement(glm::vec2 pos, glm::vec2 scale, float* ptr)
+			: position(pos), scale(scale), textureID(0), fPtr(ptr), iPtr(nullptr) {}
 	};
 }
 

@@ -61,9 +61,28 @@ int lightFlickerRNG;
 GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, shadowMapID;
 GLuint envShader, spriteShader, lightingShader, uiShader, displayShader; //Shaders
 GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric; //Textures
-GLuint visplaneSSBO, wallSSBO, spriteSSBO, lightSSBO, textObjectSSBO, displacementSSBO; //Storage Buffers
-GLuint VAO;
+GLuint visplaneSSBO, wallSSBO, spriteSSBO, lightSSBO, displacementSSBO; //Storage Buffers
+GLuint VAO, uiVAO, uiVBO, uiEBO;
+glm::mat4 pvmMatrix;
+//Data must be synced between the graphics and physics threads.
+utils::DataSet stateA, stateB;
+utils::DataSet* physicsData = &stateA;
+utils::DataSet* graphicsData = &stateB;
+std::mutex stateSwapMutex;
+std::vector<float> rollingFPS;
+std::vector<float> rollingTPS;
 
+
+
+float getAverage(std::vector<float>& q) {
+	float n = 0.0f;
+	float sum = 0.0f;
+	for (float v : q) {
+		sum += v;
+		n++;
+	}
+	return sum / n;
+}
 
 
 void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
@@ -142,6 +161,7 @@ void APIENTRY openGLErrorCallback(
 
 
 std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
+size_t currentVertexSize, currentIndexSize;
 void prepareOpenGL() {
 	//OpenGL setup;
 
@@ -171,11 +191,8 @@ void prepareOpenGL() {
 	lightSSBO = render::createShaderStorageBufferObject(
 		3, sizeof(utils::LightGPU) * validLights
 	);
-	textObjectSSBO = render::createShaderStorageBufferObject(
-		4, sizeof(utils::TextObjectGPU) * validTextObjects
-	);
 	displacementSSBO = render::createShaderStorageBufferObject(
-		5, sizeof(utils::DisplacementGPU) * validDisplacements
+		4, sizeof(utils::DisplacementGPU) * validDisplacements
 	);
 
 
@@ -189,18 +206,44 @@ void prepareOpenGL() {
 	lightingShader = render::createShaderProgram("lighting", false);
 
 	//uiShader
-	uiShader = render::createShaderProgram("interface", false);
+	uiShader = render::createShaderProgram("interface");
 
 	//Display Shader
 	displayShader = render::createShaderProgram("display");
 
 
 
+	glGenVertexArrays(1, &uiVAO);
+    glBindVertexArray(uiVAO);
+
+    glGenBuffers(1, &uiVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, uiVBO);
+    glBufferData(GL_ARRAY_BUFFER, constants::MAX_VERTEX_BYTES, nullptr, GL_DYNAMIC_DRAW); // Reserve space
+    currentVertexSize = constants::MAX_VERTEX_BYTES;
+
+    glGenBuffers(1, &uiEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, uiEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, constants::MAX_INDEX_BYTES, nullptr, GL_DYNAMIC_DRAW); // Reserve space
+    currentIndexSize = constants::MAX_INDEX_BYTES;
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(5 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(0);
+
+
+
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
 	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
 	VAO = render::getVAO();
 
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	pvmMatrix = glm::ortho(0.0f, float(display::UI_RESOLUTION.x), 0.0f, float(display::UI_RESOLUTION.y), -1.0f, 1.0f);
 	
 
 	//Debug settings
@@ -211,6 +254,162 @@ void prepareOpenGL() {
 
 	utils::GLErrorcheck("Initialisation", true); //Old basic debugging
 }
+
+
+float avgframerate, avgtickrate;
+//UI
+const std::vector<utils::UIElement> UIElements = {
+	UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),	//Health image
+	UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
+	UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 	//Energy image
+	UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
+	UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate), 				//FPS number
+	UIElement(glm::vec2(0, 476), glm::vec2(32, 32), &avgtickrate)	 				//TPS number
+};
+GLuint currentIdx;
+
+inline void addImage(glm::vec2 position, glm::vec2 scale, GLuint textureID, bool isAlphaNumeric, bool hasBackground, std::vector<float>* verticesData, std::vector<GLuint>* indicesData, float distance=0.0f) {
+	float texID = (textureID << 2) | int(isAlphaNumeric) | int(hasBackground);
+	verticesData->insert(verticesData->end(), {
+		position.x, 			position.y, 			0.0f, 1.0f, texID, distance,
+		position.x, 			position.y + scale.y, 	0.0f, 0.0f, texID, distance,
+		position.x + scale.x, 	position.y, 			1.0f, 1.0f, texID, distance,
+		position.x + scale.x, 	position.y + scale.y, 	1.0f, 0.0f, texID, distance,
+	});
+
+	indicesData->insert(indicesData->end(), {
+		currentIdx + 0, currentIdx + 1, currentIdx + 2,
+		currentIdx + 1, currentIdx + 2, currentIdx + 3
+	});
+	currentIdx += 4;
+}
+
+void drawInt(glm::vec2 position, glm::vec2 scale, int value, std::vector<float>* verticesData, std::vector<GLuint>* indicesData) { //Values [-99999 <-> 99999] inclusive.
+	int absVal = abs(value);
+	int maxDigits = 5;
+	bool started = false;
+	int divisor = 10000;
+
+	glm::vec2 digitOffset = glm::vec2(scale.x * 0.65f, 0.0);
+
+
+	if (value < 0) {
+		addImage(position, scale, 10, true, false, verticesData, indicesData); //"-"
+		position += digitOffset;
+	}
+
+	for (int i = 0; i < maxDigits; i++) {
+		int digit = (absVal / divisor) % 10;
+
+		if (digit > 0 || started || (i == maxDigits - 1)) {
+			started = true;
+			addImage(position, scale, digit, true, false, verticesData, indicesData); //"[0-9]"
+			position += digitOffset;
+		}
+
+		divisor /= 10;
+	}
+}
+
+void drawHUD() {
+	currentIdx = 0;
+	glClearTexImage(interfaceID, 0, GL_RGBA, GL_FLOAT, nullptr);
+	std::vector<float> vertices;
+	std::vector<GLuint> indices;
+	std::vector<float> verticesData;
+	std::vector<GLuint> indicesData;
+
+
+
+	for (const utils::UIElement element : UIElements) {
+		verticesData.clear();
+		indicesData.clear();
+
+		if (element.iPtr) { //Shows an integer value
+			drawInt(element.position, element.scale, *(element.iPtr), &verticesData, &indicesData);
+		} else if (element.fPtr) { //Shows an integer value
+			drawInt(element.position, element.scale, int(*(element.fPtr)), &verticesData, &indicesData);
+		} else { //Shows some UI image element
+			addImage(element.position, element.scale, element.textureID, false, false, &verticesData, &indicesData);
+		}
+
+		utils::combineVectors(&vertices, verticesData);
+		utils::combineVectors(&indices, indicesData);
+	}
+
+	for (utils::TextObject thisTO : graphicsData->textObjectData) {
+		verticesData.clear();
+		indicesData.clear();
+
+
+		float distance = glm::length(glm::vec2(thisTO.position - player.position));
+		float scale = thisTO.scale * zoomEffect / distance;
+
+		float centreX = utils::getCentreX(thisTO.position, &player, display::UI_RESOLUTION);
+		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * zoomEffect / distance;
+		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
+		float charY = centreY - (scale / 2.0f);
+		float pitchDecimal = glm::clamp(player.viewPitch, -22.5f, 22.5f) * zoomEffect;
+		charY += (pitchDecimal * display::UI_RESOLUTION.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
+
+		int letterIdx = 0;
+		int textLength = thisTO.text.size();
+		for (char ch : thisTO.text) {
+			//Iterate through letters.
+			int charIdx = utils::convertTextToIdx(ch, &symbolNames);
+			letterIdx++;
+
+			if (charIdx < 0) {continue; /* Blank Character */}
+			float charX = centreX + scale*0.65f*(letterIdx - (textLength/2.0f));
+			glm::vec2 charPos = glm::vec2(charX, charY);
+
+
+			addImage(charPos, glm::vec2(scale, scale), charIdx, true, true, &verticesData, &indicesData, distance);
+		}
+
+		utils::combineVectors(&vertices, verticesData);
+		utils::combineVectors(&indices, indicesData);
+	}
+
+
+	size_t newVertexSize = vertices.size() * sizeof(float);
+	size_t newIndexSize = indices.size() * sizeof(GLuint);
+	//Draw using 2D projection (pvmMatrix is just ortho projection.)
+	glUseProgram(uiShader);
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO);
+	if (newVertexSize > currentVertexSize) {
+		glBufferData(GL_ARRAY_BUFFER, newVertexSize, vertices.data(), GL_DYNAMIC_DRAW);
+		currentVertexSize = newVertexSize;
+	} else {
+		glBufferSubData(GL_ARRAY_BUFFER, 0, newVertexSize, vertices.data());
+	}
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, uiEBO);
+	if (newIndexSize > currentIndexSize) {
+		glBufferData(GL_ARRAY_BUFFER, newIndexSize, vertices.data(), GL_DYNAMIC_DRAW);
+		currentIndexSize = newIndexSize;
+	} else {
+		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, newIndexSize, indices.data());
+	}
+
+	glBindImageTexture(0, interfaceID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindTextureUnit(0, textureArrayUI);
+	glBindTextureUnit(1, textureArrayNumeric);
+	glBindTextureUnit(2, renderedFrameID);
+
+	render::bindCommonUniforms(uiShader, &player);
+	GLint pvmMatrixLocation = glGetUniformLocation(uiShader, "pvmMatrix");
+	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(pvmMatrix));
+
+	glBindVertexArray(uiVAO);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(0);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+	utils::GLErrorcheck("Interface", true);
+
+}
+
 
 
 
@@ -295,28 +494,9 @@ void renderFrame(double blendingAlpha) {
 	//UI Shader.
 	if (utils::configToBool("VIEW_SHOW_HUD")) {
 		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-		glUseProgram(uiShader);
-
-		glBindTextureUnit(0, renderedFrameID);
-		glBindImageTexture(0, interfaceID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		glBindTextureUnit(1, textureArrayEnvironment); //World Textures
-		glBindTextureUnit(2, textureArrayUI); //UI Textures
-		glBindTextureUnit(3, textureArrayNumeric); //0-9 Textures.
-
-		//Uniforms
-		render::bindCommonUniforms(uiShader, &player);
-		//UI-Specific
-		render::bindUniformValue(uiShader, "showFramerate", utils::configToBool("META_SHOW_FRAMERATE_UI"));
-		render::bindUniformValue(uiShader, "framerate", int(round(framerate)));
-		render::bindUniformValue(uiShader, "showTickrate", utils::configToBool("META_SHOW_TICKRATE_UI"));
-		render::bindUniformValue(uiShader, "tickrate", int(round(tickrate)));
-		render::bindUniformValue(uiShader, "showData", utils::configToBool("META_SHOW_DATA"));
-		render::bindUniformValue(uiShader, "health", player.health);
-		render::bindUniformValue(uiShader, "energy", player.energy);
-		render::bindUniformValue(uiShader, "tint", tintData);
-
-		renderingGeneric("UI Shader");
+		avgframerate = getAverage(rollingFPS);
+		avgtickrate = getAverage(rollingTPS);
+		drawHUD();
 	}		
 
 
@@ -347,12 +527,6 @@ void renderFrame(double blendingAlpha) {
 
 
 
-//Data must be synced between updateSSBOs() and the physics thread.
-utils::DataSet stateA, stateB;
-utils::DataSet* physicsData = &stateA;
-utils::DataSet* graphicsData = &stateB;
-std::mutex stateSwapMutex;
-
 //Non-synced data.
 std::vector<utils::LogicGate> logicGates;
 std::array<bool, constants::MAX_FLAGS> flags;
@@ -374,9 +548,6 @@ void updateSSBOs(utils::DataSet* localGraphicsData) {
 	);
 	render::updateShaderStorageBufferObject<utils::LightGPU>(
 		lightSSBO, &player, &(localGraphicsData->lightData)
-	);
-	render::updateShaderStorageBufferObject<utils::TextObjectGPU>(
-		textObjectSSBO, &player, &(localGraphicsData->textObjectData), &symbolNames
 	);
 	utils::GLErrorcheck("Updating SSBOs", true);
 }
@@ -417,6 +588,7 @@ void physicsLoop(bool* physicsReady) {
 
 		float dt = glfwGetTime() - tickStart;
 		tickrate = floor(1.0f / dt);
+		rollingTPS.push_back(tickrate);
 		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {
 			std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;
 		}
@@ -427,6 +599,11 @@ void physicsLoop(bool* physicsReady) {
 		*physicsReady = true;
 		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
 		tick++;
+
+
+
+		if (rollingFPS.size() > constants::MAX_ROLLING_VALUE_QUALITY) {rollingFPS.clear();}
+		if (rollingTPS.size() > constants::MAX_ROLLING_VALUE_QUALITY) {rollingTPS.clear();}
 	}
 }
 
@@ -608,6 +785,7 @@ int main() {
 			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		}
 		framerate = floor(1.0f / (glfwGetTime() - frameStart));
+		rollingFPS.push_back(framerate);
 		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {
 			std::cout << "Framerate: " << framerate << "Hz" << std::endl;
 		}

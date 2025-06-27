@@ -64,7 +64,7 @@ struct Displacement {
 	vec2 UV[3];			//2D UV coordinates per vertex
 	vec4 normal_texID;	//Normal and texture ID packed together
 };
-layout(std430, binding=5) buffer displacementSSBO {
+layout(std430, binding=4) buffer displacementSSBO {
 	Displacement displacements[];
 };
 
@@ -160,7 +160,7 @@ const float minMipMapDistance = 5.0f;
 
 void unpackTextureFormattingBits(
 		uint inputBits, out bvec2 isWorldspace,
-		out vec2 textureScale, out vec2 textureOffset
+		out vec2 invTextureScale, out vec2 textureOffset
 	) {
 	/*
 	- Full 32bits; (uint)
@@ -184,10 +184,10 @@ void unpackTextureFormattingBits(
 		bool(inputBits & 0x40000000)
 	);
 
-	textureScale = vec2(
+	invTextureScale = 16.0f / vec2(
 		float((inputBits >> 22) & 0xFF),
 		float((inputBits >> 14) & 0xFF)
-	) / 16.0f;
+	);
 
 	textureOffset = vec2(
 		float((inputBits >> 7) & 0x7F),
@@ -250,11 +250,11 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, double wallD
 
 
 	bvec2 useWorldSpace;
-	vec2 textureScale;
+	vec2 invTextureScale;
 	vec2 textureOffset;
 	unpackTextureFormattingBits(
 		thisWall.textureData, useWorldSpace,
-		textureScale, textureOffset
+		invTextureScale, textureOffset
 	);
 
 
@@ -263,42 +263,40 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, double wallD
 	double xUV;
 	if (useWorldSpace.x) {
 		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = fract(intersectPoint.y / textureScale.x);
+			xUV = intersectPoint.y * invTextureScale.x;
 		} else {
-			xUV = fract(intersectPoint.x / textureScale.x);
+			xUV = intersectPoint.x * invTextureScale.x;
 		}
-		if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
+		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
 	} else {
 		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
 			xUV = (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
 		} else {
 			xUV = (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
 		}
-		xUV = fract(xUV / textureScale.x);
+		xUV = xUV * invTextureScale.x;
 	}
 
+    double invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
+    double projectedYLow = (originPos.z - wallLowZ) * invDistance;
+    double projectedYTop = (originPos.z - wallTopZ) * invDistance;
 
-	//yUV calculation.
-	double invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
-	double projectedYLow = (originPos.z - wallLowZ) * invDistance;
-	double projectedYTop = (originPos.z - wallTopZ) * invDistance;
+    double screenYLow = renderResolution.y * (0.5f - projectedYLow);
+    double screenYTop = renderResolution.y * (0.5f - projectedYTop);
 
-	double screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	double screenYTop = renderResolution.y * (0.5 - projectedYTop);
+    if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {
+    	return INVALIDv2;
+    }
 
-	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {return INVALIDv2;}
+    double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow);
+    fragZ = mix(wallLowZ, wallTopZ, a);
 
-	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow); //Alpha to mix by.
-	fragZ = mix(wallLowZ, wallTopZ, a);
-	double yUV;
-	if (useWorldSpace.y) {
-		yUV = 1.0f - fract(fragZ / textureScale.y);
-	} else {
-		yUV = 1.0f - (a / textureScale.y);
-	}
-	
+    double yUVWorld = 1.0f - fragZ * invTextureScale.y;
+    double yUVLocal = 1.0f - (a * invTextureScale.y);
 
-	return vec2(xUV, yUV) + textureOffset.xy;
+    double yUV = mix(yUVLocal, yUVWorld, double(useWorldSpace.y));
+
+    return vec2(xUV, yUV) + textureOffset;
 }
 
 
@@ -376,56 +374,22 @@ bool behindCamera(vec4 pt, vec2 proj) {
 
 
 
-
 //Visplanes
-vec3 getVisplaneIntersect(Visplane plane, vec3 originPos, vec2 rayDirection) {
-	float targetZ = (originPos.z - plane.height) * zoomEffect;
-	vec2 position2D;
-
-	/*
-	//Original from getWallUV()
-	float projectedYTop = (originPos.z - wallTopZ) / distance;
-	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	*/
-
-	float antiProjection = 0.5f - (fragPosition.y/renderResolution.y);
-	if (abs(antiProjection) < EPSILON) {return INVALIDv3; /* Avoids DivZero error */}
-	float t = targetZ / antiProjection;
-	if (t < 0.0f) {return INVALIDv3; /* Behind origin */}
-	position2D = originPos.xy + rayDirection.xy * t;
-
-	return vec3(position2D.xy, plane.height);
-}
-
-
 vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
 	bvec2 useWorldSpace;
-	vec2 textureScale;
+	vec2 invTextureScale;
 	vec2 textureOffset;
 	unpackTextureFormattingBits(
 		plane.textureData, useWorldSpace,
-		textureScale, textureOffset
+		invTextureScale, textureOffset
 	);
 
-	float xUV;
-	if (useWorldSpace.x) {
-		xUV = fract(position3D.x / textureScale.x);
-		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
-	} else {
-		xUV = (position3D.x - plane.start.x) / (plane.end.x - plane.start.x);
-		xUV = fract(xUV / textureScale.x);
-	}
+	vec2 pos = position3D.xy;
+	vec2 localUV = (pos - plane.start.xy) / (plane.end.xy - plane.start.xy);
+	vec2 worldUV = pos * invTextureScale;
 
-	float yUV;
-	if (useWorldSpace.y) {
-		yUV = fract(position3D.y / textureScale.y);
-		if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
-	} else {
-		yUV = (position3D.y - plane.start.y) / (plane.end.y - plane.start.y);
-		yUV = fract(yUV / textureScale.y);
-	}
-
-	return vec2(xUV, yUV) + textureOffset.xy;
+	vec2 UV = mix(localUV * invTextureScale, worldUV, vec2(useWorldSpace));
+	return UV - floor(UV) + textureOffset;
 }
 
 
@@ -453,6 +417,7 @@ void main() {
 	float rayAngleYaw = radians(playerViewAngle + rayOffset);
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
+	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;
 	float rPVA = radians(playerViewAngle);
 	rayDirectionCentre = vec2(sin(rPVA), cos(rPVA));
 	float distMultiplier = dot(rayDirection, rayDirectionCentre);
@@ -485,12 +450,12 @@ void main() {
 		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
 
 		double t = (projStart) / (projEnd - projStart);
-		dvec2 intersectPoint = playerPosition.xy - rayDirection.xy * t * maxRayDistance;
+		dvec2 intersectPoint = playerPosition.xy - rayDelta2D * t;
 		vec2 minWall = min(thisWall.start.xy, thisWall.end.xy);
 		vec2 maxWall = max(thisWall.start.xy, thisWall.end.xy);
 		if (
-		    intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
-		    intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y
+			intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+			intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y
 		) {
 			//Outside of valid wall segment.
 			continue;
@@ -515,34 +480,43 @@ void main() {
 		
 	}
 
-	//Iterate through all visplanes. (3D)
-	for (int idx=0; idx<numVisplanes; idx++) {
-		Visplane thisPlane = visplanes[idx];
+	float antiProjection = 0.5f - (fragPosition.y/renderResolution.y);
+	if (abs(antiProjection) > EPSILON) {/* Avoids DivZero error */
+		float invAntiProjection = zoomEffect / antiProjection;
+		//Iterate through all visplanes. (3D)
+		for (int idx=0; idx<numVisplanes; idx++) {
+			Visplane thisPlane = visplanes[idx];
 
-		if (
-			(lowerHalf && thisPlane.height > playerPosition.z) ||
-			(!lowerHalf && thisPlane.height < playerPosition.z)
-		) {
-			//Fragray cannot possibly hit visplane.
-			continue;
+			if (
+				(lowerHalf && thisPlane.height > playerPosition.z) ||
+				(!lowerHalf && thisPlane.height < playerPosition.z)
+			) {
+				//Fragray cannot possibly hit visplane.
+				continue;
+			}
+
+			float t = (playerPosition.z - thisPlane.height) * invAntiProjection;
+			if (t < 0.0f) {continue; /* Behind origin or out of range. */}
+			vec3 intersectPoint = vec3(playerPosition.xy + rayDirection.xy * t, thisPlane.height);
+
+			vec2 planeMin = min(thisPlane.start, thisPlane.end);
+			vec2 planeMax = max(thisPlane.start, thisPlane.end);
+			if ((intersectPoint.x < planeMin.x) || (intersectPoint.x > planeMax.x) ||
+				(intersectPoint.y < planeMin.y) || (intersectPoint.y > planeMax.y)) {
+				//Out of the range of the Visplane.
+				continue;
+			}
+
+			float dx = playerPosition.x - intersectPoint.x;
+			float dy = playerPosition.y - intersectPoint.y;
+			thisIntersect.distanceSQ = dx * dx + dy * dy;
+			thisIntersect.position = intersectPoint;
+			thisIntersect.index = idx;
+			thisIntersect.foundType = 2;
+			thisIntersect.UV = vec3(getVisplaneUV(intersectPoint, thisPlane), thisPlane.textureID);
+			pushStack(thisIntersect);
+			foundObject = true;
 		}
-
-		vec3 intersectPoint = getVisplaneIntersect(thisPlane, playerPosition, rayDirection);
-		if (intersectPoint == INVALIDv3) {continue; /* Invalid Intersect */}
-		if ((intersectPoint.x < min(thisPlane.start.x, thisPlane.end.x)) || (intersectPoint.x > max(thisPlane.start.x, thisPlane.end.x)) ||
-			(intersectPoint.y < min(thisPlane.start.y, thisPlane.end.y)) || (intersectPoint.y > max(thisPlane.start.y, thisPlane.end.y))) {
-			//Out of the range of the Visplane.
-			continue;
-		}
-
-		float vPlaneDistanceSQ = dot(playerPosition.xy - intersectPoint.xy, playerPosition.xy - intersectPoint.xy); //Cheaper length() call
-		thisIntersect.distanceSQ = vPlaneDistanceSQ;
-		thisIntersect.position = intersectPoint;
-		thisIntersect.index = idx;
-		thisIntersect.foundType = 2;
-		thisIntersect.UV = vec3(getVisplaneUV(intersectPoint, thisPlane), thisPlane.textureID);
-		pushStack(thisIntersect);
-		foundObject = true;
 	}
 
 
