@@ -101,6 +101,8 @@ inline StageData stageData;
 //Numbers of valid types.
 inline size_t validVisplanes;
 inline size_t validWalls;
+inline size_t numVisibleVisplanes;
+inline size_t numVisibleWalls;
 inline size_t validDisplacements;
 inline size_t validSprites;
 inline size_t validLights;

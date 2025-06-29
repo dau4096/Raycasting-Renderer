@@ -149,34 +149,16 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-bool quickIntersect(vec3 pointA, vec3 pointB, Wall wall) {
-	vec2 rayDelta = pointB.xy - pointA.xy;
-	vec2 wallDelta = wall.end.xy - wall.start.xy;
-
-	float denom = cross2D(rayDelta, wallDelta);
-	if (abs(denom) < 1e-4f) {return false;}
-
-	vec2 rel = wall.start.xy - pointA.xy;
-	float t = cross2D(rel, wallDelta) / denom;
-	float u = cross2D(rel, rayDelta) / denom;
-
-	if ((t < -1e-4f) || (t > 1.0f + 1e-4f) || (u < -1e-4f) || (u > 1.0f + 1e-4f)) {return false;}
-
-	float z = pointA.z + (pointB.z - pointA.z) * t;
-
-	return (min(wall.start.z, wall.end.z) - 1e-4f <= z) && (z <= max(wall.start.z, wall.end.z) + 1e-4f);
-}
-
-vec2 getWallUV(Wall thisWall, dvec3 intersectPoint3D) {
+vec2 getWallUV(Wall thisWall, dvec3 intersectPoint) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 
 	bvec2 useWorldSpace;
-	vec2 textureScale;
+	vec2 invTextureScale;
 	vec2 textureOffset;
 	unpackTextureFormattingBits(
 		thisWall.textureData, useWorldSpace,
-		textureScale, textureOffset
+		invTextureScale, textureOffset
 	);
 
 
@@ -185,65 +167,51 @@ vec2 getWallUV(Wall thisWall, dvec3 intersectPoint3D) {
 	double xUV;
 	if (useWorldSpace.x) {
 		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = fract(intersectPoint3D.y / textureScale.x);
+			xUV = intersectPoint.y * invTextureScale.x;
 		} else {
-			xUV = fract(intersectPoint3D.x / textureScale.x);
+			xUV = intersectPoint.x * invTextureScale.x;
 		}
-		if (xUV < 0.0f) {xUV = 1.0 - abs(xUV);}
+		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
 	} else {
 		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = (intersectPoint3D.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
+			xUV = (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
 		} else {
-			xUV = (intersectPoint3D.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
+			xUV = (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
 		}
-		xUV = fract(xUV / textureScale.x);
+		xUV = xUV * invTextureScale.x;
 	}
 
 
-	//yUV calculation.
-	double yUV;
-	if (useWorldSpace.y) {
-		yUV = fract(intersectPoint3D.z / textureScale.y);
-		if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
-	} else {
+	double a = (intersectPoint.z - thisWall.start.z) / (thisWall.end.z - thisWall.start.z);
+	double fragZ = mix(wallLowZ, wallTopZ, a);
 
-	}
-	
+	double yUVWorld = 1.0f - fragZ * invTextureScale.y;
+	double yUVLocal = 1.0f - (a * invTextureScale.y);
 
-	return vec2(xUV, yUV) + textureOffset.xy;
+	double yUV = mix(yUVLocal, yUVWorld, double(useWorldSpace.y));
+
+	return vec2(xUV, yUV) + textureOffset;
 }
+
 
 
 
 //Visplanes
 vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
 	bvec2 useWorldSpace;
-	vec2 textureScale;
+	vec2 invTextureScale;
 	vec2 textureOffset;
 	unpackTextureFormattingBits(
 		plane.textureData, useWorldSpace,
-		textureScale, textureOffset
+		invTextureScale, textureOffset
 	);
 
-	float xUV;
-	if (useWorldSpace.x) {
-		xUV = fract(position3D.x / textureScale.x);
-		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
-	} else {
-		xUV = (position3D.x - plane.start.x) / (plane.end.x - plane.start.x);
-		xUV = fract(xUV / textureScale.x);
-	}
+	vec2 pos = position3D.xy;
+	vec2 localUV = (pos - plane.start.xy) / (plane.end.xy - plane.start.xy);
+	vec2 worldUV = pos * invTextureScale;
 
-	float yUV;
-	if (useWorldSpace.y) {
-		yUV = fract(position3D.y / textureScale.y);
-		if (yUV < 0.0f) {yUV = 1.0f - abs(yUV);}
-	} else {
-		yUV = (position3D.y - plane.start.y) / (plane.end.y - plane.start.y);
-		yUV = fract(yUV / textureScale.y);
-	}
-
-	return vec2(xUV, yUV) + textureOffset.xy;
+	vec2 UV = mix(localUV * invTextureScale, worldUV, vec2(useWorldSpace));
+	return UV - floor(UV) + textureOffset;
 }
 
 
@@ -405,10 +373,10 @@ void main() {
 		vec3 delta = origin - thisLight.position;
 		float distSQ = dot(delta, delta);
 		float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-		if (attenuation < 0.0f) {continue;}
+		if (attenuation <= EPSILON_ALT) {continue;}
 		vec3 lightDir = normalize(thisLight.position - origin);
 		float normalDot = getNormalDot(normal, lightDir);
-		if (normalDot <= EPSILON) {continue;}
+		if (normalDot <= EPSILON_ALT) {continue;}
 
 		
 		//Shadow Checks

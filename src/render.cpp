@@ -108,6 +108,46 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 
 
 
+void findVisibleObjects(
+		utils::Player* player,
+		std::vector<utils::Visplane>* visplaneData, std::vector<uint>* visibleVisplaneIndices,
+		std::vector<utils::Wall>* wallData, std::vector<uint>* visibleWallIndices
+	) {	
+	glm::vec2 playerFDirection = glm::vec2(sin(player->viewAngle * constants::TO_RAD), cos(player->viewAngle * constants::TO_RAD));
+	glm::vec2 playerPosV2 = glm::vec2(player->position);
+
+
+	//Visplanes
+	for (uint idx=0; idx<visplaneData->size(); idx++) {
+		utils::Visplane thisPlane = visplaneData->at(idx);
+		bool aProj = glm::dot(thisPlane.start - playerPosV2, playerFDirection) < 0.0f;
+		bool bProj = glm::dot(thisPlane.end - playerPosV2, playerFDirection) < 0.0f;
+		bool cProj = glm::dot(glm::vec2(thisPlane.start.x, thisPlane.end.y) - playerPosV2, playerFDirection) < 0.0f;
+		bool dProj = glm::dot(glm::vec2(thisPlane.end.x, thisPlane.start.y) - playerPosV2, playerFDirection) < 0.0f;
+		if (aProj && bProj && cProj && dProj) {continue; /* Completely behind player view */}
+
+		visibleVisplaneIndices->push_back(idx);
+ 	}
+ 	numVisibleVisplanes = visibleVisplaneIndices->size();
+
+
+ 	//Walls
+	for (uint idx=0; idx<wallData->size(); idx++) {
+		utils::Wall thisWall = wallData->at(idx);
+		bool sProj = glm::dot(glm::vec2(thisWall.start - player->position), playerFDirection) < 0.0f;
+		bool eProj = glm::dot(glm::vec2(thisWall.end - player->position), playerFDirection) < 0.0f;
+		if (sProj && eProj) {continue; /* Completely behind player view */}
+
+		visibleWallIndices->push_back(idx);
+ 	}
+ 	numVisibleWalls = visibleWallIndices->size();
+
+}
+
+
+
+
+
 
 void saveScreenshot(GLuint frameTextureID) {
 	GLuint fbo;

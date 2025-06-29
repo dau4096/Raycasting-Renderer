@@ -6,6 +6,8 @@
 #include "utils.h"
 #include <array>
 
+using namespace glm;
+
 
 
 namespace render {
@@ -59,6 +61,27 @@ namespace render {
 
 		for (size_t index=0; index<size; index++) {
 			dataSet.push_back(TGPU(dataSetIn->data() + index, player));
+		}
+
+		if (size > 0 && !dataSet.empty()) {
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	}
+
+	template<typename TGPU, typename TCPU>
+	void updateShaderStorageBufferObject(
+			GLuint SSBO,
+			std::vector<TCPU>* dataSetIn
+		) {
+
+		size_t singleItemSize = sizeof(TGPU);
+		size_t size = dataSetIn->size();
+		std::vector<TGPU> dataSet;
+
+		for (size_t index=0; index<size; index++) {
+			dataSet.push_back(TGPU(*(dataSetIn->data() + index)));
 		}
 
 		if (size > 0 && !dataSet.empty()) {
@@ -157,6 +180,8 @@ namespace render {
 		//Other
 		bindUniformValue(shaderProgram, "numVisplanes", validVisplanes);
 		bindUniformValue(shaderProgram, "numWalls", validWalls);
+		bindUniformValue(shaderProgram, "numVisibleVisplanes", numVisibleVisplanes);
+		bindUniformValue(shaderProgram, "numVisibleWalls", numVisibleWalls);
 		bindUniformValue(shaderProgram, "numDisplacements", validDisplacements);
 		bindUniformValue(shaderProgram, "numSprites", validSprites);
 		bindUniformValue(shaderProgram, "numLights", validLights);
@@ -173,6 +198,11 @@ namespace render {
 	}
 
 
+	void findVisibleObjects(
+		utils::Player* player,
+		std::vector<utils::Visplane>* visplaneData, std::vector<uint>* visibleVisplaneIndices,
+		std::vector<utils::Wall>* wallData, std::vector<uint>* visibleWallIndices
+	);
 
 	void saveScreenshot(GLuint frameTextureID);
 

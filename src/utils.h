@@ -521,10 +521,10 @@ namespace utils {
 
 		WallGPU()
 			: start(), end(), direction(),
-			  textureID(-1) {}
+			  textureID(), textureData() {}
 
 		WallGPU(Wall *wall, Player* player)
-			: start(wall->start), end(wall->end), direction(glm::normalize(wall->end - wall->start)),
+			: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
 			  textureData(wall->textureData) {
 				if ((wall->type == W_SWITCH) && (wall->internal > 0.0f)) {
 					textureID = wall->textures.second;

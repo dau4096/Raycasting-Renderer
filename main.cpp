@@ -61,7 +61,7 @@ int lightFlickerRNG;
 GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, shadowMapID;
 GLuint envShader, spriteShader, lightingShader, uiShader, displayShader; //Shaders
 GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric; //Textures
-GLuint visplaneSSBO, wallSSBO, spriteSSBO, lightSSBO, displacementSSBO; //Storage Buffers
+GLuint allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO, displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO; //Storage Buffers
 GLuint VAO, uiVAO, uiVBO, uiEBO;
 glm::mat4 pvmMatrix;
 //Data must be synced between the graphics and physics threads.
@@ -179,10 +179,10 @@ void prepareOpenGL() {
 	skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 
-	visplaneSSBO = render::createShaderStorageBufferObject(
+	allVisplanesSSBO = render::createShaderStorageBufferObject(
 		0, sizeof(utils::VisplaneGPU) * validVisplanes
 	);
-	wallSSBO = render::createShaderStorageBufferObject(
+	allWallsSSBO = render::createShaderStorageBufferObject(
 		1, sizeof(utils::WallGPU) * validWalls
 	);
 	spriteSSBO = render::createShaderStorageBufferObject(
@@ -193,6 +193,12 @@ void prepareOpenGL() {
 	);
 	displacementSSBO = render::createShaderStorageBufferObject(
 		4, sizeof(utils::DisplacementGPU) * validDisplacements
+	);
+	visibleVisplaneIndicesSSBO = render::createShaderStorageBufferObject(
+		5, sizeof(uint) * validVisplanes
+	);
+	visibleWallIndicesSSBO = render::createShaderStorageBufferObject(
+		6, sizeof(uint) * validWalls
 	);
 
 
@@ -437,6 +443,7 @@ void renderFrame(double blendingAlpha) {
 	player.cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
+
 	//Environment Shader.
 	glUseProgram(envShader);
 	glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -532,13 +539,20 @@ std::vector<utils::LogicGate> logicGates;
 std::array<bool, constants::MAX_FLAGS> flags;
 
 
+std::vector<uint> visibleVisplaneIndices;
+std::vector<uint> visibleWallIndices;
 void updateSSBOs(utils::DataSet* localGraphicsData) {
+	visibleVisplaneIndices.clear();
+	visibleWallIndices.clear();
+	render::findVisibleObjects(&player, &(localGraphicsData->visplaneData), &visibleVisplaneIndices, &(localGraphicsData->wallData), &visibleWallIndices);
+
+
 	//Update SSBOs.
 	render::updateShaderStorageBufferObject<utils::VisplaneGPU>(
-		visplaneSSBO, &player, &(localGraphicsData->visplaneData)
+		allVisplanesSSBO, &player, &(localGraphicsData->visplaneData)
 	);
 	render::updateShaderStorageBufferObject<utils::WallGPU>(
-		wallSSBO, &player, &(localGraphicsData->wallData)
+		allWallsSSBO, &player, &(localGraphicsData->wallData)
 	);
 	render::updateShaderStorageBufferObject<utils::DisplacementGPU>(
 		displacementSSBO, &player, &(localGraphicsData->displacementData)
@@ -548,6 +562,12 @@ void updateSSBOs(utils::DataSet* localGraphicsData) {
 	);
 	render::updateShaderStorageBufferObject<utils::LightGPU>(
 		lightSSBO, &player, &(localGraphicsData->lightData)
+	);
+	render::updateShaderStorageBufferObject<uint>(
+		visibleVisplaneIndicesSSBO, &visibleVisplaneIndices
+	);
+	render::updateShaderStorageBufferObject<uint>(
+		visibleWallIndicesSSBO, &visibleWallIndices
 	);
 	utils::GLErrorcheck("Updating SSBOs", true);
 }

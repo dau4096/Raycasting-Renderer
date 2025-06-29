@@ -24,9 +24,9 @@ uniform ivec2 renderResolution;
 uniform int debugMode;
 
 //Other
-uniform int numVisplanes;
-uniform int numWalls;
 uniform int numDisplacements;
+uniform int numVisibleVisplanes;
+uniform int numVisibleWalls;
 uniform float shadowMapQuality;
 uniform bool allowTransparency;
 
@@ -68,13 +68,17 @@ layout(std430, binding=4) buffer displacementSSBO {
 	Displacement displacements[];
 };
 
+//Buffers containing indices of all valid objects (referencing their actual datasets above.)
+layout(std430, binding=5) buffer visibleVisplaneIndicesSSBO {uint visibleVisplaneIndices[];};
+layout(std430, binding=6) buffer visibleWallIndicesSSBO {uint visibleWallIndices[];};
+
 
 
 struct IntersectionData {
 	vec3 position;		//3D intersect location
 	vec3 UV;			//UV & texture ID
 	double distanceSQ;	//Distance from camera, squared
-	int index;			//The index of the found object
+	uint index;			//The index of the found object
 	int foundType;		//The type of the found object
 };
 IntersectionData stack[3];
@@ -277,26 +281,26 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, double wallD
 		xUV = xUV * invTextureScale.x;
 	}
 
-    double invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
-    double projectedYLow = (originPos.z - wallLowZ) * invDistance;
-    double projectedYTop = (originPos.z - wallTopZ) * invDistance;
+	double invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
+	double projectedYLow = (originPos.z - wallLowZ) * invDistance;
+	double projectedYTop = (originPos.z - wallTopZ) * invDistance;
 
-    double screenYLow = renderResolution.y * (0.5f - projectedYLow);
-    double screenYTop = renderResolution.y * (0.5f - projectedYTop);
+	double screenYLow = renderResolution.y * (0.5f - projectedYLow);
+	double screenYTop = renderResolution.y * (0.5f - projectedYTop);
 
-    if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {
-    	return INVALIDv2;
-    }
+	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {
+		return INVALIDv2;
+	}
 
-    double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow);
-    fragZ = mix(wallLowZ, wallTopZ, a);
+	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow);
+	fragZ = mix(wallLowZ, wallTopZ, a);
 
-    double yUVWorld = 1.0f - fragZ * invTextureScale.y;
-    double yUVLocal = 1.0f - (a * invTextureScale.y);
+	double yUVWorld = 1.0f - fragZ * invTextureScale.y;
+	double yUVLocal = 1.0f - (a * invTextureScale.y);
 
-    double yUV = mix(yUVLocal, yUVWorld, double(useWorldSpace.y));
+	double yUV = mix(yUVLocal, yUVWorld, double(useWorldSpace.y));
 
-    return vec2(xUV, yUV) + textureOffset;
+	return vec2(xUV, yUV) + textureOffset;
 }
 
 
@@ -442,8 +446,11 @@ void main() {
 	bool foundObject = false;
 
 	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<numWalls; idx++) {
-		Wall thisWall = walls[idx];
+	for (int idx=0; idx<numVisibleWalls; idx++) {
+		//Access walls via a buffer containing indices of visible walls (could be onscreen.)
+		uint actualIDX = visibleWallIndices[idx];
+		Wall thisWall = walls[actualIDX];
+
 		vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
 		float projStart = dot(rayStart-thisWall.start.xy, wallNormal);
 		float projEnd = dot(rayEnd-thisWall.start.xy, wallNormal);
@@ -470,7 +477,7 @@ void main() {
 		if (wallUV != INVALIDv2) {
 			//Set closest.
 			thisIntersect.distanceSQ = wallDistanceSQ;
-			thisIntersect.index = idx;
+			thisIntersect.index = actualIDX;
 			thisIntersect.position = vec3(intersectPoint.xy, fragZ);
 			thisIntersect.UV = vec3(wallUV.xy, thisWall.textureID);
 			thisIntersect.foundType = 1;
@@ -484,8 +491,10 @@ void main() {
 	if (abs(antiProjection) > EPSILON) {/* Avoids DivZero error */
 		float invAntiProjection = zoomEffect / antiProjection;
 		//Iterate through all visplanes. (3D)
-		for (int idx=0; idx<numVisplanes; idx++) {
-			Visplane thisPlane = visplanes[idx];
+		for (int idx=0; idx<numVisibleVisplanes; idx++) {
+			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
+			uint actualIDX = visibleVisplaneIndices[idx];
+			Visplane thisPlane = visplanes[actualIDX];
 
 			if (
 				(lowerHalf && thisPlane.height > playerPosition.z) ||
@@ -496,7 +505,7 @@ void main() {
 			}
 
 			float t = (playerPosition.z - thisPlane.height) * invAntiProjection;
-			if (t < 0.0f) {continue; /* Behind origin or out of range. */}
+			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
 			vec3 intersectPoint = vec3(playerPosition.xy + rayDirection.xy * t, thisPlane.height);
 
 			vec2 planeMin = min(thisPlane.start, thisPlane.end);
@@ -511,7 +520,7 @@ void main() {
 			float dy = playerPosition.y - intersectPoint.y;
 			thisIntersect.distanceSQ = dx * dx + dy * dy;
 			thisIntersect.position = intersectPoint;
-			thisIntersect.index = idx;
+			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
 			thisIntersect.UV = vec3(getVisplaneUV(intersectPoint, thisPlane), thisPlane.textureID);
 			pushStack(thisIntersect);
@@ -609,7 +618,7 @@ void main() {
 			albedo = fetchUV(validIntersect.UV, minDistance, normal, validIntersect.position);
 			if ((albedo.a < 0.5f) && (allowTransparency)) {continue;}
 			if (shouldDrawToPositionMap) {
-				int idx = (validIntersect.index << 2) | typeFlag;
+				uint idx = (validIntersect.index << 2) | typeFlag;
 				ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 				imageStore(positionMap, thisFramePosition, vec4(validIntersect.position, float(idx)));
 				imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));
