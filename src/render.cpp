@@ -45,17 +45,14 @@ GLuint compileShader(GLenum shaderType, string filePath) {
 	std::string source = utils::readFile(filePath);
 	const char* src = source.c_str();
 
-	// Create a shader object
 	GLuint shader = glCreateShader(shaderType);
 	if (shader == 0) {
 		raise("Error: Failed to create shader.");
 		return 0;
 	}
 
-	// Attach the shader source code to the shader object
 	glShaderSource(shader, 1, &src, nullptr);
 
-	// Compile the shader
 	glCompileShader(shader);
 	
 
@@ -104,6 +101,32 @@ GLuint createShaderProgram(std::string name, bool hasVertexSource=true) {
 
 	return shaderProgram;
 }
+
+
+GLuint createComputeShader(std::string name) {
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src\\shaders\\" + name + ".comp");
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, computeShader);
+	glLinkProgram(shaderProgram);
+
+	GLint success;
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
+		char infolog[512];
+		glGetProgramInfoLog(shaderProgram, 512, nullptr, infolog);
+		raise("Error: Compute shader program linking failed:\n" + std::string(infolog));
+	}
+
+	glDeleteShader(computeShader);
+
+	return shaderProgram;
+}
+
+
 
 
 

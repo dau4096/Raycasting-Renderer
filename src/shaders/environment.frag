@@ -26,7 +26,8 @@ uniform int debugMode;
 //Other
 uniform int numDisplacements;
 uniform int numVisibleVisplanes;
-uniform int numVisibleWalls;
+uniform int numWalls;			//Total
+uniform int numVisibleWalls; 	//Onscreen
 uniform float shadowMapQuality;
 uniform bool allowTransparency;
 
@@ -71,6 +72,20 @@ layout(std430, binding=4) buffer displacementSSBO {
 //Buffers containing indices of all valid objects (referencing their actual datasets above.)
 layout(std430, binding=5) buffer visibleVisplaneIndicesSSBO {uint visibleVisplaneIndices[];};
 layout(std430, binding=6) buffer visibleWallIndicesSSBO {uint visibleWallIndices[];};
+
+
+//All 2D intersects found from raycast.comp previously.
+struct WallIntersect {
+	vec2 position2D;
+	vec2 normal2D;
+	uint projections;
+	uint wallIndexAndXUV;
+	float distanceSQ;
+	float _padding;
+};
+layout(std430, binding=7) buffer wallIntersectSSBO {
+	WallIntersect wallIntersects[];
+};
 
 
 
@@ -140,7 +155,8 @@ vec2 rayDirectionCentre;
 vec4 fragColour;
 float zoomEffect;
 float halfFOV;
-double t, fragZ;
+double t;
+float fragZ;
 const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
@@ -249,7 +265,7 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, double wallDistanceSQ) {
+float getWallYUV(Wall thisWall, uint projections) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 
@@ -262,45 +278,22 @@ vec2 getWallUV(Wall thisWall, dvec2 intersectPoint, vec3 originPos, double wallD
 	);
 
 
-
-	//xUV calculation.
-	double xUV;
-	if (useWorldSpace.x) {
-		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = intersectPoint.y * invTextureScale.x;
-		} else {
-			xUV = intersectPoint.x * invTextureScale.x;
-		}
-		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
-	} else {
-		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
-		} else {
-			xUV = (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
-		}
-		xUV = xUV * invTextureScale.x;
-	}
-
-	double invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
-	double projectedYLow = (originPos.z - wallLowZ) * invDistance;
-	double projectedYTop = (originPos.z - wallTopZ) * invDistance;
-
-	double screenYLow = renderResolution.y * (0.5f - projectedYLow);
-	double screenYTop = renderResolution.y * (0.5f - projectedYTop);
+	float screenYLow = float((projections >> 16) & 0xFFFF) - 12288.0f; //12,288 == 0x3000
+	float screenYTop = float(projections & 0xFFFF) - 12288.0f;
 
 	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {
-		return INVALIDv2;
+		return INF;
 	}
 
-	double a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow);
+	float a = (fragPosition.y - screenYLow) / (screenYTop - screenYLow);
 	fragZ = mix(wallLowZ, wallTopZ, a);
 
-	double yUVWorld = 1.0f - fragZ * invTextureScale.y;
-	double yUVLocal = 1.0f - (a * invTextureScale.y);
+	float yUVWorld = 1.0f - fragZ * invTextureScale.y;
+	float yUVLocal = 1.0f - (a * invTextureScale.y);
 
-	double yUV = mix(yUVLocal, yUVWorld, double(useWorldSpace.y));
+	float yUV = mix(yUVLocal, yUVWorld, float(useWorldSpace.y));
 
-	return vec2(xUV, yUV) + textureOffset;
+	return fract(yUV + textureOffset.y);
 }
 
 
@@ -449,41 +442,28 @@ void main() {
 	for (int idx=0; idx<numVisibleWalls; idx++) {
 		//Access walls via a buffer containing indices of visible walls (could be onscreen.)
 		uint actualIDX = visibleWallIndices[idx];
-		Wall thisWall = walls[actualIDX];
+		uint SSBOIndex = uint(framePosition.x * numWalls) + actualIDX;
+		WallIntersect intersect = wallIntersects[SSBOIndex];
+		float wallDistanceSQ = intersect.distanceSQ;
+		if (wallDistanceSQ <= MIN_WALL_DIST * MIN_WALL_DIST) {continue; /* No intersect found, i.e. distance is impossible. */}
 
-		vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
-		float projStart = dot(rayStart-thisWall.start.xy, wallNormal);
-		float projEnd = dot(rayEnd-thisWall.start.xy, wallNormal);
-		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
+		uint wallIndex = (intersect.wallIndexAndXUV >> 8);
+		float xUV = (intersect.wallIndexAndXUV & 0xFF) / 255.0f;
+		Wall thisWall = walls[wallIndex];
+		
 
-		double t = (projStart) / (projEnd - projStart);
-		dvec2 intersectPoint = playerPosition.xy - rayDelta2D * t;
-		vec2 minWall = min(thisWall.start.xy, thisWall.end.xy);
-		vec2 maxWall = max(thisWall.start.xy, thisWall.end.xy);
-		if (
-			intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
-			intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y
-		) {
-			//Outside of valid wall segment.
-			continue;
-		}
+		float yUV = getWallYUV(thisWall, intersect.projections); //Check if inside wall (Valid UV)
+		if (yUV == INF) {continue; /* Above/Below wall */}
 
-		dvec3 intersectPointv3 = dvec3(intersectPoint.xy, playerPosition.z);
-		double wallDistanceSQ = dot(playerPosition - intersectPointv3, playerPosition - intersectPointv3); //Cheaper length() call
+		thisIntersect.distanceSQ = wallDistanceSQ;
+		thisIntersect.index = actualIDX;
+		thisIntersect.position = vec3(intersect.position2D, fragZ);
+		thisIntersect.UV = vec3(xUV, yUV, thisWall.textureID);
+		thisIntersect.foundType = 1;
 
-		vec2 wallUV = getWallUV(thisWall, intersectPoint, playerPosition, wallDistanceSQ); //Check if inside wall (Valid UV)
-
-
-		if (wallUV != INVALIDv2) {
-			//Set closest.
-			thisIntersect.distanceSQ = wallDistanceSQ;
-			thisIntersect.index = actualIDX;
-			thisIntersect.position = vec3(intersectPoint.xy, fragZ);
-			thisIntersect.UV = vec3(wallUV.xy, thisWall.textureID);
-			thisIntersect.foundType = 1;
-			pushStack(thisIntersect);
-			foundObject = true;
-		}
+		//Set closest.
+		pushStack(thisIntersect);
+		foundObject = true;
 		
 	}
 

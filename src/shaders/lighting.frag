@@ -99,7 +99,7 @@ const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
 void unpackTextureFormattingBits(
 		uint inputBits, out bvec2 isWorldspace,
-		out vec2 textureScale, out vec2 textureOffset
+		out vec2 invTextureScale, out vec2 textureOffset
 	) {
 	/*
 	- Full 32bits; (uint)
@@ -123,10 +123,10 @@ void unpackTextureFormattingBits(
 		bool(inputBits & 0x40000000)
 	);
 
-	textureScale = vec2(
+	invTextureScale = 16.0f / vec2(
 		float((inputBits >> 22) & 0xFF),
 		float((inputBits >> 14) & 0xFF)
-	) / 16.0f;
+	);
 
 	textureOffset = vec2(
 		float((inputBits >> 7) & 0x7F),

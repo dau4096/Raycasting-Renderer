@@ -59,9 +59,9 @@ bool headLampEnabled = false;
 bool interactKey = false, prevInteract = false, shouldTakeScreenshot = false;
 int lightFlickerRNG;
 GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, shadowMapID;
-GLuint envShader, spriteShader, lightingShader, uiShader, displayShader; //Shaders
+GLuint raycastShader, envShader, spriteShader, lightingShader, uiShader, displayShader; //Shaders
 GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric; //Textures
-GLuint allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO, displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO; //Storage Buffers
+GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO, displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO; //Storage Buffers
 GLuint VAO, uiVAO, uiVBO, uiEBO;
 glm::mat4 pvmMatrix;
 //Data must be synced between the graphics and physics threads.
@@ -97,11 +97,16 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	);
 	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 
+
+	wallIntersectSSBO = render::createShaderStorageBufferObject(
+		7, sizeof(utils::WallIntersect) * currentRenderResolution.x * validWalls
+	);
+
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	positionMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	normalMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y, GL_RGBA32F, GL_LINEAR);
-	verticalFOV = 2 * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
 
 
@@ -200,7 +205,13 @@ void prepareOpenGL() {
 	visibleWallIndicesSSBO = render::createShaderStorageBufferObject(
 		6, sizeof(uint) * validWalls
 	);
+	wallIntersectSSBO = render::createShaderStorageBufferObject(
+		7, sizeof(utils::WallIntersect) * currentRenderResolution.x * validWalls
+	);
 
+
+	//Raycast compute shader
+	raycastShader = render::createComputeShader("raycast");
 
 	//Environment shader
 	envShader = render::createShaderProgram("environment", false);
@@ -220,26 +231,26 @@ void prepareOpenGL() {
 
 
 	glGenVertexArrays(1, &uiVAO);
-    glBindVertexArray(uiVAO);
+	glBindVertexArray(uiVAO);
 
-    glGenBuffers(1, &uiVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, uiVBO);
-    glBufferData(GL_ARRAY_BUFFER, constants::MAX_VERTEX_BYTES, nullptr, GL_DYNAMIC_DRAW); // Reserve space
-    currentVertexSize = constants::MAX_VERTEX_BYTES;
+	glGenBuffers(1, &uiVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO);
+	glBufferData(GL_ARRAY_BUFFER, constants::MAX_VERTEX_BYTES, nullptr, GL_DYNAMIC_DRAW); // Reserve space
+	currentVertexSize = constants::MAX_VERTEX_BYTES;
 
-    glGenBuffers(1, &uiEBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, uiEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, constants::MAX_INDEX_BYTES, nullptr, GL_DYNAMIC_DRAW); // Reserve space
-    currentIndexSize = constants::MAX_INDEX_BYTES;
+	glGenBuffers(1, &uiEBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, uiEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, constants::MAX_INDEX_BYTES, nullptr, GL_DYNAMIC_DRAW); // Reserve space
+	currentIndexSize = constants::MAX_INDEX_BYTES;
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(5 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(5 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
-    glBindVertexArray(0);
+	glBindVertexArray(0);
 
 
 
@@ -263,14 +274,15 @@ void prepareOpenGL() {
 
 
 float avgframerate, avgtickrate;
+bool shouldShowFPS, shouldShowTPS;
 //UI
 const std::vector<utils::UIElement> UIElements = {
 	UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),	//Health image
 	UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
 	UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 	//Energy image
 	UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
-	UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate), 				//FPS number
-	UIElement(glm::vec2(0, 476), glm::vec2(32, 32), &avgtickrate)	 				//TPS number
+	UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
+	UIElement(glm::vec2(0, 476), glm::vec2(32, 32), &avgtickrate, &shouldShowTPS)	//TPS number
 };
 GLuint currentIdx;
 
@@ -325,9 +337,13 @@ void drawHUD() {
 	std::vector<float> verticesData;
 	std::vector<GLuint> indicesData;
 
+	shouldShowFPS = utils::configToBool("META_SHOW_FRAMERATE_UI");
+	shouldShowTPS = utils::configToBool("META_SHOW_TICKRATE_UI");
 
 
 	for (const utils::UIElement element : UIElements) {
+		if ((element.showPtr) && !*(element.showPtr)) {continue;}
+
 		verticesData.clear();
 		indicesData.clear();
 
@@ -442,6 +458,14 @@ void renderFrame(double blendingAlpha) {
 	glm::vec3 interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
 	player.cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
+
+
+	//Raycasting compute shader.
+	const glm::uvec3 LOCAL_SIZE = glm::uvec3(32, 1, 1);
+	glUseProgram(raycastShader);
+	render::bindCommonUniforms(raycastShader, &player);
+	glDispatchCompute((currentRenderResolution.x + LOCAL_SIZE.x - 1) / LOCAL_SIZE.x, (numVisibleWalls + LOCAL_SIZE.y - 1) / LOCAL_SIZE.y, 1);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 
 	//Environment Shader.

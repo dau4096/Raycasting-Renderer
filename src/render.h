@@ -13,40 +13,19 @@ using namespace glm;
 namespace render {
 	GLFWwindow* initializeWindow(int width, int height, const char* title);
 	GLuint createShaderProgram(std::string name, bool hasVertexSource=true);
+	GLuint createComputeShader(std::string name);
 
 
 	
-	GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0) {
+	GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint glType=GL_DYNAMIC_DRAW) {
 		GLuint SSBO;
 		glGenBuffers(1, &SSBO);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, GL_DYNAMIC_DRAW);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, glType);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, SSBO);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 		return SSBO;
-	}
-
-	template<typename TGPU, typename TCPU>
-	void updateShaderStorageBufferObject(
-			GLuint SSBO, utils::Player* player,
-			std::vector<TCPU>* dataSetIn,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* symbolNames //Only used for TOs
-		) {
-
-		size_t singleItemSize = sizeof(TGPU);
-		size_t size = dataSetIn->size();
-		std::vector<TGPU> dataSet;
-
-		for (size_t index=0; index<size; index++) {
-			dataSet.push_back(TGPU(dataSetIn->data() + index, player, symbolNames));
-		}
-
-		if (size > 0 && !dataSet.empty()) {
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
-			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-		}
 	}
 
 	template<typename TGPU, typename TCPU>
@@ -87,6 +66,20 @@ namespace render {
 		if (size > 0 && !dataSet.empty()) {
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
 			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	}
+
+	template<typename T>
+	void updateShaderStorageBufferObject(
+		GLuint SSBO,
+		T* data,
+		size_t count
+	) {
+		size_t size = sizeof(T) * count;
+		if (count > 0) {
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data);
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 		}
 	}

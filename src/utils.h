@@ -535,6 +535,21 @@ namespace utils {
 	};
 
 
+	struct WallIntersect {
+		glm::vec2 position2D;
+		glm::vec2 normal2D;
+		glm::uint projections;
+		glm::uint wallIndexAndXUV;
+		float distanceSQ;
+		float _padding;
+
+		WallIntersect()
+			: position2D(), normal2D(),
+			  projections(),
+			  wallIndexAndXUV(), distanceSQ() {}
+	};
+
+
 	struct Displacement {
 		std::array<glm::vec3, 3> vertices;
 		std::array<glm::vec2, 3> UV;
@@ -728,17 +743,18 @@ namespace utils {
 		float* fPtr;
 		glm::vec2 position;
 		glm::vec2 scale;
+		bool* showPtr;
 
 		UIElement() : textureID(), iPtr(nullptr), fPtr(nullptr), position(), scale() {}
 
-		UIElement(glm::vec2 pos, glm::vec2 scale, GLuint textureID)
-			: position(pos), scale(scale), textureID(textureID), iPtr(nullptr), fPtr(nullptr) {}
+		UIElement(glm::vec2 pos, glm::vec2 scale, GLuint textureID, bool* showPtr=nullptr)
+			: position(pos), scale(scale), textureID(textureID), iPtr(nullptr), fPtr(nullptr), showPtr(showPtr) {}
 
-		UIElement(glm::vec2 pos, glm::vec2 scale, int* ptr)
-			: position(pos), scale(scale), textureID(0), iPtr(ptr), fPtr(nullptr) {}
+		UIElement(glm::vec2 pos, glm::vec2 scale, int* ptr, bool* showPtr=nullptr)
+			: position(pos), scale(scale), textureID(0), iPtr(ptr), fPtr(nullptr), showPtr(showPtr) {}
 
-		UIElement(glm::vec2 pos, glm::vec2 scale, float* ptr)
-			: position(pos), scale(scale), textureID(0), fPtr(ptr), iPtr(nullptr) {}
+		UIElement(glm::vec2 pos, glm::vec2 scale, float* ptr, bool* showPtr=nullptr)
+			: position(pos), scale(scale), textureID(0), fPtr(ptr), iPtr(nullptr), showPtr(showPtr) {}
 	};
 }
 

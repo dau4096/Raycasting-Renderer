@@ -230,7 +230,7 @@ namespace constants {
 	constexpr size_t MAX_FLAGS = 256;
 	constexpr size_t MAX_VERTEX_BYTES = 16384;
 	constexpr size_t MAX_INDEX_BYTES = 16384;
-	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 1;
+	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 64;
 
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
