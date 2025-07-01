@@ -1,5 +1,5 @@
 @ECHO off
-CD C:\Users\User\Documents\GitHub\Raycasting-Renderer\src
+CD src
 
 
 REM Delete all .o files and force recompile.
@@ -20,7 +20,7 @@ IF EXIST "loader.o" (
 )
 
 
-CD C:\Users\User\Documents\GitHub\Raycasting-Renderer
+CD ..
 IF EXIST "main.o" (
     DEL /Q "main.o"
 )
