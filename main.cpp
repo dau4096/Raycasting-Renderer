@@ -428,7 +428,20 @@ void drawHUD() {
 	glBindVertexArray(0);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-	utils::GLErrorcheck("Interface", true);
+
+	/*
+	//Draw crosshair. (Immediate mode)
+	glm::vec2 halfUIRes = glm::vec2(display::UI_RESOLUTION) / 2.0f;
+	glBegin(GL_LINES);
+	glLineWidth(1.0f);
+	glVertex2f(halfUIRes.x, halfUIRes.y + 4.0f);
+	glVertex2f(halfUIRes.x, halfUIRes.y - 4.0f);
+	glVertex2f(halfUIRes.x + 4.0f, halfUIRes.y);
+	glVertex2f(halfUIRes.x - 4.0f, halfUIRes.y);
+	glEnd();
+	*/
+
+	utils::GLErrorcheck("Interface 3D", true);
 
 }
 
