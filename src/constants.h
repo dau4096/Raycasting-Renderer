@@ -201,11 +201,11 @@ namespace constants {
 
 
 	//Mathematical Constants
-	constexpr float PI = 3.14159265358979f;
-	constexpr float EXP = 2.71828182845905f;
+	constexpr float PI = 3.141592f;
+	constexpr float EXP = 2.718281f;
 
-	constexpr float TO_RAD = 0.01745329251994f;
-	constexpr float TO_DEG = 57.2957795130824f;
+	constexpr float TO_RAD = 0.017453f;
+	constexpr float TO_DEG = 57.29577f;
 
 
 
