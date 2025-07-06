@@ -125,3 +125,7 @@ inline float rayAngle;
 inline float verticalFOV;
 inline size_t frame;
 inline size_t tick;
+
+
+//Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
+inline std::deque<std::pair<float, float>> internalsData;

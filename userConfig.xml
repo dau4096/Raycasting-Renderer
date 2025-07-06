@@ -54,7 +54,7 @@
 	<option function="META_SHOW_DT_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
 	<option function="META_SHOW_DATA" value="FALSE" />
-	<option function="META_STAGE_NAME" value="stressnice" />
+	<option function="META_STAGE_NAME" value="dev-quake" />
 	<option function="META_DYNAMIC_UPD" value="FALSE" />
 	<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" value="FALSE" />
 

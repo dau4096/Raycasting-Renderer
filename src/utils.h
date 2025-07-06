@@ -397,34 +397,46 @@ namespace utils {
 	}
 
 
+
 	struct Visplane {
-		glm::vec2 start;
-		glm::vec2 end;
-		float height;
-		GLuint textureID;
+		glm::vec2 start, originalStart;
+		glm::vec2 end, originalEnd;
+		float height, originalHeight;
+		GLint textureID;
 		GLuint textureData;
 		VisplaneType type;
 		bool* IOPtr;
 		float data;
-		float internal;
+		std::pair<float, float>* internal;
 
 		Visplane()
-			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f), textureID(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), internal(0.0f) {}
+			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f),
+			  originalStart(0.0f, 0.0f), originalEnd(0.0f, 0.0f), originalHeight(0.0f),
+			  textureID(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
+				internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
+				internal = &(internalsData.at(internalsData.size()-1));
+			}
 
 		Visplane(
-				glm::vec2 s, glm::vec2 e, float heightZ, GLuint textureID,
+				glm::vec2 s, glm::vec2 e, float heightZ, GLint textureID,
 				VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 				bool isWorldSpaceX=true, bool isWorldSpaceY=true,
 				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 			) : start(glm::min(s, e)), end(glm::max(s, e)), height(heightZ), 
+				originalStart(glm::min(s, e)), originalEnd(glm::max(s, e)), originalHeight(heightZ), 
 				textureID(textureID),
-				type(type),
-				IOPtr(IOPtr), data(data),
-				internal(0.0f) {
+				type(type),	IOPtr(IOPtr), data(data) {
 					textureData = combineTextureData(
 						isWorldSpaceX, isWorldSpaceY,
 						textureScale, textureOffset
 					);
+
+					if ((type != V_NORMAL) && (type != V_INVALID)) {
+						internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
+						internal = &(internalsData.at(internalsData.size()-1));
+					} else {
+						internal = nullptr;
+					}
 				}
 	};
 
@@ -432,7 +444,7 @@ namespace utils {
 		glm::vec2 start;
 		glm::vec2 end;
 		float height;
-		int textureID;
+		GLint textureID;
 		GLuint textureData;
 		float _padding;
 
@@ -447,37 +459,42 @@ namespace utils {
 
 
 	struct Wall {
-		glm::vec3 start;
-		glm::vec3 end;
-		std::pair<GLuint, GLuint> textures;
+		glm::vec3 start, originalStart;
+		glm::vec3 end, originalEnd;
+		std::pair<GLint, GLint> textures;
 		GLuint textureData;
 		WallType type;
 		bool* IOPtr;
 		float data;
-		float internal;
+		std::pair<float, float>* internal;
 
 		Wall()
-			: start(0.0f, 0.0f, 0.0f),
-			  end(0.0f, 0.0f, 0.0f),
+			: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
+			  end(0.0f, 0.0f, 0.0f), originalEnd(0.0f, 0.0f, 0.0f),
 			  textures(),
 			  type(W_INVALID),
-			  IOPtr(nullptr), data(0.0f),
-			  internal(0.0f) {}
+			  IOPtr(nullptr), data(0.0f) {
+				if ((type != W_NORMAL) && (type != W_INVALID)) {
+					internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
+					internal = &(internalsData.at(internalsData.size()-1));
+				} else {
+					internal = nullptr;
+				}
+			  }
 
 		Wall(
 				glm::vec2 start, glm::vec2 end, float lowZ, float topZ,
-				GLuint textureID0,
+				GLint textureID0,
 				WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
-				GLuint textureID1=-1,
+				GLint textureID1=-1,
 				bool isWorldSpaceX=true, bool isWorldSpaceY=true,
 				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
-			) : start(glm::vec3(start.x, start.y, lowZ)),
-				end(glm::vec3(end.x, end.y, topZ)), 
+			) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
+				end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
 				type(type), 
-				IOPtr(IOPtr), data(data), 
-				internal(0.0f) {
+				IOPtr(IOPtr), data(data) {
 					textures.first = textureID0;
-			  		if (textureID1 == -1) {
+			  		if (textureID1 < 0) {
 			  			textures.second = textureID0;
 			  		} else {
 			  			textures.second = textureID1;
@@ -487,19 +504,26 @@ namespace utils {
 			  			isWorldSpaceX, isWorldSpaceY,
 			  			textureScale, textureOffset
 			  		);
+
+					if ((type != W_NORMAL) && (type != W_INVALID)) {
+						internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
+						internal = &(internalsData.at(internalsData.size()-1));
+					} else {
+						internal = nullptr;
+					}
 				}
 
 		Wall(
 				glm::vec3 start, glm::vec3 end,
-				GLuint textureID0, WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f, GLuint textureID1=-1,
+				GLint textureID0, WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f, GLint textureID1=-1,
 				bool isWorldSpaceX=true, bool isWorldSpaceY=true,
 				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
-			) : start(start), end(end),
+			) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
+				originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 				type(type), 
-				IOPtr(IOPtr), data(data), 
-				internal(0.0f) {
+				IOPtr(IOPtr), data(data) {
 			  		textures.first = textureID0;
-				  	if (textureID1 == -1) {
+				  	if (textureID1 < 0) {
 						textures.second = textureID0;
 					} else {
 						textures.second = textureID1;
@@ -509,6 +533,13 @@ namespace utils {
 						isWorldSpaceX, isWorldSpaceY,
 						textureScale, textureOffset
 					);
+
+					if ((type != W_NORMAL) && (type != W_INVALID)) {
+						internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
+						internal = &(internalsData.at(internalsData.size()-1));
+					} else {
+						internal = nullptr;
+					}
 				}
 	};
 
@@ -516,7 +547,7 @@ namespace utils {
 		alignas(16) glm::vec3 start;
 		alignas(16) glm::vec3 end;
 		alignas(8) glm::vec2 direction;
-		alignas(4) int textureID;
+		alignas(4) GLint textureID;
 		alignas(4) GLuint textureData;
 
 		WallGPU()
@@ -526,7 +557,7 @@ namespace utils {
 		WallGPU(Wall *wall, Player* player)
 			: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
 			  textureData(wall->textureData) {
-				if ((wall->type == W_SWITCH) && (wall->internal > 0.0f)) {
+				if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
 					textureID = wall->textures.second;
 				} else {
 					textureID = wall->textures.first;
@@ -554,7 +585,7 @@ namespace utils {
 		std::array<glm::vec3, 3> vertices;
 		std::array<glm::vec2, 3> UV;
 		glm::vec3 normal;
-		int textureID;
+		GLint textureID;
 		DisplacementType type;
 		bool* IOPtr;
 		float data;
@@ -612,7 +643,7 @@ namespace utils {
 	struct Sprite {
 		glm::vec3 position;
 		float width, height;
-		GLuint textureID;
+		GLint textureID;
 		bool collision;
 		SpriteType type;
 
@@ -626,7 +657,7 @@ namespace utils {
 		alignas(16) glm::vec3 position;
 		alignas(4) float width;
 		alignas(4) float height;
-		alignas(4) int textureID;
+		alignas(4) GLint textureID;
 		alignas(4) int screenCentreX;
 
 		SpriteGPU() : position(0.0f, 0.0f, 0.0f), width(0.0f), height(0.0f), textureID(0), screenCentreX(0) {}

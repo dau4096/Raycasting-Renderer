@@ -61,6 +61,8 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"G_TOGGLE", 8},		{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8},
 							{"W_SWITCH", 9},		{"V_HURT", 9},
 							{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
+							{"W_DOOR", 11},
+							{"W_DOORSWING", 12},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -188,6 +190,317 @@ static inline int getTexture(
 }
 
 using namespace xmlFallbackAttribFunc;
+
+
+
+namespace macros {
+//Any non-elementary type shorthand nodes in the XML file which can be decomposed into primative types such as walls.
+
+void fetchMacroFromXML(
+		const pugi::xml_document& doc,
+		const std::string& xpath,
+		std::function<void(
+			pugi::xml_node node,
+			std::vector<utils::Visplane>* visplaneData,
+			std::vector<utils::Wall>* wallData,
+			std::array<bool, constants::MAX_FLAGS>* flags,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		)> extractor,
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::array<bool, constants::MAX_FLAGS>* flags=nullptr,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
+	)
+{
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	
+	for (size_t i=0; i<count; i++) {
+		pugi::xml_node node = nodeList[i].node();
+		extractor(node, visplaneData, wallData, flags, textureNames);
+	}
+}
+
+void extractCuboid(
+		pugi::xml_node node,
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::array<bool, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
+	glm::vec3 lowerCorner = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 upperCorner = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
+	GLuint sideTexture = getTexture(node, textureNames, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint topTexture = getTexture(node, textureNames, "upperTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint lowTexture = getTexture(node, textureNames, "lowerTexture", initial::FALLBACK_TEXTURE_NAME);
+
+
+	int intType = getEnum(node, "type", 1); //V_NORMAL, W_NORMAL and D_NORMAL are all integer value 1.
+	VisplaneType vType = static_cast<VisplaneType>(intType);
+	WallType wType = static_cast<WallType>(intType);
+	float extra = getFloat(node, "data", 0.0f);
+	bool* ptr = getPTR(node, flags, "flag");
+
+	glm::bvec3 worldSpaceTextures = glm::bvec3(
+		getBool(node, "useWorldUVX", true),
+		getBool(node, "useWorldUVY", true),
+		getBool(node, "useWorldUVZ", true)
+	);
+
+	glm::vec3 textureScale = getVec3(node, "textureScale", glm::vec3(1.0f, 1.0f, 1.0f));
+	glm::vec3 textureOffset = getVec3(node, "textureOffset", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec2 wTexScale = glm::vec2(textureScale.x, textureScale.z);
+	glm::vec2 wTexOffset = glm::vec2(textureOffset.x, textureOffset.z);
+
+	std::vector<utils::Visplane> newVData = {
+		utils::Visplane(
+			glm::vec2(lowerCorner), glm::vec2(upperCorner), lowerCorner.z,
+			lowTexture, vType, ptr, extra,
+			worldSpaceTextures.x, worldSpaceTextures.y,
+			glm::vec2(textureScale), glm::vec2(textureOffset)
+		),
+		utils::Visplane(
+			glm::vec2(lowerCorner), glm::vec2(upperCorner), upperCorner.z,
+			topTexture, vType, ptr, extra,
+			worldSpaceTextures.x, worldSpaceTextures.y,
+			glm::vec2(textureScale), glm::vec2(textureOffset)
+		),
+	};
+	utils::combineVectors(visplaneData, newVData);
+	validVisplanes += 2;
+
+	std::vector<utils::Wall> newWData = {
+		utils::Wall(
+			lowerCorner, glm::vec3(lowerCorner.x, upperCorner.y, upperCorner.z),
+			sideTexture, wType, ptr, extra,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			wTexScale, wTexOffset
+		),
+		utils::Wall(
+			glm::vec3(lowerCorner.x, upperCorner.y, lowerCorner.z), upperCorner,
+			sideTexture, wType, ptr, extra,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			wTexScale, wTexOffset
+		),
+		utils::Wall(
+			lowerCorner, glm::vec3(upperCorner.x, lowerCorner.y, upperCorner.z),
+			sideTexture, wType, ptr, extra,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			wTexScale, wTexOffset
+		),
+		utils::Wall(
+			glm::vec3(upperCorner.x, lowerCorner.y, lowerCorner.z), upperCorner,
+			sideTexture, wType, ptr, extra,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			wTexScale, wTexOffset
+		),
+	};
+	utils::combineVectors(wallData, newWData);
+	validWalls += 4;
+}
+
+
+void extractStairs(
+		pugi::xml_node node,
+		std::vector<utils::Visplane>* visplaneData,
+		std::vector<utils::Wall>* wallData,
+		std::array<bool, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	) {
+	glm::vec3 lowerCorner = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 upperCorner = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
+	bool lowerIsLower = lowerCorner.z < upperCorner.z;
+	float zDelta = upperCorner.z - lowerCorner.z;
+	int numStairs = static_cast<int>(std::max(1, int(std::ceil(abs(zDelta) / constants::MAX_STEP_HEIGHT))));
+
+	GLuint sideTexture = getTexture(node, textureNames, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint stepsTexture = getTexture(node, textureNames, "stepsTexture", initial::FALLBACK_TEXTURE_NAME);
+
+	bool stairsStatic = getBool(node, "static", true);
+	VisplaneType vType;
+	WallType wType;
+	if (stairsStatic) {
+		vType = V_NORMAL;
+		wType = W_NORMAL;
+	} else {
+		if (getBool(node, "slowMovement", true)) {
+			vType = V_MOVEZ_SLOW;
+			wType = W_MOVEZ_SLOW;
+		} else {
+			vType = V_MOVEZ_FAST;
+			wType = W_MOVEZ_FAST;
+		}
+	}
+	bool* ptr = getPTR(node, flags, "flag");
+
+	bool hasEnd = getBool(node, "hasEndWall", true);
+	bool hasSides = getBool(node, "hasSideWalls", true);
+	bool hasConnectors = getBool(node, "hasConnectingWalls", true);
+
+	glm::bvec3 worldSpaceTextures = glm::bvec3(
+		getBool(node, "useWorldUVX", true),
+		getBool(node, "useWorldUVY", true),
+		getBool(node, "useWorldUVZ", true)
+	);
+
+	glm::vec3 textureScale = getVec3(node, "textureScale", glm::vec3(1.0f, 1.0f, 1.0f));
+	glm::vec3 textureOffset = getVec3(node, "textureOffset", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec2 wTexScale = glm::vec2(textureScale.x, textureScale.z);
+	glm::vec2 wTexOffset = glm::vec2(textureOffset.x, textureOffset.z);
+
+
+
+	glm::vec2 stairMin = glm::vec2(std::min(lowerCorner.x, upperCorner.x), std::min(lowerCorner.y, upperCorner.y));
+	glm::vec2 stairMax = glm::vec2(std::max(lowerCorner.x, upperCorner.x), std::max(lowerCorner.y, upperCorner.y));
+	glm::vec2 stairDelta = stairMax - stairMin;
+	if (abs(zDelta) < constants::MAX_STEP_HEIGHT) {
+		//Flat floor, delta is shorter than 1 step.
+		visplaneData->push_back(utils::Visplane(
+			stairMin, stairMax, (lowerCorner.z + upperCorner.z) / 2.0f, //Average the Z.
+			stepsTexture, V_NORMAL, nullptr, 0.0f,
+			worldSpaceTextures.x, worldSpaceTextures.y,
+			glm::vec2(textureScale), glm::vec2(textureOffset)
+		));
+		validVisplanes++;
+		return;
+	}
+
+	float stepDelta = zDelta / float(numStairs);
+	float stepHeight = lowerCorner.z;
+	if (abs(stairDelta.y) > abs(stairDelta.x)) {
+		//In the Y direction.
+		float stairWidth = stairDelta.y / float(numStairs);
+		float currentY;
+		if (((zDelta > 0.0f) && lowerIsLower) || ((zDelta <= 0.0f) && !lowerIsLower)) {
+			//+Y direction
+			currentY = stairMin.y;
+		} else {
+			//-Y direction
+			currentY = stairMax.y;
+		}
+
+		for (size_t stepIdx=0; stepIdx<numStairs; stepIdx++) {
+			//Visplane step
+			visplaneData->push_back(utils::Visplane(
+				glm::vec2(lowerCorner.x, currentY), glm::vec2(upperCorner.x, currentY + stairWidth), stepHeight,
+				stepsTexture, vType, ptr, -0.01f-stepHeight,
+				worldSpaceTextures.x, worldSpaceTextures.y,
+				glm::vec2(textureScale), glm::vec2(textureOffset)
+
+			));
+			validVisplanes++;
+
+			//Side walls
+			if (hasSides) {
+				wallData->push_back(utils::Wall(
+					glm::vec3(lowerCorner.x, currentY, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(lowerCorner.x, currentY + stairWidth, stepHeight),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				wallData->push_back(utils::Wall(
+					glm::vec3(upperCorner.x, currentY, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(upperCorner.x, currentY + stairWidth, stepHeight),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				validWalls += 2;
+			}
+
+			//Mid-step connecting wall
+			currentY += stairWidth;
+			if (hasConnectors) {
+				wallData->push_back(utils::Wall(
+					glm::vec3(lowerCorner.x, currentY, stepHeight), glm::vec3(upperCorner.x, currentY, stepHeight + stepDelta),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				validWalls++;
+			}
+
+			stepHeight += stepDelta;
+
+			if (hasEnd) {
+				wallData->push_back(utils::Wall(
+					glm::vec3(lowerCorner.x, (lowerIsLower) ? upperCorner.y : lowerCorner.y, lowerCorner.z),
+					glm::vec3(upperCorner.x, (lowerIsLower) ? upperCorner.y : lowerCorner.y, upperCorner.z),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				validWalls++;
+			}
+		}
+	} else {
+		//In the X direction.
+		float stairWidth = stairDelta.x / float(numStairs);
+		float currentX;
+		if (((zDelta > 0.0f) && lowerIsLower) || ((zDelta <= 0.0f) && !lowerIsLower)) {
+			//+X direction
+			currentX = stairMin.x;
+		} else {
+			//-X direction
+			currentX = stairMax.x;
+		}
+
+		for (size_t stepIdx=0; stepIdx<numStairs; stepIdx++) {
+			visplaneData->push_back(utils::Visplane(
+				glm::vec2(currentX, lowerCorner.y), glm::vec2(currentX + stairWidth, upperCorner.y), stepHeight,
+				stepsTexture, vType, ptr, -0.01f-stepHeight,
+				worldSpaceTextures.x, worldSpaceTextures.y,
+				glm::vec2(textureScale), glm::vec2(textureOffset)
+
+			));
+			validVisplanes++;
+
+			//Side walls
+			if (hasSides) {
+				wallData->push_back(utils::Wall(
+					glm::vec3(currentX, lowerCorner.y, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(currentX + stairWidth, lowerCorner.y, stepHeight),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				wallData->push_back(utils::Wall(
+					glm::vec3(currentX, upperCorner.y, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(currentX + stairWidth, upperCorner.y, stepHeight),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				validWalls += 2;
+			}
+
+			//Mid-step connecting wall
+			currentX += stairWidth;
+			if (hasConnectors) {
+				wallData->push_back(utils::Wall(
+					glm::vec3(currentX, lowerCorner.y, stepHeight), glm::vec3(currentX, upperCorner.y, stepHeight + stepDelta),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				validWalls++;
+			}
+
+			stepHeight += stepDelta;
+
+			if (hasEnd) {
+				wallData->push_back(utils::Wall(
+					glm::vec3((lowerIsLower) ? upperCorner.x : lowerCorner.x, lowerCorner.y, lowerCorner.z),
+					glm::vec3((lowerIsLower) ? upperCorner.x : lowerCorner.x, upperCorner.y, upperCorner.z),
+					sideTexture, wType, ptr, -0.01f-stepHeight,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					wTexScale, wTexOffset
+				));
+				validWalls++;
+			}
+		}
+	}
+}
+
+}
+
 
 
 
@@ -752,6 +1065,10 @@ void loadStage(
 	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects, nullptr, nullptr);
 	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates, flags, nullptr);
 
+
+	//Get macros (shorthands for collection of elementary objects like walls or displacements)
+	macros::fetchMacroFromXML(doc, "//environment/cuboid", macros::extractCuboid, visplaneData, wallData, flags, textureNames);
+	macros::fetchMacroFromXML(doc, "//environment/stairs", macros::extractStairs, visplaneData, wallData, flags, textureNames);
 	xml::loadModels(doc, "//environment/model", displacementData, textureNames);
 
 

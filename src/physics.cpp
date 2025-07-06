@@ -49,8 +49,8 @@ bool quickIntersect(glm::vec3 pointA, glm::vec3 pointB, utils::Wall wall, float*
 
 
 glm::vec2 raycast(utils::Ray ray, utils::Wall wall) {
-	glm::vec2 wallStartV2 = glm::vec2(wall.start.x, wall.start.y);
-	glm::vec2 wallEndV2 = glm::vec2(wall.end.x, wall.end.y);
+	glm::vec2 wallStartV2 = glm::vec2(wall.start);
+	glm::vec2 wallEndV2 = glm::vec2(wall.end);
 
 	glm::vec2 xDiff = glm::vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
 	glm::vec2 yDiff = glm::vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
@@ -186,37 +186,32 @@ void applyWallDirectionalMovement(utils::Wall* wall, float speed, bool enabled) 
 		return;
 
 	} else if (wall->data/2.0f < 0) { //Movement toward wall.start.
-		if (enabled && (wall->internal > wall->data/2.0f)) { //Turned on; move toward start.
-			float newInternal = std::max(wall->internal - speed, wall->data/2.0f);
-			float delta = wall->internal - newInternal;
-			wall->start -= wallDir * delta;
-			wall->end -= wallDir * delta;
-			wall->internal = newInternal;
+		if (enabled && (wall->internal->first > wall->data/2.0f)) { //Turned on; move toward start.
+			float newInternal = std::max(wall->internal->first - speed, wall->data/2.0f);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
 
-		} else if (!enabled && (wall->internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall->internal + speed, 0.0f);
-			float delta = newInternal - wall->internal;
-			wall->start += wallDir * delta;
-			wall->end += wallDir * delta;
-			wall->internal = newInternal;
+		} else if (!enabled && (wall->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal->first + speed, 0.0f);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
 		}
 
 	} else { //Movement toward wall.end.
-		if (enabled && (wall->internal < wall->data/2.0f)) { //Turned on; move toward end.
-			float newInternal = std::min(wall->internal + speed, wall->data/2.0f);
-			float delta = newInternal - wall->internal;
-			wall->start += wallDir * delta;
-			wall->end += wallDir * delta;
-			wall->internal = newInternal;
+		if (enabled && (wall->internal->first < wall->data/2.0f)) { //Turned on; move toward end.
+			float newInternal = std::min(wall->internal->first + speed, wall->data/2.0f);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
 
-		} else if (!enabled && (wall->internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall->internal - speed, 0.0f);
-			float delta = wall->internal - newInternal;
-			wall->start -= wallDir * delta;
-			wall->end -= wallDir * delta;
-			wall->internal = newInternal;
+		} else if (!enabled && (wall->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal->first - speed, 0.0f);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
 		}
 	}
+
+	wall->start = wall->originalStart + wallDir * wall->internal->first;
+	wall->end = wall->originalEnd + wallDir * wall->internal->first;
 }
 
 
@@ -228,37 +223,32 @@ void applyWallNormalMovement(utils::Wall* wall, float speed, bool enabled) {
 		return;
 
 	} else if (wall->data/2.0f < 0) { //Movement toward wall.start.
-		if (enabled && (wall->internal > wall->data/2.0f)) { //Turned on; move toward start.
-			float newInternal = std::max(wall->internal - speed, wall->data/2.0f);
-			float delta = wall->internal - newInternal;
-			wall->start -= wallNormal * delta;
-			wall->end -= wallNormal * delta;
-			wall->internal = newInternal;
+		if (enabled && (wall->internal->first > wall->data/2.0f)) { //Turned on; move toward start.
+			float newInternal = std::max(wall->internal->first - speed, wall->data/2.0f);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
 
-		} else if (!enabled && (wall->internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall->internal + speed, 0.0f);
-			float delta = newInternal - wall->internal;
-			wall->start += wallNormal * delta;
-			wall->end += wallNormal * delta;
-			wall->internal = newInternal;
+		} else if (!enabled && (wall->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal->first + speed, 0.0f);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
 		}
 
 	} else { //Movement toward wall.end.
-		if (enabled && (wall->internal < wall->data/2.0f)) { //Turned on; move toward end.
-			float newInternal = std::min(wall->internal + speed, wall->data/2.0f);
-			float delta = newInternal - wall->internal;
-			wall->start += wallNormal * delta;
-			wall->end += wallNormal * delta;
-			wall->internal = newInternal;
+		if (enabled && (wall->internal->first < wall->data/2.0f)) { //Turned on; move toward end.
+			float newInternal = std::min(wall->internal->first + speed, wall->data/2.0f);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
 
-		} else if (!enabled && (wall->internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall->internal - speed, 0.0f);
-			float delta = wall->internal - newInternal;
-			wall->start -= wallNormal * delta;
-			wall->end -= wallNormal * delta;
-			wall->internal = newInternal;
+		} else if (!enabled && (wall->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal->first - speed, 0.0f);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
 		}
 	}
+
+	wall->start = wall->originalStart + wallNormal * wall->internal->first;
+	wall->end = wall->originalEnd + wallNormal * wall->internal->first;
 }
 
 
@@ -267,37 +257,71 @@ void applyWallZMovement(utils::Wall* wall, float speed, bool enabled) {
 		return;
 
 	} else if (wall->data < 0) { //Downwards
-		if (enabled && (wall->internal > wall->data)) { //Turned on; moving down.
-			float newInternal = std::max(wall->internal - speed, wall->data);
-			float delta = wall->internal - newInternal;
-			wall->start.z -= delta;
-			wall->end.z -= delta;
-			wall->internal = newInternal;
+		if (enabled && (wall->internal->first > wall->data)) { //Turned on; moving down.
+			float newInternal = std::max(wall->internal->first - speed, wall->data);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
 
-		} else if (!enabled && (wall->internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(wall->internal + speed, 0.0f);
-			float delta = newInternal - wall->internal;
-			wall->start.z += delta;
-			wall->end.z += delta;
-			wall->internal = newInternal;
+		} else if (!enabled && (wall->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal->first + speed, 0.0f);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
 		}
 
 	} else { //Upwards
-		if (enabled && (wall->internal < wall->data)) { //Turned on; moving up.
-			float newInternal = std::min(wall->internal + speed, wall->data);
-			float delta = newInternal - wall->internal;
-			wall->start.z += delta;
-			wall->end.z += delta;
-			wall->internal = newInternal;
+		if (enabled && (wall->internal->first < wall->data)) { //Turned on; moving up.
+			float newInternal = std::min(wall->internal->first + speed, wall->data);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
 
-		} else if (!enabled && (wall->internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(wall->internal - speed, 0.0f);
-			float delta = wall->internal - newInternal;
-			wall->start.z -= delta;
-			wall->end.z -= delta;
-			wall->internal = newInternal;
+		} else if (!enabled && (wall->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal->first - speed, 0.0f);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
 		}
 	}
+	wall->start.z = wall->originalStart.z + wall->internal->first;
+	wall->end.z = wall->originalEnd.z + wall->internal->first;
+}
+
+
+void applyWallRotation(utils::Wall* wall, float speed, bool enabled) {
+	if (abs(wall->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+		return;
+
+	} else if (wall->data < 0) { //Downwards
+		if (enabled && (wall->internal->first > wall->data)) { //Turned on; moving down.
+			float newInternal = std::max(wall->internal->first - speed, wall->data);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
+
+		} else if (!enabled && (wall->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(wall->internal->first + speed, 0.0f);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
+		}
+
+	} else { //Upwards
+		if (enabled && (wall->internal->first < wall->data)) { //Turned on; moving up.
+			float newInternal = std::min(wall->internal->first + speed, wall->data);
+			float delta = newInternal - wall->internal->first;
+			wall->internal->first = newInternal;
+
+		} else if (!enabled && (wall->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(wall->internal->first - speed, 0.0f);
+			float delta = wall->internal->first - newInternal;
+			wall->internal->first = newInternal;
+		}
+	}
+
+	glm::vec2 delta2D = glm::vec2(wall->originalEnd) - glm::vec2(wall->originalStart);
+	float angle = wall->internal->first;
+	glm::mat2 rotMat = glm::mat2(
+		cos(angle), -sin(angle),
+		sin(angle),  cos(angle)
+	);
+	glm::vec2 rotated = rotMat * delta2D;
+	wall->end = wall->originalStart + glm::vec3(rotated, wall->originalEnd.z);
 }
 
 
@@ -308,38 +332,33 @@ void applyVisplaneXMovement(utils::Visplane* vPlane, float speed, bool enabled) 
 		return;
 
 
-	} else if (vPlane->data < 0) { //Moving downwards.
-		if (enabled && (vPlane->internal > vPlane->data)) { //Turned on; moving down.
-			float newInternal = std::max(vPlane->internal - speed, vPlane->data);
-			float delta = vPlane->internal - newInternal;
-			vPlane->start.x -= delta;
-			vPlane->end.x -= delta;
-			vPlane->internal = newInternal;
+	} else if (vPlane->data < 0) { //Moving Negative X.
+		if (enabled && (vPlane->internal->first > vPlane->data)) { //Turned on; moving down.
+			float newInternal = std::max(vPlane->internal->first - speed, vPlane->data);
+			float delta = vPlane->internal->first - newInternal;
+			vPlane->internal->first = newInternal;
 
-		} else if (!enabled && (vPlane->internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(vPlane->internal + speed, 0.0f);
-			float delta = newInternal - vPlane->internal;
-			vPlane->start.x += delta;
-			vPlane->end.x += delta;
-			vPlane->internal = newInternal;
+		} else if (!enabled && (vPlane->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal->first + speed, 0.0f);
+			float delta = newInternal - vPlane->internal->first;
+			vPlane->internal->first = newInternal;
 		}
 
-	} else { //Moving upwards.
-		if (enabled && (vPlane->internal < vPlane->data)) { //Turned on; moving up.
-			float newInternal = std::max(vPlane->internal + speed, 0.0f);
-			float delta = newInternal - vPlane->internal;
-			vPlane->start.x += delta;
-			vPlane->end.x += delta;
-			vPlane->internal = newInternal;
+	} else { //Moving Positive X.
+		if (enabled && (vPlane->internal->first < vPlane->data)) { //Turned on; moving up.
+			float newInternal = std::max(vPlane->internal->first + speed, 0.0f);
+			float delta = newInternal - vPlane->internal->first;
+			vPlane->internal->first = newInternal;
 
-		} else if (!enabled && (vPlane->internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::min(vPlane->internal - speed, vPlane->data);
-			float delta = vPlane->internal - newInternal;
-			vPlane->start.x -= delta;
-			vPlane->end.x -= delta;
-			vPlane->internal = newInternal;
+		} else if (!enabled && (vPlane->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal->first - speed, vPlane->data);
+			float delta = vPlane->internal->first - newInternal;
+			vPlane->internal->first = newInternal;
 		}
 	}
+
+	vPlane->start.x = vPlane->originalStart.x + vPlane->internal->first;
+	vPlane->end.x = vPlane->originalEnd.x + vPlane->internal->first;
 }
 
 
@@ -348,38 +367,33 @@ void applyVisplaneYMovement(utils::Visplane* vPlane, float speed, bool enabled) 
 		return;
 
 
-	} else if (vPlane->data < 0) { //Moving downwards.
-		if (enabled && (vPlane->internal > vPlane->data)) { //Turned on; moving down.
-			float newInternal = std::max(vPlane->internal - speed, vPlane->data);
-			float delta = vPlane->internal - newInternal;
-			vPlane->start.y -= delta;
-			vPlane->end.y -= delta;
-			vPlane->internal = newInternal;
+	} else if (vPlane->data < 0) { //Moving Negative Y.
+		if (enabled && (vPlane->internal->first > vPlane->data)) { //Turned on; moving down.
+			float newInternal = std::max(vPlane->internal->first - speed, vPlane->data);
+			float delta = vPlane->internal->first - newInternal;
+			vPlane->internal->first = newInternal;
 
-		} else if (!enabled && (vPlane->internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(vPlane->internal + speed, 0.0f);
-			float delta = newInternal - vPlane->internal;
-			vPlane->start.y += delta;
-			vPlane->end.y += delta;
-			vPlane->internal = newInternal;
+		} else if (!enabled && (vPlane->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal->first + speed, 0.0f);
+			float delta = newInternal - vPlane->internal->first;
+			vPlane->internal->first = newInternal;
 		}
 
-	} else { //Moving upwards.
-		if (enabled && (vPlane->internal < vPlane->data)) { //Turned on; moving up.
-			float newInternal = std::max(vPlane->internal + speed, 0.0f);
-			float delta = newInternal - vPlane->internal;
-			vPlane->start.y += delta;
-			vPlane->end.y += delta;
-			vPlane->internal = newInternal;
+	} else { //Moving Positive Y.
+		if (enabled && (vPlane->internal->first < vPlane->data)) { //Turned on; moving up.
+			float newInternal = std::max(vPlane->internal->first + speed, 0.0f);
+			float delta = newInternal - vPlane->internal->first;
+			vPlane->internal->first = newInternal;
 
-		} else if (!enabled && (vPlane->internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::min(vPlane->internal - speed, vPlane->data);
-			float delta = vPlane->internal - newInternal;
-			vPlane->start.y -= delta;
-			vPlane->end.y -= delta;
-			vPlane->internal = newInternal;
+		} else if (!enabled && (vPlane->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal->first - speed, vPlane->data);
+			float delta = vPlane->internal->first - newInternal;
+			vPlane->internal->first = newInternal;
 		}
 	}
+
+	vPlane->start.y = vPlane->originalStart.y + vPlane->internal->first;
+	vPlane->end.y = vPlane->originalEnd.y + vPlane->internal->first;
 }
 
 
@@ -389,33 +403,31 @@ void applyVisplaneZMovement(utils::Visplane* vPlane, float speed, bool enabled) 
 
 
 	} else if (vPlane->data < 0) { //Moving downwards.
-		if (enabled && (vPlane->internal > vPlane->data)) { //Turned on; moving down.
-			float newInternal = std::max(vPlane->internal - speed, vPlane->data);
-			float delta = vPlane->internal - newInternal;
-			vPlane->height -= delta;
-			vPlane->internal = newInternal;
+		if (enabled && (vPlane->internal->first > vPlane->data)) { //Turned on; moving down.
+			float newInternal = std::max(vPlane->internal->first - speed, vPlane->data);
+			float delta = vPlane->internal->first - newInternal;
+			vPlane->internal->first = newInternal;
 
-		} else if (!enabled && (vPlane->internal < 0)) { //Turned off; return to 0.
-			float newInternal = std::min(vPlane->internal + speed, 0.0f);
-			float delta = newInternal - vPlane->internal;
-			vPlane->height += delta;
-			vPlane->internal = newInternal;
+		} else if (!enabled && (vPlane->internal->first < 0)) { //Turned off; return to 0.
+			float newInternal = std::min(vPlane->internal->first + speed, 0.0f);
+			float delta = newInternal - vPlane->internal->first;
+			vPlane->internal->first = newInternal;
 		}
 
 	} else { //Moving upwards.
-		if (enabled && (vPlane->internal < vPlane->data)) { //Turned on; moving up.
-			float newInternal = std::min(vPlane->internal + speed, vPlane->data);
-			float delta = newInternal - vPlane->internal;
-			vPlane->height += delta;
-			vPlane->internal = newInternal;
+		if (enabled && (vPlane->internal->first < vPlane->data)) { //Turned on; moving up.
+			float newInternal = std::min(vPlane->internal->first + speed, vPlane->data);
+			float delta = newInternal - vPlane->internal->first;
+			vPlane->internal->first = newInternal;
 
-		} else if (!enabled && (vPlane->internal > 0)) { //Turned off; return to 0.
-			float newInternal = std::max(vPlane->internal - speed, 0.0f);
-			float delta = vPlane->internal - newInternal;
-			vPlane->height -= delta;
-			vPlane->internal = newInternal;
+		} else if (!enabled && (vPlane->internal->first > 0)) { //Turned off; return to 0.
+			float newInternal = std::max(vPlane->internal->first - speed, 0.0f);
+			float delta = vPlane->internal->first - newInternal;
+			vPlane->internal->first = newInternal;
 		}
 	}
+
+	vPlane->height = vPlane->originalHeight + vPlane->internal->first;
 }
 
 
@@ -761,7 +773,8 @@ void updateSpecials(
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
 		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL) || (wall.type == W_PASSTHROUGH)) {continue;}
-		bool enabled = *(wall.IOPtr);
+		bool enabled = false;
+		if (wall.IOPtr) {enabled = *(wall.IOPtr);}
 
 		switch(wall.type) {
 			case W_TRIGGER: {
@@ -791,7 +804,7 @@ void updateSpecials(
 						*(wall.IOPtr) = !(*(wall.IOPtr));
 					}
 				}
-				//cout << *(wall.IOPtr) << endl;
+				wall.internal->first = int(*(wall.IOPtr));
 				break;
 			}
 
@@ -824,6 +837,39 @@ void updateSpecials(
 				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
 				break;
 			}
+			
+			case W_DOORZ: { //When pressed, move like W_MOVEZ_FAST and decrement a counter until closing.
+				wall.internal->second = glm::max(wall.internal->second - 1.0f, 0.0f);
+				if (interactKey) {
+					if (didHitSwitch(player, wIndex, wallData)) {
+						//DOOR_OPEN_TIME_TICKS does not include time to open the door, only time being fully opened.
+						float ticksToOpen = abs(wall.data) / constants::SPECIAL_MOVE_SPEED_FAST;
+						wall.internal->second = constants::DOOR_OPEN_TIME_TICKS + ticksToOpen;
+					}
+				}
+				bool shouldBeOpen = wall.internal->second > 0.0f;
+				bool inDoorCheck = circleLineIntersect(
+					wall,
+					glm::vec2(player->position) + glm::vec2(player->velocity),
+					playerConfig::PLAYER_COLLISION_RADIUS
+				);
+				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, shouldBeOpen || inDoorCheck);
+				break;
+			}
+
+			case W_DOORSWING: { //When pressed, rotate around wall.start.xy and decrement a counter until closing.
+				wall.internal->second = glm::max(wall.internal->second - 1.0f, 0.0f);
+				if (interactKey) {
+					if (didHitSwitch(player, wIndex, wallData)) {
+						//DOOR_OPEN_TIME_TICKS does not include time to open the door, only time being fully opened.
+						float ticksToOpen = abs(wall.data) / constants::SPECIAL_MOVE_SPEED_FAST;
+						wall.internal->second = constants::DOOR_OPEN_TIME_TICKS + ticksToOpen;
+					}
+				}
+				bool shouldBeOpen = wall.internal->second > 0.0f;
+				specialMotion::applyWallRotation(&wall, constants::SPECIAL_MOVE_SPEED_FAST, shouldBeOpen);
+				break;
+			}
 
 			default: {
 				break;
@@ -836,7 +882,8 @@ void updateSpecials(
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
 		utils::Visplane vPlane = visplaneData->at(vIndex);
 		if ((vPlane.type == V_INVALID) || (vPlane.type == V_NORMAL) || (vPlane.type == V_PASSTHROUGH)) {continue;}
-		bool enabled = *(vPlane.IOPtr);
+		bool enabled = false;
+		if (vPlane.IOPtr) {enabled = *(vPlane.IOPtr);}
 
 
 		bool inPlaneXYRange = !(

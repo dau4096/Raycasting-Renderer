@@ -428,19 +428,6 @@ void drawHUD() {
 	glBindVertexArray(0);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-
-	/*
-	//Draw crosshair. (Immediate mode)
-	glm::vec2 halfUIRes = glm::vec2(display::UI_RESOLUTION) / 2.0f;
-	glBegin(GL_LINES);
-	glLineWidth(1.0f);
-	glVertex2f(halfUIRes.x, halfUIRes.y + 4.0f);
-	glVertex2f(halfUIRes.x, halfUIRes.y - 4.0f);
-	glVertex2f(halfUIRes.x + 4.0f, halfUIRes.y);
-	glVertex2f(halfUIRes.x - 4.0f, halfUIRes.y);
-	glEnd();
-	*/
-
 	utils::GLErrorcheck("Interface 3D", true);
 
 }
@@ -688,12 +675,12 @@ inline void reloadLevel(const bool resetPlayer=false) {
 			&textureNames
 		);
 	}
-	if (utils::configToBool("META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES")) {
-		glDeleteTextures(1, &textureArrayEnvironment);
-		textureArrayEnvironment = render::createTexture2DArray(textureNames);
-		skyboxTextureID = render::loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+
+	prepareOpenGL();
+	{
+		std::lock_guard<std::mutex> lock(stateSwapMutex);
+		graphicsData = physicsData;
 	}
-	*graphicsData = *physicsData;
 }
 
 void handleInputs() {

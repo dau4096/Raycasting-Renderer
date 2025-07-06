@@ -34,7 +34,8 @@ enum WallType {
 	W_MOVED_FAST, W_MOVED_SLOW,
 	W_MOVEN_FAST, W_MOVEN_SLOW,
 	W_MOVEZ_FAST, W_MOVEZ_SLOW,
-	W_SWITCH, W_PASSTHROUGH
+	W_SWITCH, W_PASSTHROUGH,
+	W_DOORZ, W_DOORSWING
 };
 
 enum DisplacementType {
@@ -217,6 +218,7 @@ namespace constants {
 	constexpr float AIR_FRICT_COEFF = 0.975f;
 	constexpr float AIR_FRICT_SLIDE_COEFF = 0.9975f;
 	constexpr float MAX_STEP_HEIGHT = 0.42857f;
+	constexpr float DOOR_OPEN_TIME_TICKS = 2.0f * PHYSICS_FREQUENCY;
 
 
 	//Invalid returns for vectors and floats.

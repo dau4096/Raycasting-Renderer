@@ -99,6 +99,17 @@ void unpackTextureFormattingBits(
 }
 
 
+
+float xUVFromWorldspace(vec2 intersectPoint, Wall thisWall) {
+	return mix(intersectPoint.x, intersectPoint.y, float(abs(thisWall.direction.y) > abs(thisWall.direction.x)));
+}
+float xUVFromWallspace(vec2 intersectPoint, Wall thisWall) {
+	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+		return (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
+	}
+	return (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
+}
+
 uint getXUV(vec2 intersectPoint, Wall thisWall) {
 	bvec2 useWorldSpace;
 	vec2 invTextureScale;
@@ -113,22 +124,13 @@ uint getXUV(vec2 intersectPoint, Wall thisWall) {
 	//xUV calculation.
 	float xUV;
 	if (useWorldSpace.x) {
-		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = intersectPoint.y * invTextureScale.x;
-		} else {
-			xUV = intersectPoint.x * invTextureScale.x;
-		}
-		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
+		xUV = xUVFromWorldspace(intersectPoint, thisWall);
 	} else {
-		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
-		} else {
-			xUV = (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
-		}
-		xUV = xUV * invTextureScale.x;
+		xUV = xUVFromWallspace(intersectPoint, thisWall);
 	}
+	xUV *= invTextureScale.x;
 
-	xUV = clamp(fract(xUV), 0.0f, 1.0f);
+	xUV = clamp(fract(xUV + textureOffset.x), 0.0f, 1.0f);
 	return uint(xUV * 255.0f);
 }
 
