@@ -61,7 +61,7 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"G_TOGGLE", 8},		{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8},
 							{"W_SWITCH", 9},		{"V_HURT", 9},
 							{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
-							{"W_DOOR", 11},
+							{"W_DOORZ", 11},
 							{"W_DOORSWING", 12},
 };
 
