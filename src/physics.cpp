@@ -476,7 +476,7 @@ void playerMove(
 				glm::vec2 slideAddition = glm::normalize(XYDelta) * playerConfig::MOVE_SPEED_SLIDE_ADD;
 				player->velocity += glm::vec3(slideAddition.x, slideAddition.y, 0.0f);
 			}
-		} else {
+		} else if (!utils::configToBool("PHYS_FLY")) {
 			playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
 			maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
 		}
@@ -512,7 +512,7 @@ void playerMove(
 		}
 		lateralMovement = glm::vec2(newX, newY);
 	}
-	if (keyMap["MOVE_JUMP"] && !prevJump) {
+	if (keyMap["MOVE_JUMP"] && !prevJump && !utils::configToBool("PHYS_FLY")) {
 		if (player->touchingFloor) {
 			player->jumpsUsed++;
 			player->velocity.z += playerConfig::JUMP_INIT_SPEED;
@@ -526,6 +526,14 @@ void playerMove(
 				float maxJump = glm::min(player->velocity.z + playerConfig::JUMP_INIT_SPEED, maxJumpSpeed);
 				player->velocity.z = maxJump;
 			}
+		}
+	}
+	if (utils::configToBool("PHYS_FLY")) {
+		if (keyMap["MOVE_JUMP"]) {
+			player->position.z += playerSpeed;
+		}
+		if (keyMap["MOVE_CROUCH"]) {
+			player->position.z -= playerSpeed;
 		}
 	}
 
@@ -577,6 +585,13 @@ void playerMove(
 	touchingFloorCheck = false;
 
 
+	//Horizontal Calculations;
+	if (utils::configToBool("PHYS_NO_COLLIDE") && utils::configToBool("PHYS_FLY")) {
+		glm::vec3 newPos = player->position + glm::vec3(newX, newY, 0.0f) * 4.0f;
+		if (isVec3NaN(newPos)) {return;}
+		player->position = newPos;
+		return;
+	}
 
 
 	float playerFootZ = player->position.z - (player->height/2.0f);
@@ -733,8 +748,12 @@ void playerMove(
 	}
 
 
+	if (!utils::configToBool("PHYS_FLY")) {
+		player->velocity.z -= stageData.gravity / constants::PHYSICS_FREQUENCY;
+	}
+
 	//Apply friction.
-	if (touchingFloorCheck) {
+	if (touchingFloorCheck || utils::configToBool("PHYS_FLY")) {
 		if (player->sliding) {
 			player->velocity.x *= constants::FLOOR_FRICT_SLIDE_COEFF;
 			player->velocity.y *= constants::FLOOR_FRICT_SLIDE_COEFF;			
@@ -752,8 +771,6 @@ void playerMove(
 		}
 		player->velocity.z *= constants::AIR_FRICT_SLIDE_COEFF;
 	}
-
-	player->velocity.z -= stageData.gravity / constants::PHYSICS_FREQUENCY;
 	player->position += player->velocity;
 
 	if (isVec3NaN(player->position) || isVec3NaN(player->velocity)) {

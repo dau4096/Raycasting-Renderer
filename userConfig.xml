@@ -59,4 +59,5 @@
 	<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" value="FALSE" />
 
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />
+	<option function="PHYS_FLY" value="FALSE" />
 </config>

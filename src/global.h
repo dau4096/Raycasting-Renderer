@@ -68,6 +68,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES", ""},
 
 	{"PHYS_NO_COLLIDE", ""},
+	{"PHYS_FLY", ""},
 };
 
 
