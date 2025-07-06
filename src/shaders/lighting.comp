@@ -13,7 +13,7 @@ uniform vec3 playerPosition;
 
 //Headlamp
 uniform bool headLampEnabled;
-uniform int headLampFlicker;
+uniform float headLampIntensity;
 
 //Sun
 uniform vec3 sunDirection;
@@ -28,13 +28,14 @@ uniform int numWalls;
 uniform int numDisplacements;
 uniform int numLights;
 uniform ivec2 shadowResolution;
+uniform ivec2 renderResolution;
 uniform bool allowTransparency;
 
 
 layout(binding=0) uniform sampler2D positionMap;
 layout(binding=1) uniform sampler2D normalMap;
 layout(binding=2) uniform sampler2DArray textureArray;
-layout(rgba32f, binding=0) uniform image2D lightMap;
+layout(rgba32f, binding=0) uniform image2DArray lightMapArray;
 
 struct Visplane {
 	vec2 start;			//2D start point
@@ -87,13 +88,13 @@ vec2 fragPosition;
 const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
-const float DEFAULT_BRIGHTNESS = 0.175f;
 const dvec2 INVALIDdv2 = dvec2(INF, INF);
 const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
 
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 
 
@@ -149,7 +150,18 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-vec2 getWallUV(Wall thisWall, dvec3 intersectPoint) {
+
+float xUVFromWorldspace(vec2 intersectPoint, Wall thisWall) {
+	return mix(intersectPoint.x, intersectPoint.y, float(abs(thisWall.direction.y) > abs(thisWall.direction.x)));
+}
+float xUVFromWallspace(vec2 intersectPoint, Wall thisWall) {
+	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+		return (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
+	}
+	return (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
+}
+
+vec2 getWallUV(Wall thisWall, vec3 intersectPoint) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 
@@ -164,31 +176,24 @@ vec2 getWallUV(Wall thisWall, dvec3 intersectPoint) {
 
 
 	//xUV calculation.
-	double xUV;
+	float xUV;
 	if (useWorldSpace.x) {
-		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = intersectPoint.y * invTextureScale.x;
-		} else {
-			xUV = intersectPoint.x * invTextureScale.x;
-		}
-		if (xUV < 0.0f) {xUV = 1.0f - abs(xUV);}
+		xUV = xUVFromWorldspace(intersectPoint.xy, thisWall);
 	} else {
-		if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
-			xUV = (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
-		} else {
-			xUV = (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
-		}
-		xUV = xUV * invTextureScale.x;
+		xUV = xUVFromWallspace(intersectPoint.xy, thisWall);
 	}
+	xUV *= invTextureScale.x;
+
+	xUV = clamp(fract(xUV + textureOffset.x), 0.0f, 1.0f);
 
 
-	double a = (intersectPoint.z - thisWall.start.z) / (thisWall.end.z - thisWall.start.z);
-	double fragZ = mix(wallLowZ, wallTopZ, a);
+	float a = (intersectPoint.z - thisWall.start.z) / (thisWall.end.z - thisWall.start.z);
+	float fragZ = mix(wallLowZ, wallTopZ, a);
 
-	double yUVWorld = 1.0f - fragZ * invTextureScale.y;
-	double yUVLocal = 1.0f - (a * invTextureScale.y);
+	float yUVWorld = 1.0f - fragZ * invTextureScale.y;
+	float yUVLocal = 1.0f - (a * invTextureScale.y);
 
-	double yUV = mix(yUVLocal, yUVWorld, double(useWorldSpace.y));
+	float yUV = mix(yUVLocal, yUVWorld, float(useWorldSpace.y));
 
 	return vec2(xUV, yUV) + textureOffset;
 }
@@ -342,9 +347,19 @@ float getNormalDot(vec3 normal, vec3 direction) {
 }
 
 
+void exit(ivec3 framePosition) {
+	imageStore(lightMapArray, framePosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+
 void main() {
-	fragPosition = gl_FragCoord.xy;
-	ivec2 framePosition = ivec2(fragPosition);
+	uint screenX = gl_GlobalInvocationID.x;
+	uint screenY = gl_GlobalInvocationID.y;
+	uint lightIndex = gl_GlobalInvocationID.z;
+	if ((screenX >= renderResolution.x) || (screenY >= renderResolution.y) || (lightIndex >= numLights + 2)) {return; /* Offscreen or out of range. */}
+
+	fragPosition = vec2(screenX, screenY);
+	ivec3 framePosition = ivec3(screenX, screenY, lightIndex);
 	vec2 thisFramePosition = vec2(fragPosition / vec2(shadowResolution));
 	vec4 data = texture(positionMap, thisFramePosition);
 	vec3 origin = data.xyz;
@@ -354,81 +369,69 @@ void main() {
 	int index = iData >> 2;
 
 	vec3 normal = texture(normalMap, thisFramePosition).xyz;
-	
-
-	if ((debugMode > 0) || (type == 0)) {
-		imageStore(lightMap, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		return;
-	}
-
 
 
 	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
+	if ((lightIndex == numLights + 1)) {
+		//Headlamp
+		if (!headLampEnabled) {exit(framePosition); return; /* Headlamp is turned off, don't bother calculating. */}
 
-	//Light effect
-	for (int idx=0; idx<numLights; idx++) {
+		const vec3 headLampColour = vec3(1.0f, 1.0f, 1.0f);
+
+		vec3 d = origin - playerPosition;
+		float distanceSQ = dot(d,d);
+		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))); //Intensity fades with distance to light.
+		float brightness = clamp(attenuation, 0.0f, 1.0f);
+
+		lightColour = headLampColour * brightness;
+
+
+
+	} else if (lightIndex == numLights) {
+		//Sun & sky's lighting
+		if (dot(sunColour, sunColour) < 0.025f) {exit(framePosition); return; /* Sun's effect is near 0 and can be ignored. */}
+
+		if ((debugMode > 0) || (type == 0)) {
+			imageStore(lightMapArray, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+			return;
+		}
+
+		float sunNormalDot = getNormalDot(normal, normalize(sunDirection));
+		vec3 offset = normal * 0.01f;
+		bool sunBlocked = checkLOS(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
+		if ((sunNormalDot >= 0.0f) && !sunBlocked) {
+			float sunNormalContrib = (sunNormalDot * 0.5f) + 0.5f;
+			lightColour = sunColour.rgb * sunNormalContrib;
+		}
+
+
+	} else {
 		//Iterate through all lights.
-		Light thisLight = lights[idx];
-		if (!thisLight.enabled) {continue;}
-		vec3 delta = origin - thisLight.position;
-		float distSQ = dot(delta, delta);
-		float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-		if (attenuation <= EPSILON_ALT) {continue;}
-		vec3 lightDir = normalize(thisLight.position - origin);
-		float normalDot = getNormalDot(normal, lightDir);
-		if (normalDot <= EPSILON_ALT) {continue;}
+		Light thisLight = lights[lightIndex];
+		if (!thisLight.enabled) {exit(framePosition); return; /* Light is turned off. */}
 
-		
-		//Shadow Checks
-		bool inShadow = checkLOS(thisLight.position, origin, index, type);
+		vec3 delta = thisLight.position - origin;
+		if (dot(delta,delta) < EPSILON_ALT) {
+			lightColour = thisLight.colour;
+		} else {
+			vec3 lightDir = normalize(delta);
+			float normalDot = getNormalDot(normal, lightDir);
+			if (normalDot <= EPSILON_ALT) {exit(framePosition); return; /* Surface would reflect no lighting due to cosine of angles being negative. */}
 
-		if (!inShadow) {
-			vec3 lightContribution = thisLight.colour * attenuation;
-			vec3 litColour = lightContribution;
+			float distSQ = dot(delta, delta);
+			float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
+			if (attenuation <= EPSILON_ALT) {exit(framePosition); return; /* Light is too dim to contribute. */}
 
-			lightColour += litColour;
+			
+			//Shadow Checks
+			bool inShadow = checkLOS(thisLight.position, origin, index, type);
+
+			if (!inShadow) {
+				lightColour = thisLight.colour * attenuation;
+			}
 		}
 	}
 
 
-	//Headlamp Effect
-	if (headLampEnabled) {
-		Light headLamp;
-		headLamp.position = playerPosition;
-		headLamp.colour = vec3(1.0f, 1.0f, 1.0f);
-		headLamp.intensity = 5.0f + (headLampFlicker / 768.0f); //headLampFlicker is 0-255.
-
-
-		vec3 lightDir = normalize(headLamp.position - origin);
-		float normalDot = getNormalDot(normal, lightDir);
-
-		if (normalDot >= 0.0f) {
-			float distance = length(origin - headLamp.position);
-			float attenuation = max(0.0, 1.0 - ((distance*distance) / (headLamp.intensity*headLamp.intensity))); //Intensity fades with distance to light.
-			float brightness = clamp(attenuation, 0.0f, 1.0f);
-
-			vec3 lightContribution = headLamp.colour * brightness;
-			vec3 litColour = lightContribution;
-
-			lightColour += litColour;
-		}
-	}
-
-
-	//Sun Effect
-	float sunNormalDot = getNormalDot(normal, normalize(sunDirection));
-	vec3 offset = normal * 0.01f;
-	bool sunBlocked = checkLOS(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
-	if ((sunNormalDot >= 0.0f) && !sunBlocked) {
-		float sunNormalContrib = (sunNormalDot * 0.5f) + 0.5f;
-		vec3 litColour = sunColour.rgb * sunNormalContrib;
-		lightColour += litColour;
-	}
-
-
-	//Minimum/Maximum brightness.
-	lightColour = clamp(lightColour, DEFAULT_BRIGHTNESS, 1.75f);
-
-
-	imageStore(lightMap, framePosition, vec4(lightColour.rgb, 1.0f));
+	imageStore(lightMapArray, framePosition, vec4(lightColour.rgb, 1.0f));
 }

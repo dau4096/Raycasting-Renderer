@@ -7,7 +7,8 @@ out vec4 fragColour;
 
 layout(binding=0) uniform sampler2D renderedFrameSampler2D;
 layout(binding=1) uniform sampler2D interfaceTexture;
-layout(binding=2) uniform sampler2D lightMap;
+layout(binding=2) uniform sampler2DArray lightMapsArray;
+layout(binding=3) uniform sampler2D normalMap;
 layout(rgba32f, binding=0) uniform image2D renderedFrameImage2D;
 
 
@@ -21,9 +22,12 @@ uniform int antiAliasingLevel;
 uniform bool smoothingEnabled;
 uniform int quantisingLevel;
 uniform bool screenshotHasHUD;
+uniform int numLights;
 
 
 const float EPSILON = 1e-4f;
+const float DEFAULT_BRIGHTNESS = 0.175f;
+
 
 vec2 getUV(vec2 pos) {
 	return vec2(pos) / vec2(screenResolution);
@@ -106,6 +110,22 @@ vec4 smoothingFunc() {
 }
 
 
+vec3 getBrightness(vec2 UV) {
+	vec3 lightingSum = vec3(0.0f, 0.0f, 0.0f);
+	for (int i=0; i<(numLights+2); i++) {
+		lightingSum += texture(lightMapsArray, vec3(UV.xy, i)).rgb;
+	}
+	float maxBright;
+	if (length(texture(normalMap, UV).xyz) < EPSILON) {
+		//Sprites and sky.
+		maxBright = 1.0f;
+	} else {
+		maxBright = 1.75f;
+	}
+	return clamp(lightingSum, DEFAULT_BRIGHTNESS, maxBright);
+}
+
+
 void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
@@ -113,7 +133,7 @@ void main() {
 	if (albedo.a >= maxRayDistance) {
 		resultant = vec4(albedo.rgb, 1.0f);
 	} else {
-		vec3 brightness = texture(lightMap, mainUV).rgb;
+		vec3 brightness = getBrightness(mainUV);
 		resultant = vec4(albedo.rgb * brightness, 1.0f);
 	}
 

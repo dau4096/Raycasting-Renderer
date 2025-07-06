@@ -204,7 +204,7 @@ void saveScreenshot(GLuint frameTextureID) {
 
 
 
-GLuint createGLImage2D(int width, int height, GLint internalFormat=GL_RGBA32F, GLint samplingType=GL_NEAREST, GLint edgeSampling=GL_REPEAT) {
+GLuint createGLImage2D(size_t width, size_t height, GLint internalFormat=GL_RGBA32F, GLint samplingType=GL_NEAREST, GLint edgeSampling=GL_REPEAT) {
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
@@ -390,6 +390,27 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 	stbi_image_free(fallbackTextureData);
 
 	return sheetArrayID;
+}
+
+
+GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
+	GLuint arrayID;
+	glGenTextures(1, &arrayID);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, arrayID);
+	glTexStorage3D(
+		GL_TEXTURE_2D_ARRAY, 1, GL_RGBA32F,
+		width, height, layers
+	);
+
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+	return arrayID;
 }
 
 

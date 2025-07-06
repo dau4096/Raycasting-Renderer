@@ -194,7 +194,7 @@ void main() {
 	}
 
 	intersect.position2D = vec2(intersectPoint);
-	intersect.normal2D = wallNormal;
+	intersect.normal2D = (dot(wallNormal, rayDirection) < 0.0f) ? wallNormal : -wallNormal;
 	vec2 d = playerPos2D - intersectPoint;
 	intersect.distanceSQ = dot(d, d); //Cheaper length() call
 	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersectPoint, thisWall);

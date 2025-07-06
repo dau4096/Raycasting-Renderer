@@ -58,7 +58,7 @@ std::atomic<bool> runPhysics = true;
 bool headLampEnabled = false;
 bool interactKey = false, prevInteract = false, shouldTakeScreenshot = false;
 int lightFlickerRNG;
-GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, shadowMapID;
+GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, lightingMapsArrayID;
 GLuint raycastShader, envShader, spriteShader, lightingShader, uiShader, displayShader; //Shaders
 GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric; //Textures
 GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO, displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO; //Storage Buffers
@@ -105,7 +105,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	renderedFrameID = render::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	positionMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	normalMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
-	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y, GL_RGBA32F, GL_LINEAR);
+	lightingMapsArrayID = render::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
 
@@ -175,7 +175,7 @@ void prepareOpenGL() {
 	interfaceID = render::createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 	positionMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	normalMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
-	shadowMapID = render::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y, GL_RGBA32F, GL_LINEAR);
+	lightingMapsArrayID = render::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 
 	//Textures
 	textureArrayEnvironment = render::createTexture2DArray(textureNames, "textures-env", true);
@@ -219,8 +219,8 @@ void prepareOpenGL() {
 	//Sprite Shader
 	spriteShader = render::createShaderProgram("sprites", false);
 
-	//Shadow Shader
-	lightingShader = render::createShaderProgram("lighting", false);
+	//Lighting compute Shader
+	lightingShader = render::createComputeShader("lighting");
 
 	//uiShader
 	uiShader = render::createShaderProgram("interface");
@@ -461,11 +461,16 @@ void renderFrame(double blendingAlpha) {
 
 
 	//Raycasting compute shader.
-	const glm::uvec3 LOCAL_SIZE = glm::uvec3(32, 1, 1);
+	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
 	glUseProgram(raycastShader);
 	render::bindCommonUniforms(raycastShader, &player);
-	glDispatchCompute((currentRenderResolution.x + LOCAL_SIZE.x - 1) / LOCAL_SIZE.x, (numVisibleWalls + LOCAL_SIZE.y - 1) / LOCAL_SIZE.y, 1);
+	glDispatchCompute(
+		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
+		(numVisibleWalls + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
+		1
+	);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("Raycasting Shader", true);
 
 
 	//Environment Shader.
@@ -503,22 +508,29 @@ void renderFrame(double blendingAlpha) {
 
 
 	//Lighting Shader
-	glViewport(0, 0, currentShadowResolution.x, currentShadowResolution.y);
+	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 	glUseProgram(lightingShader);
 
 	glBindTextureUnit(0, positionMapID);
 	glBindTextureUnit(1, normalMapID);
 	glBindTextureUnit(2, textureArrayEnvironment);
-	glBindImageTexture(0, shadowMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms;
 	render::bindCommonUniforms(lightingShader, &player);
 	render::bindUniformValue(lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
 	render::bindUniformValue(lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	render::bindUniformValue(lightingShader, "headLampEnabled", headLampEnabled);
-	render::bindUniformValue(lightingShader, "headLampFlicker", lightFlickerRNG);
+	render::bindUniformValue(lightingShader, "headLampIntensity", 5.0f + (lightFlickerRNG / 768.0f)); //lightFlickerRNG is 0-255.
 
-	renderingGeneric("Lighting Shader");
+	//Dispatch 2 extra valid lights (Sun, Headlamp.)
+	glDispatchCompute(
+		(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+		(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+		(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z
+	);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("Lighting Shader", true);
 
 
 
@@ -537,7 +549,8 @@ void renderFrame(double blendingAlpha) {
 
 	glBindTextureUnit(0, renderedFrameID);
 	glBindTextureUnit(1, interfaceID);
-	glBindTextureUnit(2, shadowMapID);
+	glBindTextureUnit(2, lightingMapsArrayID);
+	glBindTextureUnit(3, normalMapID);
 	glBindImageTexture(0, renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms

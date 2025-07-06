@@ -50,7 +50,7 @@
 
 
     <!-- Lift Control -->
-    <wall start="6.0 -8.0 0.0" end="6.0 -6.0 5.0" texture="quake" altTexture="quake2" type="W_SWITCH" flag="liftControl" extra="0.0" textureScale="2.0 2.0" />
+    <wall start="6.0 -8.0 0.0" end="6.0 -6.0 5.0" texture="quake" altTexture="quake2" type="W_SWITCH" flag="liftControl" extra="0.0" textureScale="2.0 2.5" />
 
     <!-- Lift "body" -->
     <visplane start="6.0 -8.0" end="4.0 -6.0" height="0.025" texture="metal" type="V_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="2.0 2.0" />

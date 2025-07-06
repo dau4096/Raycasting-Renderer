@@ -95,6 +95,7 @@ struct IntersectionData {
 	double distanceSQ;	//Distance from camera, squared
 	uint index;			//The index of the found object
 	int foundType;		//The type of the found object
+	vec2 normal2D;		//Normal vector of the intersect.
 };
 IntersectionData stack[3];
 int topOfStack = 0;
@@ -460,6 +461,7 @@ void main() {
 		thisIntersect.position = vec3(intersect.position2D, fragZ);
 		thisIntersect.UV = vec3(xUV, yUV, thisWall.textureID);
 		thisIntersect.foundType = 1;
+		thisIntersect.normal2D = intersect.normal2D;
 
 		//Set closest.
 		pushStack(thisIntersect);
@@ -575,7 +577,7 @@ void main() {
 					normalv2 *= -1;
 					validIntersect.UV.x *= -1;
 				}
-				normal = vec3(normalv2.xy, 0.0f);
+				normal = vec3(validIntersect.normal2D.xy, 0.0f);
 				typeFlag = 0x1;
 
 			} else if (validIntersect.foundType == 2) { //Visplane
