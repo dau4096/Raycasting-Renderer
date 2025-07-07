@@ -279,8 +279,8 @@ float getWallYUV(Wall thisWall, uint projections) {
 	);
 
 
-	float screenYLow = float((projections >> 16) & 0xFFFF) - 12288.0f; //12,288 == 0x3000
-	float screenYTop = float(projections & 0xFFFF) - 12288.0f;
+	float screenYLow = float((projections >> 16) & 0xFFFF) - 12289.0f; //12,288 == 0x3000
+	float screenYTop = float(projections & 0xFFFF) - 12287.0f;
 
 	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {
 		return INF;

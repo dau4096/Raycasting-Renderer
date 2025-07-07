@@ -231,8 +231,8 @@ void extractCuboid(
 	glm::vec3 lowerCorner = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
 	glm::vec3 upperCorner = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
 	GLuint sideTexture = getTexture(node, textureNames, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
-	GLuint topTexture = getTexture(node, textureNames, "upperTexture", initial::FALLBACK_TEXTURE_NAME);
-	GLuint lowTexture = getTexture(node, textureNames, "lowerTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint topTexture = getTexture(node, textureNames, "topTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint lowTexture = getTexture(node, textureNames, "bottomTexture", initial::FALLBACK_TEXTURE_NAME);
 
 
 	int intType = getEnum(node, "type", 1); //V_NORMAL, W_NORMAL and D_NORMAL are all integer value 1.
@@ -252,22 +252,25 @@ void extractCuboid(
 	glm::vec2 wTexScale = glm::vec2(textureScale.x, textureScale.z);
 	glm::vec2 wTexOffset = glm::vec2(textureOffset.x, textureOffset.z);
 
-	std::vector<utils::Visplane> newVData = {
-		utils::Visplane(
-			glm::vec2(lowerCorner), glm::vec2(upperCorner), lowerCorner.z,
-			lowTexture, vType, ptr, extra,
-			worldSpaceTextures.x, worldSpaceTextures.y,
-			glm::vec2(textureScale), glm::vec2(textureOffset)
-		),
-		utils::Visplane(
+
+	if (getBool(node, "hasTop", true)) {
+		visplaneData->push_back(utils::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), upperCorner.z,
 			topTexture, vType, ptr, extra,
 			worldSpaceTextures.x, worldSpaceTextures.y,
 			glm::vec2(textureScale), glm::vec2(textureOffset)
-		),
-	};
-	utils::combineVectors(visplaneData, newVData);
-	validVisplanes += 2;
+		));
+		validVisplanes++;
+	}
+	if (getBool(node, "hasBottom", true)) {
+		visplaneData->push_back(utils::Visplane(
+			glm::vec2(lowerCorner), glm::vec2(upperCorner), lowerCorner.z,
+			lowTexture, vType, ptr, extra,
+			worldSpaceTextures.x, worldSpaceTextures.y,
+			glm::vec2(textureScale), glm::vec2(textureOffset)
+		));
+		validVisplanes++;
+	}
 
 	std::vector<utils::Wall> newWData = {
 		utils::Wall(
