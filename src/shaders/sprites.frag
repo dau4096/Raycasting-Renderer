@@ -170,7 +170,7 @@ void main() {
 		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, invdistance, spriteDistanceSQ);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
-		fragDepth = 1.0f / invdistance;
+		
 		if (debugMode == 1) { //DrawUV
 			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
 		} else if (debugMode == 2) { //DrawNormals
@@ -181,6 +181,7 @@ void main() {
 			albedo = alphaTexture.rgb;
 		}
 
+		fragDepth = 1.0f / invdistance;
 		spriteHit = true;
 		closestSprite = thisSprite;
 		closestIndex = index;
