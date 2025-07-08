@@ -554,7 +554,7 @@ void loadModel(
 	std::vector<tinyobj::material_t> materials;
 	std::string warn;
 
-	glm::mat4 modelMatrix = getModelMat4(position, rotation, scale); //Matrix seems wrong; renders fine when matrix NOT involved.
+	glm::mat4 modelMatrix = getModelMat4(position, rotation, scale);
 
 	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, modelFilePath.c_str(), nullptr, true);
 
@@ -564,47 +564,53 @@ void loadModel(
 
 	for (const auto& shape : shapes) {
 		std::unordered_map<int, int> indexMap;
-
+		size_t index_offset = 0;
 		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-			int fv = shape.mesh.num_face_vertices[f];
-			if (fv != 3) {continue; /* Invalid. */}
+		    int fv = shape.mesh.num_face_vertices[f];
+		    if (fv != 3) {
+		        index_offset += fv;
+		        continue;
+		    }
 
-			Displacement thisDisp;
-			for (size_t v = 0; v < fv; v++) {
-				tinyobj::index_t idx = shape.mesh.indices[f * fv + v];
+		    Displacement thisDisp;
+		    for (size_t v = 0; v < 3; v++) {
+		        tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
 
-				glm::vec4 pos4 = glm::vec4(
-					attrib.vertices[3 * idx.vertex_index + 0],
-					attrib.vertices[3 * idx.vertex_index + 1],
-					attrib.vertices[3 * idx.vertex_index + 2],
-					1.0f
-				);
+		        glm::vec4 pos4 = glm::vec4(
+		            attrib.vertices[3 * idx.vertex_index + 0],
+		            attrib.vertices[3 * idx.vertex_index + 1],
+		            attrib.vertices[3 * idx.vertex_index + 2],
+		            1.0f
+		        );
 
-				glm::vec3 pos = glm::vec3(pos4 * modelMatrix);
+		        glm::vec3 pos = glm::vec3(pos4 * modelMatrix);
 
-				glm::vec2 uv = glm::vec2(0.0f, 0.0f);
-				if (idx.texcoord_index >= 0) {
-					uv = glm::vec2(
-						attrib.texcoords[2 * idx.texcoord_index + 0],
-						attrib.texcoords[2 * idx.texcoord_index + 1]
-					);
-				} else {
-					textureID = -1;
-				}
+		        glm::vec2 uv = glm::vec2(0.0f, 0.0f);
+		        if (idx.texcoord_index >= 0) {
+		            uv = glm::vec2(
+		                attrib.texcoords[2 * idx.texcoord_index + 0],
+		                attrib.texcoords[2 * idx.texcoord_index + 1]
+		            );
+		        } else {
+		            textureID = -1;
+		        }
 
-				thisDisp.vertices[v] = pos;
-				thisDisp.UV[v] = uv;
-			}
-			thisDisp.textureID = textureID;
-			thisDisp.type = D_NORMAL;
-			thisDisp.IOPtr = nullptr;
-			thisDisp.data = 0.0f;
+		        thisDisp.vertices[v] = pos;
+		        thisDisp.UV[v] = uv;
+		    }
 
-			thisDisp.normal = glm::normalize(glm::cross(
-				thisDisp.vertices[1] - thisDisp.vertices[0],
-				thisDisp.vertices[2] - thisDisp.vertices[0]
-			));
-			displacementData->push_back(thisDisp);
+		    thisDisp.textureID = textureID;
+		    thisDisp.type = D_NORMAL;
+		    thisDisp.IOPtr = nullptr;
+		    thisDisp.data = 0.0f;
+		    thisDisp.normal = glm::normalize(glm::cross(
+		        thisDisp.vertices[1] - thisDisp.vertices[0],
+		        thisDisp.vertices[2] - thisDisp.vertices[0]
+		    ));
+
+		    displacementData->push_back(thisDisp);
+
+		    index_offset += fv;
 		}
 	}
 

@@ -216,6 +216,16 @@ namespace utils {
 		A->insert(A->end(), B.begin(), B.end());
 	}
 
+	static inline float getAverage(std::vector<float>& q) {
+		float n = 0.0f;
+		float sum = 0.0f;
+		for (float v : q) {
+			sum += v;
+			n++;
+		}
+		return sum / n;
+	}
+
 
 	float determinant(glm::vec2 vecA, glm::vec2 vecB);
 
@@ -358,10 +368,10 @@ namespace utils {
 	static inline int getCentreX(glm::vec3& objPos, Player* player, glm::ivec2 resolution) {
 		glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player->position));
 		float theta = atan2(direction.x, direction.y);
-		float rayDelta = (theta * constants::TO_DEG) - player->viewAngle;
-		if (rayDelta > 180.0f) rayDelta -= 360.0f;
-		if (rayDelta < -180.0f) rayDelta += 360.0f;
-		float centreX = (resolution.x / 2.0f) * ((rayDelta / rayAngle) + 1.0f);
+		float angleDelta = (theta * constants::TO_DEG) - player->viewAngle;
+		if (angleDelta > 180.0f) {angleDelta -= 360.0f;}
+		if (angleDelta < -180.0f) {angleDelta += 360.0f;}
+		float centreX = (resolution.x / 2.0f) * ((angleDelta / rayAngle) + 1.0f);
 		return int(round(centreX));
 	}
 

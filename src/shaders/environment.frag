@@ -24,7 +24,6 @@ uniform ivec2 renderResolution;
 uniform int debugMode;
 
 //Other
-uniform int numDisplacements;
 uniform int numVisibleVisplanes;
 uniform int numWalls;			//Total
 uniform int numVisibleWalls; 	//Onscreen
@@ -60,15 +59,6 @@ layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
 };
 
-struct Displacement {
-	vec4 vertices[3];	//3D Vertices
-	vec2 UV[3];			//2D UV coordinates per vertex
-	vec4 normal_texID;	//Normal and texture ID packed together
-};
-layout(std430, binding=4) buffer displacementSSBO {
-	Displacement displacements[];
-};
-
 //Buffers containing indices of all valid objects (referencing their actual datasets above.)
 layout(std430, binding=5) buffer visibleVisplaneIndicesSSBO {uint visibleVisplaneIndices[];};
 layout(std430, binding=6) buffer visibleWallIndicesSSBO {uint visibleWallIndices[];};
@@ -92,7 +82,7 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 struct IntersectionData {
 	vec3 position;		//3D intersect location
 	vec3 UV;			//UV & texture ID
-	double distanceSQ;	//Distance from camera, squared
+	float distanceSQ;	//Distance from camera, squared
 	uint index;			//The index of the found object
 	int foundType;		//The type of the found object
 	vec2 normal2D;		//Normal vector of the intersect.
@@ -152,7 +142,6 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 
 
 vec2 fragPosition;
-vec2 rayDirectionCentre;
 vec4 fragColour;
 float zoomEffect;
 float halfFOV;
@@ -304,74 +293,6 @@ float getWallYUV(Wall thisWall, uint projections) {
 
 
 
-//Displacements
-vec2 getScreenPosition(vec3 position3D) {
-	vec2 delta = position3D.xy - playerPosition.xy;
-
-	//X
-	vec2 direction = normalize(delta);
-	float theta = atan(direction.x, direction.y);
-	float rayDelta = degrees(theta) - playerViewAngle;
-	if (rayDelta > 180.0f) rayDelta -= 360.0f;
-	if (rayDelta < -180.0f) rayDelta += 360.0f;
-	float X = (renderResolution.x / 2.0f) * ((rayDelta / halfFOV) + 1.0f);
-
-	//Y
-	/*
-	//Original from getWallUV()
-	float projectedYTop = (originPos.z - wallTopZ) / distance;
-	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	*/
-
-	float invDistance = inversesqrt(max(dot(delta, delta), 1e-4f));
-	float projCentreY = (playerPosition.z - position3D.z) * invDistance * zoomEffect;
-	float Y = renderResolution.y * (0.5f - projCentreY);
-
-	return vec2(X, Y);
-}
-
-
-float sign2(vec2 a, vec2 b, vec2 c) {
-	return (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
-}
-
-
-float edge(vec2 a, vec2 b, vec2 c) {
-	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-}
-
-
-bool inDisplacement(vec2 v1, vec2 v2, vec2 v3) {
-	float d1 = sign2(fragPosition, v1, v2);
-	float d2 = sign2(fragPosition, v2, v3);
-	float d3 = sign2(fragPosition, v3, v1);
-
-	bool hasNegative = (d1 < 0) || (d2 < 0) || (d3 < 0);
-	bool hasPositive = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-	return !(hasNegative && hasPositive);
-}
-
-
-vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
-	float areaABC = edge(v1, v2, v3);
-	float a = edge(fragPosition, v2, v3)/areaABC;
-	float b = edge(fragPosition, v3, v1)/areaABC;
-	float c = 1.0f - a - b;
-	return vec3(a,b,c);
-}
-
-
-bool behindCamera(vec4 pt, vec2 proj) {
-	vec2 dir = normalize(pt.xy - playerPosition.xy);
-	return (dot(rayDirectionCentre, dir) < 0.0f) || (proj.x < 0.0f || proj.x > renderResolution.x);
-}
-
-
-
-
-
-
 //Visplanes
 vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
 	bvec2 useWorldSpace;
@@ -416,9 +337,6 @@ void main() {
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;
-	float rPVA = radians(playerViewAngle);
-	rayDirectionCentre = vec2(sin(rPVA), cos(rPVA));
-	float distMultiplier = dot(rayDirection, rayDirectionCentre);
 
 	Ray fragRay = createRay(playerPosition.xy, rayDirection);
 
@@ -498,9 +416,8 @@ void main() {
 				continue;
 			}
 
-			float dx = playerPosition.x - intersectPoint.x;
-			float dy = playerPosition.y - intersectPoint.y;
-			thisIntersect.distanceSQ = dx * dx + dy * dy;
+			vec2 d = (playerPosition - intersectPoint).xy;
+			thisIntersect.distanceSQ = dot(d,d) ;
 			thisIntersect.position = intersectPoint;
 			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
@@ -509,46 +426,6 @@ void main() {
 			foundObject = true;
 		}
 	}
-
-
-	//Iterate through all displacements. (pseudo-3D)
-	for (int idx=0; idx<numDisplacements; idx++) {
-		Displacement thisDisp = displacements[idx];
-
-		vec2 pA = getScreenPosition(thisDisp.vertices[0].xyz);
-		vec2 pB = getScreenPosition(thisDisp.vertices[1].xyz);
-		vec2 pC = getScreenPosition(thisDisp.vertices[2].xyz);
-
-		if (behindCamera(thisDisp.vertices[0], pA) && behindCamera(thisDisp.vertices[1], pB) && behindCamera(thisDisp.vertices[2], pC)) {continue;}
-
-		if (inDisplacement(pA, pB, pC)) {
-			vec3 barycentricW = barycentricWeights(pA, pB, pC);
-			vec3 pos3D = (
-				thisDisp.vertices[0].xyz * barycentricW.x +
-				thisDisp.vertices[1].xyz * barycentricW.y +
-				thisDisp.vertices[2].xyz * barycentricW.z
-			);
-			vec2 delta = pos3D.xy - playerPosition.xy;
-			float distanceSQ = dot(delta, delta);
-
-			
-			thisIntersect.distanceSQ = distanceSQ;
-			thisIntersect.index = idx;
-			thisIntersect.position = pos3D;
-			thisIntersect.foundType = 3;
-
-			vec2 UV = (
-				thisDisp.UV[0].xy * barycentricW.x +
-				thisDisp.UV[1].xy * barycentricW.y +
-				thisDisp.UV[2].xy * barycentricW.z
-			);
-			thisIntersect.UV = vec3(UV.xy, thisDisp.normal_texID.w);
-			pushStack(thisIntersect);
-			foundObject = true;
-		}
-	}
-
-
 	
 	
 
@@ -560,14 +437,13 @@ void main() {
 		vec3 normal;
 		int typeFlag;
 		vec4 albedo;
-		double minDistance;
+		float minDistance;
 		bool trueFound = false;
 		while (success) {
 			success = popStack(validIntersect);
 			
 			Wall closestWall;
 			Visplane closestPlane;
-			Displacement closestDisp;
 			if (validIntersect.foundType == 1) { //Wall
 				closestWall = walls[validIntersect.index];
 
@@ -589,14 +465,10 @@ void main() {
 					normal = vec3(0.0f, 0.0f, 1.0f);
 				}
 				typeFlag = 0x2;
-
-			} else if (validIntersect.foundType == 3) {
-				closestDisp = displacements[validIntersect.index];
-				normal = closestDisp.normal_texID.xyz;
-				typeFlag = 0x3;
 			}
 
-			minDistance = distMultiplier / inversesqrt(validIntersect.distanceSQ);
+
+			minDistance = 1.0f / inversesqrt(validIntersect.distanceSQ);
 			albedo = fetchUV(validIntersect.UV, minDistance, normal, validIntersect.position);
 			if ((albedo.a < 0.5f) && (allowTransparency)) {continue;}
 			if (shouldDrawToPositionMap) {
@@ -618,6 +490,7 @@ void main() {
 			}
 			vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
 			imageStore(renderedFrame, framePosition, finalFragColour);
+			gl_FragDepth = minDistance / maxRayDistance;
 			return;
 		}
 	}
@@ -633,4 +506,5 @@ void main() {
 		imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
 	}
 	imageStore(renderedFrame, framePosition, vec4(skyAlbedo.rgb, maxRayDistance));
+	gl_FragDepth = 1.0f;
 }

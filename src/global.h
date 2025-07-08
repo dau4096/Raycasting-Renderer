@@ -124,9 +124,43 @@ inline float tickrate;
 inline float zoomEffect;
 inline float rayAngle;
 inline float verticalFOV;
-inline size_t frame;
-inline size_t tick;
+inline size_t frameNumber;
+inline size_t tickNumber;
+
+inline float avgframerate, avgtickrate;
+inline bool shouldShowFPS, shouldShowTPS;
+inline std::vector<float> rollingFPS;
+inline std::vector<float> rollingTPS;
+
+inline bool headLampEnabled;
+inline bool interactKey;
+inline bool prevInteract;
+inline bool shouldTakeScreenshot;
+inline int lightFlickerRNG;
 
 
 //Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
 inline std::deque<std::pair<float, float>> internalsData;
+
+
+
+namespace GLIndex {
+//Displacements
+inline GLuint dispVAO, dispVBO, dispEBO;
+inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, displacementFBONormals;
+
+inline GLuint uiVAO, uiVBO, uiEBO;
+inline GLuint genericVAO;
+inline GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, lightingMapsArrayID;
+
+//Shaders
+inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D, spriteShader, lightingShader, uiShader, displayShader; 
+
+//Textures
+inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric;
+
+//Storage Buffers
+inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
+inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO; 
+
+}

@@ -99,10 +99,10 @@
 
 
 
-	<!-- Trees -->
+	<!-- Deco -->
 	<model position=" 7.0  7.0 0.0" rotation="0.0 0.0 1.57" scale="0.02 0.02 0.02" file="fir_tree" texture="tree" />
 	<model position="-4.0 -7.0 0.0" rotation="0.0 0.0 1.57" scale="0.02 0.02 0.02" file="fir_tree" texture="tree" />
-	<model position="0.0 -15.0 0.0" rotation="0.0 0.0 1.57" scale="0.02 0.02 0.02" file="island_11_house" />
+	<!--model position="0.0 -15.0 0.0" rotation="0.0 0.0 1.57" scale="0.02 0.02 0.02" file="island_11_house" /-->
 
 </environment>
 
