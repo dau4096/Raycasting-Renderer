@@ -454,7 +454,7 @@ void playerMove(
 		player->position = stageData.playerStartPoint;
 		player->velocity = glm::vec3(0.0f, 0.0f, 0.0f);
 		player->viewAngle = stageData.playerStartAngle;
-		player->state = E_NONE;
+		player->state = E_RESPAWN;
 		player->touchingFloor = false;
 		player->health = playerConfig::PLAYER_MAX_HEALTH;
 		player->energy = playerConfig::PLAYER_MAX_ENERGY;
@@ -789,7 +789,6 @@ void updateSpecials(
 
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		utils::Wall wall = wallData->at(wIndex);
-		if ((wall.type == W_INVALID) || (wall.type == W_NORMAL) || (wall.type == W_PASSTHROUGH)) {continue;}
 		bool enabled = false;
 		if (wall.IOPtr) {enabled = *(wall.IOPtr);}
 
@@ -898,7 +897,6 @@ void updateSpecials(
 
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
 		utils::Visplane vPlane = visplaneData->at(vIndex);
-		if ((vPlane.type == V_INVALID) || (vPlane.type == V_NORMAL) || (vPlane.type == V_PASSTHROUGH)) {continue;}
 		bool enabled = false;
 		if (vPlane.IOPtr) {enabled = *(vPlane.IOPtr);}
 
@@ -971,6 +969,35 @@ void updateSpecials(
 				if (planeTouch) {
 					float hurt = vPlane.data;
 					utils::hurtPlayer(player, hurt);
+				}
+				break;
+			}
+
+			case V_TELEPORT: {
+				if (planeTouch && (vPlane.internal->first <= 0.0f)) {
+					int partnerIndex = int(vPlane.data);
+					if (partnerIndex < 0.0f) {break; /* Invalid partner. */}
+					utils::Visplane partner = visplaneData->at(partnerIndex);
+					glm::vec2 partnerCentre = (partner.start + partner.end) / 2.0f;
+
+
+					float exitDir = partner.internal->second;
+					if (exitDir == constants::INF) {
+						exitDir = player->viewAngle;
+					}
+
+					//Move player and play teleport visual effect.
+					player->position = glm::vec3(partnerCentre, partner.height + (player->height / 2.0f));
+					player->velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+					player->viewAngle = exitDir; player->viewPitch = 0.0f; player->viewRoll = 0.0f;
+					player->state = E_TELEPORT;
+					player->touchingFloor = false;
+					player->jumpsUsed = 0;
+
+					partner.internal->first = 1.0f;
+					vPlane.internal->first = 1.0f;
+				} else if (!planeTouch) {
+					vPlane.internal->first = 0.0f;
 				}
 				break;
 			}

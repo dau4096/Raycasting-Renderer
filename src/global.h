@@ -137,6 +137,8 @@ inline bool interactKey;
 inline bool prevInteract;
 inline bool shouldTakeScreenshot;
 inline int lightFlickerRNG;
+inline glm::vec4 screenTint;
+inline bool isInvertEffect;
 
 
 //Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
@@ -161,6 +163,6 @@ inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureA
 
 //Storage Buffers
 inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
-inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO; 
+inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO;
 
 }

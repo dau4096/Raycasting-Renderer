@@ -98,6 +98,9 @@ void physicsLoop(bool* physicsReady) {
 
 
 		//Update states;
+		screenTint = graphics::manageScreenTint(&player);
+		player.previousState = player.state;
+		player.state = E_NONE;
 		{
 			std::lock_guard<std::mutex> lock(stateSwapMutex);
 			std::swap(physicsData, graphicsData);
@@ -241,6 +244,7 @@ int main() {
 		&logicGates, &flags,
 		&textureNames
 	);
+	player.state = E_RESPAWN;
 
 	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	currentRenderResolution = glm::ivec2(

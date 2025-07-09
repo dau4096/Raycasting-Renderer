@@ -6,7 +6,8 @@
 enum Event {
 	E_NONE, E_DEAD,
 	E_HURT, E_HEAL,
-	E_NEW_IH, E_ENERGY
+	E_NEW_IH, E_ENERGY,
+	E_TELEPORT, E_RESPAWN
 };
 
 enum ItemFloor {
@@ -25,7 +26,8 @@ enum VisplaneType {
 	V_MOVEX_FAST, V_MOVEX_SLOW,
 	V_MOVEY_FAST, V_MOVEY_SLOW,
 	V_MOVEZ_FAST, V_MOVEZ_SLOW,
-	V_HURT, V_PASSTHROUGH
+	V_HURT, V_PASSTHROUGH,
+	V_NODRAW, V_TELEPORT
 };
 
 enum WallType {
@@ -35,7 +37,8 @@ enum WallType {
 	W_MOVEN_FAST, W_MOVEN_SLOW,
 	W_MOVEZ_FAST, W_MOVEZ_SLOW,
 	W_SWITCH, W_PASSTHROUGH,
-	W_DOORZ, W_DOORSWING
+	W_DOORZ, W_DOORSWING,
+	W_NODRAW
 };
 
 enum DisplacementType {
@@ -204,6 +207,7 @@ namespace constants {
 	//Mathematical Constants
 	constexpr float PI = 3.141592f;
 	constexpr float EXP = 2.718281f;
+	constexpr float INF = std::numeric_limits<float>::infinity();
 
 	constexpr float TO_RAD = 0.017453f;
 	constexpr float TO_DEG = 57.29577f;

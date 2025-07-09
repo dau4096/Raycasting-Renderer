@@ -313,7 +313,7 @@ namespace utils {
 		glm::vec3 position, prevPosition, velocity, cameraPosition;
 		float viewAngle, viewRoll, viewPitch, vLook, height;
 		bool touchingFloor, sliding;
-		Event state;
+		Event state, previousState;
 		int health, energy;
 		unsigned int jumpsUsed;
 		//std::vector<utils::Weapon, constants::MAX_ITEMS_HELD> backpack;
@@ -324,7 +324,7 @@ namespace utils {
 			  viewAngle(stageData.playerStartAngle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 			  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 			  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
-			  state(E_NONE), jumpsUsed(0), sliding(false) {}
+			  state(E_NONE), previousState(E_NONE), jumpsUsed(0), sliding(false) {}
 	};
 
 
@@ -431,7 +431,8 @@ namespace utils {
 				glm::vec2 s, glm::vec2 e, float heightZ, GLint textureID,
 				VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 				bool isWorldSpaceX=true, bool isWorldSpaceY=true,
-				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
+				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
+				float exitDirection=constants::INF
 			) : start(glm::min(s, e)), end(glm::max(s, e)), height(heightZ), 
 				originalStart(glm::min(s, e)), originalEnd(glm::max(s, e)), originalHeight(heightZ), 
 				textureID(textureID),
@@ -446,6 +447,11 @@ namespace utils {
 						internal = &(internalsData.at(internalsData.size()-1));
 					} else {
 						internal = nullptr;
+					}
+
+
+					if (type == V_TELEPORT) {
+						internal->second = exitDirection;
 					}
 				}
 	};

@@ -420,6 +420,7 @@ void findVisibleObjects(
 	//Visplanes
 	for (uint idx=0; idx<visplaneData->size(); idx++) {
 		utils::Visplane thisPlane = visplaneData->at(idx);
+		if ((thisPlane.type == V_INVALID) || (thisPlane.type == V_NODRAW)) {continue; /* Non-shown VPs */}
 		bool aProj = glm::dot(thisPlane.start - playerPosV2, playerFDirection) < 0.0f;
 		bool bProj = glm::dot(thisPlane.end - playerPosV2, playerFDirection) < 0.0f;
 		bool cProj = glm::dot(glm::vec2(thisPlane.start.x, thisPlane.end.y) - playerPosV2, playerFDirection) < 0.0f;
@@ -434,6 +435,7 @@ void findVisibleObjects(
 	//Walls
 	for (uint idx=0; idx<wallData->size(); idx++) {
 		utils::Wall thisWall = wallData->at(idx);
+		if ((thisWall.type == W_INVALID) || (thisWall.type == W_NODRAW)) {continue; /* Non-shown Walls */}
 		bool sProj = glm::dot(glm::vec2(thisWall.start - player->position), playerFDirection) < 0.0f;
 		bool eProj = glm::dot(glm::vec2(thisWall.end - player->position), playerFDirection) < 0.0f;
 		if (sProj && eProj) {continue; /* Completely behind player view */}
@@ -755,29 +757,62 @@ float viewBob(float tick, utils::Player* player) {
 
 int tickCounter = 0, duration = 0;
 glm::vec3 screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE) {
-	if (newDuration > 0) {
+std::unordered_map<Event, int> stateMap = {
+	{E_NONE, 0},
+	{E_HURT, 3 * constants::PHYSICS_FREQUENCY},
+	{E_HEAL, 1 * constants::PHYSICS_FREQUENCY},
+	{E_ENERGY, 1 * constants::PHYSICS_FREQUENCY},
+	{E_NEW_IH, 5 * constants::PHYSICS_FREQUENCY},
+	{E_TELEPORT, 1 * constants::PHYSICS_FREQUENCY},
+	{E_RESPAWN, 2 * constants::PHYSICS_FREQUENCY}
+};
+glm::vec4 manageScreenTint(utils::Player* player) {
+	int newDuration = 0;
+	if (player->state != player->previousState) {
+		newDuration = stateMap.at(player->state);
+	}
+
+	if (newDuration > tickCounter) {
 		tickCounter = newDuration;
 		duration = newDuration;
-		switch (event) {
-			case E_NONE:
+		isInvertEffect = false;
+		switch (player->state) {
+			case E_NONE: {
 				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
 				break;
-			case E_HURT:
+			}
+			case E_HURT: {
 				screenTintRGB = glm::vec3(1.0f, 0.0f, 0.0f);
 				break;
-			case E_HEAL:
+			}
+			case E_HEAL: {
 				screenTintRGB = glm::vec3(0.0f, 1.0f, 0.0f);
 				break;
-			case E_ENERGY:
+			}
+			case E_ENERGY: {
 				screenTintRGB = glm::vec3(1.0f, 1.0f, 0.0f);
 				break;
-			case E_NEW_IH:
+			}
+			case E_NEW_IH: {
 				screenTintRGB = glm::vec3(0.125f, 0.125f, 0.125f);
 				break;
-			default:
+			}
+			case E_TELEPORT: {
+				screenTintRGB = glm::vec3(1.0f, 1.0f, 1.0f);
+				isInvertEffect = true;
+				break;
+			}
+			case E_RESPAWN: {
+				screenTintRGB = glm::vec3(1.0f, 0.0f, 0.0f);
+				isInvertEffect = true;
+				break;
+			}
+			default:{
 				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
+				break;
+			}
 		}
+		player->state = E_NONE;
 	} else if (tickCounter != 0) {
 		tickCounter--;
 	}
@@ -787,8 +822,10 @@ glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE) {
 		intensity = static_cast<float>(tickCounter) / static_cast<float>(duration);
 	} else {
 		intensity = 0;
+		player->state = E_NONE;
+		player->previousState = E_NONE;
 	}
-	return glm::vec4(screenTintRGB.x, screenTintRGB.y, screenTintRGB.z, intensity);
+	return glm::vec4(screenTintRGB.r, screenTintRGB.g, screenTintRGB.b, intensity);
 }
 
 
@@ -1325,7 +1362,6 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	if (headLampEnabled) {
 		lightFlickerRNG = utils::RNGc();
 	}
-	glm::vec4 tintData = graphics::manageScreenTint(0, player->state);
 	float viewBob = (utils::configToBool("VIEW_BOB")) ? graphics::viewBob(tickNumber, player) : 0.0f;
 	glm::vec3 interpPosition = glm::mix(player->prevPosition, player->position, blendingAlpha);
 	player->cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player->height/3.0f) + viewBob);
@@ -1451,6 +1487,8 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	uniforms::bindUniformValue(GLIndex::displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
+	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
+	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
 
 	renderingGeneric("Display Shader");
 

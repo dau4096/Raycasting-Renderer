@@ -98,7 +98,7 @@ vec4 fetchUV(vec3 UV, double distance, bool fetchTexture=true) {
 
 
 
-vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance, float depth) {
+vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
@@ -106,8 +106,8 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance, float
 	float projectedYLow = (playerPosition.z - spriteFootZ) * invdistance * zoomEffect;
 	float projectedYTop = (playerPosition.z - spriteHeadZ) * invdistance * zoomEffect;
 	
-	float screenYLow = renderResolution.y * (0.5 - projectedYLow);
-	float screenYTop = renderResolution.y * (0.5 - projectedYTop);
+	float screenYLow = renderResolution.y * (0.5f - projectedYLow);
+	float screenYTop = renderResolution.y * (0.5f - projectedYTop);
 
 	float spriteHeight = screenYTop - screenYLow;
 	float spriteWidth = thisSprite.width * spriteHeight;
@@ -116,9 +116,9 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance, float
 
 
 	//xUV calculation.
-	float relativeX = fragPosition.x - centrePixelX + (spriteWidth/2);
+	float relativeX = fragPosition.x - centrePixelX + (spriteWidth/2.0f);
 	float xUV = fract(relativeX / spriteWidth);
-	if (fragPosition.x < centrePixelX - (spriteWidth/2) || fragPosition.x >= centrePixelX + (spriteWidth/2)) {return INVALIDv2; /* Horizontally out of sprite bounds */}
+	if (fragPosition.x < centrePixelX - (spriteWidth/2.0f) || fragPosition.x >= centrePixelX + (spriteWidth/2.0f)) {return INVALIDv2; /* Horizontally out of sprite bounds */}
 
 
 	//yUV calculation.
@@ -163,18 +163,18 @@ void main() {
 		vec2 delta = playerPosition.xy - thisSprite.position.xy;
 		float spriteDistanceSQ = dot(delta, delta);
 
-		if (spriteDistanceSQ >= fragDepth*fragDepth || spriteDistanceSQ > maxRayDistance*maxRayDistance) {continue; /* Too far to see onscreen. */}
+		if (spriteDistanceSQ > fragDepth*fragDepth || spriteDistanceSQ > maxRayDistance*maxRayDistance) {continue; /* Too far to see onscreen. */}
 
 
 		float invdistance = inversesqrt(spriteDistanceSQ);
-		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, invdistance, spriteDistanceSQ);
+		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, invdistance);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
 		
 		if (debugMode == 1) { //DrawUV
 			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
 		} else if (debugMode == 2) { //DrawNormals
-			albedo = vec3(delta.xy, 0.0f);
+			albedo = vec3(normalize(delta.xy), 0.0f);
 		} else {
 			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, thisSprite.textureID), fragDepth);
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}

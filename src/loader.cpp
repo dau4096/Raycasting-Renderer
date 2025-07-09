@@ -49,20 +49,21 @@ bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flag
 
 
 static const std::unordered_map<std::string, int> enumMap = {
-	//Logic gates 			Walls 					Visplanes 				Sprites 				Displacements
-	{"G_INVALID", 0}, 		{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
-	{"G_PASSTHROUGH", 1}, 	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
-	{"G_AND", 2}, 			{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"SPR_LIGHT", 2}, 
-	{"G_OR", 3}, 			{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 
-	{"G_NOT", 4}, 			{"W_MOVED_SLOW", 4},	{"V_MOVEX_SLOW", 4}, 
-	{"G_XOR", 5}, 			{"W_MOVEN_FAST", 5},	{"V_MOVEY_FAST", 5}, 
-	{"G_LATCH", 6}, 		{"W_MOVEN_SLOW", 6},	{"V_MOVEY_SLOW", 6},
-	{"G_PULSE", 7}, 		{"W_MOVEZ_FAST", 7},	{"V_MOVEZ_FAST", 7},
-	{"G_TOGGLE", 8},		{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8},
-							{"W_SWITCH", 9},		{"V_HURT", 9},
-							{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
-							{"W_DOORZ", 11},
-							{"W_DOORSWING", 12},
+	//Walls 				Visplanes				Logic Gates				Sprites 				Displacements
+	{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"G_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
+	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"G_PASSTHROUGH", 1}, 	{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
+	{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"G_AND", 2}, 			{"SPR_LIGHT", 2}, 
+	{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 	{"G_OR", 3}, 			 
+	{"W_MOVED_SLOW", 4},	{"V_MOVEX_SLOW", 4}, 	{"G_NOT", 4}, 			 
+	{"W_MOVEN_FAST", 5},	{"V_MOVEY_FAST", 5}, 	{"G_XOR", 5}, 			 
+	{"W_MOVEN_SLOW", 6},	{"V_MOVEY_SLOW", 6}, 	{"G_LATCH", 6}, 		
+	{"W_MOVEZ_FAST", 7},	{"V_MOVEZ_FAST", 7}, 	{"G_PULSE", 7}, 		
+	{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8}, 	{"G_TOGGLE", 8},		
+	{"W_SWITCH", 9},		{"V_HURT", 9},
+	{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
+	{"W_DOORZ", 11},		{"V_NODRAW", 11},
+	{"W_DOORSWING", 12},	{"V_TELEPORT", 12},
+	{"W_NODRAW", 13},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -177,15 +178,49 @@ static inline int getTexture(
 		const char* defaultValue=display::FALLBACK_TEXTURE_PATH
 	) {
 	pugi::xml_attribute attr = node.attribute(attrName);
-	const char* name;
+	const char* texname;
 	if (attr) {
 		std::string attrValue = attr.as_string();
-		name = attrValue.c_str();
+		texname = attrValue.c_str();
 	} else {
-		name = defaultValue;
+		texname = defaultValue;
 	}
-	return assignTexture(name, textureNames);
+	return assignTexture(texname, textureNames);
 }
+
+
+static std::unordered_map<std::string, std::pair<size_t, size_t>> indexMap;
+float assignExtra(const pugi::xml_node& node, size_t index=0) {
+	if (utils::strToUpper(node.attribute("type").value()) == "V_TELEPORT") {
+		std::string teleflag = node.attribute("extra").as_string();
+		auto it = indexMap.find(teleflag);
+		if (it == indexMap.end()) {
+			indexMap[teleflag] = std::pair<size_t, size_t>{index, 0};
+		} else {
+			indexMap[teleflag].second = index;
+		}
+		return 0.0f;
+	}
+	return node.attribute("extra").as_float();
+}
+
+static inline float getExtra(const pugi::xml_node& node, float defaultValue=0.0f, size_t index=0) {
+	pugi::xml_attribute attr = node.attribute("extra");
+	if (attr) {
+		return assignExtra(node, index);
+	}
+	return defaultValue;
+}
+
+
+
+void processTeleporterPartners(std::vector<utils::Visplane>* visplaneData) {
+	for (std::pair<std::string, std::pair<size_t, size_t>> pair : indexMap) {
+		visplaneData->at(pair.second.first).data = pair.second.second;
+		visplaneData->at(pair.second.second).data = pair.second.first;
+	}
+}
+
 
 }
 
@@ -566,51 +601,51 @@ void loadModel(
 		std::unordered_map<int, int> indexMap;
 		size_t index_offset = 0;
 		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
-		    int fv = shape.mesh.num_face_vertices[f];
-		    if (fv != 3) {
-		        index_offset += fv;
-		        continue;
-		    }
+			int fv = shape.mesh.num_face_vertices[f];
+			if (fv != 3) {
+				index_offset += fv;
+				continue;
+			}
 
-		    Displacement thisDisp;
-		    for (size_t v = 0; v < 3; v++) {
-		        tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+			Displacement thisDisp;
+			for (size_t v = 0; v < 3; v++) {
+				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
 
-		        glm::vec4 pos4 = glm::vec4(
-		            attrib.vertices[3 * idx.vertex_index + 0],
-		            attrib.vertices[3 * idx.vertex_index + 1],
-		            attrib.vertices[3 * idx.vertex_index + 2],
-		            1.0f
-		        );
+				glm::vec4 pos4 = glm::vec4(
+					attrib.vertices[3 * idx.vertex_index + 0],
+					attrib.vertices[3 * idx.vertex_index + 1],
+					attrib.vertices[3 * idx.vertex_index + 2],
+					1.0f
+				);
 
-		        glm::vec3 pos = glm::vec3(pos4 * modelMatrix);
+				glm::vec3 pos = glm::vec3(pos4 * modelMatrix);
 
-		        glm::vec2 uv = glm::vec2(0.0f, 0.0f);
-		        if (idx.texcoord_index >= 0) {
-		            uv = glm::vec2(
-		                attrib.texcoords[2 * idx.texcoord_index + 0],
-		                attrib.texcoords[2 * idx.texcoord_index + 1]
-		            );
-		        } else {
-		            textureID = -1;
-		        }
+				glm::vec2 uv = glm::vec2(0.0f, 0.0f);
+				if (idx.texcoord_index >= 0) {
+					uv = glm::vec2(
+						attrib.texcoords[2 * idx.texcoord_index + 0],
+						attrib.texcoords[2 * idx.texcoord_index + 1]
+					);
+				} else {
+					textureID = -1;
+				}
 
-		        thisDisp.vertices[v] = pos;
-		        thisDisp.UV[v] = uv;
-		    }
+				thisDisp.vertices[v] = pos;
+				thisDisp.UV[v] = uv;
+			}
 
-		    thisDisp.textureID = textureID;
-		    thisDisp.type = D_NORMAL;
-		    thisDisp.IOPtr = nullptr;
-		    thisDisp.data = 0.0f;
-		    thisDisp.normal = glm::normalize(glm::cross(
-		        thisDisp.vertices[1] - thisDisp.vertices[0],
-		        thisDisp.vertices[2] - thisDisp.vertices[0]
-		    ));
+			thisDisp.textureID = textureID;
+			thisDisp.type = D_NORMAL;
+			thisDisp.IOPtr = nullptr;
+			thisDisp.data = 0.0f;
+			thisDisp.normal = glm::normalize(glm::cross(
+				thisDisp.vertices[1] - thisDisp.vertices[0],
+				thisDisp.vertices[2] - thisDisp.vertices[0]
+			));
 
-		    displacementData->push_back(thisDisp);
+			displacementData->push_back(thisDisp);
 
-		    index_offset += fv;
+			index_offset += fv;
 		}
 	}
 
@@ -640,7 +675,7 @@ void convertOBJIntoDisplacements(
 
 namespace xml {
 
-
+inline size_t objectIndex = 0;
 template<typename T>
 std::vector<T> fetchObjectFromXML(
 		const pugi::xml_document& doc,
@@ -660,8 +695,8 @@ std::vector<T> fetchObjectFromXML(
 	size_t count = static_cast<size_t>(nodeList.size());
 	*numObjects = count;
 	
-	for (size_t i=0; i<count; i++) {
-		pugi::xml_node node = nodeList[i].node();
+	for (objectIndex=0; objectIndex<count; objectIndex++) {
+		pugi::xml_node node = nodeList[objectIndex].node();
 		result.push_back(extractor(node, flags, textureNames));
 	}
 	return result;
@@ -683,11 +718,12 @@ static inline Visplane extractVisplane(
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL)),
 		getPTR(node, flags, "flag", nullptr),
-		getFloat(node, "extra", 0.0f),
+		getExtra(node, 0.0f, objectIndex),
 		getBool(node, "useWorldUVX", true),
 		getBool(node, "useWorldUVY", true),
 		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
-		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
+		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
+		getFloat(node, "exitDirection", constants::INF)
 	);
 	
 	return visplane;
@@ -1084,6 +1120,7 @@ void loadStage(
 	stageData.name = stageName;
 	stageData.filePath = filePath;
 	xml::retrieveStageMetaData(doc, player);
+	processTeleporterPartners(visplaneData);
 }
 
 

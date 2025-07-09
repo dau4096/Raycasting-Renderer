@@ -48,7 +48,7 @@ namespace graphics {
 	GLuint getVAO();
 
 	float viewBob(float tick, utils::Player player);
-	glm::vec4 manageScreenTint(int newDuration=0, unsigned int event=E_NONE);
+	glm::vec4 manageScreenTint(utils::Player* player);
 
 
 	void initialiseVAOs();

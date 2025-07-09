@@ -23,6 +23,8 @@ uniform bool smoothingEnabled;
 uniform int quantisingLevel;
 uniform bool screenshotHasHUD;
 uniform int numLights;
+uniform vec4 screenTint;
+uniform bool isInvertEffect;
 
 
 const float EPSILON = 1e-4f;
@@ -135,6 +137,14 @@ void main() {
 	} else {
 		vec3 brightness = getBrightness(mainUV);
 		resultant = vec4(albedo.rgb * brightness, 1.0f);
+
+		if (isInvertEffect) {
+			vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
+			float flashAlpha = screenTint.a * 2.0f - 1.0f;
+			resultant.rgb = mix(resultant.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+		} else {
+			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
+		}
 	}
 
 	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not adequate. Works based on luminance.
