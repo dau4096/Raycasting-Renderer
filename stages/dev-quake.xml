@@ -94,11 +94,22 @@
 
 
 
-    <!-- V_TELEPORT testing -->
+    <!-- V_TELEPORT and other vPlane specials testing -->
     <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="90.0" />
     <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="-90.0" />
     <visplane start="-8.0 13.0" end="-7.0 14.0" height="0.125" type="V_TELEPORT" extra="InfFall" texture="quake2" exitDirection="90.0" />
     <visplane start="4.5 -9.5" end="5.5 -10.5" height="0.125" type="V_TELEPORT" extra="InfFall" texture="quake2" exitDirection="-90.0" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+
+    <!-- Circle conveyor -->
+    <visplane start="-0.5 14.0" end="0.5 15.0" direction="1.0 0.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-0.5 16.0" end="0.5 17.0" direction="-1.0 0.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-1.5 15.0" end="-0.5 16.0" direction="0.0 -1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="1.5 15.0" end="0.5 16.0" direction="0.0 1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="0.5 14.0" end="1.5 15.0" direction="0.25 1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-0.5 14.0" end="-1.5 15.0" direction="1.0 -0.25" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="0.5 16.0" end="1.5 17.0" direction="-1.0 0.25" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-0.5 16.0" end="-1.5 17.0" direction="-0.25 -1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <cuboid start="-0.5 15.0 0.0" end="0.5 16.0 0.5" height="0.01" useWorldUVX="FALSE" useWorldUVY="FALSE" hasBottom="FALSE" topTexture="metal" sideTexture="brick2" />
 
 </environment>
 

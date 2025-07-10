@@ -1002,6 +1002,15 @@ void updateSpecials(
 				break;
 			}
 
+			case V_CONVEY: {
+				if (planeTouch) {
+					float speed = vPlane.data / float(constants::PHYSICS_FREQUENCY);
+					player->velocity.x += speed * vPlane.internal->first;
+					player->velocity.y += speed * vPlane.internal->second;
+					player->sliding = false;
+				}
+			}
+
 			default: {
 				break;
 			}

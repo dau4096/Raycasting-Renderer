@@ -63,7 +63,7 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
 	{"W_DOORZ", 11},		{"V_NODRAW", 11},
 	{"W_DOORSWING", 12},	{"V_TELEPORT", 12},
-	{"W_NODRAW", 13},
+	{"W_NODRAW", 13},		{"V_CONVEY", 13},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -711,12 +711,13 @@ static inline Visplane extractVisplane(
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
+	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
 	Visplane visplane = Visplane(
 		getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
 		getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
 		getFloat(node, "height", 0.0f),
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
-		static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL)),
+		type,
 		getPTR(node, flags, "flag", nullptr),
 		getExtra(node, 0.0f, objectIndex),
 		getBool(node, "useWorldUVX", true),
@@ -725,6 +726,12 @@ static inline Visplane extractVisplane(
 		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
 		getFloat(node, "exitDirection", constants::INF)
 	);
+
+	if (type == V_CONVEY) {
+		glm::vec2 direction = glm::normalize(getVec2(node, "direction", glm::vec2(0.0f, 1.0f)));
+		visplane.internal->first = direction.x;
+		visplane.internal->second = direction.y;
+	}
 	
 	return visplane;
 }
