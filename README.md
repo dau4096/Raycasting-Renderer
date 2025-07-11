@@ -78,9 +78,21 @@ The world is drawn in a pseudo-3D manner. `X, Y` are in perspective, and `Z` (ve
 ### _displacements3D.frag_
 Rasterises and colours the displacements in 3D space, using `projection.vert` (which uses a similar system to sprite rendering.) This is drawn to a framebuffer including position and normals data.
 
+![**[Image of Displacements before the projection shader]**](images/displacements-preVS.png "[Image of Displacements before the projection shader]")
+
+_Displacements mesh in actual 3D space._
+
+![**[Image of Displacements being warped in the view frustum]**](images/displacements-postVS.png "[Image of Displacements being warped in the view frustum]")
+
+_Displacements after the projection shader, warped inside the view frustum._
+
 
 ### _displacements2D.frag_
 This interprets the data from the frambuffer used in `displacements3D.frag` and writes it to the current frame texture given that pixel is closer than that already inside the frame. Also writes normals/position data for lighting if applicable.
+
+![**[Image of Displacements overlaid on scene]**](images/displacements.png "[Image of Displacements overlaid on scene]")
+
+_Displacements overlaid on the rest of the environment._
 
 
 ### _sprites.frag_
@@ -104,7 +116,7 @@ _And a map of normals (`normalMap`)_
 
 ![**[Image of lightMap]**](images/lightMap.png "[Image of lightMap]")
 
-_To create the final lightmap._
+_To create the final lightmaps._
 
 Using these three textures, it creates a lower resolution overlay of pixel lighting to be used later. This can contain lighting colours, shading, brightness and so on. The calculations utilise every light in the scene, the player's Headlamp (if enabled) and the sun (given as a direction and colour).
 
