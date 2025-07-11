@@ -141,5 +141,5 @@
 
 <!-- Logic Gates -->
 <logic>
-    <gate type="G_NOT" inputAPtr="stairsFlag" outputPtr="notStairsFlag" />
+    <gate type="G_NOT" inAFlag="stairsFlag" outFlag="notStairsFlag" />
 </logic>

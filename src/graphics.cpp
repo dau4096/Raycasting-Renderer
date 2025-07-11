@@ -420,12 +420,13 @@ void findVisibleObjects(
 	//Visplanes
 	for (uint idx=0; idx<visplaneData->size(); idx++) {
 		utils::Visplane thisPlane = visplaneData->at(idx);
+
+		bool behind = true;
 		if ((thisPlane.type == V_INVALID) || (thisPlane.type == V_NODRAW)) {continue; /* Non-shown VPs */}
-		bool aProj = glm::dot(thisPlane.start - playerPosV2, playerFDirection) < 0.0f;
-		bool bProj = glm::dot(thisPlane.end - playerPosV2, playerFDirection) < 0.0f;
-		bool cProj = glm::dot(glm::vec2(thisPlane.start.x, thisPlane.end.y) - playerPosV2, playerFDirection) < 0.0f;
-		bool dProj = glm::dot(glm::vec2(thisPlane.end.x, thisPlane.start.y) - playerPosV2, playerFDirection) < 0.0f;
-		if (aProj && bProj && cProj && dProj) {continue; /* Completely behind player view */}
+		for (size_t vertexIdx=0; vertexIdx<thisPlane.numVertices; vertexIdx++) {
+			behind &= glm::dot(thisPlane.vertices[vertexIdx] - playerPosV2, playerFDirection) < 0.0f;
+		}
+		if (behind) {continue; /* Completely behind player view */}
 
 		visibleVisplaneIndices->push_back(idx);
 	}

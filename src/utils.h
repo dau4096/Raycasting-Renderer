@@ -397,20 +397,36 @@ namespace utils {
 			0000 0000 0000 0000 0000 0000 0111 1111
 		*/
 		return (
-	    	((GLuint(isWorldSpaceX) & 0x1u) << 31) |
-	    	((GLuint(isWorldSpaceY) & 0x1u) << 30) |
-	    	((GLuint(textureScale.x * 16.0f) & 0xFFu) << 22) |
-	    	((GLuint(textureScale.y * 16.0f) & 0xFFu) << 14) |
-	    	((GLuint(textureOffset.x * 128.0f) & 0x7Fu) << 7) |
-	    	((GLuint(textureOffset.y * 128.0f) & 0x7Fu) << 0)
+			((GLuint(isWorldSpaceX) & 0x1u) << 31) |
+			((GLuint(isWorldSpaceY) & 0x1u) << 30) |
+			((GLuint(textureScale.x * 16.0f) & 0xFFu) << 22) |
+			((GLuint(textureScale.y * 16.0f) & 0xFFu) << 14) |
+			((GLuint(textureOffset.x * 128.0f) & 0x7Fu) << 7) |
+			((GLuint(textureOffset.y * 128.0f) & 0x7Fu) << 0)
 		);
 	}
 
+	static void ensureACW(glm::vec2 vertices[8], size_t numVertices) {
+		//Ensures the winding order is always Anti-Clockwise.
+		float signedArea = 0.0f;
+		for (int i = 0; i < numVertices; ++i) {
+			glm::vec2 a = vertices[i];
+			glm::vec2 b = vertices[(i + 1) % numVertices];
+			signedArea += (b.x - a.x) * (b.y + a.y);
+		}
 
+		if (signedArea > 0.0f) {
+			//The winding order was clockwise, reverse order.
+			for (int i = 0; i < numVertices / 2; ++i) {
+				std::swap(vertices[i], vertices[numVertices - 1 - i]);
+			}
+		}
+	}
 
 	struct Visplane {
-		glm::vec2 start, originalStart;
-		glm::vec2 end, originalEnd;
+		glm::vec2 vertices[8];
+		glm::vec2 originalVertices[8];
+		size_t numVertices;
 		float height, originalHeight;
 		GLint textureID;
 		GLuint textureData;
@@ -420,21 +436,19 @@ namespace utils {
 		std::pair<float, float>* internal;
 
 		Visplane()
-			: start(0.0f, 0.0f), end(0.0f, 0.0f), height(0.0f),
-			  originalStart(0.0f, 0.0f), originalEnd(0.0f, 0.0f), originalHeight(0.0f),
+			: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
 			  textureID(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
 				internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
 				internal = &(internalsData.at(internalsData.size()-1));
 			}
 
 		Visplane(
-				glm::vec2 s, glm::vec2 e, float heightZ, GLint textureID,
+				std::vector<glm::vec2> verts, float heightZ, GLint textureID,
 				VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 				bool isWorldSpaceX=true, bool isWorldSpaceY=true,
 				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 				float exitDirection=constants::INF
-			) : start(glm::min(s, e)), end(glm::max(s, e)), height(heightZ), 
-				originalStart(glm::min(s, e)), originalEnd(glm::max(s, e)), originalHeight(heightZ), 
+			) : height(heightZ), originalHeight(heightZ), 
 				textureID(textureID),
 				type(type),	IOPtr(IOPtr), data(data) {
 					textureData = combineTextureData(
@@ -453,24 +467,87 @@ namespace utils {
 					if (type == V_TELEPORT) {
 						internal->second = exitDirection;
 					}
+
+
+					numVertices = verts.size();
+					size_t index = 0;
+					for (glm::vec2 v : verts) {
+						vertices[index] = v;
+						index++;
+					}
+					glm::vec2 empty = glm::vec2(0.0f, 0.0f);
+					for (size_t newIdx=index; newIdx<8; newIdx++) {
+						vertices[newIdx] = empty;
+					}
+					ensureACW(vertices, numVertices);
+					std::copy(std::begin(vertices), std::end(vertices), std::begin(originalVertices));
+				}
+
+		Visplane(
+				glm::vec2 start, glm::vec2 end, float heightZ, GLint textureID,
+				VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
+				bool isWorldSpaceX=true, bool isWorldSpaceY=true,
+				glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
+				float exitDirection=constants::INF
+			) : height(heightZ), originalHeight(heightZ), 
+				textureID(textureID),
+				type(type),	IOPtr(IOPtr), data(data) {
+					textureData = combineTextureData(
+						isWorldSpaceX, isWorldSpaceY,
+						textureScale, textureOffset
+					);
+
+					if ((type != V_NORMAL) && (type != V_INVALID)) {
+						internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
+						internal = &(internalsData.at(internalsData.size()-1));
+					} else {
+						internal = nullptr;
+					}
+
+
+					if (type == V_TELEPORT) {
+						internal->second = exitDirection;
+					}
+
+
+					numVertices = 4;
+					vertices[0] = start;
+					vertices[1] = glm::vec2(start.x, end.y);
+					vertices[2] = end;
+					vertices[3] = glm::vec2(end.x, start.y);
+
+					glm::vec2 empty = glm::vec2(0.0f, 0.0f);
+					vertices[4] = empty; vertices[5] = empty; vertices[6] = empty; vertices[7] = empty;
+
+					ensureACW(vertices, numVertices);
+					std::copy(std::begin(vertices), std::end(vertices), std::begin(originalVertices));
 				}
 	};
 
 	struct VisplaneGPU {
-		glm::vec2 start;
-		glm::vec2 end;
+		glm::vec4 vertices[4];
+		GLuint numVertices;
 		float height;
 		GLint textureID;
 		GLuint textureData;
-		float _padding;
 
 		VisplaneGPU()
-			: start(glm::vec2(0.0f, 0.0f)), end(glm::vec2(0.0f, 0.0f)), height(0.0f),
-			  textureID(0), _padding() {}
+			: vertices(), height(0.0f), numVertices(0), textureID(0), textureData() {}
 
 		VisplaneGPU(Visplane *visplane, Player* player)
-			: start(visplane->start), end(visplane->end), height(visplane->height),
-			  textureID(visplane->textureID), textureData(visplane->textureData), _padding() {}
+			: numVertices(visplane->numVertices), height(visplane->height),
+			  textureID(visplane->textureID), textureData(visplane->textureData) {
+				// Zero entire array first (RenderDoc will no longer see garbage)
+				for (int i = 0; i < 4; ++i)
+					vertices[i] = glm::vec4(0.0f);
+
+				// Pack pairs of vec2s into vec4s
+				for (size_t i = 0; i < visplane->numVertices; i += 2) {
+					glm::vec2 a = visplane->vertices[i];
+					glm::vec2 b = (i + 1 < visplane->numVertices) ? visplane->vertices[i + 1] : glm::vec2(0.0f);
+					vertices[i / 2] = glm::vec4(a, b);
+				}
+			}
 	};
 
 
@@ -510,16 +587,16 @@ namespace utils {
 				type(type), 
 				IOPtr(IOPtr), data(data) {
 					textures.first = textureID0;
-			  		if (textureID1 < 0) {
-			  			textures.second = textureID0;
-			  		} else {
-			  			textures.second = textureID1;
-			  		}
+					if (textureID1 < 0) {
+						textures.second = textureID0;
+					} else {
+						textures.second = textureID1;
+					}
 
-			  		textureData = combineTextureData(
-			  			isWorldSpaceX, isWorldSpaceY,
-			  			textureScale, textureOffset
-			  		);
+					textureData = combineTextureData(
+						isWorldSpaceX, isWorldSpaceY,
+						textureScale, textureOffset
+					);
 
 					if ((type != W_NORMAL) && (type != W_INVALID)) {
 						internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
@@ -538,8 +615,8 @@ namespace utils {
 				originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 				type(type), 
 				IOPtr(IOPtr), data(data) {
-			  		textures.first = textureID0;
-				  	if (textureID1 < 0) {
+					textures.first = textureID0;
+					if (textureID1 < 0) {
 						textures.second = textureID0;
 					} else {
 						textures.second = textureID1;

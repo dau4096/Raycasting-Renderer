@@ -273,7 +273,7 @@ void extractCuboid(
 	int intType = getEnum(node, "type", 1); //V_NORMAL, W_NORMAL and D_NORMAL are all integer value 1.
 	VisplaneType vType = static_cast<VisplaneType>(intType);
 	WallType wType = static_cast<WallType>(intType);
-	float extra = getFloat(node, "data", 0.0f);
+	float extra = getFloat(node, "extra", 0.0f);
 	bool* ptr = getPTR(node, flags, "flag");
 
 	glm::bvec3 worldSpaceTextures = glm::bvec3(
@@ -704,6 +704,31 @@ std::vector<T> fetchObjectFromXML(
 
 
 
+static std::vector<glm::vec2> getVertsV2(const pugi::xml_node& node, size_t maxVertices, bool fill=false, std::string prefix="v", glm::vec2 defaultValue=glm::vec2(0.0f, 0.0f)) {
+	std::vector<glm::vec2> verts;
+	for (size_t idx=0; idx<maxVertices; idx++) {
+		glm::vec2 possibleVert = getVec2(node, prefix+std::to_string(idx), constants::INVALIDv2);
+		if (possibleVert != constants::INVALIDv2) {
+			verts.push_back(possibleVert);
+		} else if (fill) {
+			verts.push_back(defaultValue);
+		}
+	}
+	return verts;
+}
+
+static std::vector<glm::vec3> getVertsV3(const pugi::xml_node& node, size_t maxVertices, bool fill=false, std::string prefix="v", glm::vec3 defaultValue=glm::vec3(0.0f, 0.0f, 0.0f)) {
+	std::vector<glm::vec3> verts;
+	for (size_t idx=0; idx<maxVertices; idx++) {
+		glm::vec3 possibleVert = getVec3(node, prefix+std::to_string(idx), constants::INVALIDv3);
+		if (possibleVert != constants::INVALIDv3) {
+			verts.push_back(possibleVert);
+		} else if (fill) {
+			verts.push_back(defaultValue);
+		}
+	}
+	return verts;
+}
 
 static inline Visplane extractVisplane(
 		const pugi::xml_node& node,
@@ -712,20 +737,41 @@ static inline Visplane extractVisplane(
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
-	Visplane visplane = Visplane(
-		getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
-		getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
-		getFloat(node, "height", 0.0f),
-		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
-		type,
-		getPTR(node, flags, "flag", nullptr),
-		getExtra(node, 0.0f, objectIndex),
-		getBool(node, "useWorldUVX", true),
-		getBool(node, "useWorldUVY", true),
-		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
-		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-		getFloat(node, "exitDirection", constants::INF)
-	);
+	Visplane visplane;
+	pugi::xml_node vertexNode = node.child("vertices");
+	if (vertexNode) { //Has explicit vertices.
+		std::vector<glm::vec2> vertsVec = getVertsV2(vertexNode, 8);
+		if (vertsVec.size() < 3) {raise("Visplanes must have at least 3 vertices.");}
+		visplane = Visplane(
+			vertsVec,
+			getFloat(node, "height", 0.0f),
+			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+			type,
+			getPTR(node, flags, "flag", nullptr),
+			getExtra(node, 0.0f, objectIndex),
+			getBool(node, "useWorldUVX", true),
+			getBool(node, "useWorldUVY", true),
+			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
+			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
+			getFloat(node, "exitDirection", constants::INF)
+		);
+
+	} else { //Old method for compatability. 
+		visplane = Visplane(
+			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
+			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
+			getFloat(node, "height", 0.0f),
+			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+			type,
+			getPTR(node, flags, "flag", nullptr),
+			getExtra(node, 0.0f, objectIndex),
+			getBool(node, "useWorldUVX", true),
+			getBool(node, "useWorldUVY", true),
+			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
+			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
+			getFloat(node, "exitDirection", constants::INF)
+		);
+	}
 
 	if (type == V_CONVEY) {
 		glm::vec2 direction = glm::normalize(getVec2(node, "direction", glm::vec2(0.0f, 1.0f)));
@@ -767,14 +813,35 @@ static inline Displacement extractDisplacement(
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
-	Displacement displacement = Displacement(
-		getVec3(node, "aPos", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getVec3(node, "bPos", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getVec3(node, "cPos", glm::vec3(0.0f, 0.0f, 0.0f)),
+	pugi::xml_node vertexNode = node.child("vertices");
+	std::array<glm::vec3, 3> vertsArr;
+	if (vertexNode) {
+		std::vector<glm::vec3> vertsVec = getVertsV3(vertexNode, 3);
+		if (vertsVec.size() != 3) {raise("Displacements must have 3 vertices.");}
+		std::copy(vertsVec.begin(), vertsVec.end(), vertsArr.begin());
+	} else { //Old method still supported.
+		vertsArr = {
+			getVec3(node, "aPos", glm::vec3(0.0f, 0.0f, 0.0f)),
+			getVec3(node, "bPos", glm::vec3(0.0f, 0.0f, 0.0f)),
+			getVec3(node, "cPos", glm::vec3(0.0f, 0.0f, 0.0f))
+		};
+	}
 
-		getVec2(node, "aUV", glm::vec2(0.0f, 0.0f)),
-		getVec2(node, "bUV", glm::vec2(1.0f, 0.0f)),
-		getVec2(node, "cUV", glm::vec2(1.0f, 1.0f)),
+	std::array<glm::vec2, 3> UVArr;
+	pugi::xml_node uvNode = node.child("uv");
+	if (uvNode) {
+		std::vector<glm::vec2> UVVec = getVertsV2(uvNode, 3, true, "uv");
+		std::copy(UVVec.begin(), UVVec.end(), UVArr.begin());
+	} else { //Old method still supported.
+		UVArr = {
+			getVec2(node, "aUV", glm::vec2(0.0f, 0.0f)),
+			getVec2(node, "bUV", glm::vec2(0.0f, 0.0f)),
+			getVec2(node, "cUV", glm::vec2(0.0f, 0.0f))
+		};
+	}
+
+	Displacement displacement = Displacement(
+		vertsArr, UVArr,
 
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
@@ -829,9 +896,9 @@ static inline TextObject extractTextObject(
 	) {
 
 	TextObject textObject = TextObject(
-		getString(node, "text", ""),
+		getString(node, "text", "<EMPTY>"),
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getInt(node, "scale", 0)
+		getInt(node, "scale", 100)
 	);
 	
 	return textObject;
@@ -846,9 +913,9 @@ static inline LogicGate extractGate(
 
 	LogicGate gate = LogicGate(
 		static_cast<GateType>(getEnum(node, "type", G_PASSTHROUGH)),
-		getPTR(node, flags, "outputPtr", nullptr),
-		getPTR(node, flags, "inputAPtr", nullptr),
-		getPTR(node, flags, "inputBPtr", nullptr)
+		getPTR(node, flags, "outFlag", nullptr),
+		getPTR(node, flags, "inAFlag", nullptr),
+		getPTR(node, flags, "inBFlag", nullptr)
 	);
 	return gate;
 }

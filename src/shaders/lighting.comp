@@ -38,12 +38,11 @@ layout(binding=2) uniform sampler2DArray textureArray;
 layout(rgba32f, binding=0) uniform image2DArray lightMapArray;
 
 struct Visplane {
-	vec2 start;			//2D start point
-	vec2 end;			//2D end point
+	vec4 vertices[4];	//2D points
+	uint numVertices;	//Number of 2D points
 	float height;		//1D height (Z)
 	int textureID;		//Texture ID
 	uint textureData;	//Texture formatting data.
-	float _padding;		//Buffer Padding
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -202,7 +201,7 @@ vec2 getWallUV(Wall thisWall, vec3 intersectPoint) {
 
 
 //Visplanes
-vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
+vec2 getVisplaneUV(vec2 position2D, Visplane plane) {
 	bvec2 useWorldSpace;
 	vec2 invTextureScale;
 	vec2 textureOffset;
@@ -211,12 +210,26 @@ vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
 		invTextureScale, textureOffset
 	);
 
-	vec2 pos = position3D.xy;
-	vec2 localUV = (pos - plane.start.xy) / (plane.end.xy - plane.start.xy);
-	vec2 worldUV = pos * invTextureScale;
-
-	vec2 UV = mix(localUV * invTextureScale, worldUV, vec2(useWorldSpace));
+	vec2 UV = position2D.xy * invTextureScale;
 	return UV - floor(UV) + textureOffset;
+}
+
+vec2 getVertex(Visplane plane, uint index) {
+	uint actualIndex = index / 2;
+	return (index % 2 == 0) ? plane.vertices[actualIndex].xy : plane.vertices[actualIndex].zw;
+}
+
+bool isInsideVP(vec2 point2D, Visplane plane) {
+	for (uint i=0; i<plane.numVertices; i++) {
+		vec2 a = getVertex(plane, i);
+		vec2 b = getVertex(plane, (i + 1) % plane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+	}
+	return true;
 }
 
 
@@ -251,8 +264,8 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		float projEnd = dot(pointB.xy-thisWall.start.xy, wallNormal);
 		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
 
-		double t = (projStart) / (projEnd - projStart);
-		dvec3 intersectPoint = pointA - LOSDelta * t;
+		float t = (projStart) / (projEnd - projStart);
+		vec3 intersectPoint = pointA - LOSDelta * t;
 		vec3 minWall = min(thisWall.start, thisWall.end);
 		vec3 maxWall = max(thisWall.start, thisWall.end);
 		if (
@@ -275,7 +288,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 	}
 
 
-	//Iterate through all visplanes. (3D)
+	//Iterate through all visplanes. (3D-ish)
 	for (int idx=0; idx<numVisplanes; idx++) {
 		Visplane thisPlane = visplanes[idx];
 		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is the index calling the LOS check. */}
@@ -284,18 +297,13 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 		if (abs(LOSDelta.z) < EPSILON) {continue;}
 
-		double tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
+		float tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
 		if (tFrac <= 0.0 || tFrac >= 1.0) {continue;}
 
-		dvec3 intersectPoint = pointA + LOSDelta * tFrac;
-		if (
-			intersectPoint.x >= min(thisPlane.start.x, thisPlane.end.x) - EPSILON &&
-			intersectPoint.x <= max(thisPlane.start.x, thisPlane.end.x) + EPSILON &&
-			intersectPoint.y >= min(thisPlane.start.y, thisPlane.end.y) - EPSILON &&
-			intersectPoint.y <= max(thisPlane.start.y, thisPlane.end.y) + EPSILON
-		) {
+		vec2 intersectPoint = (pointA + LOSDelta * tFrac).xy;
+		if (isInsideVP(intersectPoint.xy, thisPlane)) {
 			if (allowTransparency) {
-				vec2 UV = getVisplaneUV(vec3(intersectPoint), thisPlane);
+				vec2 UV = getVisplaneUV(intersectPoint, thisPlane);
 				if (textureLod(textureArray, vec3(UV.xy, thisPlane.textureID), 0.0f).a >= 0.5f) {
 					return true;
 				}
@@ -391,7 +399,7 @@ void main() {
 		//Sun & sky's lighting
 		if (dot(sunColour, sunColour) < 0.025f) {exit(framePosition); return; /* Sun's effect is near 0 and can be ignored. */}
 
-		if ((debugMode > 0) || (type == 0)) {
+		if ((debugMode > 0) || (type == 0x0)) {
 			imageStore(lightMapArray, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
 			return;
 		}

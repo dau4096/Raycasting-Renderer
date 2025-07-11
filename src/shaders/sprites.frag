@@ -176,7 +176,7 @@ void main() {
 		} else if (debugMode == 2) { //DrawNormals
 			albedo = vec3(normalize(delta.xy), 0.0f);
 		} else {
-			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, thisSprite.textureID), fragDepth);
+			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, thisSprite.textureID), 1.0f / invdistance);
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 			albedo = alphaTexture.rgb;
 		}

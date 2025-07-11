@@ -120,6 +120,19 @@ float quadraticFormula(float a, float b, float determinant, bool positiveSolutio
 	return (-b + (sign * sqrt(determinant))) / (2*a);
 }
 
+bool isInsideVP(glm::vec2 point2D, utils::Visplane plane) {
+	for (glm::uint i=0; i<plane.numVertices; i++) {
+		glm::vec2 a = plane.vertices[i];
+		glm::vec2 b = plane.vertices[(i + 1) % plane.numVertices];
+		glm::vec2 edge = b - a;
+		glm::vec2 toPoint = point2D - a;
+		glm::vec2 normal = glm::vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (glm::dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+	}
+	return true;
+}
+
 
 
 
@@ -357,8 +370,9 @@ void applyVisplaneXMovement(utils::Visplane* vPlane, float speed, bool enabled) 
 		}
 	}
 
-	vPlane->start.x = vPlane->originalStart.x + vPlane->internal->first;
-	vPlane->end.x = vPlane->originalEnd.x + vPlane->internal->first;
+	for (size_t vertexIdx=0; vertexIdx<vPlane->numVertices; vertexIdx++) {
+		vPlane->vertices[vertexIdx].x = vPlane->originalVertices[vertexIdx].x + vPlane->internal->first;
+	}
 }
 
 
@@ -392,8 +406,9 @@ void applyVisplaneYMovement(utils::Visplane* vPlane, float speed, bool enabled) 
 		}
 	}
 
-	vPlane->start.y = vPlane->originalStart.y + vPlane->internal->first;
-	vPlane->end.y = vPlane->originalEnd.y + vPlane->internal->first;
+	for (size_t vertexIdx=0; vertexIdx<vPlane->numVertices; vertexIdx++) {
+		vPlane->vertices[vertexIdx].y = vPlane->originalVertices[vertexIdx].y + vPlane->internal->first;
+	}
 }
 
 
@@ -602,12 +617,7 @@ void playerMove(
 		utils::Visplane vPlane = visplaneData->at(vIndex);
 		if ((vPlane.type == V_INVALID) || (vPlane.type == V_PASSTHROUGH)) {continue;}
 
-		bool inPlaneXYRange = !(
-			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.x, vPlane.end.x))
-			|| (player->position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.x, vPlane.end.x))
-			|| (player->position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.y, vPlane.end.y))
-			|| (player->position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.y, vPlane.end.y))
-		); // !outOfRange.
+		bool inPlaneXYRange = isInsideVP(glm::vec2(player->position), vPlane);
 		bool abovePlane = player->position.z >= vPlane.height;
 
 		if (inPlaneXYRange) {
@@ -748,12 +758,12 @@ void playerMove(
 	}
 
 
-	if (!utils::configToBool("PHYS_FLY")) {
+	if (!(utils::configToBool("PHYS_FLY") || player->touchingFloor)) {
 		player->velocity.z -= stageData.gravity / constants::PHYSICS_FREQUENCY;
 	}
 
 	//Apply friction.
-	if (touchingFloorCheck || utils::configToBool("PHYS_FLY")) {
+	if (player->touchingFloor || utils::configToBool("PHYS_FLY")) {
 		if (player->sliding) {
 			player->velocity.x *= constants::FLOOR_FRICT_SLIDE_COEFF;
 			player->velocity.y *= constants::FLOOR_FRICT_SLIDE_COEFF;			
@@ -901,12 +911,7 @@ void updateSpecials(
 		if (vPlane.IOPtr) {enabled = *(vPlane.IOPtr);}
 
 
-		bool inPlaneXYRange = !(
-			(player->position.x + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.x, vPlane.end.x))
-			|| (player->position.x - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.x, vPlane.end.x))
-			|| (player->position.y + (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) < min(vPlane.start.y, vPlane.end.y))
-			|| (player->position.y - (playerConfig::PLAYER_COLLISION_RADIUS/2.0f) > max(vPlane.start.y, vPlane.end.y))
-		); // !outOfRange.
+		bool inPlaneXYRange = isInsideVP(glm::vec2(player->position), vPlane);
 		bool abovePlane = player->position.z >= vPlane.height;
 		bool planeTouch = false;
 
@@ -978,7 +983,12 @@ void updateSpecials(
 					int partnerIndex = int(vPlane.data);
 					if (partnerIndex < 0.0f) {break; /* Invalid partner. */}
 					utils::Visplane partner = visplaneData->at(partnerIndex);
-					glm::vec2 partnerCentre = (partner.start + partner.end) / 2.0f;
+					
+					glm::vec2 partnerCentre = glm::vec2(0.0f, 0.0f);
+					for (size_t vertexIdx=0; vertexIdx<partner.numVertices; vertexIdx++) {
+						partnerCentre += partner.vertices[vertexIdx];
+					}
+					partnerCentre /= partner.numVertices;
 
 
 					float exitDir = partner.internal->second;

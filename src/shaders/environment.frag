@@ -37,12 +37,11 @@ layout(rgba32f, binding=2) uniform image2D normalMap;
 
 
 struct Visplane {
-	vec2 start;			//2D start point
-	vec2 end;			//2D end point
+	vec4 vertices[4];	//2D points
+	uint numVertices;	//Number of 2D points
 	float height;		//1D height (Z)
 	int textureID;		//Texture ID
 	uint textureData;	//Texture formatting data.
-	float _padding;		//Buffer Padding
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -294,7 +293,7 @@ float getWallYUV(Wall thisWall, uint projections) {
 
 
 //Visplanes
-vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
+vec2 getVisplaneUV(vec2 position2D, Visplane plane) {
 	bvec2 useWorldSpace;
 	vec2 invTextureScale;
 	vec2 textureOffset;
@@ -303,12 +302,26 @@ vec2 getVisplaneUV(vec3 position3D, Visplane plane) {
 		invTextureScale, textureOffset
 	);
 
-	vec2 pos = position3D.xy;
-	vec2 localUV = (pos - plane.start.xy) / (plane.end.xy - plane.start.xy);
-	vec2 worldUV = pos * invTextureScale;
-
-	vec2 UV = mix(localUV * invTextureScale, worldUV, vec2(useWorldSpace));
+	vec2 UV = position2D.xy * invTextureScale;
 	return UV - floor(UV) + textureOffset;
+}
+
+vec2 getVertex(Visplane plane, uint index) {
+	uint actualIndex = index / 2;
+	return (index % 2 == 0) ? plane.vertices[actualIndex].xy : plane.vertices[actualIndex].zw;
+}
+
+bool isInsideVP(vec2 point2D, Visplane plane) {
+	for (uint i=0; i<plane.numVertices; i++) {
+		vec2 a = getVertex(plane, i);
+		vec2 b = getVertex(plane, (i + 1) % plane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+	}
+	return true;
 }
 
 
@@ -343,7 +356,7 @@ void main() {
 	vec2 rayStart = playerPosition.xy;
 	vec2 rayEnd = vec2(fragRay.end.xy);
 	
-	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;
+	float normY = (2.0f * fragPosition.y / renderResolution.y) - 1.0f;
 
 
 
@@ -404,21 +417,16 @@ void main() {
 				continue;
 			}
 
+
 			float t = (playerPosition.z - thisPlane.height) * invAntiProjection;
 			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
-			vec3 intersectPoint = vec3(playerPosition.xy + rayDirection.xy * t, thisPlane.height);
+			vec2 intersectPoint = playerPosition.xy + rayDirection * t;
 
-			vec2 planeMin = min(thisPlane.start, thisPlane.end);
-			vec2 planeMax = max(thisPlane.start, thisPlane.end);
-			if ((intersectPoint.x < planeMin.x) || (intersectPoint.x > planeMax.x) ||
-				(intersectPoint.y < planeMin.y) || (intersectPoint.y > planeMax.y)) {
-				//Out of the range of the Visplane.
-				continue;
-			}
+			if (!isInsideVP(intersectPoint, thisPlane)) {continue; /* Outside VP */}
 
-			vec2 d = (playerPosition - intersectPoint).xy;
+			vec2 d = playerPosition.xy - intersectPoint;
 			thisIntersect.distanceSQ = dot(d,d) ;
-			thisIntersect.position = intersectPoint;
+			thisIntersect.position = vec3(intersectPoint, thisPlane.height);
 			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
 			thisIntersect.UV = vec3(getVisplaneUV(intersectPoint, thisPlane), thisPlane.textureID);

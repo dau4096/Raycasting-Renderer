@@ -151,17 +151,19 @@ namespace GLIndex {
 inline GLuint dispVAO, dispVBO, dispEBO;
 inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, displacementFBONormals;
 
+//Assorted
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
 inline GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, lightingMapsArrayID;
 
 //Shaders
-inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D, spriteShader, lightingShader, uiShader, displayShader; 
+inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
+inline GLuint spriteShader, lightingShader, uiShader, displayShader; 
 
 //Textures
 inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric;
 
-//Storage Buffers
+//Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO;
 

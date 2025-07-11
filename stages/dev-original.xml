@@ -60,7 +60,7 @@
 
 <!-- Logic Gates -->
 <logic>
-	<gate type="G_PASSTHROUGH" inputAPtr="0" inputBPtr="1" outputPtr="2" />
-	<gate type="G_PASSTHROUGH" inputAPtr="0" inputBPtr="0" outputPtr="0" />
-	<gate type="G_PASSTHROUGH" inputAPtr="0" inputBPtr="0" outputPtr="1" />
+	<gate type="G_PASSTHROUGH" inAFlag="0" inBFlag="1" outFlag="2" />
+	<gate type="G_PASSTHROUGH" inAFlag="0" inBFlag="0" outFlag="0" />
+	<gate type="G_PASSTHROUGH" inAFlag="0" inBFlag="0" outFlag="1" />
 </logic>
