@@ -43,6 +43,7 @@ struct Visplane {
 	float height;		//1D height (Z)
 	int textureID;		//Texture ID
 	uint textureData;	//Texture formatting data.
+	vec4 boundingBox;	//Bounding box in 2D.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -220,6 +221,10 @@ vec2 getVertex(Visplane plane, uint index) {
 }
 
 bool isInsideVP(vec2 point2D, Visplane plane) {
+	if (
+		((point2D.x < plane.boundingBox.x) || (point2D.x > plane.boundingBox.z)) ||
+		((point2D.y < plane.boundingBox.y) || (point2D.y > plane.boundingBox.w))
+	) {return false; /* Outside bounding box. */}
 	for (uint i=0; i<plane.numVertices; i++) {
 		vec2 a = getVertex(plane, i);
 		vec2 b = getVertex(plane, (i + 1) % plane.numVertices);
@@ -232,20 +237,6 @@ bool isInsideVP(vec2 point2D, Visplane plane) {
 	return true;
 }
 
-
-
-//Displacements
-float edge(vec2 a, vec2 b, vec2 c) {
-	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-}
-
-vec3 barycentricWeights(vec2 v1, vec2 v2, vec2 v3) {
-	float areaABC = edge(v1, v2, v3);
-	float a = edge(fragPosition, v2, v3)/areaABC;
-	float b = edge(fragPosition, v3, v1)/areaABC;
-	float c = 1.0f - a - b;
-	return vec3(a,b,c);
-}
 
 
 
@@ -339,7 +330,14 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 	    float t = invDeterminant * dot(edgeB, sCrossEdgeA);
 	    if (t > EPSILON) {
-	    	return true;
+			if (allowTransparency) {
+				vec2 UV = ((1.0f - u - v) * thisDisp.UV[0]) + (u * thisDisp.UV[1]) + (v * thisDisp.UV[2]);
+				if (textureLod(textureArray, vec3(UV.xy, thisDisp.normal_texID.w), 0.0f).a >= 0.5f) {
+					return true;
+				}
+			} else {
+				return true;
+			}
 	    }
  	}
 

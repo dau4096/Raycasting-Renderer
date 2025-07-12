@@ -34,7 +34,8 @@ namespace graphics {
 	void findVisibleObjects(
 		utils::Player* player,
 		std::vector<utils::Visplane>* visplaneData, std::vector<uint>* visibleVisplaneIndices,
-		std::vector<utils::Wall>* wallData, std::vector<uint>* visibleWallIndices
+		std::vector<utils::Wall>* wallData, std::vector<uint>* visibleWallIndices,
+		std::vector<utils::Displacement>* displacementData, std::vector<uint>* visibleDisplacementsIndices
 	);
 
 	void saveScreenshot(GLuint frameTextureID);

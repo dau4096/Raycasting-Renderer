@@ -66,7 +66,6 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 
 //Non-synced data.
 std::vector<utils::LogicGate> logicGates;
-std::array<bool, constants::MAX_FLAGS> flags;
 
 
 

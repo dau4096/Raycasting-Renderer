@@ -39,7 +39,9 @@ bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flag
 
 	auto it = flagList.find(ptrStrUpper);
 	if (it == flagList.end()) {
-		bool* ptr = &(*flags)[flagIndex++];
+		bool* ptr = flags->begin() + flagIndex;
+		flagIndex++;
+		if (flagIndex >= constants::MAX_FLAGS) {raise("Maximum number of valid flags reached! [" + std::to_string(constants::MAX_FLAGS) + "]");}
 		flagList[ptrStrUpper] = ptr;
 		return ptr;
 	}
@@ -771,7 +773,7 @@ static inline Visplane extractVisplane(
 			getFloat(node, "height", 0.0f),
 			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 			type,
-			getPTR(node, flags, "flag", nullptr),
+			getPTR(node, flags, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
 			getBool(node, "useWorldUVY", true),
@@ -787,7 +789,7 @@ static inline Visplane extractVisplane(
 			getFloat(node, "height", 0.0f),
 			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 			type,
-			getPTR(node, flags, "flag", nullptr),
+			getPTR(node, flags, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
 			getBool(node, "useWorldUVY", true),
@@ -818,7 +820,7 @@ static inline Wall extractWall(
 		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
-		getPTR(node, flags, "flag", nullptr),
+		getPTR(node, flags, "flag", &(constants::C_FALSE)),
 		getFloat(node, "extra", 0.0f),
 		getTexture(node, textureNames, "altTexture", initial::FALLBACK_TEXTURE_NAME),
 		getBool(node, "useWorldUVX", true),
@@ -869,7 +871,7 @@ static inline Displacement extractDisplacement(
 
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
-		getPTR(node, flags, "flag", nullptr),
+		getPTR(node, flags, "flag", &(constants::C_FALSE)),
 		getFloat(node, "extra", 0.0f)
 	);
 	
@@ -906,7 +908,7 @@ static inline Light extractLight(
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getVec3(node, "colour", glm::vec3(1.0f, 1.0f, 1.0f)),
 		getFloat(node, "intensity", 1.0f),
-		getPTR(node, flags, "flag", nullptr)
+		getPTR(node, flags, "flag", &(constants::C_TRUE))
 	);
 	
 	return light;
@@ -929,6 +931,7 @@ static inline TextObject extractTextObject(
 }
 
 
+bool nullBool;
 static inline LogicGate extractGate(
 		const pugi::xml_node& node,
 		std::array<bool, constants::MAX_FLAGS>* flags,
@@ -937,9 +940,9 @@ static inline LogicGate extractGate(
 
 	LogicGate gate = LogicGate(
 		static_cast<GateType>(getEnum(node, "type", G_PASSTHROUGH)),
-		getPTR(node, flags, "outFlag", nullptr),
-		getPTR(node, flags, "inAFlag", nullptr),
-		getPTR(node, flags, "inBFlag", nullptr)
+		getPTR(node, flags, "outFlag", &(constants::C_FALSE)),
+		getPTR(node, flags, "inAFlag", &(constants::C_FALSE)),
+		getPTR(node, flags, "inBFlag", &nullBool)
 	);
 	return gate;
 }

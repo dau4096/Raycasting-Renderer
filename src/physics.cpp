@@ -48,50 +48,6 @@ bool quickIntersect(glm::vec3 pointA, glm::vec3 pointB, utils::Wall wall, float*
 
 
 
-glm::vec2 raycast(utils::Ray ray, utils::Wall wall) {
-	glm::vec2 wallStartV2 = glm::vec2(wall.start);
-	glm::vec2 wallEndV2 = glm::vec2(wall.end);
-
-	glm::vec2 xDiff = glm::vec2(ray.position.x - ray.end.x, wall.start.x - wall.end.x);
-	glm::vec2 yDiff = glm::vec2(ray.position.y - ray.end.y, wall.start.y - wall.end.y);
-
-
-	double divisor = utils::determinant(xDiff, yDiff);
-	if (abs(divisor) < EPSILON) {
-		//Lines do not intersect, as they are nearly parallel.
-		return constants::INVALIDv2;
-	}
-
-
-	glm::vec2 dets = glm::vec2(utils::determinant(ray.position, ray.end), utils::determinant(wallStartV2, wallEndV2));
-	double xCoord = utils::determinant(dets, xDiff) / divisor;
-	double yCoord = utils::determinant(dets, yDiff) / divisor;
-
-	glm::vec2 intersectPoint = glm::vec2(xCoord, yCoord);
-
-
-	//Check if the intersection is within the wall.
-	if ((intersectPoint.x < min(wall.start.x, wall.end.x)) || (intersectPoint.x > max(wall.start.x, wall.end.x)) ||
-		(intersectPoint.y < min(wall.start.y, wall.end.y)) || (intersectPoint.y > max(wall.start.y, wall.end.y))) {
-		return constants::INVALIDv2;
-	}
-
-
-	glm::vec2 intersectDirection = glm::normalize(intersectPoint - ray.position);
-	glm::vec2 directionDifference = ray.direction - intersectDirection;
-
-	
-	if (glm::length(directionDifference) < EPSILON) {
-		//Wrong way, behind camera.
-		return constants::INVALIDv2;
-	}
-	
-
-	return intersectPoint;  
-}
-
-
-
 
 bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr) {
 	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);

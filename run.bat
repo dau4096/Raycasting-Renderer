@@ -9,8 +9,8 @@ IF EXIST "constants.o" (
 IF EXIST "physics.o" (
     DEL /Q "physics.o"
 )
-IF EXIST "render.o" (
-    DEL /Q "render.o"
+IF EXIST "graphics.o" (
+    DEL /Q "graphics.o"
 )
 IF EXIST "utils.o" (
     DEL /Q "utils.o"

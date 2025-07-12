@@ -98,13 +98,15 @@ struct StageData {
 
 inline StageData stageData;
 
+inline std::array<bool, constants::MAX_FLAGS> flags;
 
 //Numbers of valid types.
 inline size_t validVisplanes;
 inline size_t validWalls;
+inline size_t validDisplacements;
 inline size_t numVisibleVisplanes;
 inline size_t numVisibleWalls;
-inline size_t validDisplacements;
+inline size_t numVisibleDisplacements;
 inline size_t validSprites;
 inline size_t validLights;
 inline size_t validTextObjects;

@@ -530,22 +530,31 @@ namespace utils {
 		float height;
 		GLint textureID;
 		GLuint textureData;
+		glm::vec4 boundingBox;
 
 		VisplaneGPU()
-			: vertices(), height(0.0f), numVertices(0), textureID(0), textureData() {}
+			: vertices(), height(0.0f), numVertices(0), textureID(0), textureData(), boundingBox() {}
 
 		VisplaneGPU(Visplane *visplane, Player* player)
 			: numVertices(visplane->numVertices), height(visplane->height),
 			  textureID(visplane->textureID), textureData(visplane->textureData) {
-				// Zero entire array first (RenderDoc will no longer see garbage)
-				for (int i = 0; i < 4; ++i)
-					vertices[i] = glm::vec4(0.0f);
+				for (int i=0; i<4; i++) {
+					vertices[i] = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+				}
 
-				// Pack pairs of vec2s into vec4s
-				for (size_t i = 0; i < visplane->numVertices; i += 2) {
+				boundingBox = glm::vec4(
+					 constants::INF,  constants::INF,
+					-constants::INF, -constants::INF
+				);
+				for (size_t i=0; i<visplane->numVertices; i += 2) {
 					glm::vec2 a = visplane->vertices[i];
-					glm::vec2 b = (i + 1 < visplane->numVertices) ? visplane->vertices[i + 1] : glm::vec2(0.0f);
-					vertices[i / 2] = glm::vec4(a, b);
+					glm::vec2 b = (i+1 < visplane->numVertices) ? visplane->vertices[i+1] : glm::vec2(0.0f, 0.0f);
+					vertices[i/2] = glm::vec4(a, b);
+
+					boundingBox.x = min(min(a.x, b.x), boundingBox.x);
+					boundingBox.y = min(min(a.y, b.y), boundingBox.y);
+					boundingBox.z = max(max(a.x, b.x), boundingBox.z);
+					boundingBox.w = max(max(a.y, b.y), boundingBox.w);
 				}
 			}
 	};
@@ -769,9 +778,9 @@ namespace utils {
 		float intensity;
 		bool* IOPtr;
 
-		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), IOPtr(nullptr) {}
+		Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), IOPtr(&(constants::C_FALSE)) {}
 
-		Light(glm::vec3 position, glm::vec3 colour, float intensity, bool* IOPtr=nullptr)
+		Light(glm::vec3 position, glm::vec3 colour, float intensity, bool* IOPtr=&(constants::C_TRUE))
 			: position(position), colour(colour), intensity(intensity), IOPtr(IOPtr) {}
 	};
 
@@ -786,9 +795,10 @@ namespace utils {
 
 		LightGPU(Light* light, Player* player)
 			: position(light->position), colour(light->colour),
-			  intensity(light->intensity),
-			  enabled((light->IOPtr) ? *(light->IOPtr) : true),
-			  _padding{0.0f} {}
+			  intensity(light->intensity), _padding{0.0f} {
+			  	if (light->IOPtr) {enabled = *(light->IOPtr);}
+			  	else {enabled = true;}
+			  }
 	};
 
 

@@ -409,17 +409,16 @@ void updateShaderStorageBufferObject(
 
 
 void findVisibleObjects(
-		utils::Player* player,
-		std::vector<utils::Visplane>* visplaneData, std::vector<uint>* visibleVisplaneIndices,
-		std::vector<utils::Wall>* wallData, std::vector<uint>* visibleWallIndices
+		utils::Player* player, utils::DataSet* localGraphicsData,
+		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices
 	) {	
 	glm::vec2 playerFDirection = glm::vec2(sin(player->viewAngle * constants::TO_RAD), cos(player->viewAngle * constants::TO_RAD));
 	glm::vec2 playerPosV2 = glm::vec2(player->position);
 
 
 	//Visplanes
-	for (uint idx=0; idx<visplaneData->size(); idx++) {
-		utils::Visplane thisPlane = visplaneData->at(idx);
+	for (uint idx=0; idx<validVisplanes; idx++) {
+		utils::Visplane thisPlane = localGraphicsData->visplaneData.at(idx);
 
 		bool behind = true;
 		if ((thisPlane.type == V_INVALID) || (thisPlane.type == V_NODRAW)) {continue; /* Non-shown VPs */}
@@ -434,8 +433,8 @@ void findVisibleObjects(
 
 
 	//Walls
-	for (uint idx=0; idx<wallData->size(); idx++) {
-		utils::Wall thisWall = wallData->at(idx);
+	for (uint idx=0; idx<validWalls; idx++) {
+		utils::Wall thisWall = localGraphicsData->wallData.at(idx);
 		if ((thisWall.type == W_INVALID) || (thisWall.type == W_NODRAW)) {continue; /* Non-shown Walls */}
 		bool sProj = glm::dot(glm::vec2(thisWall.start - player->position), playerFDirection) < 0.0f;
 		bool eProj = glm::dot(glm::vec2(thisWall.end - player->position), playerFDirection) < 0.0f;
@@ -445,6 +444,17 @@ void findVisibleObjects(
 	}
 	numVisibleWalls = visibleWallIndices->size();
 
+	for (uint idx=0; idx<validDisplacements; idx++) {
+		utils::Displacement thisDisp = localGraphicsData->displacementData.at(idx);
+		if (thisDisp.type == D_INVALID) {continue; /* Non-shown VPs */}
+		bool behind = true;
+		for (size_t vertexIdx=0; vertexIdx<3; vertexIdx++) {
+			behind &= glm::dot(glm::vec2(thisDisp.vertices[vertexIdx]) - playerPosV2, playerFDirection) < 0.0f;
+		}
+		if (behind) {continue; /* Completely behind player view */}
+		visibleDisplacementIndices->push_back(idx);
+	}
+	numVisibleDisplacements = visibleDisplacementIndices->size();
 }
 
 
@@ -1079,10 +1089,15 @@ namespace frame {
 
 std::vector<uint> visibleVisplaneIndices;
 std::vector<uint> visibleWallIndices;
+std::vector<uint> visibleDisplacementIndices;
 void updateSSBOs(utils::DataSet* localGraphicsData, utils::Player* player) {
 	visibleVisplaneIndices.clear();
 	visibleWallIndices.clear();
-	graphics::findVisibleObjects(player, &(localGraphicsData->visplaneData), &visibleVisplaneIndices, &(localGraphicsData->wallData), &visibleWallIndices);
+	visibleDisplacementIndices.clear();
+	graphics::findVisibleObjects(
+		player, localGraphicsData,
+		 &visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices
+	);
 
 
 	//Update SSBOs.
@@ -1116,30 +1131,29 @@ void drawDisplacements(utils::DataSet* localGraphicsData, utils::Player* player)
 	std::vector<GLuint> indices;
 	std::vector<float> verticesData;
 	std::vector<GLuint> indicesData;
-	GLuint currentIdx = 0;
+	GLuint currentIndicesCount = 0;
 
-	int dispIdx = 0;
-	for (utils::Displacement& thisDisp : localGraphicsData->displacementData) {
+	for (uint displacementIdx : visibleDisplacementIndices) {
+		utils::Displacement thisDisp = localGraphicsData->displacementData.at(displacementIdx);
 		glm::vec3 dispNormal = thisDisp.normal;
 		verticesData = {
 			thisDisp.vertices[0].x, thisDisp.vertices[0].y, thisDisp.vertices[0].z,
-			thisDisp.UV[0].x, thisDisp.UV[0].y,	float(dispIdx),
+			thisDisp.UV[0].x, thisDisp.UV[0].y,	float(displacementIdx),
 
 			thisDisp.vertices[1].x, thisDisp.vertices[1].y, thisDisp.vertices[1].z,
-			thisDisp.UV[1].x, thisDisp.UV[1].y,	float(dispIdx),
+			thisDisp.UV[1].x, thisDisp.UV[1].y,	float(displacementIdx),
 
 			thisDisp.vertices[2].x, thisDisp.vertices[2].y, thisDisp.vertices[2].z,
-			thisDisp.UV[2].x, thisDisp.UV[2].y,	float(dispIdx),
+			thisDisp.UV[2].x, thisDisp.UV[2].y,	float(displacementIdx),
 		};
 		indicesData = {
-			currentIdx + 0, currentIdx + 1, currentIdx + 2
+			currentIndicesCount + 0, currentIndicesCount + 1, currentIndicesCount + 2
 		};
 
 		utils::combineVectors(&vertices, verticesData);
 		utils::combineVectors(&indices, indicesData);
 
-		currentIdx += 3; //3 vertices added.
-		dispIdx++;
+		currentIndicesCount += 3; //3 vertices added.
 	}
 
 
@@ -1177,6 +1191,7 @@ void drawDisplacements(utils::DataSet* localGraphicsData, utils::Player* player)
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 
 	uniforms::bindCommonUniforms(GLIndex::displacementShader3D, player);
+	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);

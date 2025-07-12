@@ -42,6 +42,7 @@ struct Visplane {
 	float height;		//1D height (Z)
 	int textureID;		//Texture ID
 	uint textureData;	//Texture formatting data.
+	vec4 boundingBox;	//Bounding box in 2D.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -270,7 +271,7 @@ float getWallYUV(Wall thisWall, uint projections) {
 	float screenYLow = float((projections >> 16) & 0xFFFF) - 12289.0f; //12,288 == 0x3000
 	float screenYTop = float(projections & 0xFFFF) - 12287.0f;
 
-	if (fragPosition.y > screenYTop || fragPosition.y < screenYLow) {
+	if (fragPosition.y >= screenYTop || fragPosition.y <= screenYLow) {
 		return INF;
 	}
 
@@ -302,8 +303,11 @@ vec2 getVisplaneUV(vec2 position2D, Visplane plane) {
 		invTextureScale, textureOffset
 	);
 
-	vec2 UV = position2D.xy * invTextureScale;
-	return UV - floor(UV) + textureOffset;
+	vec2 worldUV = position2D * invTextureScale;
+	vec2 localUV = (position2D - plane.boundingBox.xy) / (plane.boundingBox.xy - plane.boundingBox.zw);
+
+	vec2 UV = mix(localUV, worldUV, vec2(useWorldSpace));
+	return fract(UV) + textureOffset;
 }
 
 vec2 getVertex(Visplane plane, uint index) {
@@ -312,6 +316,10 @@ vec2 getVertex(Visplane plane, uint index) {
 }
 
 bool isInsideVP(vec2 point2D, Visplane plane) {
+	if (
+		((point2D.x < plane.boundingBox.x) || (point2D.x > plane.boundingBox.z)) ||
+		((point2D.y < plane.boundingBox.y) || (point2D.y > plane.boundingBox.w))
+	) {return false; /* Outside bounding box. */}
 	for (uint i=0; i<plane.numVertices; i++) {
 		vec2 a = getVertex(plane, i);
 		vec2 b = getVertex(plane, (i + 1) % plane.numVertices);
