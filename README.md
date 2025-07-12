@@ -156,6 +156,7 @@ Visplanes are objects stored under the tag `<environment>` and have the followin
 | `textureScale` | Attribute | 2D vector | Texture scale. higher numbers make the texture larger. |
 | `textureOffset` | Attribute | 2D vector | [0-1] range of texture offset. Is applied after texture scale. |
 | `exitDirection` | Attribute | Number | Only applies when `type` is `V_TELEPORT`. Specifies player view direction in degrees when exiting this VP. `0.0` is +Y. |
+| | | | |
 
 Example;
 
@@ -179,6 +180,7 @@ Walls are objects stored under the tag `<environment>` and have the following at
 | `useWorldUVY` | Attribute | Boolean | Whether to texture based on physical Z (Vertical) position or accross the surface. |
 | `textureScale` | Attribute | 2D vector | Texture scale. higher numbers make the texture larger. |
 | `textureOffset` | Attribute | 2D vector | [0-1] range of texture offset. Is applied after texture scale. |
+| | | | |
 
 Example;
 
@@ -203,6 +205,7 @@ Displacements are objects stored under the tag `<environment>` and have the foll
 | `type` | Attribute | Type | Type of displacement. See the Types section (Displacement-specific). Currently unused (defaults to `D_NORMAL`). |
 | `flag` | Attribute | Text | The name of the flag to be used (usually by non-`D_NORMAL` types). Currently unused (defaults to _`nullptr`_). |
 | `extra` | Attribute | Number | Data used by non-`D_NORMAL` types. See the Types section (Displacement-specific). Currently unused (defaults to `0.0`). |
+| | | | |
 
 Example;
 
@@ -221,6 +224,7 @@ Sprites are objects stored under the tag `<objects>` and have the following attr
 | `texture` | Attribute | Text | The texture file to use on the sprite. Cannot be resized or shifted. |
 | `type` | Attribute | Type | Type of sprite. See the Types section (Sprite-specific). Currently unused (defaults to `SPR_DECO`). |
 | `collision` | Attribute | Boolean | Defines whether or not the sprite should collide with the player. |
+| | | | |
 
 Example;
 
@@ -237,6 +241,8 @@ Lights are objects stored under the tag `<objects>` and have the following attri
 | `colour` | Attribute | 3D vector | What colour light should be emitted. |
 | `intensity` | Attribute | Number | Defines the intensity and thus maximum range of the light.
 | `flag` | Attribute | Text | The flag to be used to turn the light On/Off. Can be set to `ALWAYS` or `TRUE` to never turn off. |
+| `hasMarker` | Attribute | Boolean | Shows a `SPR_LIGHT` with the "lamp" texture at the light's location. |
+| | | | |
 
 Example;
 
@@ -252,6 +258,7 @@ TextObjects are objects stored under the tag `<objects>` and have the following 
 | `position` | Attribute | 3D vector | Where in 3D space the sprite should be. |
 | `text` | Attribute | Text | What text it should show. |
 | `scale` | Attribute | Number | The rough scale of the text. 100 is the default. |
+| | | | |
 
 Example;
 
@@ -268,6 +275,7 @@ Logic gates are objects stored under the tag `<logic>` have the following attrib
 | `outFlag` | Attribute | Text | Where to store the output. |
 | `inAFlag` | Attribute | Text | Input A's flag. |
 | `inBFlag` | Attribute | Text | Input B's flag. |
+| | | | |
 
 Example;
 
@@ -285,6 +293,7 @@ Models are macros made of Displacements stored under the tag `<environment>` and
 | `scale` | Attribute | 3D vector | Scale of the model in XYZ space. |
 | `file` | Attribute | Text | Filename of the model to use (without .obj extension) |
 | `texture` | Attribute | Text | Texture to use on the model. Uses models' built in UV coordinates (A lack thereof is not corrected.). |
+| | | | |
 
 Example;
 
@@ -310,6 +319,7 @@ Cuboids are macros made of Walls and Visplanes stored under the tag `<environmen
 | `useWorldUVZ` | Attribute | Boolean | Whether to texture based on physical Z (Vertical) position or accross the surface. |
 | `textureScale` | Attribute | 3D vector | Texture scale. higher numbers make the texture larger. |
 | `textureOffset` | Attribute | 3D vector | [0-1] range of texture offset. Is applied after texture scale. |
+| | | | |
 
 Example;
 
@@ -337,6 +347,7 @@ Stairs are macros made of Walls and Visplanes. They slope along the longest edge
 | `useWorldUVZ` | Attribute | Boolean | Whether to texture based on physical Z (Vertical) position or accross the surface. |
 | `textureScale` | Attribute | 3D vector | Texture scale. higher numbers make the texture larger. |
 | `textureOffset` | Attribute | 3D vector | [0-1] range of texture offset. Is applied after texture scale. |
+| | | | |
 
 
 Example;

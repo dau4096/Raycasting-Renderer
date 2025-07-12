@@ -52,7 +52,6 @@ bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flag
 
 static const std::unordered_map<std::string, int> enumMap = {
 	//Walls 				Visplanes				Cuboids					Logic Gates				Sprites 				Displacements
-	{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"C_INVALID", 0}, 		{"G_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
 	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"C_NORMAL", 1}, 		{"G_PASSTHROUGH", 1}, 	{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
 	{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"C_MOVEX_FAST", 2}, 	{"G_AND", 2}, 			{"SPR_LIGHT", 2}, 
 	{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 	{"C_MOVEX_SLOW", 3}, 	{"G_OR", 3}, 			 
@@ -712,8 +711,8 @@ std::vector<T> fetchObjectFromXML(
 			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 		)> extractor,
 		size_t* numObjects,
-		std::array<bool, constants::MAX_FLAGS>* flags=nullptr,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
+		std::array<bool, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	)
 {
 	std::vector<T> result{};
@@ -728,7 +727,104 @@ std::vector<T> fetchObjectFromXML(
 	return result;
 }
 
+template<typename T>
+std::vector<T> fetchObjectFromXML(
+		const pugi::xml_document& doc,
+		const std::string& xpath,
+		std::function<T(
+			const pugi::xml_node&,
+			std::array<bool, constants::MAX_FLAGS>* flags
+		)> extractor,
+		size_t* numObjects,
+		std::array<bool, constants::MAX_FLAGS>* flags
+	)
+{
+	std::vector<T> result{};
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	*numObjects = count;
+	
+	for (objectIndex=0; objectIndex<count; objectIndex++) {
+		pugi::xml_node node = nodeList[objectIndex].node();
+		result.push_back(extractor(node, flags));
+	}
+	return result;
+}
 
+template<typename T>
+std::vector<T> fetchObjectFromXML(
+		const pugi::xml_document& doc,
+		const std::string& xpath,
+		std::function<T(
+			const pugi::xml_node&,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		)> extractor,
+		size_t* numObjects,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+	)
+{
+	std::vector<T> result{};
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	*numObjects = count;
+	
+	for (objectIndex=0; objectIndex<count; objectIndex++) {
+		pugi::xml_node node = nodeList[objectIndex].node();
+		result.push_back(extractor(node, textureNames));
+	}
+	return result;
+}
+
+template<typename T>
+std::vector<T> fetchObjectFromXML(
+		const pugi::xml_document& doc,
+		const std::string& xpath,
+		std::function<T(
+			const pugi::xml_node&
+		)> extractor,
+		size_t* numObjects
+	)
+{
+	std::vector<T> result{};
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	*numObjects = count;
+	
+	for (objectIndex=0; objectIndex<count; objectIndex++) {
+		pugi::xml_node node = nodeList[objectIndex].node();
+		result.push_back(extractor(node));
+	}
+	return result;
+}
+
+
+template<typename T>
+std::vector<T> fetchObjectFromXML(
+		const pugi::xml_document& doc,
+		const std::string& xpath,
+		std::function<T(
+			const pugi::xml_node&,
+			std::array<bool, constants::MAX_FLAGS>* flags,
+			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
+			std::vector<utils::Sprite>* spriteData
+		)> extractor,
+		size_t* numObjects,
+		std::array<bool, constants::MAX_FLAGS>* flags,
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
+		std::vector<utils::Sprite>* spriteData
+	)
+{
+	std::vector<T> result{};
+	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
+	size_t count = static_cast<size_t>(nodeList.size());
+	*numObjects = count;
+	
+	for (objectIndex=0; objectIndex<count; objectIndex++) {
+		pugi::xml_node node = nodeList[objectIndex].node();
+		result.push_back(extractor(node, flags, textureNames, spriteData));
+	}
+	return result;
+}
 
 static std::vector<glm::vec2> getVertsV2(const pugi::xml_node& node, size_t maxVertices, bool fill=false, std::string prefix="v", glm::vec2 defaultValue=glm::vec2(0.0f, 0.0f)) {
 	std::vector<glm::vec2> verts;
@@ -763,12 +859,12 @@ static inline Visplane extractVisplane(
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
-	Visplane visplane;
+	utils::Visplane visplane;
 	pugi::xml_node vertexNode = node.child("vertices");
 	if (vertexNode) { //Has explicit vertices.
 		std::vector<glm::vec2> vertsVec = getVertsV2(vertexNode, 8);
 		if (vertsVec.size() < 3) {raise("Visplanes must have at least 3 vertices.");}
-		visplane = Visplane(
+		visplane = utils::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
 			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
@@ -783,7 +879,7 @@ static inline Visplane extractVisplane(
 		);
 
 	} else { //Old method for compatability. 
-		visplane = Visplane(
+		visplane = utils::Visplane(
 			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
 			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
 			getFloat(node, "height", 0.0f),
@@ -815,7 +911,7 @@ static inline Wall extractWall(
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
-	Wall wall = Wall(
+	utils::Wall wall = utils::Wall(
 		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
@@ -866,7 +962,7 @@ static inline Displacement extractDisplacement(
 		};
 	}
 
-	Displacement displacement = Displacement(
+	utils::Displacement displacement = utils::Displacement(
 		vertsArr, UVArr,
 
 		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
@@ -881,11 +977,10 @@ static inline Displacement extractDisplacement(
 
 static inline Sprite extractSprite(
 		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
 	) {
 
-	Sprite sprite = Sprite(
+	utils::Sprite sprite = utils::Sprite(
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getFloat(node, "width", 1.0f),
 		getFloat(node, "height", 1.0f),
@@ -901,27 +996,34 @@ static inline Sprite extractSprite(
 static inline Light extractLight(
 		const pugi::xml_node& node,
 		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
+		std::vector<utils::Sprite>* spriteData
 	) {
 
-	Light light = Light(
-		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
+	glm::vec3 lightPos = getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f));
+	utils::Light light = utils::Light(
+		lightPos,
 		getVec3(node, "colour", glm::vec3(1.0f, 1.0f, 1.0f)),
 		getFloat(node, "intensity", 1.0f),
 		getPTR(node, flags, "flag", &(constants::C_TRUE))
 	);
+
+	if (getBool(node, "hasMarker", false)) {
+		spriteData->push_back(utils::Sprite(
+			lightPos, 1.0f, 2.0f, assignTexture("lamp", textureNames), SPR_LIGHT, false
+		));
+		validSprites++;
+	}
 	
 	return light;
 }
 
 
 static inline TextObject extractTextObject(
-		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		const pugi::xml_node& node
 	) {
 
-	TextObject textObject = TextObject(
+	utils::TextObject textObject = utils::TextObject(
 		getString(node, "text", "<EMPTY>"),
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getInt(node, "scale", 100)
@@ -934,11 +1036,10 @@ static inline TextObject extractTextObject(
 bool nullBool;
 static inline LogicGate extractGate(
 		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::array<bool, constants::MAX_FLAGS>* flags
 	) {
 
-	LogicGate gate = LogicGate(
+	utils::LogicGate gate = utils::LogicGate(
 		static_cast<GateType>(getEnum(node, "type", G_PASSTHROUGH)),
 		getPTR(node, flags, "outFlag", &(constants::C_FALSE)),
 		getPTR(node, flags, "inAFlag", &(constants::C_FALSE)),
@@ -1206,10 +1307,10 @@ void loadStage(
 	*visplaneData = xml::fetchObjectFromXML<utils::Visplane>(doc, "//environment/visplane", xml::extractVisplane, &validVisplanes, flags, textureNames);
 	*wallData = xml::fetchObjectFromXML<utils::Wall>(doc, "//environment/wall", xml::extractWall, &validWalls, flags, textureNames);
 	*displacementData = xml::fetchObjectFromXML<utils::Displacement>(doc, "//environment/displacement", xml::extractDisplacement, &validDisplacements, flags, textureNames);
-	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//objects/sprite", xml::extractSprite, &validSprites, nullptr, textureNames);
-	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//objects/light", xml::extractLight, &validLights, nullptr, nullptr);
-	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects, nullptr, nullptr);
-	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates, flags, nullptr);
+	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//objects/sprite", xml::extractSprite, &validSprites, textureNames);
+	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//objects/light", xml::extractLight, &validLights, flags, textureNames, spriteData);
+	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects);
+	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates, flags);
 
 
 	//Get macros (shorthands for collection of elementary objects like walls or displacements)

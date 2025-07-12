@@ -119,10 +119,8 @@
     <sprite position="5.0 5.0 1.0" width="1.0" height="2.0" texture="piloten" collision="true" />
 
     <!-- Lights and their markers -->
-    <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="7.5" inputPTR="always" />
-    <sprite position="-5.0 2.5 1.0" width="1.0" height="2.0" texture="lamp" type="SPR_LIGHT" collision="FALSE" />
-    <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="32.0" inputPTR="always" />
-    <sprite position="-5.0 -10.0 1.0" width="1.0" height="2.0" texture="lamp" type="SPR_LIGHT" collision="FALSE" />
+    <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="7.5" inputPTR="always" hasMarker="TRUE" />
+    <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="32.0" inputPTR="always" hasMarker="TRUE" />
 
 
     <!-- Various labels -->
