@@ -49,17 +49,17 @@ bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flag
 
 
 static const std::unordered_map<std::string, int> enumMap = {
-	//Walls 				Visplanes				Logic Gates				Sprites 				Displacements
-	{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"G_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
-	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"G_PASSTHROUGH", 1}, 	{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
-	{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"G_AND", 2}, 			{"SPR_LIGHT", 2}, 
-	{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 	{"G_OR", 3}, 			 
-	{"W_MOVED_SLOW", 4},	{"V_MOVEX_SLOW", 4}, 	{"G_NOT", 4}, 			 
-	{"W_MOVEN_FAST", 5},	{"V_MOVEY_FAST", 5}, 	{"G_XOR", 5}, 			 
-	{"W_MOVEN_SLOW", 6},	{"V_MOVEY_SLOW", 6}, 	{"G_LATCH", 6}, 		
-	{"W_MOVEZ_FAST", 7},	{"V_MOVEZ_FAST", 7}, 	{"G_PULSE", 7}, 		
-	{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8}, 	{"G_TOGGLE", 8},		
-	{"W_SWITCH", 9},		{"V_HURT", 9},
+	//Walls 				Visplanes				Cuboids					Logic Gates				Sprites 				Displacements
+	{"W_INVALID", 0}, 		{"V_INVALID", 0}, 		{"C_INVALID", 0}, 		{"G_INVALID", 0}, 		{"SPR_INVALID", 0},		{"D_INVALID", 0},
+	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"C_NORMAL", 1}, 		{"G_PASSTHROUGH", 1}, 	{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
+	{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"C_MOVEX_FAST", 2}, 	{"G_AND", 2}, 			{"SPR_LIGHT", 2}, 
+	{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 	{"C_MOVEX_SLOW", 3}, 	{"G_OR", 3}, 			 
+	{"W_MOVED_SLOW", 4},	{"V_MOVEX_SLOW", 4}, 	{"C_MOVEY_FAST", 4}, 	{"G_NOT", 4}, 			 
+	{"W_MOVEN_FAST", 5},	{"V_MOVEY_FAST", 5}, 	{"C_MOVEY_SLOW", 5}, 	{"G_XOR", 5}, 			 
+	{"W_MOVEN_SLOW", 6},	{"V_MOVEY_SLOW", 6}, 	{"C_MOVEZ_FAST", 6}, 	{"G_LATCH", 6}, 		
+	{"W_MOVEZ_FAST", 7},	{"V_MOVEZ_FAST", 7}, 	{"C_MOVEZ_SLOW", 7}, 	{"G_PULSE", 7}, 		
+	{"W_MOVEZ_SLOW", 8},	{"V_MOVEZ_SLOW", 8}, 	{"C_PASSTHROUGH", 8}, 	{"G_TOGGLE", 8},		
+	{"W_SWITCH", 9},		{"V_HURT", 9},			{"C_NODRAW", 9},
 	{"W_PASSTHROUGH", 10},	{"V_PASSTHROUGH", 10},
 	{"W_DOORZ", 11},		{"V_NODRAW", 11},
 	{"W_DOORSWING", 12},	{"V_TELEPORT", 12},
@@ -256,6 +256,30 @@ void fetchMacroFromXML(
 	}
 }
 
+
+struct TypesSet {
+	VisplaneType planeType;
+	WallType XType, YType;
+
+	TypesSet() : planeType(V_INVALID), XType(W_INVALID), YType(W_INVALID) {}
+
+	TypesSet(VisplaneType vType, WallType xType, WallType yType)
+		: planeType(vType), XType(xType), YType(yType) {}
+};
+
+static std::unordered_map<CuboidType, TypesSet> cuboidTypeMap = {
+	{C_INVALID, TypesSet(V_INVALID, W_INVALID, W_INVALID)},
+	{C_NORMAL, TypesSet(V_NORMAL, W_NORMAL, W_NORMAL)},
+	{C_MOVEX_FAST, TypesSet(V_MOVEX_FAST, W_MOVEN_FAST, W_MOVED_FAST)},
+	{C_MOVEX_SLOW, TypesSet(V_MOVEX_SLOW, W_MOVEN_SLOW, W_MOVED_SLOW)},
+	{C_MOVEY_FAST, TypesSet(V_MOVEY_FAST, W_MOVED_FAST, W_MOVEN_FAST)},
+	{C_MOVEY_SLOW, TypesSet(V_MOVEY_SLOW, W_MOVED_SLOW, W_MOVEN_SLOW)},
+	{C_MOVEZ_FAST, TypesSet(V_MOVEZ_FAST, W_MOVEZ_FAST, W_MOVEZ_FAST)},
+	{C_MOVEZ_SLOW, TypesSet(V_MOVEZ_SLOW, W_MOVEZ_SLOW, W_MOVEZ_SLOW)},
+	{C_PASSTHROUGH, TypesSet(V_PASSTHROUGH, W_PASSTHROUGH, W_PASSTHROUGH)},
+	{C_NODRAW, TypesSet(V_NODRAW, W_NODRAW, W_NODRAW)}
+};
+
 void extractCuboid(
 		pugi::xml_node node,
 		std::vector<utils::Visplane>* visplaneData,
@@ -270,9 +294,8 @@ void extractCuboid(
 	GLuint lowTexture = getTexture(node, textureNames, "bottomTexture", initial::FALLBACK_TEXTURE_NAME);
 
 
-	int intType = getEnum(node, "type", 1); //V_NORMAL, W_NORMAL and D_NORMAL are all integer value 1.
-	VisplaneType vType = static_cast<VisplaneType>(intType);
-	WallType wType = static_cast<WallType>(intType);
+	CuboidType cType = static_cast<CuboidType>(getEnum(node, "type", C_NORMAL)); //V_NORMAL, W_NORMAL and D_NORMAL are all integer value 1.
+	TypesSet typesSet = cuboidTypeMap[cType];
 	float extra = getFloat(node, "extra", 0.0f);
 	bool* ptr = getPTR(node, flags, "flag");
 
@@ -291,7 +314,7 @@ void extractCuboid(
 	if (getBool(node, "hasTop", true)) {
 		visplaneData->push_back(utils::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), upperCorner.z,
-			topTexture, vType, ptr, extra,
+			topTexture, typesSet.planeType, ptr, extra,
 			worldSpaceTextures.x, worldSpaceTextures.y,
 			glm::vec2(textureScale), glm::vec2(textureOffset)
 		));
@@ -300,35 +323,36 @@ void extractCuboid(
 	if (getBool(node, "hasBottom", true)) {
 		visplaneData->push_back(utils::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), lowerCorner.z,
-			lowTexture, vType, ptr, extra,
+			lowTexture, typesSet.planeType, ptr, extra,
 			worldSpaceTextures.x, worldSpaceTextures.y,
 			glm::vec2(textureScale), glm::vec2(textureOffset)
 		));
 		validVisplanes++;
 	}
 
+	if ((cType == C_MOVEX_FAST) || (cType == C_MOVEX_SLOW)) {extra *= -1;}
 	std::vector<utils::Wall> newWData = {
 		utils::Wall(
-			lowerCorner, glm::vec3(lowerCorner.x, upperCorner.y, upperCorner.z),
-			sideTexture, wType, ptr, extra,
+			glm::vec3(lowerCorner.x, upperCorner.y, upperCorner.z), lowerCorner,
+			sideTexture, typesSet.XType, ptr, (extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),
 		utils::Wall(
 			glm::vec3(lowerCorner.x, upperCorner.y, lowerCorner.z), upperCorner,
-			sideTexture, wType, ptr, extra,
+			sideTexture, typesSet.YType, ptr, ((cType==C_MOVEY_FAST || cType == C_MOVEY_SLOW) ? -extra : extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),
 		utils::Wall(
 			lowerCorner, glm::vec3(upperCorner.x, lowerCorner.y, upperCorner.z),
-			sideTexture, wType, ptr, extra,
+			sideTexture, typesSet.YType, ptr, ((cType==C_MOVEY_FAST || cType == C_MOVEY_SLOW) ? -extra : extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),
 		utils::Wall(
-			glm::vec3(upperCorner.x, lowerCorner.y, lowerCorner.z), upperCorner,
-			sideTexture, wType, ptr, extra,
+			upperCorner, glm::vec3(upperCorner.x, lowerCorner.y, lowerCorner.z),
+			sideTexture, typesSet.XType, ptr, (extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),

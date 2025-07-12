@@ -42,6 +42,14 @@ enum WallType {
 	W_NODRAW
 };
 
+enum CuboidType {
+	C_INVALID, C_NORMAL,
+	C_MOVEX_FAST, C_MOVEX_SLOW,
+	C_MOVEY_FAST, C_MOVEY_SLOW,
+	C_MOVEZ_FAST, C_MOVEZ_SLOW,
+	C_PASSTHROUGH, C_NODRAW
+};
+
 enum DisplacementType {
 	D_INVALID, D_NORMAL
 };

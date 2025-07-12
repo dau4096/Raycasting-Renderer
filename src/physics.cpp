@@ -195,12 +195,12 @@ void applyWallDirectionalMovement(utils::Wall* wall, float speed, bool enabled) 
 	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall->start) - glm::vec2(wall->end));
 	glm::vec3 wallDir = glm::vec3(wallDir2D.x, wallDir2D.y, 0.0f);
 
-	if (abs(wall->data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+	if (abs(wall->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
 		return;
 
-	} else if (wall->data/2.0f < 0) { //Movement toward wall.start.
-		if (enabled && (wall->internal->first > wall->data/2.0f)) { //Turned on; move toward start.
-			float newInternal = std::max(wall->internal->first - speed, wall->data/2.0f);
+	} else if (wall->data < 0) { //Movement toward wall.start.
+		if (enabled && (wall->internal->first > wall->data)) { //Turned on; move toward start.
+			float newInternal = std::max(wall->internal->first - speed, wall->data);
 			float delta = wall->internal->first - newInternal;
 			wall->internal->first = newInternal;
 
@@ -211,8 +211,8 @@ void applyWallDirectionalMovement(utils::Wall* wall, float speed, bool enabled) 
 		}
 
 	} else { //Movement toward wall.end.
-		if (enabled && (wall->internal->first < wall->data/2.0f)) { //Turned on; move toward end.
-			float newInternal = std::min(wall->internal->first + speed, wall->data/2.0f);
+		if (enabled && (wall->internal->first < wall->data)) { //Turned on; move toward end.
+			float newInternal = std::min(wall->internal->first + speed, wall->data);
 			float delta = newInternal - wall->internal->first;
 			wall->internal->first = newInternal;
 
@@ -232,12 +232,12 @@ void applyWallNormalMovement(utils::Wall* wall, float speed, bool enabled) {
 	glm::vec2 wallDir2D = glm::normalize(glm::vec2(wall->start) - glm::vec2(wall->end));
 	glm::vec3 wallNormal = glm::vec3(-wallDir2D.y, wallDir2D.x, 0.0f);
 
-	if (abs(wall->data/2.0f) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
+	if (abs(wall->data) < constants::SPECIAL_MOVE_SPEED_SLOW) { //Movement is not significant enough to carry out.
 		return;
 
-	} else if (wall->data/2.0f < 0) { //Movement toward wall.start.
-		if (enabled && (wall->internal->first > wall->data/2.0f)) { //Turned on; move toward start.
-			float newInternal = std::max(wall->internal->first - speed, wall->data/2.0f);
+	} else if (wall->data < 0) { //Movement toward wall.start.
+		if (enabled && (wall->internal->first > wall->data)) { //Turned on; move toward start.
+			float newInternal = std::max(wall->internal->first - speed, wall->data);
 			float delta = wall->internal->first - newInternal;
 			wall->internal->first = newInternal;
 
@@ -248,8 +248,8 @@ void applyWallNormalMovement(utils::Wall* wall, float speed, bool enabled) {
 		}
 
 	} else { //Movement toward wall.end.
-		if (enabled && (wall->internal->first < wall->data/2.0f)) { //Turned on; move toward end.
-			float newInternal = std::min(wall->internal->first + speed, wall->data/2.0f);
+		if (enabled && (wall->internal->first < wall->data)) { //Turned on; move toward end.
+			float newInternal = std::min(wall->internal->first + speed, wall->data);
 			float delta = newInternal - wall->internal->first;
 			wall->internal->first = newInternal;
 

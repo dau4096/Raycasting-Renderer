@@ -302,9 +302,9 @@ Cuboids are macros made of Walls and Visplanes stored under the tag `<environmen
 | `sideTexture` | Attribute | Text | The texture file to use on the side faces. |
 | `topTexture` | Attribute | Text | The texture file to use on the top face. |
 | `bottomTexture` | Attribute | Text | The texture file to use on the bottom face. |
-| `type` | Attribute | Type | Type of VPs/Walls. See the Types section for Visplanes & Walls. Not reccomended to alter as it can be unintuitive. |
-| `extra` | Attribute | Number | Data used by non-`W_NORMAL`/`V_NORMAL` types. See above. |
-| `flag` | Attribute | Text | The name of the flag to be used. See above. |
+| `type` | Attribute | Type | Type of VPs/Walls are assigned via Cuboid Type. See the Types section for Cuboids. |
+| `extra` | Attribute | Number | Data used by non-`C_NORMAL` types. |
+| `flag` | Attribute | Text | The name of the flag to be used. |
 | `useWorldUVX` | Attribute | Boolean | Whether to texture based on physical X (Horizontal) position or accross the surface. |
 | `useWorldUVY` | Attribute | Boolean | Whether to texture based on physical Y (Horizontal) position or accross the surface. |
 | `useWorldUVZ` | Attribute | Boolean | Whether to texture based on physical Z (Vertical) position or accross the surface. |
@@ -396,3 +396,15 @@ The types that can be used within XML files and their descriptions.
 | LogicGate | `G_LATCH` | A enables, B disables. Outputs state. |
 | LogicGate | `G_PULSE` | Outputs when A goes from `FALSE` to `TRUE`. (1 tick) |
 | LogicGate | `G_TOGGLE` | A swaps state. Outputs state. |
+| | | |
+| Cuboid | `C_INVALID` | Used when a cuboid is not valid. |
+| Cuboid | `C_NORMAL` | Used for a regular cuboid. |
+| Cuboid | `C_MOVEX_FAST` | Moves in the +X direction quickly. |
+| Cuboid | `C_MOVEX_SLOW` | Moves in the +X direction slowly. |
+| Cuboid | `C_MOVEY_FAST` | Moves in the +Y direction quickly. |
+| Cuboid | `C_MOVEY_SLOW` | Moves in the +Y direction slowly. |
+| Cuboid | `C_MOVEZ_FAST` | Moves in the +Z direction quickly. |
+| Cuboid | `C_MOVEZ_SLOW` | Moves in the +Z direction slowly. |
+| Cuboid | `C_PASSTHROUGH` | Has no physical collision but still renders. |
+| Cuboid | `C_NODRAW` | Has physical collision but does not render. |
+| | | |
