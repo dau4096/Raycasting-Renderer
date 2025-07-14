@@ -23,6 +23,9 @@ out vec2 fragUV;
 out flat int dispIndex;
 
 
+const float PI = 3.141592f;
+
+
 void main() {
 	vec2 delta2D = (aPos - playerPosition).xy;
 	float zoomEffect = (zoom) ? zoomFactor : 1.0f;
@@ -33,8 +36,8 @@ void main() {
 	vec2 direction2D = normalize(delta2D);
 	float theta = atan(direction2D.x, direction2D.y);
 	float angleDelta = degrees(theta) - playerViewAngle;
-	if (angleDelta > 180.0f) {angleDelta -= 360.0f;}
-	if (angleDelta < -180.0f) {angleDelta += 360.0f;}
+	if (angleDelta > PI) {angleDelta -= 2.0f*PI;}
+	if (angleDelta < -PI) {angleDelta += 2.0f*PI;}
 	float x = (angleDelta / (halfFOV));
 
 
@@ -44,9 +47,9 @@ void main() {
 
 	//Screen warping
 	//Negative is upward; so subtract.
-	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f) * zoomEffect;
+	float rollDecimal = clamp(degrees(playerViewRoll) / 22.5f, -1.0f, 1.0f) * zoomEffect;
 	y += x * rollDecimal * 2.0f;
-	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f) * zoomEffect;
+	float pitchDecimal = clamp(degrees(playerViewPitch), -22.5f, 22.5f) * zoomEffect;
 	y += pitchDecimal / 27.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 

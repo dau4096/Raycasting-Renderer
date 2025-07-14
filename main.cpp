@@ -185,14 +185,15 @@ void handleInputs() {
 
 
 	rayAngle = (keyMap["USE_VIEWZOOM"]) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
+	rayAngle *= constants::TO_RAD;
 	zoomEffect = ((keyMap["USE_VIEWZOOM"]) ? display::ZOOM_MULT : 1.0f);
 	double cursorXDelta = cursorXPos - cursorXPosPrev;
 	double cursorYDelta = cursorYPos - cursorYPosPrev;
-	player.viewAngle += cursorXDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-	player.viewAngle = fmodf(player.viewAngle + 540.0f, 360.0f) - 180.0f;
+	player.viewAngle += cursorXDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
+	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
 	if (utils::configToBool("VIEW_VLOOK")) {
-		double dY = cursorYDelta * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-		player.vLook = glm::clamp(float(player.vLook+dY), -22.5f, 22.5f);
+		double dY = cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
+		player.vLook = glm::clamp(float(player.vLook+dY), -0.125f*constants::PI, 0.125f*constants::PI);
 	}
 }
 

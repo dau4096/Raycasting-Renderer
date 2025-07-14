@@ -215,7 +215,7 @@ struct Player {
 	Player()
 		: position(stageData.playerStartPoint), prevPosition(stageData.playerStartPoint), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
 		  cameraPosition(stageData.playerStartPoint + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
-		  viewAngle(stageData.playerStartAngle), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
+		  viewAngle(stageData.playerStartAngle * constants::TO_RAD), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 		  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 		  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
 		  state(E_NONE), previousState(E_NONE), jumpsUsed(0), sliding(false) {}
@@ -225,9 +225,9 @@ struct Player {
 static inline int getCentreX(glm::vec3& objPos, Player player, glm::ivec2 resolution) {
 	glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player.position));
 	float theta = atan2(direction.x, direction.y);
-	float angleDelta = (theta * constants::TO_DEG) - player.viewAngle;
-	if (angleDelta > 180.0f) {angleDelta -= 360.0f;}
-	if (angleDelta < -180.0f) {angleDelta += 360.0f;}
+	float angleDelta = theta - player.viewAngle;
+	if (angleDelta > constants::PI) {angleDelta -= constants::PI2;}
+	if (angleDelta < -constants::PI) {angleDelta += constants::PI2;}
 	float centreX = (resolution.x / 2.0f) * ((angleDelta / rayAngle) + 1.0f);
 	return int(round(centreX));
 }

@@ -50,6 +50,7 @@ layout(std430, binding=2) buffer spriteSSBO {
 vec2 fragPosition;
 vec4 fragColour;
 float fragDepth, tanVerticalViewAngleOffset, zoomEffect;
+const float PI = 3.141592f;
 const float INF = 0xFFFFFF;
 const float EPSILON = 1e-4f;
 const float EPSILON_ALT = 1e-3f;
@@ -142,9 +143,9 @@ void main() {
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
 	//Negative is upward; so subtract.
-	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f) * zoomEffect;
+	float rollDecimal = clamp(degrees(playerViewRoll) / 22.5f, -1.0f, 1.0f) * zoomEffect;
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
-	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f) * zoomEffect;
+	float pitchDecimal = clamp(degrees(playerViewPitch), -22.5f, 22.5f) * zoomEffect;
 	fragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 	
 	float normY = (2.0 * fragPosition.y / renderResolution.y) - 1.0;

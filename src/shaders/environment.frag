@@ -345,16 +345,16 @@ void main() {
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
 	//Negative is upward; so subtract.
-	float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f) * zoomEffect;
+	float rollDecimal = clamp(degrees(playerViewRoll) / 22.5f, -1.0f, 1.0f) * zoomEffect;
 	fragPosition.y -= (fragPosition.x - renderResolution.x / 2.0f) * rollDecimal;
-	float pitchDecimal = clamp(playerViewPitch, -22.5f, 22.5f) * zoomEffect;
+	float pitchDecimal = clamp(degrees(playerViewPitch), -22.5f, 22.5f) * zoomEffect;
 	fragPosition.y -= (pitchDecimal * renderResolution.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 	bool lowerHalf = fragPosition.y < (renderResolution.y / 2.0f); //If the frag has no possible way to intersect a visplane below (or above) then skip those.
 
 
 	halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
 	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
-	float rayAngleYaw = radians(playerViewAngle + rayOffset);
+	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;

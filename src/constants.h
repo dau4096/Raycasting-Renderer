@@ -89,7 +89,8 @@ enum ParticleType {
 	P_DUST,
 	P_ENERGY,
 	P_HURT,
-	P_EXPLODE
+	P_EXPLODE,
+	P_DUST_NOFALL
 };
 
 
@@ -224,6 +225,7 @@ namespace constants {
 
 	//Mathematical Constants
 	constexpr float PI = 3.141592f;
+	constexpr float PI2 = PI * 2.0f;
 	constexpr float EXP = 2.718281f;
 	constexpr float INF = std::numeric_limits<float>::infinity();
 
@@ -325,7 +327,7 @@ namespace playerConfig {
 
 
 	//Player Initial Values
-	constexpr float LATERAL_VIEW_LEAN = 2.5f;
+	constexpr float LATERAL_VIEW_LEAN = 2.5f * constants::TO_RAD;
 	constexpr int PLAYER_MAX_HEALTH = 128;
 	constexpr int PLAYER_MAX_ENERGY = 64;
 

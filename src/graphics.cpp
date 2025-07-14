@@ -203,7 +203,7 @@ static void bindCommonUniforms(GLuint shaderProgram) {
 
 	//Camera Data
 	bindUniformValue(shaderProgram, "maxRayDistance", utils::configToFloat("VIEW_MAX_RAY_DIST"));
-	bindUniformValue(shaderProgram, "maxRayAngle", utils::configToFloat("VIEW_FOV") / 2.0f);
+	bindUniformValue(shaderProgram, "maxRayAngle", rayAngle);
 	bindUniformValue(shaderProgram, "verticalFOV", verticalFOV);
 	bindUniformValue(shaderProgram, "zoomFactor", display::ZOOM_MULT);
 	bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
@@ -409,7 +409,7 @@ void updateShaderStorageBufferObject(
 void findVisibleObjects(
 		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices
 	) {	
-	glm::vec2 playerFDirection = glm::vec2(sin(player.viewAngle * constants::TO_RAD), cos(player.viewAngle * constants::TO_RAD));
+	glm::vec2 playerFDirection = glm::vec2(sin(player.viewAngle), cos(player.viewAngle));
 	glm::vec2 playerPosV2 = glm::vec2(player.position);
 
 
@@ -1377,7 +1377,7 @@ void drawHUD() {
 		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * zoomEffect / distance;
 		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
 		float charY = centreY - (scale / 2.0f);
-		float pitchDecimal = glm::clamp(player.viewPitch, -22.5f, 22.5f) * zoomEffect;
+		float pitchDecimal = glm::clamp(player.viewPitch * constants::TO_DEG, -22.5f, 22.5f) * zoomEffect;
 		charY += (pitchDecimal * display::UI_RESOLUTION.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 		int letterIdx = 0;
@@ -1612,7 +1612,8 @@ const std::unordered_map<ParticleType, std::vector<std::string>> particleTexture
 	{P_DUST, {"dust-0", "dust-1", "dust-2", "dust-3",}},
 	{P_ENERGY, {"energy-0", "energy-1", "energy-2",}},
 	{P_HURT, {"hurt-0", "hurt-1", "hurt-2",}},
-	{P_EXPLODE, {"explode-0",}}
+	{P_EXPLODE, {"explode-0",}},
+	{P_DUST_NOFALL, {"dust-0", "dust-1", "dust-2", "dust-3",}},
 };
 
 const std::unordered_map<ParticleType, std::pair<float, bool>> particleBaseMasses = {
@@ -1620,7 +1621,8 @@ const std::unordered_map<ParticleType, std::pair<float, bool>> particleBaseMasse
 	{P_DUST, {-0.03125f, true}},
 	{P_ENERGY, {-0.03125f, true}},
 	{P_HURT, {1.0f, true}},
-	{P_EXPLODE, {0.0f, false}} 
+	{P_EXPLODE, {0.0f, false}},
+	{P_DUST_NOFALL, {0.0f, false}},
 };
 
 void createParticle(glm::vec3 position, ParticleType type=P_DUST, glm::vec3 initialVelocity=glm::vec3(0.0f, 0.0f, 0.0f)) {

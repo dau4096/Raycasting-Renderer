@@ -162,7 +162,7 @@ void main() {
 	zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float halfFOV = maxRayAngle / zoomEffect;
 	float rayOffset = -halfFOV + (screenX / float(renderResolution.x)) * 2.0f * halfFOV;
-	float rayAngleYaw = radians(playerViewAngle + rayOffset);
+	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;

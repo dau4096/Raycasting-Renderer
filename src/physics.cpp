@@ -95,7 +95,7 @@ bool isInsideVP(glm::vec2 point2D, structs::Visplane plane) {
 
 
 bool didHitSwitch(size_t switchIdx) {
-	glm::vec2 dir = glm::vec2(sin(player.viewAngle * constants::TO_RAD), cos(player.viewAngle * constants::TO_RAD));
+	glm::vec2 dir = glm::vec2(sin(player.viewAngle), cos(player.viewAngle));
 	glm::vec2 interactDelta = dir * playerConfig::PLAYER_INTERACT_RAY_DIST;
 	glm::vec2 playerV2 = glm::vec2(player.position);
 	glm::vec2 end = playerV2 + interactDelta;
@@ -419,7 +419,7 @@ void playerMovement() {
 		//Reset player.
 		player.position = stageData.playerStartPoint;
 		player.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
-		player.viewAngle = stageData.playerStartAngle;
+		player.viewAngle = stageData.playerStartAngle * constants::TO_RAD;
 		player.state = E_RESPAWN;
 		player.touchingFloor = false;
 		player.health = playerConfig::PLAYER_MAX_HEALTH;
@@ -459,23 +459,23 @@ void playerMovement() {
 		float reduction = 1.0f;
 		if (keyMap["MOVE_FORWARD"]) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
-			newX += playerSpeed * sin(player.viewAngle * constants::TO_RAD) * reduction;
-			newY += playerSpeed * cos(player.viewAngle * constants::TO_RAD) * reduction;
+			newX += playerSpeed * sin(player.viewAngle) * reduction;
+			newY += playerSpeed * cos(player.viewAngle) * reduction;
 		}
 		if (keyMap["MOVE_BACKWARD"]) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
-			newX -= playerSpeed * sin(player.viewAngle * constants::TO_RAD) * reduction;
-			newY -= playerSpeed * cos(player.viewAngle * constants::TO_RAD) * reduction;
+			newX -= playerSpeed * sin(player.viewAngle) * reduction;
+			newY -= playerSpeed * cos(player.viewAngle) * reduction;
 		}
 		if (keyMap["MOVE_LEFT"]) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
-			newX -= playerSpeed * cos((player.viewAngle) * constants::TO_RAD) * reduction;
-			newY -= playerSpeed * -sin((player.viewAngle) * constants::TO_RAD) * reduction;
+			newX -= playerSpeed * cos(player.viewAngle) * reduction;
+			newY -= playerSpeed * -sin(player.viewAngle) * reduction;
 		}
 		if (keyMap["MOVE_RIGHT"]) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
-			newX += playerSpeed * cos((player.viewAngle) * constants::TO_RAD) * reduction;
-			newY += playerSpeed * -sin((player.viewAngle) * constants::TO_RAD) * reduction;
+			newX += playerSpeed * cos(player.viewAngle) * reduction;
+			newY += playerSpeed * -sin(player.viewAngle) * reduction;
 		}
 		lateralMovement = glm::vec2(newX, newY);
 	}
@@ -513,15 +513,15 @@ void playerMovement() {
 
 	if (lateralMovement != glm::vec2(0.0f, 0.0f)) {
 		glm::vec2 rDir = glm::vec2(
-			cos((player.viewAngle) * constants::TO_RAD),
-			-sin((player.viewAngle) * constants::TO_RAD)
+			cos(player.viewAngle),
+			-sin(player.viewAngle)
 		);
 		float leanDotLR = glm::dot(glm::normalize(lateralMovement), rDir);
 		desiredLeanLR = leanDotLR * playerConfig::LATERAL_VIEW_LEAN;
 
 		glm::vec2 fDir = glm::vec2(
-			sin((player.viewAngle) * constants::TO_RAD),
-			cos((player.viewAngle) * constants::TO_RAD)
+			sin(player.viewAngle),
+			cos(player.viewAngle)
 		);
 		float leanDotFB = glm::dot(glm::normalize(lateralMovement), fDir);
 		desiredLeanFB = leanDotFB * playerConfig::LATERAL_VIEW_LEAN;

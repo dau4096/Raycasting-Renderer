@@ -990,7 +990,7 @@ static inline float handlePlayerHEString(std::string inputSTR, float maxValue) {
 }
 
 
-void retrieveStageMetaData(const pugi::xml_document& doc, structs::Player* player) {
+void retrieveStageMetaData(const pugi::xml_document& doc) {
 	//Sky
 	pugi::xml_node skyNode = getMetaNode(doc, "sky");
 	stageData.skyboxTextureName = getString(skyNode, "skyboxTexture", std::string(initial::FALLBACK_SKYBOX_NAME));
@@ -1020,7 +1020,7 @@ void retrieveStageMetaData(const pugi::xml_document& doc, structs::Player* playe
 	std::string startEnergyStr = getString(playerNode, "initialEnergy", "MAX");
 	stageData.playerStartEnergy = handlePlayerHEString(startEnergyStr, playerConfig::PLAYER_MAX_ENERGY);
 
-	*player = structs::Player();
+	player = structs::Player();
 }
 
 
@@ -1210,7 +1210,7 @@ void loadStage(
 
 	stageData.name = stageName;
 	stageData.filePath = filePath;
-	xml::retrieveStageMetaData(doc, player);
+	xml::retrieveStageMetaData(doc);
 	processTeleporterPartners(&(physicsData->visplaneData));
 }
 
