@@ -410,7 +410,7 @@ void main() {
 
 	float antiProjection = 0.5f - (fragPosition.y/renderResolution.y);
 	if (abs(antiProjection) > EPSILON) {/* Avoids DivZero error */
-		float invAntiProjection = zoomEffect / antiProjection;
+		float invAntiProjection = 1.5f * zoomEffect / antiProjection;
 		//Iterate through all visplanes. (3D)
 		for (int idx=0; idx<numVisibleVisplanes; idx++) {
 			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
@@ -488,7 +488,7 @@ void main() {
 			albedo = fetchUV(validIntersect.UV, minDistance, normal, validIntersect.position);
 			if ((albedo.a < 0.5f) && (allowTransparency)) {continue;}
 			if (shouldDrawToPositionMap) {
-				uint idx = (validIntersect.index << 2) | typeFlag;
+				uint idx = (validIntersect.index << 3) | typeFlag;
 				ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 				imageStore(positionMap, thisFramePosition, vec4(validIntersect.position, float(idx)));
 				imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));

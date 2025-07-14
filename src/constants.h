@@ -56,8 +56,8 @@ enum DisplacementType {
 
 enum SpriteType {
 	SPR_INVALID,
-	SPR_DECO,
-	SPR_LIGHT
+	SPR_DECO, SPR_LIGHT,
+	SPR_PHYSICS, SPR_PARTICLE
 };
 
 enum LogicInput {
@@ -81,6 +81,15 @@ enum GateType {
 	G_LATCH,		// 2 inputs, turns on with input A and off with input B.
 	G_PULSE,		// 1 input, turns on for 1 frame of the input, then off after.
 	G_TOGGLE		// 1 input, turns on and off with that input.
+};
+
+
+enum ParticleType {
+	P_NONE,
+	P_DUST,
+	P_ENERGY,
+	P_HURT,
+	P_EXPLODE
 };
 
 
@@ -246,7 +255,9 @@ namespace constants {
 	constexpr size_t MAX_VERTEX_BYTES = 16384;
 	constexpr size_t MAX_INDEX_BYTES = 16384;
 	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 64;
+	constexpr size_t MAX_SPRITE_PARTICLES = 2048;
 
+	constexpr float PARTICLE_LIFETIME_FRAMES = 2.0f * PHYSICS_FREQUENCY;
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
 }
@@ -309,7 +320,7 @@ namespace playerConfig {
 	//Physics Collision Values
 	constexpr float PLAYER_COLLISION_RADIUS = 0.25f;
 	constexpr float PLAYER_COLLISION_HEIGHT_STAND = 1.75f;
-	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 1.0f;
+	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 0.875f;
 	constexpr float PLAYER_INTERACT_RAY_DIST = 2.0f;
 
 

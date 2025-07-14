@@ -20,7 +20,7 @@ namespace graphics {
 	GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint glType=GL_DYNAMIC_DRAW);
 
 	template<typename TGPU, typename TCPU>
-	void updateShaderStorageBufferObject(GLuint SSBO, utils::Player* player, std::vector<TCPU>* dataSetIn);
+	void updateShaderStorageBufferObject(GLuint SSBO, structs::Player* player, std::vector<TCPU>* dataSetIn);
 
 	template<typename TGPU, typename TCPU>
 	void updateShaderStorageBufferObject(GLuint SSBO, std::vector<TCPU>* dataSetIn);
@@ -32,28 +32,33 @@ namespace graphics {
 
 
 	void findVisibleObjects(
-		utils::Player* player,
-		std::vector<utils::Visplane>* visplaneData, std::vector<uint>* visibleVisplaneIndices,
-		std::vector<utils::Wall>* wallData, std::vector<uint>* visibleWallIndices,
-		std::vector<utils::Displacement>* displacementData, std::vector<uint>* visibleDisplacementsIndices
+		structs::Player* player,
+		std::vector<structs::Visplane>* visplaneData, std::vector<uint>* visibleVisplaneIndices,
+		std::vector<structs::Wall>* wallData, std::vector<uint>* visibleWallIndices,
+		std::vector<structs::Displacement>* displacementData, std::vector<uint>* visibleDisplacementsIndices
 	);
 
 	void saveScreenshot(GLuint frameTextureID);
 
+
+	//Textures
 	GLuint createGLImage2D(size_t width, size_t height, GLint internalFormat=GL_RGBA32F, GLint samplingType=GL_NEAREST, GLint edgeSampling=GL_REPEAT);
 	GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
 	GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false);
+	void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string textureName, size_t layer, bool hasMipMap=false);
 	GLuint createGLImage2DArray(size_t width, size_t height, size_t layers);
+	GLint fetchTextureID(std::string textureName, std::string subFolder="textures-env");
+	void handleTextureLoadQueue();
 
 
 	GLuint getVAO();
 
-	float viewBob(float tick, utils::Player player);
-	glm::vec4 manageScreenTint(utils::Player* player);
+	float viewBob(float tick);
+	glm::vec4 manageScreenTint();
 
 
 	void initialiseVAOs();
-	void prepareOpenGL(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames, utils::Player* player);
+	void prepareOpenGL();
 
 	GLuint createDisplacementsFBO(size_t width, size_t height);
 
@@ -63,9 +68,19 @@ namespace graphics {
 
 namespace frame {
 
-	void updateSSBOs(utils::DataSet* localGraphicsData, utils::Player* player);
+	void updateSSBOs();
 
-	void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player* player);
+	void draw(double blendingAlpha);
+
+}
+
+
+
+namespace particles {
+
+void createParticle(glm::vec3 position, ParticleType type=P_DUST, glm::vec3 initialVelocity=glm::vec3(0.0f, 0.0f, 0.0f));
+void createParticleLine(glm::vec3 start, glm::vec3 end, ParticleType type=P_DUST, size_t numParticles=0);
+void createParticleRing(glm::vec3 centre, float radius, ParticleType type=P_DUST, size_t numParticles=0);
 
 }
 

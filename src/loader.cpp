@@ -29,7 +29,7 @@ static inline glm::vec2 parseVec2(const std::string& str) {
 
 std::unordered_map<std::string, bool*> flagList;
 size_t flagIndex = 0;
-bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flags) {
+bool* managePTR(std::string ptrStr) {
 	std::string ptrStrUpper = strToUpper(ptrStr);
 	if ((ptrStrUpper == "TRUE") || (ptrStrUpper == "ALWAYS")) {
 		return &(constants::C_TRUE);
@@ -39,7 +39,7 @@ bool* managePTR(std::string ptrStr, std::array<bool, constants::MAX_FLAGS>* flag
 
 	auto it = flagList.find(ptrStrUpper);
 	if (it == flagList.end()) {
-		bool* ptr = flags->begin() + flagIndex;
+		bool* ptr = flags.begin() + flagIndex;
 		flagIndex++;
 		if (flagIndex >= constants::MAX_FLAGS) {raise("Maximum number of valid flags reached! [" + std::to_string(constants::MAX_FLAGS) + "]");}
 		flagList[ptrStrUpper] = ptr;
@@ -54,7 +54,7 @@ static const std::unordered_map<std::string, int> enumMap = {
 	//Walls 				Visplanes				Cuboids					Logic Gates				Sprites 				Displacements
 	{"W_NORMAL", 1},	 	{"V_NORMAL", 1}, 		{"C_NORMAL", 1}, 		{"G_PASSTHROUGH", 1}, 	{"SPR_DECO", 1}, 		{"D_NORMAL", 1},
 	{"W_TRIGGER", 2},	 	{"V_TRIGGER", 2}, 		{"C_MOVEX_FAST", 2}, 	{"G_AND", 2}, 			{"SPR_LIGHT", 2}, 
-	{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 	{"C_MOVEX_SLOW", 3}, 	{"G_OR", 3}, 			 
+	{"W_MOVED_FAST", 3},	{"V_MOVEX_FAST", 3}, 	{"C_MOVEX_SLOW", 3}, 	{"G_OR", 3}, 			{"SPR_PHYSICS", 3},
 	{"W_MOVED_SLOW", 4},	{"V_MOVEX_SLOW", 4}, 	{"C_MOVEY_FAST", 4}, 	{"G_NOT", 4}, 			 
 	{"W_MOVEN_FAST", 5},	{"V_MOVEY_FAST", 5}, 	{"C_MOVEY_SLOW", 5}, 	{"G_XOR", 5}, 			 
 	{"W_MOVEN_SLOW", 6},	{"V_MOVEY_SLOW", 6}, 	{"C_MOVEZ_FAST", 6}, 	{"G_LATCH", 6}, 		
@@ -74,29 +74,25 @@ int assignEnum(const std::string& enumStr) {
 	return -1;
 }
 
-int currentTextureIndex = 0;
-int assignTexture(std::string textureStr, std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames) {
-	auto begin = textureNames->begin(), end = textureNames->end();
-	auto namePTR = std::find(begin, end, textureStr);
 
-	int idx = -1;
+int assignTexture(std::string textureStr) {
+	auto namePTR = std::find(textureNames.begin(), textureNames.end(), textureStr);
 
-	if (namePTR != end) {
-		idx = std::distance(begin, namePTR);
+	int idx;
+	if (namePTR != textureNames.end()) {
+		idx = std::distance(textureNames.begin(), namePTR);
 	} else {
 		if (currentTextureIndex >= display::TEXTURE_ARRAY_MAX_LAYERS) {
 			raise("Maximum texture layers reached. Cannot assign more.");
 			return -1;
 		}
-		textureNames->at(currentTextureIndex) = textureStr;
+		textureNames.at(currentTextureIndex) = textureStr;
 		idx = currentTextureIndex;
 		currentTextureIndex++;
 	}
 	return idx;
 }
 
-
-//Helper functions;
 
 static inline int getInt(const pugi::xml_node& node, std::string attrName, int defaultValue=0) {
 	pugi::xml_attribute attr = node.attribute(attrName);
@@ -161,20 +157,18 @@ static inline int getEnum(const pugi::xml_node& node, std::string attrName, int 
 
 static inline bool* getPTR(
 		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
 		std::string attrName,
 		bool* defaultValue=nullptr
 	) {
 	pugi::xml_attribute attr = node.attribute(attrName);
 	if (attr) {
-		return managePTR(attr.as_string(), flags);
+		return managePTR(attr.as_string());
 	}
 	return defaultValue;
 }
 
 static inline int getTexture(
 		const pugi::xml_node& node,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
 		std::string attrName,
 		const char* defaultValue=display::FALLBACK_TEXTURE_PATH
 	) {
@@ -186,7 +180,7 @@ static inline int getTexture(
 	} else {
 		texname = defaultValue;
 	}
-	return assignTexture(texname, textureNames);
+	return assignTexture(texname);
 }
 
 
@@ -215,7 +209,7 @@ static inline float getExtra(const pugi::xml_node& node, float defaultValue=0.0f
 
 
 
-void processTeleporterPartners(std::vector<utils::Visplane>* visplaneData) {
+void processTeleporterPartners(std::vector<structs::Visplane>* visplaneData) {
 	for (std::pair<std::string, std::pair<size_t, size_t>> pair : indexMap) {
 		visplaneData->at(pair.second.first).data = pair.second.second;
 		visplaneData->at(pair.second.second).data = pair.second.first;
@@ -237,15 +231,11 @@ void fetchMacroFromXML(
 		const std::string& xpath,
 		std::function<void(
 			pugi::xml_node node,
-			std::vector<utils::Visplane>* visplaneData,
-			std::vector<utils::Wall>* wallData,
-			std::array<bool, constants::MAX_FLAGS>* flags,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+			std::vector<structs::Visplane>* visplaneData,
+			std::vector<structs::Wall>* wallData
 		)> extractor,
-		std::vector<utils::Visplane>* visplaneData,
-		std::vector<utils::Wall>* wallData,
-		std::array<bool, constants::MAX_FLAGS>* flags=nullptr,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames=nullptr
+		std::vector<structs::Visplane>* visplaneData,
+		std::vector<structs::Wall>* wallData
 	)
 {
 	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
@@ -253,7 +243,7 @@ void fetchMacroFromXML(
 	
 	for (size_t i=0; i<count; i++) {
 		pugi::xml_node node = nodeList[i].node();
-		extractor(node, visplaneData, wallData, flags, textureNames);
+		extractor(node, visplaneData, wallData);
 	}
 }
 
@@ -283,22 +273,20 @@ static std::unordered_map<CuboidType, TypesSet> cuboidTypeMap = {
 
 void extractCuboid(
 		pugi::xml_node node,
-		std::vector<utils::Visplane>* visplaneData,
-		std::vector<utils::Wall>* wallData,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::vector<structs::Visplane>* visplaneData,
+		std::vector<structs::Wall>* wallData
 	) {
 	glm::vec3 lowerCorner = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
 	glm::vec3 upperCorner = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
-	GLuint sideTexture = getTexture(node, textureNames, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
-	GLuint topTexture = getTexture(node, textureNames, "topTexture", initial::FALLBACK_TEXTURE_NAME);
-	GLuint lowTexture = getTexture(node, textureNames, "bottomTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint sideTexture = getTexture(node, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint topTexture = getTexture(node, "topTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint lowTexture = getTexture(node, "bottomTexture", initial::FALLBACK_TEXTURE_NAME);
 
 
 	CuboidType cType = static_cast<CuboidType>(getEnum(node, "type", C_NORMAL)); //V_NORMAL, W_NORMAL and D_NORMAL are all integer value 1.
 	TypesSet typesSet = cuboidTypeMap[cType];
 	float extra = getFloat(node, "extra", 0.0f);
-	bool* ptr = getPTR(node, flags, "flag");
+	bool* ptr = getPTR(node, "flag");
 
 	glm::bvec3 worldSpaceTextures = glm::bvec3(
 		getBool(node, "useWorldUVX", true),
@@ -313,7 +301,7 @@ void extractCuboid(
 
 
 	if (getBool(node, "hasTop", true)) {
-		visplaneData->push_back(utils::Visplane(
+		visplaneData->push_back(structs::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), upperCorner.z,
 			topTexture, typesSet.planeType, ptr, extra,
 			worldSpaceTextures.x, worldSpaceTextures.y,
@@ -322,7 +310,7 @@ void extractCuboid(
 		validVisplanes++;
 	}
 	if (getBool(node, "hasBottom", true)) {
-		visplaneData->push_back(utils::Visplane(
+		visplaneData->push_back(structs::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), lowerCorner.z,
 			lowTexture, typesSet.planeType, ptr, extra,
 			worldSpaceTextures.x, worldSpaceTextures.y,
@@ -332,26 +320,26 @@ void extractCuboid(
 	}
 
 	if ((cType == C_MOVEX_FAST) || (cType == C_MOVEX_SLOW)) {extra *= -1;}
-	std::vector<utils::Wall> newWData = {
-		utils::Wall(
+	std::vector<structs::Wall> newWData = {
+		structs::Wall(
 			glm::vec3(lowerCorner.x, upperCorner.y, upperCorner.z), lowerCorner,
 			sideTexture, typesSet.XType, ptr, (extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),
-		utils::Wall(
+		structs::Wall(
 			glm::vec3(lowerCorner.x, upperCorner.y, lowerCorner.z), upperCorner,
 			sideTexture, typesSet.YType, ptr, ((cType==C_MOVEY_FAST || cType == C_MOVEY_SLOW) ? -extra : extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),
-		utils::Wall(
+		structs::Wall(
 			lowerCorner, glm::vec3(upperCorner.x, lowerCorner.y, upperCorner.z),
 			sideTexture, typesSet.YType, ptr, ((cType==C_MOVEY_FAST || cType == C_MOVEY_SLOW) ? -extra : extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
 			wTexScale, wTexOffset
 		),
-		utils::Wall(
+		structs::Wall(
 			upperCorner, glm::vec3(upperCorner.x, lowerCorner.y, lowerCorner.z),
 			sideTexture, typesSet.XType, ptr, (extra),
 			-1, worldSpaceTextures.x, worldSpaceTextures.z,
@@ -365,10 +353,8 @@ void extractCuboid(
 
 void extractStairs(
 		pugi::xml_node node,
-		std::vector<utils::Visplane>* visplaneData,
-		std::vector<utils::Wall>* wallData,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::vector<structs::Visplane>* visplaneData,
+		std::vector<structs::Wall>* wallData
 	) {
 	glm::vec3 lowerCorner = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
 	glm::vec3 upperCorner = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
@@ -376,8 +362,8 @@ void extractStairs(
 	float zDelta = upperCorner.z - lowerCorner.z;
 	int numStairs = static_cast<int>(std::max(1, int(std::ceil(abs(zDelta) / constants::MAX_STEP_HEIGHT))));
 
-	GLuint sideTexture = getTexture(node, textureNames, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
-	GLuint stepsTexture = getTexture(node, textureNames, "stepsTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint sideTexture = getTexture(node, "sideTexture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint stepsTexture = getTexture(node, "stepsTexture", initial::FALLBACK_TEXTURE_NAME);
 
 	bool stairsStatic = getBool(node, "static", true);
 	VisplaneType vType;
@@ -394,7 +380,7 @@ void extractStairs(
 			wType = W_MOVEZ_FAST;
 		}
 	}
-	bool* ptr = getPTR(node, flags, "flag");
+	bool* ptr = getPTR(node, "flag");
 
 	bool hasEnd = getBool(node, "hasEndWall", true);
 	bool hasSides = getBool(node, "hasSideWalls", true);
@@ -418,7 +404,7 @@ void extractStairs(
 	glm::vec2 stairDelta = stairMax - stairMin;
 	if (abs(zDelta) < constants::MAX_STEP_HEIGHT) {
 		//Flat floor, delta is shorter than 1 step.
-		visplaneData->push_back(utils::Visplane(
+		visplaneData->push_back(structs::Visplane(
 			stairMin, stairMax, (lowerCorner.z + upperCorner.z) / 2.0f, //Average the Z.
 			stepsTexture, V_NORMAL, nullptr, 0.0f,
 			worldSpaceTextures.x, worldSpaceTextures.y,
@@ -444,7 +430,7 @@ void extractStairs(
 
 		for (size_t stepIdx=0; stepIdx<numStairs; stepIdx++) {
 			//Visplane step
-			visplaneData->push_back(utils::Visplane(
+			visplaneData->push_back(structs::Visplane(
 				glm::vec2(lowerCorner.x, currentY), glm::vec2(upperCorner.x, currentY + stairWidth), stepHeight,
 				stepsTexture, vType, ptr, -0.01f-stepHeight,
 				worldSpaceTextures.x, worldSpaceTextures.y,
@@ -455,13 +441,13 @@ void extractStairs(
 
 			//Side walls
 			if (hasSides) {
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(lowerCorner.x, currentY, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(lowerCorner.x, currentY + stairWidth, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
 					-1, worldSpaceTextures.x, worldSpaceTextures.z,
 					wTexScale, wTexOffset
 				));
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(upperCorner.x, currentY, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(upperCorner.x, currentY + stairWidth, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
 					-1, worldSpaceTextures.x, worldSpaceTextures.z,
@@ -473,7 +459,7 @@ void extractStairs(
 			//Mid-step connecting wall
 			currentY += stairWidth;
 			if (hasConnectors) {
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(lowerCorner.x, currentY, stepHeight), glm::vec3(upperCorner.x, currentY, stepHeight + stepDelta),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
 					-1, worldSpaceTextures.x, worldSpaceTextures.z,
@@ -485,7 +471,7 @@ void extractStairs(
 			stepHeight += stepDelta;
 
 			if (hasEnd) {
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(lowerCorner.x, (lowerIsLower) ? upperCorner.y : lowerCorner.y, lowerCorner.z),
 					glm::vec3(upperCorner.x, (lowerIsLower) ? upperCorner.y : lowerCorner.y, upperCorner.z),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
@@ -508,7 +494,7 @@ void extractStairs(
 		}
 
 		for (size_t stepIdx=0; stepIdx<numStairs; stepIdx++) {
-			visplaneData->push_back(utils::Visplane(
+			visplaneData->push_back(structs::Visplane(
 				glm::vec2(currentX, lowerCorner.y), glm::vec2(currentX + stairWidth, upperCorner.y), stepHeight,
 				stepsTexture, vType, ptr, -0.01f-stepHeight,
 				worldSpaceTextures.x, worldSpaceTextures.y,
@@ -519,13 +505,13 @@ void extractStairs(
 
 			//Side walls
 			if (hasSides) {
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(currentX, lowerCorner.y, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(currentX + stairWidth, lowerCorner.y, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
 					-1, worldSpaceTextures.x, worldSpaceTextures.z,
 					wTexScale, wTexOffset
 				));
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(currentX, upperCorner.y, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(currentX + stairWidth, upperCorner.y, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
 					-1, worldSpaceTextures.x, worldSpaceTextures.z,
@@ -537,7 +523,7 @@ void extractStairs(
 			//Mid-step connecting wall
 			currentX += stairWidth;
 			if (hasConnectors) {
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3(currentX, lowerCorner.y, stepHeight), glm::vec3(currentX, upperCorner.y, stepHeight + stepDelta),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
 					-1, worldSpaceTextures.x, worldSpaceTextures.z,
@@ -549,7 +535,7 @@ void extractStairs(
 			stepHeight += stepDelta;
 
 			if (hasEnd) {
-				wallData->push_back(utils::Wall(
+				wallData->push_back(structs::Wall(
 					glm::vec3((lowerIsLower) ? upperCorner.x : lowerCorner.x, lowerCorner.y, lowerCorner.z),
 					glm::vec3((lowerIsLower) ? upperCorner.x : lowerCorner.x, upperCorner.y, upperCorner.z),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
@@ -603,7 +589,7 @@ static glm::mat4 getModelMat4(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale) {
 
 void loadModel(
 		const std::string& modelFilePath, 
-		std::vector<utils::Displacement>* displacementData,
+		std::vector<structs::Displacement>* displacementData,
 		int textureID,
 		glm::vec3 position=glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3 rotation=glm::vec3(0.0f, 0.0f, 0.0f),
@@ -632,7 +618,7 @@ void loadModel(
 				continue;
 			}
 
-			Displacement thisDisp;
+			structs::Displacement thisDisp;
 			for (size_t v = 0; v < 3; v++) {
 				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
 
@@ -680,14 +666,13 @@ void loadModel(
 
 void convertOBJIntoDisplacements(
 		const pugi::xml_node& node,
-		std::vector<utils::Displacement>* displacementData,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::vector<structs::Displacement>* displacementData
 	) {
 	glm::vec3 modelPosition = getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f));
 	glm::vec3 modelRotation = getVec3(node, "rotation", glm::vec3(0.0f, 0.0f, 0.0f));
 	glm::vec3 modelScale = getVec3(node, "scale", glm::vec3(1.0f, 1.0f, 1.0f));
 	std::string modelFileName = getString(node, "file", "");
-	int textureID = getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME);
+	int textureID = getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
 
 	if (!modelFileName.empty()) {
 		std::string modelFilePath = "stages/assets-" + utils::strToUpper(userConfig["META_STAGE_NAME"]) + "/" + modelFileName + ".obj";
@@ -701,80 +686,6 @@ void convertOBJIntoDisplacements(
 namespace xml {
 
 inline size_t objectIndex = 0;
-template<typename T>
-std::vector<T> fetchObjectFromXML(
-		const pugi::xml_document& doc,
-		const std::string& xpath,
-		std::function<T(
-			const pugi::xml_node&,
-			std::array<bool, constants::MAX_FLAGS>* flags,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
-		)> extractor,
-		size_t* numObjects,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
-	)
-{
-	std::vector<T> result{};
-	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
-	size_t count = static_cast<size_t>(nodeList.size());
-	*numObjects = count;
-	
-	for (objectIndex=0; objectIndex<count; objectIndex++) {
-		pugi::xml_node node = nodeList[objectIndex].node();
-		result.push_back(extractor(node, flags, textureNames));
-	}
-	return result;
-}
-
-template<typename T>
-std::vector<T> fetchObjectFromXML(
-		const pugi::xml_document& doc,
-		const std::string& xpath,
-		std::function<T(
-			const pugi::xml_node&,
-			std::array<bool, constants::MAX_FLAGS>* flags
-		)> extractor,
-		size_t* numObjects,
-		std::array<bool, constants::MAX_FLAGS>* flags
-	)
-{
-	std::vector<T> result{};
-	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
-	size_t count = static_cast<size_t>(nodeList.size());
-	*numObjects = count;
-	
-	for (objectIndex=0; objectIndex<count; objectIndex++) {
-		pugi::xml_node node = nodeList[objectIndex].node();
-		result.push_back(extractor(node, flags));
-	}
-	return result;
-}
-
-template<typename T>
-std::vector<T> fetchObjectFromXML(
-		const pugi::xml_document& doc,
-		const std::string& xpath,
-		std::function<T(
-			const pugi::xml_node&,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
-		)> extractor,
-		size_t* numObjects,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
-	)
-{
-	std::vector<T> result{};
-	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
-	size_t count = static_cast<size_t>(nodeList.size());
-	*numObjects = count;
-	
-	for (objectIndex=0; objectIndex<count; objectIndex++) {
-		pugi::xml_node node = nodeList[objectIndex].node();
-		result.push_back(extractor(node, textureNames));
-	}
-	return result;
-}
-
 template<typename T>
 std::vector<T> fetchObjectFromXML(
 		const pugi::xml_document& doc,
@@ -804,14 +715,10 @@ std::vector<T> fetchObjectFromXML(
 		const std::string& xpath,
 		std::function<T(
 			const pugi::xml_node&,
-			std::array<bool, constants::MAX_FLAGS>* flags,
-			std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
-			std::vector<utils::Sprite>* spriteData
+			std::vector<structs::Sprite>* spriteData
 		)> extractor,
 		size_t* numObjects,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
-		std::vector<utils::Sprite>* spriteData
+		std::vector<structs::Sprite>* spriteData
 	)
 {
 	std::vector<T> result{};
@@ -821,7 +728,7 @@ std::vector<T> fetchObjectFromXML(
 	
 	for (objectIndex=0; objectIndex<count; objectIndex++) {
 		pugi::xml_node node = nodeList[objectIndex].node();
-		result.push_back(extractor(node, flags, textureNames, spriteData));
+		result.push_back(extractor(node, spriteData));
 	}
 	return result;
 }
@@ -852,24 +759,22 @@ static std::vector<glm::vec3> getVertsV3(const pugi::xml_node& node, size_t maxV
 	return verts;
 }
 
-static inline Visplane extractVisplane(
-		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+static inline structs::Visplane extractVisplane(
+		const pugi::xml_node& node
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
-	utils::Visplane visplane;
+	structs::Visplane visplane;
 	pugi::xml_node vertexNode = node.child("vertices");
 	if (vertexNode) { //Has explicit vertices.
 		std::vector<glm::vec2> vertsVec = getVertsV2(vertexNode, 8);
 		if (vertsVec.size() < 3) {raise("Visplanes must have at least 3 vertices.");}
-		visplane = utils::Visplane(
+		visplane = structs::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
-			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 			type,
-			getPTR(node, flags, "flag", &(constants::C_FALSE)),
+			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
 			getBool(node, "useWorldUVY", true),
@@ -879,13 +784,13 @@ static inline Visplane extractVisplane(
 		);
 
 	} else { //Old method for compatability. 
-		visplane = utils::Visplane(
+		visplane = structs::Visplane(
 			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
 			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
 			getFloat(node, "height", 0.0f),
-			getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 			type,
-			getPTR(node, flags, "flag", &(constants::C_FALSE)),
+			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
 			getBool(node, "useWorldUVY", true),
@@ -905,20 +810,18 @@ static inline Visplane extractVisplane(
 }
 
 
-static inline Wall extractWall(
-		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+static inline structs::Wall extractWall(
+		const pugi::xml_node& node
 	) {
 
-	utils::Wall wall = utils::Wall(
+	structs::Wall wall = structs::Wall(
 		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+		getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
-		getPTR(node, flags, "flag", &(constants::C_FALSE)),
+		getPTR(node, "flag", &(constants::C_FALSE)),
 		getFloat(node, "extra", 0.0f),
-		getTexture(node, textureNames, "altTexture", initial::FALLBACK_TEXTURE_NAME),
+		getTexture(node, "altTexture", getString(node, "texture", initial::FALLBACK_TEXTURE_NAME).c_str()),
 		getBool(node, "useWorldUVX", true),
 		getBool(node, "useWorldUVY", true),
 		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
@@ -929,10 +832,8 @@ static inline Wall extractWall(
 }
 
 
-static inline Displacement extractDisplacement(
-		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+static inline structs::Displacement extractDisplacement(
+		const pugi::xml_node& node
 	) {
 
 	pugi::xml_node vertexNode = node.child("vertices");
@@ -962,12 +863,12 @@ static inline Displacement extractDisplacement(
 		};
 	}
 
-	utils::Displacement displacement = utils::Displacement(
+	structs::Displacement displacement = structs::Displacement(
 		vertsArr, UVArr,
 
-		getTexture(node, textureNames, "texture", initial::FALLBACK_TEXTURE_NAME),
+		getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<DisplacementType>(getEnum(node, "type", D_NORMAL)),
-		getPTR(node, flags, "flag", &(constants::C_FALSE)),
+		getPTR(node, "flag", &(constants::C_FALSE)),
 		getFloat(node, "extra", 0.0f)
 	);
 	
@@ -975,16 +876,15 @@ static inline Displacement extractDisplacement(
 }
 
 
-static inline Sprite extractSprite(
-		const pugi::xml_node& node,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+static inline structs::Sprite extractSprite(
+		const pugi::xml_node& node
 	) {
 
-	utils::Sprite sprite = utils::Sprite(
+	structs::Sprite sprite = structs::Sprite(
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getFloat(node, "width", 1.0f),
 		getFloat(node, "height", 1.0f),
-		getTexture(node, textureNames, "texture", display::FALLBACK_TEXTURE_PATH),
+		getTexture(node, "texture", display::FALLBACK_TEXTURE_PATH),
 		static_cast<SpriteType>(getEnum(node, "type", SPR_DECO)),
 		getBool(node, "collision", false)
 	);
@@ -993,24 +893,22 @@ static inline Sprite extractSprite(
 }
 
 
-static inline Light extractLight(
+static inline structs::Light extractLight(
 		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames,
-		std::vector<utils::Sprite>* spriteData
+		std::vector<structs::Sprite>* spriteData
 	) {
 
 	glm::vec3 lightPos = getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f));
-	utils::Light light = utils::Light(
+	structs::Light light = structs::Light(
 		lightPos,
 		getVec3(node, "colour", glm::vec3(1.0f, 1.0f, 1.0f)),
 		getFloat(node, "intensity", 1.0f),
-		getPTR(node, flags, "flag", &(constants::C_TRUE))
+		getPTR(node, "flag", &(constants::C_TRUE))
 	);
 
 	if (getBool(node, "hasMarker", false)) {
-		spriteData->push_back(utils::Sprite(
-			lightPos, 1.0f, 2.0f, assignTexture("lamp", textureNames), SPR_LIGHT, false
+		spriteData->push_back(structs::Sprite(
+			lightPos, 1.0f, 1.0f, assignTexture("lamp"), SPR_LIGHT, false
 		));
 		validSprites++;
 	}
@@ -1019,11 +917,11 @@ static inline Light extractLight(
 }
 
 
-static inline TextObject extractTextObject(
+static inline structs::TextObject extractTextObject(
 		const pugi::xml_node& node
 	) {
 
-	utils::TextObject textObject = utils::TextObject(
+	structs::TextObject textObject = structs::TextObject(
 		getString(node, "text", "<EMPTY>"),
 		getVec3(node, "position", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getInt(node, "scale", 100)
@@ -1034,16 +932,15 @@ static inline TextObject extractTextObject(
 
 
 bool nullBool;
-static inline LogicGate extractGate(
-		const pugi::xml_node& node,
-		std::array<bool, constants::MAX_FLAGS>* flags
+static inline utils::LogicGate extractGate(
+		const pugi::xml_node& node
 	) {
 
 	utils::LogicGate gate = utils::LogicGate(
 		static_cast<GateType>(getEnum(node, "type", G_PASSTHROUGH)),
-		getPTR(node, flags, "outFlag", &(constants::C_FALSE)),
-		getPTR(node, flags, "inAFlag", &(constants::C_FALSE)),
-		getPTR(node, flags, "inBFlag", &nullBool)
+		getPTR(node, "outFlag", &(constants::C_FALSE)),
+		getPTR(node, "inAFlag", &(constants::C_FALSE)),
+		getPTR(node, "inBFlag", &nullBool)
 	);
 	return gate;
 }
@@ -1053,15 +950,14 @@ static inline LogicGate extractGate(
 void loadModels(
 		pugi::xml_document& doc,
 		const std::string& xpath,
-		std::vector<utils::Displacement>* displacementData,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		std::vector<structs::Displacement>* displacementData
 	) {
 	pugi::xpath_node_set nodeList = doc.select_nodes(xpath.c_str());
 	size_t count = static_cast<size_t>(nodeList.size());
 	
 	for (size_t i=0; i<count; i++) {
 		pugi::xml_node node = nodeList[i].node();
-		models::convertOBJIntoDisplacements(node, displacementData, textureNames);
+		models::convertOBJIntoDisplacements(node, displacementData);
 	}
 }
 
@@ -1094,7 +990,7 @@ static inline float handlePlayerHEString(std::string inputSTR, float maxValue) {
 }
 
 
-void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player) {
+void retrieveStageMetaData(const pugi::xml_document& doc, structs::Player* player) {
 	//Sky
 	pugi::xml_node skyNode = getMetaNode(doc, "sky");
 	stageData.skyboxTextureName = getString(skyNode, "skyboxTexture", std::string(initial::FALLBACK_SKYBOX_NAME));
@@ -1124,7 +1020,7 @@ void retrieveStageMetaData(const pugi::xml_document& doc, utils::Player* player)
 	std::string startEnergyStr = getString(playerNode, "initialEnergy", "MAX");
 	stageData.playerStartEnergy = handlePlayerHEString(startEnergyStr, playerConfig::PLAYER_MAX_ENERGY);
 
-	*player = utils::Player();
+	*player = structs::Player();
 }
 
 
@@ -1283,16 +1179,9 @@ namespace loader {
 
 
 void loadStage(
-		const std::string& stageName, utils::Player* player,
-		std::vector<utils::Visplane>* visplaneData,
-		std::vector<utils::Wall>* wallData,
-		std::vector<utils::Displacement>* displacementData,
-		std::vector<utils::Sprite>* spriteData,
-		std::vector<utils::Light>* lightData,
-		std::vector<utils::TextObject>* textObjectData,
-		std::vector<utils::LogicGate>* logicGates,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		const std::string& stageName, structs::Player* player,
+		structs::DataSet* physicsData,
+		std::vector<utils::LogicGate>* logicGates
 	) {
 	std::string filePath = "stages/" + stageName + ".xml";
 	std::string XMLSrc = utils::readFile(filePath);
@@ -1304,25 +1193,25 @@ void loadStage(
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
 	
-	*visplaneData = xml::fetchObjectFromXML<utils::Visplane>(doc, "//environment/visplane", xml::extractVisplane, &validVisplanes, flags, textureNames);
-	*wallData = xml::fetchObjectFromXML<utils::Wall>(doc, "//environment/wall", xml::extractWall, &validWalls, flags, textureNames);
-	*displacementData = xml::fetchObjectFromXML<utils::Displacement>(doc, "//environment/displacement", xml::extractDisplacement, &validDisplacements, flags, textureNames);
-	*spriteData	= xml::fetchObjectFromXML<utils::Sprite>(doc, "//objects/sprite", xml::extractSprite, &validSprites, textureNames);
-	*lightData = xml::fetchObjectFromXML<utils::Light>(doc, "//objects/light", xml::extractLight, &validLights, flags, textureNames, spriteData);
-	*textObjectData = xml::fetchObjectFromXML<utils::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects);
-	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates, flags);
+	physicsData->visplaneData = xml::fetchObjectFromXML<structs::Visplane>(doc, "//environment/visplane", xml::extractVisplane, &validVisplanes);
+	physicsData->wallData = xml::fetchObjectFromXML<structs::Wall>(doc, "//environment/wall", xml::extractWall, &validWalls);
+	physicsData->displacementData = xml::fetchObjectFromXML<structs::Displacement>(doc, "//environment/displacement", xml::extractDisplacement, &validDisplacements);
+	physicsData->spriteData	= xml::fetchObjectFromXML<structs::Sprite>(doc, "//objects/sprite", xml::extractSprite, &validSprites);
+	physicsData->lightData = xml::fetchObjectFromXML<structs::Light>(doc, "//objects/light", xml::extractLight, &validLights, &(physicsData->spriteData));
+	physicsData->textObjectData = xml::fetchObjectFromXML<structs::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects);
+	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates);
 
 
 	//Get macros (shorthands for collection of elementary objects like walls or displacements)
-	macros::fetchMacroFromXML(doc, "//environment/cuboid", macros::extractCuboid, visplaneData, wallData, flags, textureNames);
-	macros::fetchMacroFromXML(doc, "//environment/stairs", macros::extractStairs, visplaneData, wallData, flags, textureNames);
-	xml::loadModels(doc, "//environment/model", displacementData, textureNames);
+	macros::fetchMacroFromXML(doc, "//environment/cuboid", macros::extractCuboid, &(physicsData->visplaneData), &(physicsData->wallData));
+	macros::fetchMacroFromXML(doc, "//environment/stairs", macros::extractStairs, &(physicsData->visplaneData), &(physicsData->wallData));
+	xml::loadModels(doc, "//environment/model", &(physicsData->displacementData));
 
 
 	stageData.name = stageName;
 	stageData.filePath = filePath;
 	xml::retrieveStageMetaData(doc, player);
-	processTeleporterPartners(visplaneData);
+	processTeleporterPartners(&(physicsData->visplaneData));
 }
 
 

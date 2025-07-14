@@ -136,7 +136,7 @@ uint getXUV(vec2 intersectPoint, Wall thisWall) {
 
 
 uint getProjectedZ(float wallDistanceSQ, float wallLowZ, float wallTopZ) {
-	float invDistance = inversesqrt(wallDistanceSQ) * zoomEffect;
+	float invDistance = inversesqrt(wallDistanceSQ) * zoomEffect * 1.5f;
 	float projectedYLow = (playerPosition.z - wallLowZ) * invDistance;
 	float screenYLow = renderResolution.y * (0.5f - projectedYLow);
 	float projectedYTop = (playerPosition.z - wallTopZ) * invDistance;

@@ -39,7 +39,7 @@ void main() {
 
 
 	//Y Coordinate;
-	float invDistance = zoomEffect * inverseDist;
+	float invDistance = 1.5f * zoomEffect * inverseDist;
 	float y = ((aPos.z - playerPosition.z) * 0.8f / tan(verticalFOV / 2.0f)) * invDistance;
 
 	//Screen warping

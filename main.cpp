@@ -17,17 +17,7 @@ using namespace glm;
 
 
 
-
 GLFWwindow* Window;
-utils::Player player;
-std::atomic<bool> runPhysics = true;
-//Data must be synced between the graphics and physics threads.
-utils::DataSet stateA, stateB;
-utils::DataSet* physicsData = &stateA;
-utils::DataSet* graphicsData = &stateB;
-std::mutex stateSwapMutex;
-
-
 
 void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	glViewport(0, 0, width, height);
@@ -43,7 +33,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 
 
 	GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
-		7, sizeof(utils::WallIntersect) * currentRenderResolution.x * validWalls
+		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
 
 	GLIndex::renderedFrameID = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
@@ -58,25 +48,18 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 
 
 
-
-
-std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
-
-
-
 //Non-synced data.
 std::vector<utils::LogicGate> logicGates;
 
 
 
 double tickStart;
-void physicsLoop(bool* physicsReady) {
+void physicsLoop() {
 	double maxTickTime = 1.0f/constants::PHYSICS_FREQUENCY;
 
 	tickNumber = 0;
 	while (runPhysics) {
 		tickStart = glfwGetTime();
-		*physicsReady = false;
 		player.prevPosition = player.position;
 
 		//1-frame inputs;
@@ -91,13 +74,13 @@ void physicsLoop(bool* physicsReady) {
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&(physicsData->wallData), &(physicsData->visplaneData), &player, interactKey);
-
-		physics::playerMove(&player, &(physicsData->wallData), &(physicsData->spriteData), &(physicsData->visplaneData));
+		physics::updateSpecials(interactKey);
+		physics::updatePhysicsObjects();
+		physics::playerMovement();
 
 
 		//Update states;
-		screenTint = graphics::manageScreenTint(&player);
+		screenTint = graphics::manageScreenTint();
 		player.previousState = player.state;
 		player.state = E_NONE;
 		{
@@ -115,7 +98,7 @@ void physicsLoop(bool* physicsReady) {
 			std::cout << "Tick #" << tickNumber << " took " << std::setprecision(6) << (dt * 1e6f) << "µs / Hypothetical tickrate: " << static_cast<int>(1.0f / dt) << endl;
 		}
 
-		*physicsReady = true;
+
 		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
 		tickNumber++;
 
@@ -133,25 +116,17 @@ inline void reloadLevel(const bool resetPlayer=false) {
 	if (resetPlayer) {
 		loader::loadStage(
 			userConfig["META_STAGE_NAME"], &player,
-			&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
-			&(physicsData->spriteData), &(physicsData->lightData),
-			&(physicsData->textObjectData),
-			&logicGates, &flags,
-			&textureNames
+			physicsData, &logicGates
 		);
 	} else {
-		utils::Player tmpPlayer;
+		structs::Player tmpPlayer;
 		loader::loadStage(
 			userConfig["META_STAGE_NAME"], &tmpPlayer,
-			&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
-			&(physicsData->spriteData), &(physicsData->lightData),
-			&(physicsData->textObjectData),
-			&logicGates, &flags,
-			&textureNames
+			physicsData, &logicGates
 		);
 	}
 
-	graphics::prepareOpenGL(&textureNames, &player);
+	graphics::prepareOpenGL();
 	{
 		std::lock_guard<std::mutex> lock(stateSwapMutex);
 		graphicsData = physicsData;
@@ -237,11 +212,7 @@ int main() {
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
-		&(physicsData->visplaneData), &(physicsData->wallData), &(physicsData->displacementData),
-		&(physicsData->spriteData), &(physicsData->lightData),
-		&(physicsData->textObjectData),
-		&logicGates, &flags,
-		&textureNames
+		physicsData, &logicGates
 	);
 	player.state = E_RESPAWN;
 
@@ -266,15 +237,14 @@ int main() {
 	cursorYPosPrev = cursorYPos;
 	utils::GLErrorcheck("Window Creation", true);
 
-	graphics::prepareOpenGL(&textureNames, &player);
+	graphics::prepareOpenGL();
 	*graphicsData = *physicsData;
-	frame::updateSSBOs(graphicsData, &player);
+	frame::updateSSBOs();
 	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
 
 
 	//Threads;
-	bool physicsReady;
-	physicsThread = std::thread(physicsLoop, &physicsReady);
+	physicsThread = std::thread(physicsLoop);
 	tickStart = glfwGetTime();
 
 	frameNumber = 0;
@@ -287,13 +257,9 @@ int main() {
 
 
 
-		utils::DataSet* localGraphicsData = nullptr;
-		{
-			std::lock_guard<std::mutex> lock(stateSwapMutex);
-			localGraphicsData = graphicsData;
-		}
-		frame::updateSSBOs(localGraphicsData, &player);
-		frame::draw(blendingAlpha, localGraphicsData, &player);
+		graphics::handleTextureLoadQueue();
+		frame::updateSSBOs();
+		frame::draw(blendingAlpha);
 		glfwSwapBuffers(Window);
 
 

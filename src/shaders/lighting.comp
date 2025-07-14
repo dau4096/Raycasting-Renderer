@@ -371,8 +371,8 @@ void main() {
 	vec3 origin = data.xyz;
 
 	int iData = int(data.w);
-	int type = iData & 0x3;
-	int index = iData >> 2;
+	int type = iData & 0x7;
+	int index = iData >> 3;
 
 	vec3 normal = texture(normalMap, thisFramePosition).xyz;
 
@@ -398,6 +398,11 @@ void main() {
 		if (dot(sunColour, sunColour) < 0.025f) {exit(framePosition); return; /* Sun's effect is near 0 and can be ignored. */}
 
 		if ((debugMode > 0) || (type == 0x0)) {
+			//Sky
+			imageStore(lightMapArray, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+			return;
+		} else if (type == 0x4) {
+			//Sprites
 			imageStore(lightMapArray, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
 			return;
 		}

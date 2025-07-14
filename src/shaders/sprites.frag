@@ -4,7 +4,7 @@
 
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
-layout(binding=1) uniform sampler2D skyboxTexture;
+layout(binding=1) uniform sampler2D renderedFrameRO;
 
 //CameraData
 uniform float maxRayDistance;
@@ -28,17 +28,17 @@ uniform int numSprites;
 uniform float shadowMapQuality;
 
 
-layout(rgba32f, binding=0) uniform image2D renderedFrame;
+layout(rgba32f, binding=0) uniform image2D renderedFrameWO;
 layout(rgba32f, binding=1) uniform image2D positionMap;
 layout(rgba32f, binding=2) uniform image2D normalMap;
 
 
 struct Sprite {
-	vec3 position;	//Sprite Position.
-	float width;	//Sprite Width.
-	float height;	//Sprite Height.
-	int textureID;	//Sprite Texture ID.
-	int centreX;	//Sprite Screen Centre.
+	vec3 position;					//Sprite Position.
+	float width;					//Sprite Width.
+	float height;					//Sprite Height.
+	uint textureID_transparency;	//Sprite Texture ID.
+	int centreX;					//Sprite Screen Centre.
 };
 layout(std430, binding=2) buffer spriteSSBO {
 	Sprite sprites[];
@@ -103,14 +103,15 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
 
-	float projectedYLow = (playerPosition.z - spriteFootZ) * invdistance * zoomEffect;
-	float projectedYTop = (playerPosition.z - spriteHeadZ) * invdistance * zoomEffect;
+	float mult = invdistance * zoomEffect * 1.5f;
+	float projectedYLow = (playerPosition.z - spriteFootZ) * mult;
+	float projectedYTop = (playerPosition.z - spriteHeadZ) * mult;
 	
 	float screenYLow = renderResolution.y * (0.5f - projectedYLow);
 	float screenYTop = renderResolution.y * (0.5f - projectedYTop);
 
 	float spriteHeight = screenYTop - screenYLow;
-	float spriteWidth = thisSprite.width * spriteHeight;
+	float spriteWidth = (thisSprite.width / thisSprite.height) * spriteHeight;
 	spriteHeight = (zoom) ? spriteHeight * zoomFactor : spriteHeight;
 
 
@@ -134,7 +135,8 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);	
-	float fragDepth = imageLoad(renderedFrame, framePosition).a;
+	vec4 fragData = texture(renderedFrameRO, fragPosition / vec2(renderResolution));
+	float fragDepth = fragData.a;
 	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 
@@ -155,7 +157,7 @@ void main() {
 	int closestIndex;
 	bool spriteHit = false;
 	vec3 albedo;
-	float rayAngle = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
+	float transparency;
 
 	for (int index=0; index<numSprites; index++) {
 		Sprite thisSprite = sprites[index];
@@ -171,16 +173,18 @@ void main() {
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
 		
+		uint texID = (thisSprite.textureID_transparency & 0xFFFF);
 		if (debugMode == 1) { //DrawUV
-			albedo = vec3(spriteUV.xy, thisSprite.textureID/16);
+			albedo = vec3(spriteUV.xy, texID/16);
 		} else if (debugMode == 2) { //DrawNormals
 			albedo = vec3(normalize(delta.xy), 0.0f);
 		} else {
-			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, thisSprite.textureID), 1.0f / invdistance);
+			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 			albedo = alphaTexture.rgb;
 		}
 
+		transparency = (thisSprite.textureID_transparency >> 16) / 65535.0f;
 		fragDepth = 1.0f / invdistance;
 		spriteHit = true;
 		closestSprite = thisSprite;
@@ -192,12 +196,12 @@ void main() {
 
 
 	if (spriteHit) {
-		if (shouldDrawToPositionMap) {
-			int idx = (closestIndex << 2) | 0x0;
+		if (shouldDrawToPositionMap && (transparency >= 1.0f)) {
+			int idx = (closestIndex << 3) | 0x4;
 			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 			imageStore(positionMap, thisFramePosition, vec4(closestSprite.position, float(idx)));
 			imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
 		}
-		imageStore(renderedFrame, framePosition, vec4(albedo.rgb, fragDepth));
+		imageStore(renderedFrameWO, framePosition, vec4(mix(fragData.rgb, albedo.rgb, transparency), fragDepth));
 	}
 }

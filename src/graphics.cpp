@@ -198,7 +198,7 @@ static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformN
 		glUniform4f(location, value.x, value.y, value.z, value.w);
 	}
 }
-static void bindCommonUniforms(GLuint shaderProgram, utils::Player* player) {
+static void bindCommonUniforms(GLuint shaderProgram) {
 	//Applies value if shader has uniform of matching name.
 
 	//Camera Data
@@ -209,10 +209,10 @@ static void bindCommonUniforms(GLuint shaderProgram, utils::Player* player) {
 	bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
 
 	//Player Data
-	bindUniformValue(shaderProgram, "playerPosition", player->cameraPosition);
-	bindUniformValue(shaderProgram, "playerViewAngle", player->viewAngle);
-	bindUniformValue(shaderProgram, "playerViewRoll", player->viewRoll);
-	bindUniformValue(shaderProgram, "playerViewPitch", player->viewPitch);
+	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
+	bindUniformValue(shaderProgram, "playerViewAngle", player.viewAngle);
+	bindUniformValue(shaderProgram, "playerViewRoll", player.viewRoll);
+	bindUniformValue(shaderProgram, "playerViewPitch", player.viewPitch);
 
 	//Debug
 	bindUniformValue(shaderProgram, "debugMode", utils::configToInt("META_DEBUG_MODE"));
@@ -349,12 +349,11 @@ GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint 
 
 template<typename TGPU, typename TCPU>
 void updateShaderStorageBufferObject(
-		GLuint SSBO, utils::Player* player,
-		std::vector<TCPU>* dataSetIn
+		GLuint SSBO, std::vector<TCPU>* dataSetIn, int allocSize
 	) {
 
 	size_t singleItemSize = sizeof(TGPU);
-	size_t size = dataSetIn->size();
+	size_t size = (allocSize == -1) ? dataSetIn->size() : allocSize;
 	std::vector<TGPU> dataSet;
 
 	for (size_t index=0; index<size; index++) {
@@ -370,8 +369,7 @@ void updateShaderStorageBufferObject(
 
 template<typename TGPU, typename TCPU>
 void updateShaderStorageBufferObject(
-		GLuint SSBO,
-		std::vector<TCPU>* dataSetIn
+		GLuint SSBO, std::vector<TCPU>* dataSetIn
 	) {
 
 	size_t singleItemSize = sizeof(TGPU);
@@ -379,7 +377,7 @@ void updateShaderStorageBufferObject(
 	std::vector<TGPU> dataSet;
 
 	for (size_t index=0; index<size; index++) {
-		dataSet.push_back(TGPU(*(dataSetIn->data() + index)));
+		dataSet.push_back(TGPU(dataSetIn->at(index)));
 	}
 
 	if (size > 0 && !dataSet.empty()) {
@@ -409,16 +407,15 @@ void updateShaderStorageBufferObject(
 
 
 void findVisibleObjects(
-		utils::Player* player, utils::DataSet* localGraphicsData,
 		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices
 	) {	
-	glm::vec2 playerFDirection = glm::vec2(sin(player->viewAngle * constants::TO_RAD), cos(player->viewAngle * constants::TO_RAD));
-	glm::vec2 playerPosV2 = glm::vec2(player->position);
+	glm::vec2 playerFDirection = glm::vec2(sin(player.viewAngle * constants::TO_RAD), cos(player.viewAngle * constants::TO_RAD));
+	glm::vec2 playerPosV2 = glm::vec2(player.position);
 
 
 	//Visplanes
 	for (uint idx=0; idx<validVisplanes; idx++) {
-		utils::Visplane thisPlane = localGraphicsData->visplaneData.at(idx);
+		structs::Visplane thisPlane = graphicsData->visplaneData.at(idx);
 
 		bool behind = true;
 		if ((thisPlane.type == V_INVALID) || (thisPlane.type == V_NODRAW)) {continue; /* Non-shown VPs */}
@@ -434,10 +431,10 @@ void findVisibleObjects(
 
 	//Walls
 	for (uint idx=0; idx<validWalls; idx++) {
-		utils::Wall thisWall = localGraphicsData->wallData.at(idx);
+		structs::Wall thisWall = graphicsData->wallData.at(idx);
 		if ((thisWall.type == W_INVALID) || (thisWall.type == W_NODRAW)) {continue; /* Non-shown Walls */}
-		bool sProj = glm::dot(glm::vec2(thisWall.start - player->position), playerFDirection) < 0.0f;
-		bool eProj = glm::dot(glm::vec2(thisWall.end - player->position), playerFDirection) < 0.0f;
+		bool sProj = glm::dot(glm::vec2(thisWall.start - player.position), playerFDirection) < 0.0f;
+		bool eProj = glm::dot(glm::vec2(thisWall.end - player.position), playerFDirection) < 0.0f;
 		if (sProj && eProj) {continue; /* Completely behind player view */}
 
 		visibleWallIndices->push_back(idx);
@@ -445,7 +442,7 @@ void findVisibleObjects(
 	numVisibleWalls = visibleWallIndices->size();
 
 	for (uint idx=0; idx<validDisplacements; idx++) {
-		utils::Displacement thisDisp = localGraphicsData->displacementData.at(idx);
+		structs::Displacement thisDisp = graphicsData->displacementData.at(idx);
 		if (thisDisp.type == D_INVALID) {continue; /* Non-shown VPs */}
 		bool behind = true;
 		for (size_t vertexIdx=0; vertexIdx<3; vertexIdx++) {
@@ -623,7 +620,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 	int width, height, channels;
 	int layerIndex = 0;
 	for (const std::string& textureName : textureNames) {
-		if (textureName.empty()) continue;
+		if (textureName.empty()) {continue;}
 		usedFallback = false;
 
 		std::string reportedTextureName = textureName;
@@ -644,6 +641,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 			);
 
 			if (!textureData) {
+				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
 				//Use fallback texture.
 				textureData = fallbackTextureData;
 				width = fallbackTextureWidth;
@@ -683,6 +681,63 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 }
 
 
+void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string textureName, size_t layer, std::string subFolder="textures-env", bool hasMipMap=false) {
+	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
+	int width, height, channels;
+
+	std::string reportedTextureName = textureName;
+	std::string texturePath = "src/" + subFolder + "/" + textureName + ".png";
+	unsigned char* textureData = stbi_load(
+		texturePath.c_str(),
+		&width, &height,
+		&channels, 4
+	);
+
+	if (!textureData) {
+		//Try in folder beside stage XML with same name.
+		texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+		textureData = stbi_load(
+			texturePath.c_str(),
+			&width, &height,
+			&channels, 4
+		);
+
+		if (!textureData) {
+			std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
+			textureData = stbi_load(
+				display::FALLBACK_TEXTURE_PATH,
+				&width, &height,
+				&channels, 4
+			);
+
+			if (!textureData) {
+				std::cerr << "Failed to load fallback texture : " << stbi_failure_reason() << std::endl;
+				glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+				glDeleteTextures(1, &sheetArrayID);
+				return;	
+			}
+		}
+	}
+
+
+	if (width != display::TEXTURE_RESOLUTION.x || height != display::TEXTURE_RESOLUTION.y) {
+		std::cerr << "Texture " << reportedTextureName << " has incorrect dimensions (" << width << "x" << height << "). Expected "
+				  << display::TEXTURE_RESOLUTION.x << "x" << display::TEXTURE_RESOLUTION.y << "." << std::endl;
+		stbi_image_free(textureData);
+		return;
+	}
+
+
+	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layer, display::TEXTURE_RESOLUTION.x, display::TEXTURE_RESOLUTION.y, 1, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+
+	stbi_image_free(textureData);
+
+
+	if (hasMipMap) {glGenerateMipmap(GL_TEXTURE_2D_ARRAY);}
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+}
+
+
 GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
 	GLuint arrayID;
 	glGenTextures(1, &arrayID);
@@ -701,6 +756,36 @@ GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
 	return arrayID;
+}
+
+
+
+GLint fetchTextureID(std::string textureName, std::string subFolder="textures-env") {
+	auto namePTR = std::find(textureNames.begin(), textureNames.end(), textureName);
+
+	int idx;
+	if (namePTR != textureNames.end()) {
+		idx = std::distance(textureNames.begin(), namePTR);
+	} else {
+		idx = currentTextureIndex++;
+		if (idx >= display::TEXTURE_ARRAY_MAX_LAYERS) {
+			raise("Maximum texture layers reached. Cannot assign more.");
+			return -1;
+		}
+		textureLoadQueue.push({GLIndex::textureArrayEnvironment, idx, textureName, subFolder, true});
+		textureNames.at(idx) = textureName;
+	}
+	return idx;
+}
+
+
+void handleTextureLoadQueue() {
+	while (!textureLoadQueue.empty()) {
+		TextureLoadTask task = textureLoadQueue.front();
+		textureLoadQueue.pop();
+		
+		writeToSpecificTexture2DArrayLayer(task.textureArrayID, task.textureName, size_t(task.layer), task.subFolder, task.hasMipMap);
+	}
 }
 
 
@@ -754,10 +839,10 @@ GLuint getVAO() {
 
 
 
-float viewBob(float tick, utils::Player* player) {
-	if (player->touchingFloor) {
+float viewBob(float tick) {
+	if (player.touchingFloor) {
 		float seconds = tick / utils::configToFloat("VIEW_MAX_FREQ");
-		float playerSpeed = length(glm::vec2(player->velocity.x, player->velocity.y));
+		float playerSpeed = length(glm::vec2(player.velocity.x, player.velocity.y));
 		float speedMultiplier = glm::clamp(playerSpeed / playerConfig::MAX_AIR_SPEED_XY, 0.0f, 1.0f);
 		float offset = sin(seconds * 6.0f) * 0.25f * speedMultiplier;
 		return offset;
@@ -777,17 +862,17 @@ std::unordered_map<Event, int> stateMap = {
 	{E_TELEPORT, 1 * constants::PHYSICS_FREQUENCY},
 	{E_RESPAWN, 2 * constants::PHYSICS_FREQUENCY}
 };
-glm::vec4 manageScreenTint(utils::Player* player) {
+glm::vec4 manageScreenTint() {
 	int newDuration = 0;
-	if (player->state != player->previousState) {
-		newDuration = stateMap.at(player->state);
+	if (player.state != player.previousState) {
+		newDuration = stateMap.at(player.state);
 	}
 
 	if (newDuration > tickCounter) {
 		tickCounter = newDuration;
 		duration = newDuration;
 		isInvertEffect = false;
-		switch (player->state) {
+		switch (player.state) {
 			case E_NONE: {
 				screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
 				break;
@@ -823,7 +908,7 @@ glm::vec4 manageScreenTint(utils::Player* player) {
 				break;
 			}
 		}
-		player->state = E_NONE;
+		player.state = E_NONE;
 	} else if (tickCounter != 0) {
 		tickCounter--;
 	}
@@ -833,8 +918,8 @@ glm::vec4 manageScreenTint(utils::Player* player) {
 		intensity = static_cast<float>(tickCounter) / static_cast<float>(duration);
 	} else {
 		intensity = 0;
-		player->state = E_NONE;
-		player->previousState = E_NONE;
+		player.state = E_NONE;
+		player.previousState = E_NONE;
 	}
 	return glm::vec4(screenTintRGB.r, screenTintRGB.g, screenTintRGB.b, intensity);
 }
@@ -969,8 +1054,8 @@ GLuint createDisplacementsFBO(size_t width, size_t height) {
 
 
 glm::mat4 uiMatrix;
-std::vector<utils::UIElement> UIElements;
-void prepareOpenGL(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames, utils::Player* player) {
+std::vector<structs::UIElement> UIElements;
+void prepareOpenGL() {
 	//OpenGL setup;
 
 	//Image2Ds
@@ -981,7 +1066,7 @@ void prepareOpenGL(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* t
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 
 	//Textures
-	GLIndex::textureArrayEnvironment = createTexture2DArray(*textureNames, "textures-env", true);
+	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true);
 	GLIndex::textureArrayUI = createTexture2DArray(UIImageNames, "textures-sym");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
 	GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
@@ -991,19 +1076,19 @@ void prepareOpenGL(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* t
 
 
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
-		0, sizeof(utils::VisplaneGPU) * validVisplanes
+		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);
 	GLIndex::allWallsSSBO = createShaderStorageBufferObject(
-		1, sizeof(utils::WallGPU) * validWalls
+		1, sizeof(structs::WallGPU) * validWalls
 	);
 	GLIndex::spriteSSBO = createShaderStorageBufferObject(
-		2, sizeof(utils::SpriteGPU) * validSprites
+		2, sizeof(structs::SpriteGPU) * (validSprites + constants::MAX_SPRITE_PARTICLES)
 	);
 	GLIndex::lightSSBO = createShaderStorageBufferObject(
-		3, sizeof(utils::LightGPU) * validLights
+		3, sizeof(structs::LightGPU) * validLights
 	);
 	GLIndex::displacementSSBO = createShaderStorageBufferObject(
-		4, sizeof(utils::DisplacementGPU) * validDisplacements
+		4, sizeof(structs::DisplacementGPU) * validDisplacements
 	);
 	GLIndex::visibleVisplaneIndicesSSBO = createShaderStorageBufferObject(
 		5, sizeof(uint) * validVisplanes
@@ -1012,7 +1097,7 @@ void prepareOpenGL(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* t
 		6, sizeof(uint) * validWalls
 	);
 	GLIndex::wallIntersectSSBO = createShaderStorageBufferObject(
-		7, sizeof(utils::WallIntersect) * currentRenderResolution.x * validWalls
+		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
 
 
@@ -1060,12 +1145,12 @@ void prepareOpenGL(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* t
 
 
 	UIElements = {
-		UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),	//Health image
-		UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player->health)),				//Health number
-		UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 	//Energy image
-		UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player->energy)),			//Energy number
-		UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
-		UIElement(glm::vec2(0, 476), glm::vec2(32, 32), &avgtickrate, &shouldShowTPS)	//TPS number
+		structs::UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),		//Health image
+		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
+		structs::UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 		//Energy image
+		structs::UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
+		structs::UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
+		structs::UIElement(glm::vec2(0, 476), glm::vec2(32, 32), &avgtickrate, &shouldShowTPS)		//TPS number
 	};
 
 
@@ -1090,31 +1175,30 @@ namespace frame {
 std::vector<uint> visibleVisplaneIndices;
 std::vector<uint> visibleWallIndices;
 std::vector<uint> visibleDisplacementIndices;
-void updateSSBOs(utils::DataSet* localGraphicsData, utils::Player* player) {
+void updateSSBOs() {
 	visibleVisplaneIndices.clear();
 	visibleWallIndices.clear();
 	visibleDisplacementIndices.clear();
 	graphics::findVisibleObjects(
-		player, localGraphicsData,
 		 &visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices
 	);
 
 
 	//Update SSBOs.
-	graphics::updateShaderStorageBufferObject<utils::VisplaneGPU>(
-		GLIndex::allVisplanesSSBO, player, &(localGraphicsData->visplaneData)
+	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
+		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
 	);
-	graphics::updateShaderStorageBufferObject<utils::WallGPU>(
-		GLIndex::allWallsSSBO, player, &(localGraphicsData->wallData)
+	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
+		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
 	);
-	graphics::updateShaderStorageBufferObject<utils::DisplacementGPU>(
-		GLIndex::displacementSSBO, player, &(localGraphicsData->displacementData)
+	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
+		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
 	);
-	graphics::updateShaderStorageBufferObject<utils::SpriteGPU>(
-		GLIndex::spriteSSBO, player, &(localGraphicsData->spriteData)
+	graphics::updateShaderStorageBufferObject<structs::SpriteGPU>(
+		GLIndex::spriteSSBO, &(graphicsData->spriteData), validSprites
 	);
-	graphics::updateShaderStorageBufferObject<utils::LightGPU>(
-		GLIndex::lightSSBO, player, &(localGraphicsData->lightData)
+	graphics::updateShaderStorageBufferObject<structs::LightGPU>(
+		GLIndex::lightSSBO, &(graphicsData->lightData), validLights
 	);
 	graphics::updateShaderStorageBufferObject<uint>(
 		GLIndex::visibleVisplaneIndicesSSBO, &visibleVisplaneIndices
@@ -1126,7 +1210,7 @@ void updateSSBOs(utils::DataSet* localGraphicsData, utils::Player* player) {
 }
 
 
-void drawDisplacements(utils::DataSet* localGraphicsData, utils::Player* player) {
+void drawDisplacements() {
 	std::vector<float> vertices;
 	std::vector<GLuint> indices;
 	std::vector<float> verticesData;
@@ -1134,7 +1218,7 @@ void drawDisplacements(utils::DataSet* localGraphicsData, utils::Player* player)
 	GLuint currentIndicesCount = 0;
 
 	for (uint displacementIdx : visibleDisplacementIndices) {
-		utils::Displacement thisDisp = localGraphicsData->displacementData.at(displacementIdx);
+		structs::Displacement thisDisp = graphicsData->displacementData.at(displacementIdx);
 		glm::vec3 dispNormal = thisDisp.normal;
 		verticesData = {
 			thisDisp.vertices[0].x, thisDisp.vertices[0].y, thisDisp.vertices[0].z,
@@ -1190,7 +1274,7 @@ void drawDisplacements(utils::DataSet* localGraphicsData, utils::Player* player)
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 
-	uniforms::bindCommonUniforms(GLIndex::displacementShader3D, player);
+	uniforms::bindCommonUniforms(GLIndex::displacementShader3D);
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
@@ -1251,7 +1335,7 @@ void drawInt(glm::vec2 position, glm::vec2 scale, int value, std::vector<float>*
 	}
 }
 
-void drawHUD(utils::DataSet* graphicsData, utils::Player* player) {
+void drawHUD() {
 	currentIdx = 0;
 	glClearTexImage(GLIndex::interfaceID, 0, GL_RGBA, GL_FLOAT, nullptr);
 	std::vector<float> vertices;
@@ -1263,7 +1347,7 @@ void drawHUD(utils::DataSet* graphicsData, utils::Player* player) {
 	shouldShowTPS = utils::configToBool("META_SHOW_TICKRATE_UI");
 
 
-	for (const utils::UIElement element : graphics::UIElements) {
+	for (const structs::UIElement element : graphics::UIElements) {
 		if ((element.showPtr) && !*(element.showPtr)) {continue;}
 
 		verticesData.clear();
@@ -1281,26 +1365,26 @@ void drawHUD(utils::DataSet* graphicsData, utils::Player* player) {
 		utils::combineVectors(&indices, indicesData);
 	}
 
-	for (utils::TextObject thisTO : graphicsData->textObjectData) {
+	for (structs::TextObject thisTO : graphicsData->textObjectData) {
 		verticesData.clear();
 		indicesData.clear();
 
 
-		float distance = glm::length(glm::vec2(thisTO.position - player->position));
+		float distance = glm::length(glm::vec2(thisTO.position - player.position));
 		float scale = thisTO.scale * zoomEffect / distance;
 
-		float centreX = utils::getCentreX(thisTO.position, player, display::UI_RESOLUTION);
-		float projCentreY = (player->cameraPosition.z - thisTO.position.z) * zoomEffect / distance;
+		float centreX = structs::getCentreX(thisTO.position, player, display::UI_RESOLUTION);
+		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * zoomEffect / distance;
 		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
 		float charY = centreY - (scale / 2.0f);
-		float pitchDecimal = glm::clamp(player->viewPitch, -22.5f, 22.5f) * zoomEffect;
+		float pitchDecimal = glm::clamp(player.viewPitch, -22.5f, 22.5f) * zoomEffect;
 		charY += (pitchDecimal * display::UI_RESOLUTION.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
 
 		int letterIdx = 0;
 		int textLength = thisTO.text.size();
 		for (char ch : thisTO.text) {
 			//Iterate through letters.
-			int charIdx = utils::convertTextToIdx(ch, &symbolNames);
+			int charIdx = structs::convertTextToIdx(ch, &symbolNames);
 			letterIdx++;
 
 			if (charIdx < 0) {continue; /* Blank Character */}
@@ -1341,7 +1425,7 @@ void drawHUD(utils::DataSet* graphicsData, utils::Player* player) {
 	glBindTextureUnit(1, GLIndex::textureArrayNumeric);
 	glBindTextureUnit(2, GLIndex::renderedFrameID);
 
-	uniforms::bindCommonUniforms(GLIndex::uiShader, player);
+	uniforms::bindCommonUniforms(GLIndex::uiShader);
 	GLint pvmMatrixLocation = glGetUniformLocation(GLIndex::uiShader, "pvmMatrix");
 	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(graphics::uiMatrix));
 
@@ -1372,22 +1456,22 @@ inline void renderingGeneric(const std::string& shaderName="") {
 }
 
 
-void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player* player) {
+void draw(double blendingAlpha) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 	if (headLampEnabled) {
 		lightFlickerRNG = utils::RNGc();
 	}
-	float viewBob = (utils::configToBool("VIEW_BOB")) ? graphics::viewBob(tickNumber, player) : 0.0f;
-	glm::vec3 interpPosition = glm::mix(player->prevPosition, player->position, blendingAlpha);
-	player->cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player->height/3.0f) + viewBob);
+	float viewBob = (utils::configToBool("VIEW_BOB")) ? graphics::viewBob(tickNumber) : 0.0f;
+	glm::vec3 interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
+	player.cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
 
 	//Raycasting compute shader.
 	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
 	glUseProgram(GLIndex::raycastShader);
-	uniforms::bindCommonUniforms(GLIndex::raycastShader, player);
+	uniforms::bindCommonUniforms(GLIndex::raycastShader);
 	glDispatchCompute(
 		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
 		(numVisibleWalls + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
@@ -1407,7 +1491,7 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	glBindTextureUnit(1, GLIndex::skyboxTextureID);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::envShader, player);
+	uniforms::bindCommonUniforms(GLIndex::envShader);
 	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
@@ -1416,7 +1500,7 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	
 	//Displacements in 2 parts;
 	//3D portion;
-	frame::drawDisplacements(localGraphicsData, player);
+	frame::drawDisplacements();
 	//2D portion;
 	glUseProgram(GLIndex::displacementShader2D);
 	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -1429,9 +1513,9 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	glBindTextureUnit(3, GLIndex::displacementFBONormals);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, player);
+	uniforms::bindCommonUniforms(GLIndex::displacementShader2D);
 
-	renderingGeneric("Environment Shader");
+	renderingGeneric("Displacements Shaders");
 
 
 	//Sprite Shader.
@@ -1441,9 +1525,10 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	glBindImageTexture(2, GLIndex::normalMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
+	glBindTextureUnit(1, GLIndex::renderedFrameID);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::spriteShader, player);
+	uniforms::bindCommonUniforms(GLIndex::spriteShader);
 	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
 	renderingGeneric("Sprite Shader");
@@ -1460,7 +1545,7 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms;
-	uniforms::bindCommonUniforms(GLIndex::lightingShader, player);
+	uniforms::bindCommonUniforms(GLIndex::lightingShader);
 	uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
 	uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
@@ -1482,7 +1567,7 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 		avgframerate = utils::getAverage(rollingFPS);
 		avgtickrate = utils::getAverage(rollingTPS);
-		drawHUD(localGraphicsData, player);
+		drawHUD();
 	}		
 
 
@@ -1497,7 +1582,7 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::displayShader, player);
+	uniforms::bindCommonUniforms(GLIndex::displayShader);
 	//Display-Specific
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
@@ -1511,6 +1596,77 @@ void draw(double blendingAlpha, utils::DataSet* localGraphicsData, utils::Player
 
 	if (shouldTakeScreenshot) {
 		graphics::saveScreenshot(GLIndex::renderedFrameID);
+	}
+}
+
+
+}
+
+
+
+namespace particles {
+
+
+const std::unordered_map<ParticleType, std::vector<std::string>> particleTextureNames = {
+	{P_NONE, {}},
+	{P_DUST, {"dust-0", "dust-1", "dust-2", "dust-3",}},
+	{P_ENERGY, {"energy-0", "energy-1", "energy-2",}},
+	{P_HURT, {"hurt-0", "hurt-1", "hurt-2",}},
+	{P_EXPLODE, {"explode-0",}}
+};
+
+const std::unordered_map<ParticleType, std::pair<float, bool>> particleBaseMasses = {
+	{P_NONE, {0.0f, false}},
+	{P_DUST, {-0.03125f, true}},
+	{P_ENERGY, {-0.03125f, true}},
+	{P_HURT, {1.0f, true}},
+	{P_EXPLODE, {0.0f, false}} 
+};
+
+void createParticle(glm::vec3 position, ParticleType type=P_DUST, glm::vec3 initialVelocity=glm::vec3(0.0f, 0.0f, 0.0f)) {
+	const std::vector<std::string> names = particleTextureNames.at(type);
+	std::string randomName = names.at(utils::RNGc() % names.size());
+
+	std::pair<float, bool> massData = particleBaseMasses.at(type);
+	float randomMass = massData.first + ((massData.second) ? 1.0f / ((utils::RNGw() & 31) - 15) : 0.0f);
+
+	structs::Sprite newSprite = structs::Sprite(
+		position, 0.5f, 0.5f, graphics::fetchTextureID(randomName, "textures-prt"), SPR_PARTICLE, false, randomMass
+	);
+	newSprite.velocity = initialVelocity;
+	{
+		std::lock_guard<std::mutex> lock(stateSwapMutex);
+		physicsData->spriteData.push_back(newSprite);
+		graphicsData->spriteData.push_back(newSprite);
+	}
+	validSprites++;
+}
+
+
+void createParticleLine(glm::vec3 start, glm::vec3 end, ParticleType type=P_DUST, size_t numParticles=0) {
+	glm::vec3 delta = end - start;
+	numParticles = (numParticles > 0) ? numParticles : constants::MAX_SPRITE_PARTICLES;	
+	glm::vec3 spacing = delta / float(numParticles);
+	for (int particleIdx=0; particleIdx<numParticles; particleIdx++) {
+		if (validSprites + 1 >= constants::MAX_SPRITE_PARTICLES) {break;}
+		createParticle(start + spacing*float(particleIdx), type);
+	}
+}
+
+
+void createParticleRing(glm::vec3 centre, float radius, ParticleType type=P_DUST, size_t numParticles=0) {
+	numParticles = (numParticles > 0) ? numParticles : constants::MAX_SPRITE_PARTICLES;
+
+	for (int particleIdx=0; particleIdx<numParticles; particleIdx++) {
+		if (validSprites + 1 >= constants::MAX_SPRITE_PARTICLES) {break;}
+		float frac = float(particleIdx) / float(numParticles);
+		float angle = constants::PI * 2.0f * frac;
+		glm::vec3 dir = glm::vec3(sin(angle), cos(angle), 0.0f);
+
+		createParticle(
+			centre + dir,
+			type, dir * 0.125f
+		);
 	}
 }
 

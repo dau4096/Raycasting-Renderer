@@ -33,7 +33,7 @@ void main() {
 		imageStore(renderedFrameWO, framePosition, albedo);
 		if (shouldDrawToPositionMap) {
 			vec4 pos = texture(FBOPosition, UV);
-			uint idx = (int(pos.w) << 2) | 0x3;
+			uint idx = (int(pos.w) << 3) | 0x3;
 			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 			imageStore(positionMap, thisFramePosition, vec4(pos.xyz, float(idx)));
 			imageStore(normalMap, thisFramePosition, vec4(normal.xyz, 1.0f));

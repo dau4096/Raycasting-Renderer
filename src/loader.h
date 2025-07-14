@@ -8,17 +8,12 @@
 
 namespace loader {
 
+	int assignTexture(std::string textureStr);
+
 	void loadStage(
-		const std::string& stageName, utils::Player* player,
-		std::vector<utils::Visplane>* visplaneData,
-		std::vector<utils::Wall>* wallData,
-		std::vector<utils::Displacement>* displacementData,
-		std::vector<utils::Sprite>* spriteData,
-		std::vector<utils::Light>* lightData,
-		std::vector<utils::TextObject>* textObjectData,
-		std::vector<utils::LogicGate>* logicGates,
-		std::array<bool, constants::MAX_FLAGS>* flags,
-		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>* textureNames
+		const std::string& stageName, structs::Player* player,
+		structs::DataSet* physicsData,
+		std::vector<utils::LogicGate>* logicGates
 	);
 
 
