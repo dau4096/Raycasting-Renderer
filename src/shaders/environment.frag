@@ -156,6 +156,10 @@ const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
+
+
+//////////////// Config stuff ////////////////
+//Mip-mapping;
 const bool blendMipMap = true;
 const bool forceMipMapLevel = false;
 const float forcedMipMapLevel = 0.0f;
@@ -163,6 +167,7 @@ const bool debugMipMapLevel = false;
 
 const float mipMapLevels = 7.0f;
 const float minMipMapDistance = 5.0f;
+//////////////// Config stuff ////////////////
 
 
 

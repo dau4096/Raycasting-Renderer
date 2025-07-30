@@ -57,6 +57,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_SHADOW_QUALITY", ""},
 	{"VIEW_ALLOW_TRANSPARENCY", ""},
 	{"VIEW_ALLOW_TRANSPARENT_SHADOWS", ""},
+	{"VIEW_WIGGLY_TEXTOBJECTS", ""},
 
 	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_TICKRATE_UI", ""},
@@ -204,7 +205,7 @@ namespace structs {
 
 
 struct Player {
-	glm::vec3 position, prevPosition, velocity, cameraPosition;
+	glm::vec3 position, prevPosition, velocity, cameraPosition, interpPosition;
 	float viewAngle, viewRoll, viewPitch, vLook, height;
 	bool touchingFloor, sliding;
 	Event state, previousState;
@@ -215,6 +216,7 @@ struct Player {
 	Player()
 		: position(stageData.playerStartPoint), prevPosition(stageData.playerStartPoint), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
 		  cameraPosition(stageData.playerStartPoint + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
+		  interpPosition(stageData.playerStartPoint),
 		  viewAngle(stageData.playerStartAngle * constants::TO_RAD), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 		  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 		  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
@@ -223,12 +225,12 @@ struct Player {
 
 
 static inline int getCentreX(glm::vec3& objPos, Player player, glm::ivec2 resolution) {
-	glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player.position));
+	glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player.interpPosition));
 	float theta = atan2(direction.x, direction.y);
 	float angleDelta = theta - player.viewAngle;
 	if (angleDelta > constants::PI) {angleDelta -= constants::PI2;}
 	if (angleDelta < -constants::PI) {angleDelta += constants::PI2;}
-	float centreX = (resolution.x / 2.0f) * ((angleDelta / rayAngle) + 1.0f);
+	float centreX = (resolution.x / 2.0f) * ((angleDelta * zoomEffect / rayAngle) + 1.0f);
 	return int(round(centreX));
 }
 

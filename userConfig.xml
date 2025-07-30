@@ -46,6 +46,7 @@
 	<option function="VIEW_VSYNC" value="FALSE" />
 	<option function="VIEW_ALLOW_TRANSPARENCY" value="TRUE" />
 	<option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" value="TRUE" />
+	<option function="VIEW_WIGGLY_TEXTOBJECTS" value="FALSE" />
 
 	<option function="META_DEBUG_MODE" value="NONE" />
 	<option function="META_SHOW_FRAMERATE_UI" value="TRUE" />

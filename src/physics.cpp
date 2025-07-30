@@ -483,14 +483,13 @@ void playerMovement() {
 		if (player.touchingFloor) {
 			player.jumpsUsed++;
 			player.velocity.z += playerConfig::JUMP_INIT_SPEED;
-			player.position.z += 0.025;
+			player.position.z += 0.025f;
 		} else if (player.jumpsUsed < playerConfig::MAX_JUMPS) {
 			player.jumpsUsed = playerConfig::MAX_JUMPS;
 			if (player.velocity.z < 0.0f) {
 				player.velocity.z = playerConfig::JUMP_INIT_SPEED;
 			} else {
-				const float maxJumpSpeed = playerConfig::JUMP_INIT_SPEED * 2.0f;
-				float maxJump = glm::min(player.velocity.z + playerConfig::JUMP_INIT_SPEED, maxJumpSpeed);
+				float maxJump = glm::min(player.velocity.z + playerConfig::JUMP_INIT_SPEED, playerConfig::JUMP_INIT_SPEED);
 				player.velocity.z = maxJump;
 			}
 		}

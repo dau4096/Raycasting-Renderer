@@ -1374,11 +1374,16 @@ void drawHUD() {
 		float scale = thisTO.scale * zoomEffect / distance;
 
 		float centreX = structs::getCentreX(thisTO.position, player, display::UI_RESOLUTION);
-		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * zoomEffect / distance;
+		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * 1.5f * zoomEffect / distance;
 		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
 		float charY = centreY - (scale / 2.0f);
+
+
+		//ViewRoll/Pitch.
+		float rollDecimal = glm::clamp(player.viewRoll * constants::TO_DEG / 22.5f, -1.0f, 1.0f) * zoomEffect;
 		float pitchDecimal = glm::clamp(player.viewPitch * constants::TO_DEG, -22.5f, 22.5f) * zoomEffect;
 		charY += (pitchDecimal * display::UI_RESOLUTION.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
+
 
 		int letterIdx = 0;
 		int textLength = thisTO.text.size();
@@ -1389,14 +1394,22 @@ void drawHUD() {
 
 			if (charIdx < 0) {continue; /* Blank Character */}
 			float charX = centreX + scale*0.65f*(letterIdx - (textLength/2.0f));
-			glm::vec2 charPos = glm::vec2(charX, charY);
 
+			float thisCharY = charY;
+			if (utils::configToBool("VIEW_WIGGLY_TEXTOBJECTS")) {
+				thisCharY += (charX - centreX) * rollDecimal;
+			} else {
+				thisCharY -= ((currentRenderResolution.x / 2.0f) - charX) * rollDecimal;
+			}
 
+			glm::vec2 charPos = glm::vec2(charX, thisCharY);
+			//cout << (charX - (currentRenderResolution.x/2.0f)) * rollDecimal << endl;
 			addImage(charPos, glm::vec2(scale, scale), charIdx, true, true, &verticesData, &indicesData, distance);
 		}
 
 		utils::combineVectors(&vertices, verticesData);
 		utils::combineVectors(&indices, indicesData);
+		break;
 	}
 
 
@@ -1463,8 +1476,8 @@ void draw(double blendingAlpha) {
 		lightFlickerRNG = utils::RNGc();
 	}
 	float viewBob = (utils::configToBool("VIEW_BOB")) ? graphics::viewBob(tickNumber) : 0.0f;
-	glm::vec3 interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
-	player.cameraPosition = interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
+	player.interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
+	player.cameraPosition = player.interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 
 
 
