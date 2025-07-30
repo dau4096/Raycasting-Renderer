@@ -4,6 +4,7 @@
 
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
+layout(binding=2) uniform sampler2DArray normalArray;
 layout(binding=1) uniform sampler2D skyboxTexture;
 
 //CameraData
@@ -156,6 +157,10 @@ const vec2 INVALIDv2 = vec2(INF, INF);
 const vec3 INVALIDv3 = vec3(INF, INF, INF);
 const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
 
+
+
+//////////////// Config stuff ////////////////
+//Mip-mapping;
 const bool blendMipMap = true;
 const bool forceMipMapLevel = false;
 const float forcedMipMapLevel = 0.0f;
@@ -163,6 +168,11 @@ const bool debugMipMapLevel = false;
 
 const float mipMapLevels = 7.0f;
 const float minMipMapDistance = 5.0f;
+
+
+//Normal mapping;
+const bool useNormalMaps = true;
+//////////////// Config stuff ////////////////
 
 
 
@@ -209,16 +219,21 @@ void unpackTextureFormattingBits(
 
 
 
-vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition, bool fetchTexture=true) {
+vec4 fetchValueFromSampler2DArrayWithLOD(
+		vec3 UV, double distance,
+		vec3 surfaceNormal, vec3 surfacePosition,
+		bool fetchTexture=true, sampler2DArray arrayToUse
+	) {
+	distance /= zoomEffect;
 	if (debugMode == 1) {
 		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
 	if (!fetchTexture || (UV.z < 0)) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
 	if (!useMipMapping) {
-		return textureLod(textureArray, UV, 0.0f);
+		return textureLod(arrayToUse, UV, 0.0f);
 	}
 	if (forceMipMapLevel) {
-		return textureLod(textureArray, UV, forcedMipMapLevel);
+		return textureLod(arrayToUse, UV, forcedMipMapLevel);
 	}
 
 	//Linear, uses MM1 from minMipMapDistance and so on.
@@ -230,15 +245,38 @@ vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition,
 	if (debugMipMapLevel) {
 		return vec4(LODIndex / mipMapLevels, fract(LODIndex), 0.0f, 1.0f);
 	}
-	vec4 mipMapColour = textureLod(textureArray, UV, ceil(LODIndex));
+	vec4 mipMapColour = textureLod(arrayToUse, UV, ceil(LODIndex));
 	if (!blendMipMap) {
 		return mipMapColour;
 	}
-	vec4 MipMapMinusOneColour = textureLod(textureArray, UV, ceil(LODIndex) - 1.0f);
+	vec4 MipMapMinusOneColour = textureLod(arrayToUse, UV, ceil(LODIndex) - 1.0f);
 	return mix(MipMapMinusOneColour, mipMapColour, fract(LODIndex));
 }
 
 
+vec3 getNormalVector(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfaceUp, vec3 surfacePosition) {
+	vec3 rgbNormal = fetchValueFromSampler2DArrayWithLOD(UV, distance, surfaceNormal, surfacePosition, true, normalArray).rgb;
+	vec3 translatedNormal = (rgbNormal - vec3(0.5f, 0.5f, 0.5f));
+	vec3 xyzNormal = normalize(vec3(translatedNormal.xy / 3.0f, 1.0f));
+
+	vec3 surfaceRight = cross(surfaceNormal, surfaceUp);
+	mat3 TBN = mat3(
+		surfaceRight.x, surfaceUp.x, surfaceNormal.x,
+		surfaceRight.y, surfaceUp.y, surfaceNormal.y,
+		surfaceRight.z, surfaceUp.y, surfaceNormal.z
+	);
+
+	return TBN * xyzNormal;
+}
+
+
+vec4 fetchAlbedo(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfaceUp, vec3 surfacePosition, out vec3 newSurfaceNormal) {
+	newSurfaceNormal = (useNormalMaps) ? getNormalVector(UV, distance * 2.0f, surfaceNormal, surfaceUp, surfacePosition) : surfaceNormal;
+	return fetchValueFromSampler2DArrayWithLOD(
+		UV, distance, newSurfaceNormal,
+		surfacePosition, true, textureArray
+	);
+}
 
 
 //GLSL Cross only works on vec3.
@@ -450,7 +488,7 @@ void main() {
 	if (foundObject) { //An intersect was found.
 		IntersectionData validIntersect;
 		bool success = true;
-		vec3 normal;
+		vec3 normal, up;
 		int typeFlag;
 		vec4 albedo;
 		float minDistance;
@@ -470,6 +508,7 @@ void main() {
 					validIntersect.UV.x *= -1;
 				}
 				normal = vec3(validIntersect.normal2D.xy, 0.0f);
+				up = vec3(0.0f, 0.0f, 1.0f);
 				typeFlag = 0x1;
 
 			} else if (validIntersect.foundType == 2) { //Visplane
@@ -480,18 +519,22 @@ void main() {
 				} else {
 					normal = vec3(0.0f, 0.0f, 1.0f);
 				}
+				up = vec3(0.0f, 1.0f, 0.0f);
 				typeFlag = 0x2;
+			} else {
+				continue;
 			}
 
 
 			minDistance = 1.0f / inversesqrt(validIntersect.distanceSQ);
-			albedo = fetchUV(validIntersect.UV, minDistance, normal, validIntersect.position);
+			vec3 newSurfaceNormal;
+			albedo = fetchAlbedo(validIntersect.UV, minDistance, normal, up, validIntersect.position, newSurfaceNormal);
 			if ((albedo.a < 0.5f) && (allowTransparency)) {continue;}
 			if (shouldDrawToPositionMap) {
 				uint idx = (validIntersect.index << 3) | typeFlag;
 				ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 				imageStore(positionMap, thisFramePosition, vec4(validIntersect.position, float(idx)));
-				imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));
+				imageStore(normalMap, thisFramePosition, vec4(normalize(newSurfaceNormal.xyz), 1.0f));
 			}
 			trueFound = true;
 			break;

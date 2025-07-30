@@ -188,7 +188,8 @@ inline GLuint raycastShader, envShader, displacementShader3D, displacementShader
 inline GLuint spriteShader, lightingShader, uiShader, displayShader; 
 
 //Textures
-inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric;
+inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
+inline GLuint textureArrayUI, textureArrayNumeric;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
