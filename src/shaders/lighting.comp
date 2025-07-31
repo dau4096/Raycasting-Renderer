@@ -347,8 +347,12 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 
 
 
-float getNormalDot(vec3 normal, vec3 direction) {
-	if (dot(normal, normal) < EPSILON) {return 1.0f; /* When normal is invalid (all 0s, used on sprites/sky where no normal exists) then treat it as 1.0f. */}
+float getNormalDot(vec3 normal, vec3 direction, out bool shouldUseSpecularHighlights) {
+	if (dot(normal, normal) < EPSILON) {
+		shouldUseSpecularHighlights = false;
+		return 1.0f; /* When normal is invalid (all 0s, used on sprites/sky where no normal exists) then treat it as 1.0f. */
+	}
+	shouldUseSpecularHighlights = true;
 	return dot(normal, direction);
 }
 
@@ -377,7 +381,10 @@ void main() {
 	vec3 normal = texture(normalMap, thisFramePosition).xyz;
 
 
+	bool shouldUseSpecularHighlights = true;
 	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
+	float normalDot;
+	vec3 lightDir;
 	if ((lightIndex == numLights + 1)) {
 		//Headlamp
 		if (!headLampEnabled) {exit(framePosition); return; /* Headlamp is turned off, don't bother calculating. */}
@@ -390,7 +397,7 @@ void main() {
 		float brightness = clamp(attenuation, 0.0f, 1.0f);
 
 		lightColour = headLampColour * brightness;
-
+		shouldUseSpecularHighlights = false; //Headlamp originates from the player's camera and so cannot show shadows or specular highlights.
 
 
 	} else if (lightIndex == numLights) {
@@ -407,13 +414,14 @@ void main() {
 			return;
 		}
 
-		float sunNormalDot = getNormalDot(normal, normalize(sunDirection));
+		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
 		bool sunBlocked = checkLOS(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
-		if ((sunNormalDot >= 0.0f) && !sunBlocked) {
-			float sunNormalContrib = (sunNormalDot * 0.5f) + 0.5f;
+		if ((normalDot >= 0.0f) && !sunBlocked) {
+			float sunNormalContrib = (normalDot * 0.5f) + 0.5f;
 			lightColour = sunColour.rgb * sunNormalContrib;
 		}
+		lightDir = sunDirection;
 
 
 	} else {
@@ -425,8 +433,8 @@ void main() {
 		if (dot(delta,delta) < EPSILON_ALT) {
 			lightColour = thisLight.colour;
 		} else {
-			vec3 lightDir = normalize(delta);
-			float normalDot = getNormalDot(normal, lightDir);
+			lightDir = normalize(delta);
+			normalDot = getNormalDot(normal, lightDir, shouldUseSpecularHighlights);
 			if (normalDot <= EPSILON_ALT) {exit(framePosition); return; /* Surface would reflect no lighting due to cosine of angles being negative. */}
 
 			float distSQ = dot(delta, delta);
@@ -443,6 +451,18 @@ void main() {
 		}
 	}
 
+
+
+	if (shouldUseSpecularHighlights) {
+		//Uses the dot product between a reflected fragDir (camera to 3d position) and the lightDir (3d position to light).
+		//Power of 8 reduces range of highlight, so they are more subtle.
+		vec3 fragDir = normalize(origin - playerPosition);
+		vec3 projNV = dot(fragDir, normal) * normal;
+		vec3 reflect = fragDir - 2.0f * projNV;
+		float base = abs(dot(reflect, lightDir));
+		float specularHighlightIntensity = pow(base, 8.0f);
+		lightColour *= 1.0f + specularHighlightIntensity;
+	}
 
 	imageStore(lightMapArray, framePosition, vec4(lightColour.rgb, 1.0f));
 }

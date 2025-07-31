@@ -122,7 +122,7 @@ vec3 getBrightness(vec2 UV) {
 		//Sprites and sky.
 		maxBright = 1.0f;
 	} else {
-		maxBright = 1.75f;
+		maxBright = 2.25f;
 	}
 	return clamp(lightingSum, DEFAULT_BRIGHTNESS, maxBright);
 }
