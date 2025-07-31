@@ -4,7 +4,7 @@
 layout(binding=0) uniform sampler2DArray textureArrayUI;
 layout(binding=1) uniform sampler2DArray textureArrayNumeric;
 layout(binding=2) uniform sampler2D renderedFrame;
-layout(rgba32f, binding=0) uniform image2D interfaceTexture;
+layout(rgba32f, binding=0) writeonly uniform image2D interfaceTexture;
 
 
 in vec3 fragUV;

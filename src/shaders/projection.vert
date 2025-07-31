@@ -23,7 +23,7 @@ out vec2 fragUV;
 out flat int dispIndex;
 
 
-const float PI = 3.141592f;
+#define PI 3.141592f
 
 
 void main() {

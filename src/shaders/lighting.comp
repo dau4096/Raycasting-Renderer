@@ -38,7 +38,7 @@ uniform bool allowTransparency;
 layout(binding=0) uniform sampler2D positionMap;
 layout(binding=1) uniform sampler2D normalMap;
 layout(binding=2) uniform sampler2DArray textureArray;
-layout(rgba32f, binding=0) uniform image2DArray lightMapArray;
+layout(rgba32f, binding=0) writeonly uniform image2DArray lightMapArray;
 
 struct Visplane {
 	vec4 vertices[4];	//2D points
@@ -88,13 +88,15 @@ layout(std430, binding=3) buffer lightSSBO {
 
 vec2 fragPosition;
 
-const float INF = 0xFFFFFF;
-const float EPSILON = 1e-4f;
-const float EPSILON_ALT = 1e-3f;
-const dvec2 INVALIDdv2 = dvec2(INF, INF);
-const vec2 INVALIDv2 = vec2(INF, INF);
-const vec3 INVALIDv3 = vec3(INF, INF, INF);
-const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
+#define INF 0xFFFFFF
+#define PI 3.141592f
+#define EPSILON 1e-4f
+#define EPSILON_ALT 1e-3f
+#define INVALIDdv2 dvec2(INF, INF)
+#define INVALIDv2 vec2(INF, INF)
+#define INVALIDv3 vec3(INF, INF, INF)
+#define INVALIDv4 vec4(INF, INF, INF, INF)
+
 
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -263,9 +265,9 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		vec3 minWall = min(thisWall.start, thisWall.end);
 		vec3 maxWall = max(thisWall.start, thisWall.end);
 		if (
-		    intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
-		    intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y ||
-		    intersectPoint.z + EPSILON_ALT < minWall.z || intersectPoint.z - EPSILON_ALT > maxWall.z
+			intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+			intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y ||
+			intersectPoint.z + EPSILON_ALT < minWall.z || intersectPoint.z - EPSILON_ALT > maxWall.z
 		) {
 			//Outside of valid wall segment.
 			continue;
@@ -321,18 +323,18 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		float invDeterminant = 1.0f / det;
 		vec3 s = pointA - thisDisp.vertices[0].xyz;
 		float u = invDeterminant * dot(s, rayCrossEdgeB);
-	    if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
-	        continue; //No hit.
-	    }
+		if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
+			continue; //No hit.
+		}
 
-	    vec3 sCrossEdgeA = cross(s, edgeA);
-	    float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
-	    if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
-	    	continue; //No hit.
-	    }
+		vec3 sCrossEdgeA = cross(s, edgeA);
+		float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
+		if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
+			continue; //No hit.
+		}
 
-	    float t = invDeterminant * dot(edgeB, sCrossEdgeA);
-	    if (t > EPSILON) {
+		float t = invDeterminant * dot(edgeB, sCrossEdgeA);
+		if (t > EPSILON) {
 			if (allowTransparency) {
 				vec2 UV = ((1.0f - u - v) * thisDisp.UV[0]) + (u * thisDisp.UV[1]) + (v * thisDisp.UV[2]);
 				if (textureLod(textureArray, vec3(UV.xy, thisDisp.normal_texID.w), 0.0f).a >= 0.5f) {
@@ -341,8 +343,8 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 			} else {
 				return true;
 			}
-	    }
- 	}
+		}
+	}
 
 	return false;
 }
@@ -363,6 +365,8 @@ float getNormalDot(vec3 normal, vec3 direction, out bool shouldUseSpecularHighli
 void exit(ivec3 framePosition) {
 	imageStore(lightMapArray, framePosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
 }
+
+
 
 
 void main() {
@@ -388,27 +392,9 @@ void main() {
 	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
 	float normalDot;
 	vec3 lightDir;
-	if ((lightIndex == numLights + 1)) {
-		//Headlamp
-		if (!headLampEnabled) {exit(framePosition); return; /* Headlamp is turned off, don't bother calculating. */}
 
-		const vec3 headLampColour = vec3(1.0f, 1.0f, 1.0f);
-
-		vec2 normPos = (2.0f * fragPosition / vec2(shadowResolution)) - 1.0f;
-		vec2 anglePos = normPos * vec2(maxRayAngle, verticalFOV / 2.0f);
-		if (dot(anglePos, anglePos) > 0.0625f) {exit(framePosition); return; /* Outside headlamp FOV */}
-
-		vec3 delta3D = origin - playerPosition;
-		float distanceSQ = dot(delta3D, delta3D);
-		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))); //Intensity fades with distance to light.
-		float brightness = clamp(attenuation, 0.0f, 1.0f);
-
-		lightColour = headLampColour * brightness;
-		shouldUseSpecularHighlights = false; //Headlamp originates from the player's camera and so cannot show shadows or specular highlights.
-
-
-	} else if (lightIndex == numLights) {
-		//Sun & sky's lighting
+	if (lightIndex == (numLights + 0)) {
+		//Sun & sky's lighting (Highest index + 1)
 		if (dot(sunColour, sunColour) < 0.025f) {exit(framePosition); return; /* Sun's effect is near 0 and can be ignored. */}
 
 		if ((debugMode > 0) || (type == 0x0)) {
@@ -429,6 +415,29 @@ void main() {
 			lightColour = sunColour.rgb * sunNormalContrib;
 		}
 		lightDir = sunDirection;
+
+
+
+
+	} else if (lightIndex == (numLights + 1)) {
+		//Headlamp (Highest index + 2)
+		if (!headLampEnabled) {exit(framePosition); return; /* Headlamp is turned off, don't bother calculating. */}
+
+		const vec3 headLampColour = vec3(1.0f, 1.0f, 1.0f);
+
+		vec2 normPos = (2.0f * fragPosition / vec2(shadowResolution)) - 1.0f;
+		vec2 anglePos = normPos * vec2(maxRayAngle, verticalFOV / 2.0f);
+		if (dot(anglePos, anglePos) > 0.0625f) {exit(framePosition); return; /* Outside headlamp FOV */}
+
+		vec3 delta3D = origin - playerPosition;
+		float distanceSQ = dot(delta3D, delta3D);
+		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))); //Intensity fades with distance to light.
+		float brightness = clamp(attenuation, 0.0f, 1.0f);
+
+		lightColour = headLampColour * brightness;
+		shouldUseSpecularHighlights = false; //Headlamp originates from the player's camera and so cannot show shadows or specular highlights.
+
+
 
 
 	} else {
@@ -457,6 +466,7 @@ void main() {
 			}
 		}
 	}
+
 
 
 

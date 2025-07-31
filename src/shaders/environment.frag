@@ -31,9 +31,9 @@ uniform float shadowMapQuality;
 uniform bool allowTransparency;
 
 
-layout(rgba32f, binding=0) uniform image2D renderedFrame;
-layout(rgba32f, binding=1) uniform image2D positionMap;
-layout(rgba32f, binding=2) uniform image2D normalMap;
+layout(rgba32f, binding=0) writeonly uniform image2D renderedFrame;
+layout(rgba32f, binding=1) writeonly uniform image2D positionMap;
+layout(rgba32f, binding=2) writeonly uniform image2D normalMap;
 
 
 struct Visplane {
@@ -147,26 +147,26 @@ float zoomEffect;
 float halfFOV;
 double t;
 float fragZ;
-const float INF = 0xFFFFFF;
-const float EPSILON = 1e-4f;
-const float EPSILON_ALT = 1e-3f;
-const float MIN_WALL_DIST = 0.125f;
-const dvec2 INVALIDdv2 = dvec2(INF, INF);
-const vec2 INVALIDv2 = vec2(INF, INF);
-const vec3 INVALIDv3 = vec3(INF, INF, INF);
-const vec4 INVALIDv4 = vec4(INF, INF, INF, INF);
+#define INF 0xFFFFFF
+#define EPSILON 1e-4f
+#define EPSILON_ALT 1e-3f
+#define MIN_WALL_DIST 0.125f
+#define INVALIDdv2 dvec2(INF, INF)
+#define INVALIDv2 vec2(INF, INF)
+#define INVALIDv3 vec3(INF, INF, INF)
+#define INVALIDv4 vec4(INF, INF, INF, INF)
 
 
 
 //////////////// Config stuff ////////////////
 //Mip-mapping;
-const bool blendMipMap = true;
-const bool forceMipMapLevel = false;
-const float forcedMipMapLevel = 0.0f;
-const bool debugMipMapLevel = false;
+#define blendMipMap true
+#define forceMipMapLevel false
+#define forcedMipMapLevel 0.0f
+#define debugMipMapLevel false
 
-const float mipMapLevels = 7.0f;
-const float minMipMapDistance = 5.0f;
+#define mipMapLevels 7.0f
+#define minMipMapDistance 5.0f
 //////////////// Config stuff ////////////////
 
 

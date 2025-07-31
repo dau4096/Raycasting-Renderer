@@ -50,7 +50,7 @@ uniform ivec2 renderResolution;
 
 
 float zoomEffect;
-const float EPSILON_ALT = 1e-3f;
+#define EPSILON_ALT 1e-3f
 
 
 void writeNoIntersect(uint SSBOIndex) {

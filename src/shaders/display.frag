@@ -9,7 +9,7 @@ layout(binding=0) uniform sampler2D renderedFrameSampler2D;
 layout(binding=1) uniform sampler2D interfaceTexture;
 layout(binding=2) uniform sampler2DArray lightMapsArray;
 layout(binding=3) uniform sampler2D normalMap;
-layout(rgba32f, binding=0) uniform image2D renderedFrameImage2D;
+layout(rgba32f, binding=0) writeonly uniform image2D renderedFrameImage2D;
 
 
 //Camera
@@ -27,8 +27,13 @@ uniform vec4 screenTint;
 uniform bool isInvertEffect;
 
 
-const float EPSILON = 1e-4f;
-const float DEFAULT_BRIGHTNESS = 0.175f;
+#define EPSILON 1e-4f
+
+//////////////// Config stuff ////////////////
+//Lighting;
+#define DEFAULT_BRIGHTNESS 0.175f
+#define NUM_PSEUDO_LIGHTS 2
+//////////////// Config stuff ////////////////
 
 
 vec2 getUV(vec2 pos) {
@@ -114,7 +119,7 @@ vec4 smoothingFunc() {
 
 vec3 getBrightness(vec2 UV) {
 	vec3 lightingSum = vec3(0.0f, 0.0f, 0.0f);
-	for (int i=0; i<(numLights+2); i++) {
+	for (int i=0; i<(numLights+NUM_PSEUDO_LIGHTS); i++) {
 		lightingSum += texture(lightMapsArray, vec3(UV.xy, i)).rgb;
 	}
 	float maxBright;

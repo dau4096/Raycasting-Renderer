@@ -5,9 +5,9 @@ layout(binding=0) uniform sampler2D renderedFrameRO;
 layout(binding=1) uniform sampler2D FBOColour;
 layout(binding=2) uniform sampler2D FBOPosition;
 layout(binding=3) uniform sampler2D FBONormal;
-layout(rgba32f, binding=0) uniform image2D renderedFrameWO;
-layout(rgba32f, binding=1) uniform image2D positionMap;
-layout(rgba32f, binding=2) uniform image2D normalMap;
+layout(rgba32f, binding=0) writeonly uniform image2D renderedFrameWO;
+layout(rgba32f, binding=1) writeonly uniform image2D positionMap;
+layout(rgba32f, binding=2) writeonly uniform image2D normalMap;
 
 
 
@@ -15,7 +15,7 @@ uniform float shadowMapQuality;
 uniform ivec2 renderResolution;
 uniform float maxRayDistance;
 
-const float EPSILON = 1e-4f;
+#define EPSILON 1e-4f
 
 
 

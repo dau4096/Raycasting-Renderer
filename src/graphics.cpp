@@ -1568,7 +1568,9 @@ void draw(double blendingAlpha) {
 	glDispatchCompute(
 		(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
 		(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-		(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z
+		(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+		//maxIndex + 1 : All sunlight calculations. [SUNL]
+		//maxIndex + 2 : All headlamp calculations. [HLMP]
 	);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	GLErrorcheck("Lighting Shader", true);
