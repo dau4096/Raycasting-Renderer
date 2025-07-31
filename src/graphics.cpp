@@ -1562,7 +1562,7 @@ void draw(double blendingAlpha) {
 	uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
 	uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
-	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 5.0f + (lightFlickerRNG / 768.0f)); //lightFlickerRNG is 0-255.
+	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
 
 	//Dispatch 2 extra valid lights (Sun, Headlamp.)
 	glDispatchCompute(

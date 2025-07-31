@@ -7,6 +7,9 @@ uniform float maxRayDistance;
 uniform vec2 textureScale;
 uniform vec3 textureOffset;
 uniform bool useMipMapping;
+uniform float verticalFOV;
+uniform float maxRayAngle;
+uniform float zoomEffect;
 
 //PlayerData
 uniform vec3 playerPosition;
@@ -391,8 +394,12 @@ void main() {
 
 		const vec3 headLampColour = vec3(1.0f, 1.0f, 1.0f);
 
-		vec3 d = origin - playerPosition;
-		float distanceSQ = dot(d,d);
+		vec2 normPos = (2.0f * fragPosition / vec2(shadowResolution)) - 1.0f;
+		vec2 anglePos = normPos * vec2(maxRayAngle, verticalFOV / 2.0f);
+		if (dot(anglePos, anglePos) > 0.0625f) {exit(framePosition); return; /* Outside headlamp FOV */}
+
+		vec3 delta3D = origin - playerPosition;
+		float distanceSQ = dot(delta3D, delta3D);
 		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))); //Intensity fades with distance to light.
 		float brightness = clamp(attenuation, 0.0f, 1.0f);
 
