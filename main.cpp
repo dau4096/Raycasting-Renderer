@@ -184,8 +184,21 @@ void renderFrame() {
 
 	glm::mat4 modelMatrix = glm::mat4(1.0f);
 	glm::mat4 viewMatrix = glm::lookAt(player.cameraPosition, player.cameraPosition + viewDirection, glm::vec3(0.0f, 0.0f, 1.0f)); //+Z is up.
+
+	//Perspective matrix for XY.
 	glm::mat4 projMatrix = glm::perspective(utils::configToFloat("VIEW_FOV") / zoomEffect, aspectRatio, display::Z_NEAR, utils::configToFloat("VIEW_MAX_DIST"));
-	glm::mat4 pvmMatrix = projMatrix * viewMatrix * modelMatrix;
+	glm::mat4 perspectiveMatrix = projMatrix * viewMatrix * modelMatrix;
+
+	//Orthographic matrix for Z.
+	float orthoTopZ = player.cameraPosition.z + utils::configToFloat("VIEW_MAX_DIST");
+	float orthoBottomZ = player.cameraPosition.z - utils::configToFloat("VIEW_MAX_DIST");
+
+	glm::mat4 orthoZ = glm::ortho(
+	    -1.0f, 1.0f, -1.0f, 1.0f, //XY not used in shader, only Z.
+	    orthoBottomZ, orthoTopZ
+	);
+
+	glm::mat4 orthoMatrix = orthoZ * viewMatrix * modelMatrix;
 
 
 	//Sky shader
@@ -214,8 +227,10 @@ void renderFrame() {
 	render::bindCommonUniforms(triShader, &player);
 
 	//MVPMatrix;
-	GLint pvmMatrixLocation = glGetUniformLocation(triShader, "pvmMatrix");
-	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(pvmMatrix));
+	GLint perspectiveMatrixLocation = glGetUniformLocation(triShader, "perspectiveMatrix");
+	glUniformMatrix4fv(perspectiveMatrixLocation, 1, GL_FALSE, glm::value_ptr(perspectiveMatrix));
+	GLint orthoMatrixLocation = glGetUniformLocation(triShader, "orthoMatrix");
+	glUniformMatrix4fv(orthoMatrixLocation, 1, GL_FALSE, glm::value_ptr(orthoMatrix));
 
 	//Other
 	render::bindUniformValue(triShader, "headLampEnabled", headLampEnabled);
