@@ -273,8 +273,12 @@ float getWallYUV(Wall thisWall, uint projections) {
 	);
 
 
-	float screenYLow = float((projections >> 16) & 0xFFFF) - 12289.0f; //12,288 == 0x3000
-	float screenYTop = float(projections & 0xFFFF) - 12287.0f;
+	//The ideal offset is -0x3000 (-12288), but they have slight offsets to account for floating-point inconsistencies later. (+/- 1px.)
+	float lowOffset = (playerPosition.z < thisWall.start.z) ? 0.0f : -1.0f;
+	float screenYLow = float(int((projections >> 16) & 0xFFFF) - 0x3000) + lowOffset;
+
+	float topOffset = ((playerPosition.z > thisWall.end.z) ? 0.0f : 1.0f);
+	float screenYTop = float(int(projections & 0xFFFF) - 0x3000) + topOffset;
 
 	if (fragPosition.y >= screenYTop || fragPosition.y <= screenYLow) {
 		return INF;
