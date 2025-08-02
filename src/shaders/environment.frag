@@ -255,7 +255,7 @@ vec4 fetchValueFromSampler2DArrayWithLOD(
 
 
 vec3 getNormalVector(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfaceUp, vec3 surfacePosition) {
-	vec3 rgbNormal = fetchValueFromSampler2DArrayWithLOD(UV, distance, surfaceNormal, surfacePosition, true, normalArray).rgb;
+	vec3 rgbNormal = textureLod(normalArray, UV, 0.0).rgb;
 	vec3 translatedNormal = (rgbNormal - vec3(0.5f, 0.5f, 0.5f));
 	vec3 xyzNormal = normalize(vec3(translatedNormal.xy / 3.0f, 1.0f));
 
