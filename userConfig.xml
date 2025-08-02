@@ -35,7 +35,7 @@
 	<option function="VIEW_SHOW_HUD" value="TRUE" />
 	<option function="VIEW_BOB" value="TRUE" />
 	<option function="VIEW_LEAN" value="TRUE" />
-	<option function="VIEW_VLOOK" value="TRUE" />
+	<option function="VIEW_VLOOK" value="FALSE" />
 	<option function="VIEW_SMOOTHING" value="FALSE" />
 	<option function="VIEW_MIPMAPPING" value="TRUE" />
 	<option function="VIEW_TEXTURE_QUALITY" value="HIGH" />

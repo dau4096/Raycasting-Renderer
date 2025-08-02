@@ -464,7 +464,6 @@ void main() {
 
 			if (!inShadow) {
 				lightColour = thisLight.colour * attenuation;
-				shouldUseSpecularHighlights = shouldUseSpecularHighlights && (dot(fragDir, normalize(thisLight.position - playerPosition)) >= 0.0f);
 			}
 		}
 	}
