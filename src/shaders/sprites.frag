@@ -182,16 +182,18 @@ void main() {
 		
 		uint texID = (thisSprite.textureID_transparency & 0xFFFF);
 		if (debugMode == 1) { //DrawUV
-			albedo = vec3(spriteUV.xy, texID/16);
+			albedo = vec3(spriteUV.xy, texID/64.0f);
 		} else if (debugMode == 2) { //DrawNormals
-			albedo = vec3(normalize(delta.xy), 0.0f);
+			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
+			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
+			albedo = vec3(0.5f, 0.5f, 0.5f);
 		} else {
 			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
 			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 			albedo = alphaTexture.rgb;
 		}
 
-		transparency = (thisSprite.textureID_transparency >> 16) / 65535.0f;
+		transparency = (thisSprite.textureID_transparency >> 16) / 65535.0f; //The smallest non-zero value transparency can be is 1/65535.
 		fragDepth = 1.0f / invdistance;
 		spriteHit = true;
 		closestSprite = thisSprite;

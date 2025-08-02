@@ -179,13 +179,13 @@ void main() {
 	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
 	float projStart = dot(playerPos2D-thisWall.start.xy, wallNormal);
 	float projEnd = dot((playerPos2D + rayDelta2D)-thisWall.start.xy, wallNormal);
-	if (projStart * projEnd >= 0.0f) {
+	if (projStart * projEnd > 0.0f) {
 		//Ray never crosses wall.
 		writeNoIntersect(SSBOIndex);
 		return;
 	}
 
-	float t = (projStart) / (projEnd - projStart);
+	float t = projStart / (projEnd - projStart);
 	vec2 intersectPoint = playerPos2D - rayDelta2D * t;
 	vec2 minWall = min(thisWall.start.xy, thisWall.end.xy);
 	vec2 maxWall = max(thisWall.start.xy, thisWall.end.xy);

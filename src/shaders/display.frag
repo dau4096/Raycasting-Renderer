@@ -17,11 +17,15 @@ uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform ivec2 renderResolution;
 
+//Debug
+uniform int debugMode;
+
 //Other
 uniform int antiAliasingLevel;
 uniform bool smoothingEnabled;
 uniform int quantisingLevel;
 uniform bool screenshotHasHUD;
+uniform bool shouldTakeScreenshot;
 uniform int numLights;
 uniform vec4 screenTint;
 uniform bool isInvertEffect;
@@ -117,19 +121,20 @@ vec4 smoothingFunc() {
 }
 
 
-vec3 getBrightness(vec2 UV) {
+vec3 getBrightness(vec2 UV, out float maxBrightness) {
+	if ((debugMode != 0) && (debugMode != 3)) {return vec3(1.0f, 1.0f, 1.0f); /* Not no-debug and not lighting debug. */}
+
 	vec3 lightingSum = vec3(0.0f, 0.0f, 0.0f);
 	for (int i=0; i<(numLights+NUM_PSEUDO_LIGHTS); i++) {
 		lightingSum += texture(lightMapsArray, vec3(UV.xy, i)).rgb;
 	}
-	float maxBright;
 	if (length(texture(normalMap, UV).xyz) < EPSILON) {
 		//Sprites and sky.
-		maxBright = 1.0f;
+		maxBrightness = 1.0f;
 	} else {
-		maxBright = 2.25f;
+		maxBrightness = 2.25f;
 	}
-	return clamp(lightingSum, DEFAULT_BRIGHTNESS, maxBright);
+	return clamp(lightingSum, DEFAULT_BRIGHTNESS, maxBrightness);
 }
 
 
@@ -138,17 +143,26 @@ void main() {
 	vec2 mainUV = getUV(gl_FragCoord.xy);
 	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
 	if (albedo.a >= maxRayDistance) {
-		resultant = vec4(albedo.rgb, 1.0f);
-	} else {
-		vec3 brightness = getBrightness(mainUV);
-		resultant = vec4(albedo.rgb * brightness, 1.0f);
-
-		if (isInvertEffect) {
-			vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
-			float flashAlpha = screenTint.a * 2.0f - 1.0f;
-			resultant.rgb = mix(resultant.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+		if (debugMode == 3) { //Debug lighting.
+			resultant = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		} else {
-			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
+			resultant = vec4(albedo.rgb, 1.0f);
+		}
+	} else {
+		float maxBrightness;
+		vec3 brightness = getBrightness(mainUV, maxBrightness);
+		if (debugMode == 3) { //Debug lighting.
+			resultant.rgb = brightness / maxBrightness;
+		} else {
+			resultant = vec4(albedo.rgb * brightness, 1.0f);
+
+			if (isInvertEffect) {
+				vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
+				float flashAlpha = screenTint.a * 2.0f - 1.0f;
+				resultant.rgb = mix(resultant.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+			} else {
+				resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
+			}
 		}
 	}
 
@@ -164,12 +178,12 @@ void main() {
 
 
 	ivec2 framePosition = ivec2((gl_FragCoord.xy * vec2(renderResolution)) / vec2(screenResolution));
-	if (!screenshotHasHUD) {
+	if (!screenshotHasHUD && shouldTakeScreenshot) {
 		imageStore(renderedFrameImage2D, framePosition, vec4(resultant.rgb, 1.0f));
 	}
 	vec4 interfaceColour = texture(interfaceTexture, mainUV);
 	fragColour = vec4(mix(resultant.rgb, interfaceColour.rgb, interfaceColour.a), 1.0f);
-	if (screenshotHasHUD) {
+	if (screenshotHasHUD && shouldTakeScreenshot) {
 		imageStore(renderedFrameImage2D, framePosition, fragColour);
 	}
 }

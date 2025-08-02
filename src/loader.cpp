@@ -1089,6 +1089,7 @@ static std::unordered_map<std::string, int> debugMap = {
 	{"", 0}, {"NONE", 0},
 	{"UV", 1}, {"TEXTURE_UV", 1},
 	{"NORMALS", 2}, {"SURFACE_NORMALS", 2},
+	{"BRIGHTNESS", 3}, {"LIGHTING", 3},
 };
 
 static std::unordered_map<std::string, int> texMipMap = {

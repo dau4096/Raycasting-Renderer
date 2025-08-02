@@ -260,7 +260,7 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		float projEnd = dot(pointB.xy-thisWall.start.xy, wallNormal);
 		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
 
-		float t = (projStart) / (projEnd - projStart);
+		float t = projStart / (projEnd - projStart);
 		vec3 intersectPoint = pointA - LOSDelta * t;
 		vec3 minWall = min(thisWall.start, thisWall.end);
 		vec3 maxWall = max(thisWall.start, thisWall.end);
@@ -392,6 +392,7 @@ void main() {
 	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
 	float normalDot;
 	vec3 lightDir;
+	vec3 fragDir = normalize(origin - playerPosition);
 
 	if (lightIndex == (numLights + 0)) {
 		//Sun & sky's lighting (Highest index + 1)
@@ -463,6 +464,7 @@ void main() {
 
 			if (!inShadow) {
 				lightColour = thisLight.colour * attenuation;
+				shouldUseSpecularHighlights = shouldUseSpecularHighlights && (dot(fragDir, normalize(thisLight.position - playerPosition)) >= 0.0f);
 			}
 		}
 	}
@@ -473,12 +475,13 @@ void main() {
 	if (shouldUseSpecularHighlights) {
 		//Uses the dot product between a reflected fragDir (camera to 3d position) and the lightDir (3d position to light).
 		//Power of 8 reduces range of highlight, so they are more subtle.
-		vec3 fragDir = normalize(origin - playerPosition);
 		vec3 projNV = dot(fragDir, normal) * normal;
 		vec3 reflect = fragDir - 2.0f * projNV;
-		float base = abs(dot(reflect, lightDir));
-		float specularHighlightIntensity = pow(base, 8.0f);
-		lightColour *= 1.0f + specularHighlightIntensity;
+		float base = dot(reflect, lightDir);
+		if (base > 0.0f) {
+			float specularHighlightIntensity = pow(base, 8.0f);
+			lightColour *= 1.0f + specularHighlightIntensity;
+		}
 	}
 
 	imageStore(lightMapArray, framePosition, vec4(lightColour.rgb, 1.0f));
