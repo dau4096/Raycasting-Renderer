@@ -30,6 +30,7 @@
 
 	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
 	<option function="VIEW_SHADOW_QUALITY" value="FULL" />
+	<option function="VIEW_USE_DYNAMIC_SHADOWS" value="TRUE" />
 	<option function="VIEW_FOV" value="70.0" />
 	<option function="VIEW_MAX_RAY_DIST" value="127.0" />
 	<option function="VIEW_SHOW_HUD" value="TRUE" />

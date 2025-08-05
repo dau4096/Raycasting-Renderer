@@ -281,6 +281,7 @@ namespace display {
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr size_t MAX_TEXTOBJECT_CHARACTERS = 64;
+	constexpr float SHADOWMAP_SCALING = 0.01f;
 }
 
 namespace initial {

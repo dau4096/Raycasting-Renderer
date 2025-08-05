@@ -799,6 +799,7 @@ void updateSpecials(bool interactKey) {
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		structs::Wall wall = physicsData->wallData.at(wIndex);
 		bool enabled = false;
+		bool upd = true;
 		if (wall.IOPtr) {enabled = *(wall.IOPtr);}
 
 		switch(wall.type) {
@@ -897,10 +898,13 @@ void updateSpecials(bool interactKey) {
 			}
 
 			default: {
+				upd = false;
 				break;
 			}
 		}
-		physicsData->wallData.at(wIndex) = wall;
+		if (upd) {
+			physicsData->wallData.at(wIndex) = wall;
+		}
 	}
 
 
@@ -908,6 +912,7 @@ void updateSpecials(bool interactKey) {
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
 		structs::Visplane vPlane = physicsData->visplaneData.at(vIndex);
 		bool enabled = false;
+		bool upd = true;
 		if (vPlane.IOPtr) {enabled = *(vPlane.IOPtr);}
 
 
@@ -1028,10 +1033,13 @@ void updateSpecials(bool interactKey) {
 			}
 
 			default: {
+				upd = false;
 				break;
 			}
 		}
-		physicsData->visplaneData.at(vIndex) = vPlane;
+		if (upd) {
+			physicsData->visplaneData.at(vIndex) = vPlane;
+		}
 	}
 }
 

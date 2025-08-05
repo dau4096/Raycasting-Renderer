@@ -55,6 +55,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_INTERFACE_IN_SCREENSHOT", ""},
 	{"VIEW_VSYNC", ""},
 	{"VIEW_SHADOW_QUALITY", ""},
+	{"VIEW_USE_DYNAMIC_SHADOWS", ""},
 	{"VIEW_ALLOW_TRANSPARENCY", ""},
 	{"VIEW_ALLOW_TRANSPARENT_SHADOWS", ""},
 	{"VIEW_WIGGLY_TEXTOBJECTS", ""},
@@ -146,6 +147,8 @@ inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
 inline glm::ivec2 currentShadowResolution;
+inline bool canUseARBTextures;
+inline bool useDynamicShadows;
 
 
 //Other
@@ -188,7 +191,7 @@ inline GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, lighting
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
-inline GLuint spriteShader, lightingShader, uiShader, displayShader; 
+inline GLuint spriteShader, lightingShaderDynamic, lightingShaderPrecompute, shadowMappingPreprocess, uiShader, displayShader; 
 
 //Textures
 inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric;
@@ -314,6 +317,8 @@ struct Visplane {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	GLuint64 shadowMapHandle;
+	GLuint shadowMapID;
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
@@ -327,9 +332,10 @@ struct Visplane {
 			VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
-			float exitDirection=constants::INF
+			float exitDirection=constants::INF,
+			GLuint shadowMapID=0
 		) : height(heightZ), originalHeight(heightZ), 
-			textureData1(textureData1),
+			textureData1(textureData1), shadowMapID(shadowMapID),
 			type(type),	IOPtr(IOPtr), data(data) {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
@@ -364,6 +370,9 @@ struct Visplane {
 				}
 				ensureACW(vertices, numVertices);
 				std::copy(std::begin(vertices), std::end(vertices), std::begin(originalVertices));
+
+				shadowMapHandle = glGetTextureHandleARB(shadowMapID);
+				glMakeTextureHandleResidentARB(shadowMapHandle);
 			}
 
 	Visplane(
@@ -371,9 +380,10 @@ struct Visplane {
 			VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
-			float exitDirection=constants::INF
+			float exitDirection=constants::INF,
+			GLuint shadowMapID=0
 		) : height(heightZ), originalHeight(heightZ), 
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), shadowMapID(shadowMapID) {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -406,6 +416,10 @@ struct Visplane {
 
 				ensureACW(vertices, numVertices);
 				std::copy(std::begin(vertices), std::end(vertices), std::begin(originalVertices));
+
+
+				shadowMapHandle = glGetTextureHandleARB(shadowMapID);
+				glMakeTextureHandleResidentARB(shadowMapHandle);
 			}
 };
 
@@ -416,6 +430,7 @@ struct VisplaneGPU {
 	GLuint textureData1;
 	GLuint textureData2;
 	glm::vec4 boundingBox;
+	GLuint64 shadowMapHandle;
 
 	VisplaneGPU()
 		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox() {}
@@ -454,6 +469,8 @@ struct Wall {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	GLuint64 shadowMapHandle;
+	GLuint shadowMapID;
 
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
@@ -475,10 +492,11 @@ struct Wall {
 			WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
 			GLint textureID1=-1,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY1=false, bool swapUVXY2=false,
-			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
+			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
+			GLuint shadowMapID=0
 		) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
 			end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
-			type(type), 
+			type(type), shadowMapID(shadowMapID),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -498,6 +516,10 @@ struct Wall {
 				} else {
 					internal = nullptr;
 				}
+
+
+				shadowMapHandle = glGetTextureHandleARB(shadowMapID);
+				glMakeTextureHandleResidentARB(shadowMapHandle);
 			}
 
 	Wall(
@@ -506,10 +528,11 @@ struct Wall {
 			WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
 			GLint textureID1=-1,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY1=false, bool swapUVXY2=false,
-			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
+			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
+			GLuint shadowMapID=0
 		) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
-			type(type), 
+			type(type), shadowMapID(shadowMapID),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -529,15 +552,20 @@ struct Wall {
 				} else {
 					internal = nullptr;
 				}
+
+
+				shadowMapHandle = glGetTextureHandleARB(shadowMapID);
+				glMakeTextureHandleResidentARB(shadowMapHandle);
 			}
 };
 
 struct WallGPU {
-	alignas(16) glm::vec3 start;
-	alignas(16) glm::vec3 end;
-	alignas(8) glm::vec2 direction;
-	alignas(4) GLuint textureData1;
-	alignas(4) GLuint textureData2;
+	glm::vec3 start;
+	glm::vec3 end;
+	glm::vec2 direction;
+	GLuint textureData1;
+	GLuint textureData2;
+	GLuint64 shadowMapHandle;
 
 	WallGPU()
 		: start(), end(), direction(),

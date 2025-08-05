@@ -209,6 +209,14 @@ static inline float getExtra(const pugi::xml_node& node, float defaultValue=0.0f
 }
 
 
+static inline void getShadowMap(glm::vec2 minimum, glm::vec2 maximum, GLuint* shadowMapID) {
+	glm::vec2 range = maximum - minimum;
+	glm::ivec2 resolution = glm::ivec2(range / display::SHADOWMAP_SCALING);
+	cout << "Creating shadow map with resolution; (" << resolution.x << ", " << resolution.y << ")" << endl;
+	*shadowMapID = graphics::createGLImage2D(resolution.x, resolution.y);
+}
+
+
 
 void processTeleporterPartners(std::vector<structs::Visplane>* visplaneData) {
 	for (std::pair<std::string, std::pair<size_t, size_t>> pair : indexMap) {
@@ -770,6 +778,15 @@ static inline structs::Visplane extractVisplane(
 	if (vertexNode) { //Has explicit vertices.
 		std::vector<glm::vec2> vertsVec = getVertsV2(vertexNode, 8);
 		if (vertsVec.size() < 3) {raise("Visplanes must have at least 3 vertices.");}
+
+		glm::vec2 minimum, maximum;
+		for (glm::vec2 pt : vertsVec) {
+			minimum = glm::min(minimum, pt);
+			maximum = glm::max(maximum, pt);
+		}
+		GLuint shadowMapID;
+		getShadowMap(minimum, maximum, &shadowMapID);
+
 		visplane = structs::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
@@ -782,13 +799,20 @@ static inline structs::Visplane extractVisplane(
 			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-			getFloat(node, "exitDirection", constants::INF)
+			getFloat(node, "exitDirection", constants::INF),
+			shadowMapID
 		);
 
 	} else { //Old method for compatability. 
+		glm::vec2 start = getVec2(node, "start", glm::vec2(0.0f, 0.0f));
+		glm::vec2 end = getVec2(node, "end", glm::vec2(0.0f, 0.0f));
+		glm::vec2 minimum = glm::min(start, end);
+		glm::vec2 maximum = glm::max(start, end);
+		GLuint shadowMapID;
+		getShadowMap(minimum, maximum, &shadowMapID);
+
 		visplane = structs::Visplane(
-			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
-			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
+			start, end,
 			getFloat(node, "height", 0.0f),
 			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 			type,
@@ -799,7 +823,8 @@ static inline structs::Visplane extractVisplane(
 			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-			getFloat(node, "exitDirection", constants::INF)
+			getFloat(node, "exitDirection", constants::INF),
+			shadowMapID
 		);
 	}
 
@@ -817,9 +842,17 @@ static inline structs::Wall extractWall(
 		const pugi::xml_node& node
 	) {
 
+	glm::vec3 start = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 end = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 minimum3D = glm::min(start, end);
+	glm::vec2 minimum2D = glm::vec2(minimum3D.x, minimum3D.z);
+	glm::vec3 maximum3D = glm::max(start, end);
+	glm::vec2 maximum2D = glm::vec2(maximum3D.x, maximum3D.z);
+	GLuint shadowMapID;
+	getShadowMap(minimum2D, maximum2D, &shadowMapID);
+
 	structs::Wall wall = structs::Wall(
-		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
+		start, end,
 		getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
 		getPTR(node, "flag", &(constants::C_FALSE)),
@@ -830,7 +863,8 @@ static inline structs::Wall extractWall(
 		getBool(node, "flipUVXY", false),
 		getBool(node, "flipAltUVXY", false),
 		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
-		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
+		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
+		shadowMapID
 	);
 	
 	return wall;

@@ -1118,8 +1118,10 @@ void prepareOpenGL() {
 	//Sprite Shader
 	GLIndex::spriteShader = createShaderProgram("sprites");
 
-	//Lighting compute Shader
-	GLIndex::lightingShader = createComputeShader("lighting");
+	//Lighting compute Shaders
+	GLIndex::lightingShaderDynamic = createComputeShader("lightingDynamic");
+	GLIndex::lightingShaderPrecompute = createComputeShader("lightingPrecomputePerFrame");
+	GLIndex::shadowMappingPreprocess = createComputeShader("lightingPreprocessOnce")
 
 	//uiShader
 	GLIndex::uiShader = createShaderProgram("interface", "interface");
@@ -1138,7 +1140,9 @@ void prepareOpenGL() {
 
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	uiMatrix = glm::ortho(0.0f, float(display::UI_RESOLUTION.x), 0.0f, float(display::UI_RESOLUTION.y), -1.0f, 1.0f);
-	
+	canUseARBTextures = glewIsSupported("GL_ARB_bindless_texture");
+	if (!utils::configToBool("VIEW_USE_DYNAMIC_SHADOWS") && !canUseARBTextures) {std::cout << "Cannot use premade shadows due to lack of support for OpenGL ARB Textures. Using original dynamic shadows." << std::endl;}
+	useDynamicShadows = utils::configToBool("VIEW_USE_DYNAMIC_SHADOWS") && canUseARBTextures;
 
 	//Debug settings
 	glEnable(GL_DEBUG_OUTPUT);
@@ -1164,6 +1168,20 @@ void prepareOpenGL() {
 
 
 
+void createShadowMaps() {
+	const glm::uvec3 SHADOW_MAPPING_SIZE = glm::uvec3(16, 16, 1);
+	for (structs::Wall wall : graphicsData->wallData) {
+		glUseProgram(GLIndex::shadowMappingPreprocess);
+		uniforms::bindCommonUniforms(GLIndex::shadowMappingPreprocess, blendingAlpha, currentTime);
+		glDispatchCompute(
+			(wall.shadowResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
+			(wall.shadowResolution + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
+			1
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		GLErrorcheck("Raycasting Shader", true);
+	}
+}
 
 
 
@@ -1188,11 +1206,11 @@ void updateSSBOs(bool drawLightBlockers) {
 		drawLightBlockers
 	);
 
-
 	//Update SSBOs.
 	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
 		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
 	);
+	//pause();
 	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
 		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
 	);
@@ -1555,30 +1573,55 @@ void draw(double blendingAlpha, double currentTime) {
 	//Lighting Shader
 	updateSSBOs(true);
 	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-	glUseProgram(GLIndex::lightingShader);
+	if (utils::configToBool("VIEW_USE_DYNAMIC_SHADOWS") || !canUseARBTextures) {
+		//Dynamic lighting does not need ARB textures, and can also be manually enabled.
+		glUseProgram(GLIndex::lightingShaderDynamic);
 
-	glBindTextureUnit(0, GLIndex::positionMapID);
-	glBindTextureUnit(1, GLIndex::normalMapID);
-	glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-	glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		glBindTextureUnit(0, GLIndex::positionMapID);
+		glBindTextureUnit(1, GLIndex::normalMapID);
+		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-	//Uniforms;
-	uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-	uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
-	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
-	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+		//Uniforms;
+		uniforms::bindCommonUniforms(GLIndex::lightingShaderDynamic, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
 
-	//Dispatch 2 extra valid lights (Sun, Headlamp.)
-	glDispatchCompute(
-		(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
-		(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-		(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
-		//maxIndex + 1 : All sunlight calculations. [SUNL]
-		//maxIndex + 2 : All headlamp calculations. [HLMP]
-	);
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	GLErrorcheck("Lighting Shader", true);
+		//Dispatch 2 extra valid lights (Sun, Headlamp.)
+		glDispatchCompute(
+			(currentShadowResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+			(currentShadowResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+			//maxIndex + 1 : All sunlight calculations. [SUNL]
+			//maxIndex + 2 : All headlamp calculations. [HLMP]
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		GLErrorcheck("Dynamic Lighting Shader", true);
+
+	} else {
+		//Premade lighting can only be used if it is selected, and ARB textures are available.
+		glUseProgram(GLIndex::lightingShaderPrecompute);
+
+		glBindTextureUnit(0, GLIndex::positionMapID);
+		glBindTextureUnit(1, GLIndex::normalMapID);
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		//Uniforms;
+		uniforms::bindCommonUniforms(GLIndex::lightingShaderPrecompute, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::lightingShaderPrecompute, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::lightingShaderPrecompute, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+
+		//Dispatch for every screen position.
+		glDispatchCompute(
+			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+			1
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		GLErrorcheck("Precompute Lighting Shader", true);
+	}
 
 
 
@@ -1611,6 +1654,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
 	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
+	uniforms::bindUniformValue(GLIndex::displayShader, "useDynamicShadows", useDynamicShadows);
 
 	renderingGeneric("Display Shader");
 
