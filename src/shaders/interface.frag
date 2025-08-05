@@ -23,7 +23,8 @@ uniform float maxRayAngle;
 void main() {
 	vec2 fragPosition = gl_FragCoord.xy;
 
-	if (fragDistance > 0.0f) {
+	bool isDisplacement = fragDistance > 0.0f;
+	if (isDisplacement) {
 		//TextObjects have roll and pitch applied, pitch being done during VAO data creation.
 		//Both use the same calculation as environment.frag and sprites.frag
 		float zoomEffect = (zoom) ? zoomFactor : 1.0f;
@@ -31,6 +32,7 @@ void main() {
 		float rollDecimal = clamp(playerViewRoll / 22.5f, -1.0f, 1.0f) * zoomEffect;
 		fragPosition.y += (fragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
 	}
+
 	if (fragDistance >= texture(renderedFrame, fragPosition / vec2(interfaceResolution)).a) {discard;}
 	ivec2 framePosition = ivec2(fragPosition);
 
@@ -46,5 +48,6 @@ void main() {
 	}
 
 	if (fragColour.a < 0.5f) {discard;}
+	if (isDisplacement) {fragColour.a *= -1.0f;}
 	imageStore(interfaceTexture, framePosition, fragColour);
 }

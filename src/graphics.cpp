@@ -1363,7 +1363,7 @@ void drawHUD(float blendingAlpha, float currentTime) {
 		} else if (element.fPtr) { //Shows an integer value
 			drawInt(element.position, element.scale, int(*(element.fPtr)), &verticesData, &indicesData);
 		} else { //Shows some UI image element
-			addImage(element.position, element.scale, element.textureID, false, false, &verticesData, &indicesData);
+			addImage(element.position, element.scale, element.textureID, false, false, &verticesData, &indicesData, -1.0f);
 		}
 
 		utils::combineVectors(&vertices, verticesData);

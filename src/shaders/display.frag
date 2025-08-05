@@ -9,7 +9,7 @@ layout(binding=0) uniform sampler2D renderedFrameSampler2D;
 layout(binding=1) uniform sampler2D interfaceTexture;
 layout(binding=2) uniform sampler2DArray lightMapsArray;
 layout(binding=3) uniform sampler2D normalMap;
-layout(rgba32f, binding=0) writeonly uniform image2D renderedFrameImage2D;
+layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
 
 
 //Camera
@@ -52,27 +52,27 @@ vec2 getUV(vec2 pos) {
 vec4 antiAliasFunc() {
 	const float edgeThreshold = 1.0f;
 
-    vec2 baseUV = getUV(gl_FragCoord.xy);
-    vec4 centrePX = texture(renderedFrameSampler2D, baseUV);
-    float centreDepth = centrePX.a;
+	vec2 baseUV = getUV(gl_FragCoord.xy);
+	vec4 centrePX = texture(renderedFrameSampler2D, baseUV);
+	float centreDepth = centrePX.a;
 
-    float minDepth = centreDepth, maxDepth = centreDepth;
+	float minDepth = centreDepth, maxDepth = centreDepth;
 
-    vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
-    int n = 0;
+	vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
+	int n = 0;
 
 	for (int dx=-antiAliasingLevel; dx<=antiAliasingLevel; dx++) {
 		for (int dy=-antiAliasingLevel; dy<=antiAliasingLevel; dy++) {
-            vec2 UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-            vec4 sampledPX = texture(renderedFrameSampler2D, UV);
+			vec2 UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
+			vec4 sampledPX = texture(renderedFrameSampler2D, UV);
 
-            float depth = sampledPX.a;
-            if (depth < 0.0) {continue; /* fragment was UI */}
+			float depth = sampledPX.a;
+			if (depth < 0.0) {continue; /* fragment was UI */}
 
-            minDepth = min(minDepth, depth);
-            maxDepth = max(maxDepth, depth);
-            colourSum += sampledPX.rgb;
-            n++;
+			minDepth = min(minDepth, depth);
+			maxDepth = max(maxDepth, depth);
+			colourSum += sampledPX.rgb;
+			n++;
 		}
 	}
 
@@ -180,12 +180,26 @@ void main() {
 
 
 	ivec2 framePosition = ivec2((gl_FragCoord.xy * vec2(renderResolution)) / vec2(screenResolution));
-	if (!screenshotHasHUD && shouldTakeScreenshot) {
-		imageStore(renderedFrameImage2D, framePosition, vec4(resultant.rgb, 1.0f));
-	}
 	vec4 interfaceColour = texture(interfaceTexture, mainUV);
+
+	//TextObjects use negative distance as their alpha. General UI uses 0-1 alpha values.
+	bool isTextObject = interfaceColour.a < 0.0f;
+	interfaceColour.a = (isTextObject) ? 1.0f : interfaceColour.a;
+
+	// Final fragment output (blend of scene and UI)
 	fragColour = vec4(mix(resultant.rgb, interfaceColour.rgb, interfaceColour.a), 1.0f);
-	if (screenshotHasHUD && shouldTakeScreenshot) {
-		imageStore(renderedFrameImage2D, framePosition, fragColour);
+
+	if (shouldTakeScreenshot) {
+		vec4 screenshotColour;
+
+		if (screenshotHasHUD) {
+			//HUD was already added to fragColour, so use that.
+			screenshotColour = fragColour;
+		} else {
+			//Check if the pixel references a TextObject or HUD before choosing between the interface colour or environment colour.
+			screenshotColour = (isTextObject) ? vec4(interfaceColour.rgb, 1.0f) : vec4(resultant.rgb, 1.0f);
+		}
+
+		imageStore(frameToScreenshot, framePosition, screenshotColour);
 	}
 }

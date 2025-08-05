@@ -765,6 +765,8 @@ static inline structs::Visplane extractVisplane(
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
+	GLuint textureID = (type == V_NODRAW) ? assignTexture("nodraw") : getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
+
 	structs::Visplane visplane;
 	pugi::xml_node vertexNode = node.child("vertices");
 	if (vertexNode) { //Has explicit vertices.
@@ -773,8 +775,7 @@ static inline structs::Visplane extractVisplane(
 		visplane = structs::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
-			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-			type,
+			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
@@ -790,8 +791,7 @@ static inline structs::Visplane extractVisplane(
 			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
 			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
 			getFloat(node, "height", 0.0f),
-			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-			type,
+			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
