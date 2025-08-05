@@ -1,0 +1,240 @@
+/* raycast.comp */
+#version 460 core
+
+
+
+
+struct Wall {
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+};
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
+};
+
+
+//Buffer containing indices of all valid walls (referencing the actual dataset above.)
+layout(std430, binding=6) buffer visibleWallIndicesSSBO {uint visibleWallIndices[];};
+
+
+struct WallIntersect {
+	vec2 position2D;
+	vec2 normal2D;
+	uint projections;
+	uint wallIndexAndXUV;
+	float distanceSQ;
+	float _padding;
+};
+layout(std430, binding=7) buffer wallIntersectSSBO {
+	WallIntersect wallIntersects[];
+};
+
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+
+
+uniform int numWalls;			//Total
+uniform int numVisibleWalls; 	//Onscreen
+
+uniform float blendingAlpha;
+uniform float maxRayDistance;
+uniform float maxRayAngle;
+uniform float zoomFactor;
+uniform bool zoom;
+uniform vec3 playerPosition;
+uniform float playerViewAngle;
+uniform ivec2 renderResolution;
+
+
+
+float zoomEffect;
+#define EPSILON_ALT 1e-3f
+
+
+void writeNoIntersect(uint SSBOIndex) {
+	WallIntersect noHit;
+	noHit.distanceSQ = -1.0f; //Impossible depth means no hit.
+	wallIntersects[SSBOIndex] = noHit;
+}
+
+
+
+void unpackTextureFormattingBits1(
+		uint inputBits, out bvec4 textureFlags,
+		out int textureID
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	- textureFlags; (4 bit flags) [0 - 15]
+		1111 0000 0000 0000 0000 0000 0000 0000
+	- textureID; (12 bit uint) [0 - 65535]
+		0000 1111 1111 1111 0000 0000 0000 0000
+	*/
+	textureFlags = bvec4(
+		bool(inputBits & 0x80000000),
+		bool(inputBits & 0x40000000),
+		bool(inputBits & 0x20000000),
+		bool(inputBits & 0x10000000)
+	);
+
+	uint texIDbits = (inputBits >> 16) & 0xFFF;
+	textureID = (texIDbits == 0xFFF) ? -1 : int(texIDbits);
+}
+void unpackTextureFormattingBits2(
+		uint inputBits, out bvec2 isWorldspace,
+		out vec2 invTextureScale, out vec2 textureOffset
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	isWorldspace.x; (bool) [0 / 1]
+		1000 0000 0000 0000 0000 0000 0000 0000
+	- isWorldspace.y; (bool) [0 / 1]
+		0100 0000 0000 0000 0000 0000 0000 0000
+	- textureScale.x; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0011 1111 1100 0000 0000 0000 0000 0000
+	- textureScale.y; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0000 0000 0011 1111 1100 0000 0000 0000
+	- textureOffset.x; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0011 1111 1000 0000
+	- textureOffset.y; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0000 0000 0111 1111
+	*/
+
+	isWorldspace = bvec2(
+		bool(inputBits & 0x80000000),
+		bool(inputBits & 0x40000000)
+	);
+
+	invTextureScale = 16.0f / vec2(
+		float((inputBits >> 22) & 0xFF),
+		float((inputBits >> 14) & 0xFF)
+	);
+
+	textureOffset = vec2(
+		float((inputBits >> 7) & 0x7F),
+		float((inputBits >> 0) & 0x7F)
+	) / 128.0f;
+}
+
+
+
+float xUVFromWorldspace(vec2 intersectPoint, Wall thisWall) {
+	return mix(intersectPoint.x, intersectPoint.y, float(abs(thisWall.direction.y) > abs(thisWall.direction.x)));
+}
+float xUVFromWallspace(vec2 intersectPoint, Wall thisWall) {
+	if (abs(thisWall.direction.y) > abs(thisWall.direction.x)) {
+		return (intersectPoint.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y);
+	}
+	return (intersectPoint.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x);
+}
+
+uint getXUV(vec2 intersectPoint, Wall thisWall) {
+	//1st formatting data;
+	bvec4 textureFlags;
+	int textureID;
+	unpackTextureFormattingBits1(
+		thisWall.textureData1, textureFlags,
+		textureID
+	);
+
+	//2nd formatting data;
+	bvec2 useWorldSpace;
+	vec2 invTextureScale;
+	vec2 textureOffset;
+	unpackTextureFormattingBits2(
+		thisWall.textureData2, useWorldSpace,
+		invTextureScale, textureOffset
+	);
+
+
+
+	//xUV calculation.
+	float xUV;
+	if (useWorldSpace.x) {
+		xUV = xUVFromWorldspace(intersectPoint, thisWall);
+	} else {
+		xUV = xUVFromWallspace(intersectPoint, thisWall);
+	}
+	xUV *= invTextureScale.x;
+
+	xUV = clamp(fract(xUV + textureOffset.x), 0.0f, 1.0f);
+	return uint(xUV * 255.0f);
+}
+
+
+uint getProjectedZ(float wallDistanceSQ, float wallLowZ, float wallTopZ) {
+	float invDistance = inversesqrt(wallDistanceSQ) * zoomEffect * 1.5f;
+	//Inverse distance scaled by zooming and a set multiplier to make 1x1u more square (was 2:3 ratio before.)
+
+	//Low edge of the wall (bottom visually)
+	float projectedYLow = (playerPosition.z - wallLowZ) * invDistance;
+	float screenYLow = renderResolution.y * (0.5f - projectedYLow);
+	uint clampedScreenYLow = uint(clamp(int(screenYLow) + 0x7FFF, 0x0000, 0xFFFF));
+
+	//High edge of the wall (top visually)
+	float projectedYTop = (playerPosition.z - wallTopZ) * invDistance;
+	float screenYTop = renderResolution.y * (0.5f - projectedYTop);
+	uint clampedScreenYTop = uint(clamp(int(screenYTop) + 0x7FFF, 0x0000, 0xFFFF));
+
+	//Convert to 16-bit unsigned integers and return combined projection.
+	return (clampedScreenYLow << 16) | clampedScreenYTop;
+}
+
+
+void main() {
+	uint screenX = gl_GlobalInvocationID.x;
+	uint IDX = gl_GlobalInvocationID.y;
+	if ((screenX >= renderResolution.x) || (IDX >= numVisibleWalls)) {return; /* Offscreen or out of range. */}
+
+	uint wallIndex = visibleWallIndices[IDX];
+	uint SSBOIndex = (screenX * numWalls) + wallIndex;
+	Wall thisWall = walls[wallIndex];
+
+
+	zoomEffect = (zoom) ? zoomFactor : 1.0f;
+	float rayOffset = -maxRayAngle + (screenX / float(renderResolution.x)) * 2.0f * maxRayAngle;
+	float rayAngleYaw = playerViewAngle + rayOffset;
+
+	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
+	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;
+
+
+	//Find wall intersect
+	WallIntersect intersect;
+	vec2 playerPos2D = playerPosition.xy;
+	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+	float projStart = dot(playerPos2D-thisWall.start.xy, wallNormal);
+	float projEnd = dot((playerPos2D + rayDelta2D)-thisWall.start.xy, wallNormal);
+	if (projStart * projEnd > 0.0f) {
+		//Ray never crosses wall.
+		writeNoIntersect(SSBOIndex);
+		return;
+	}
+
+	float t = projStart / (projEnd - projStart);
+	vec2 intersectPoint = playerPos2D - rayDelta2D * t;
+	vec2 minWall = min(thisWall.start.xy, thisWall.end.xy);
+	vec2 maxWall = max(thisWall.start.xy, thisWall.end.xy);
+	if (
+		intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+		intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y
+	) {
+		//Outside of valid wall segment.
+		writeNoIntersect(SSBOIndex);
+		return;
+	}
+
+	intersect.position2D = vec2(intersectPoint);
+	intersect.normal2D = (dot(wallNormal, rayDirection) < 0.0f) ? wallNormal : -wallNormal;
+	vec2 d = playerPos2D - intersectPoint;
+	intersect.distanceSQ = dot(d, d); //Cheaper length() call
+	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersectPoint, thisWall);
+	intersect.projections = getProjectedZ(intersect.distanceSQ, thisWall.start.z, thisWall.end.z);
+	wallIntersects[SSBOIndex] = intersect;
+}

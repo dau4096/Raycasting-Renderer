@@ -6,7 +6,8 @@
 enum Event {
 	E_NONE, E_DEAD,
 	E_HURT, E_HEAL,
-	E_NEW_IH, E_ENERGY
+	E_NEW_IH, E_ENERGY,
+	E_TELEPORT, E_RESPAWN
 };
 
 enum ItemFloor {
@@ -22,16 +23,31 @@ enum ItemHeld {
 enum VisplaneType {
 	V_INVALID, V_NORMAL,
 	V_TRIGGER,
-	V_MOVEV_FAST, V_MOVEV_SLOW,
-	V_HURT
+	V_MOVEX_FAST, V_MOVEX_SLOW,
+	V_MOVEY_FAST, V_MOVEY_SLOW,
+	V_MOVEZ_FAST, V_MOVEZ_SLOW,
+	V_HURT, V_PASSTHROUGH,
+	V_NODRAW, V_TELEPORT,
+	V_CONVEY, V_LIGHTBLOCKER
 };
 
 enum WallType {
 	W_INVALID, W_NORMAL,
 	W_TRIGGER,
-	W_MOVEV_FAST, W_MOVEV_SLOW,
-	W_MOVEH_FAST, W_MOVEH_SLOW,
-	W_SWITCH
+	W_MOVED_FAST, W_MOVED_SLOW,
+	W_MOVEN_FAST, W_MOVEN_SLOW,
+	W_MOVEZ_FAST, W_MOVEZ_SLOW,
+	W_SWITCH, W_PASSTHROUGH,
+	W_DOORZ, W_DOORSWING,
+	W_NODRAW, W_LIGHTBLOCKER
+};
+
+enum CuboidType {
+	C_INVALID, C_NORMAL,
+	C_MOVEX_FAST, C_MOVEX_SLOW,
+	C_MOVEY_FAST, C_MOVEY_SLOW,
+	C_MOVEZ_FAST, C_MOVEZ_SLOW,
+	C_PASSTHROUGH, C_NODRAW
 };
 
 enum DisplacementType {
@@ -40,8 +56,8 @@ enum DisplacementType {
 
 enum SpriteType {
 	SPR_INVALID,
-	SPR_DECO,
-	SPR_LIGHT
+	SPR_DECO, SPR_LIGHT,
+	SPR_PHYSICS, SPR_PARTICLE
 };
 
 enum LogicInput {
@@ -65,6 +81,16 @@ enum GateType {
 	G_LATCH,		// 2 inputs, turns on with input A and off with input B.
 	G_PULSE,		// 1 input, turns on for 1 frame of the input, then off after.
 	G_TOGGLE		// 1 input, turns on and off with that input.
+};
+
+
+enum ParticleType {
+	P_NONE,
+	P_DUST,
+	P_ENERGY,
+	P_HURT,
+	P_EXPLODE,
+	P_DUST_NOFALL
 };
 
 
@@ -193,26 +219,30 @@ inline const std::unordered_map<std::string, int> keyNameToGLFW = {
 
 
 namespace constants {
-	static int C_TRUE = 1;
-	static int C_FALSE = 0;
+	static bool C_TRUE = true;
+	static bool C_FALSE = false;
 
 
 	//Mathematical Constants
-	constexpr float PI = 3.14159265358979f;
-	constexpr float EXP = 2.71828182845905f;
+	constexpr float PI = 3.141592f;
+	constexpr float PI2 = PI * 2.0f;
+	constexpr float EXP = 2.718281f;
+	constexpr float INF = std::numeric_limits<float>::infinity();
 
-	constexpr float TO_RAD = 0.01745329251994f;
-	constexpr float TO_DEG = 57.2957795130824f;
+	constexpr float TO_RAD = 0.017453f;
+	constexpr float TO_DEG = 57.29577f;
 
 
 
 	//Sim Constants
+	constexpr float PHYSICS_FREQUENCY = 60.0f;
 	constexpr float GRAVITY_ACCEL = 0.486f;
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
 	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
 	constexpr float AIR_FRICT_COEFF = 0.975f;
 	constexpr float AIR_FRICT_SLIDE_COEFF = 0.9975f;
 	constexpr float MAX_STEP_HEIGHT = 0.42857f;
+	constexpr float DOOR_OPEN_TIME_TICKS = 2.0f * PHYSICS_FREQUENCY;
 
 
 	//Invalid returns for vectors and floats.
@@ -223,8 +253,13 @@ namespace constants {
 
 
 	//Maximum quantities of each type.
-	constexpr int MAX_FLAGS = 256;
+	constexpr size_t MAX_FLAGS = 256;
+	constexpr size_t MAX_VERTEX_BYTES = 16384;
+	constexpr size_t MAX_INDEX_BYTES = 16384;
+	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 64;
+	constexpr size_t MAX_SPRITE_PARTICLES = 2048;
 
+	constexpr float PARTICLE_LIFETIME_FRAMES = 2.0f * PHYSICS_FREQUENCY;
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
 }
@@ -232,20 +267,20 @@ namespace constants {
 namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
-	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(640, 400);
+	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
 
 
 	//Texture Standardisation
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
-	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 64;
+	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback-general.png";
 	constexpr const char* FALLBACK_SKYBOX_PATH = "src/textures-env/fallback-skybox.png";
 
 
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
-	constexpr int MAX_TEXTOBJECT_CHARACTERS = 64;
+	constexpr size_t MAX_TEXTOBJECT_CHARACTERS = 64;
 }
 
 namespace initial {
@@ -258,7 +293,7 @@ namespace initial {
 
 	//Sun
 	constexpr glm::vec3 SUN_DIRECTION = glm::vec3(0.0f, 0.0f, 1.0f);
-	constexpr float SUN_INTENSITY = 2.5f;
+	constexpr float SUN_INTENSITY = 1.75f;
 	constexpr glm::vec3 SUN_COLOUR = glm::vec3(1.0f, 1.0f, 1.0f);
 
 
@@ -274,7 +309,7 @@ namespace initial {
 
 namespace playerConfig {
 	//Physics speed values
-	constexpr float MOVE_SPEED_BASE = 0.05f;
+	constexpr float MOVE_SPEED_BASE = 0.0375f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
 	constexpr float MOVE_SPEED_SLIDE_ADD = 0.5f;
@@ -287,12 +322,12 @@ namespace playerConfig {
 	//Physics Collision Values
 	constexpr float PLAYER_COLLISION_RADIUS = 0.25f;
 	constexpr float PLAYER_COLLISION_HEIGHT_STAND = 1.75f;
-	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 1.0f;
+	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 0.875f;
 	constexpr float PLAYER_INTERACT_RAY_DIST = 2.0f;
 
 
 	//Player Initial Values
-	constexpr float LATERAL_VIEW_LEAN = 2.5f;
+	constexpr float LATERAL_VIEW_LEAN = 2.5f * constants::TO_RAD;
 	constexpr int PLAYER_MAX_HEALTH = 128;
 	constexpr int PLAYER_MAX_ENERGY = 64;
 
@@ -304,4 +339,7 @@ namespace playerConfig {
 
 namespace dev {
 	//Assorted DEV/DEBUG constants
+	constexpr bool SHOW_PHYSICS_TICKRATE = false;
+	constexpr bool SHOW_PHYSICS_DT = false;
+	constexpr bool PAUSE_ON_OPENGL_ERROR = true;
 }

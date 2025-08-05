@@ -28,3 +28,8 @@
 # Compiled programs
 *.app
 *.exe
+*.ini
+*.bat
+
+# Other
+notes.md

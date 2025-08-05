@@ -11,31 +11,24 @@
 
 
 <!-- Visplanes -->
-<visplanes>
+<environment>
 	<visplane start="-10.0 -10.0" end="10.0 10.0" height="-1.0" texture="a" />
-</visplanes>
 
-<!-- Walls -->
-<walls>
 	<wall start="-1.0 -1.0 -1.0" end="1.0 -1.0 1.0" texture="b" />
-</walls>
+</environment>
 
 
 <!-- Sprites -->
-<sprites>
+<objects>
 	<sprite position="0.0 -4.0 0.0" width="1.0" height="2.0" texture="c" type="SPR_DECO" collision="true" />
 
-	<sprite position="0.0 -2.0 3.0" width="1.0" height="1.0" texture="lamp" type="SPR_LIGHT" collision="false" />
-</sprites>
-
-
-<!-- Lights -->
-<lights>
+	<!-- Lights -->
 	<light position="0.0 -2.0 3.0" colour="1.0 0.0 0.0" intensity="5.0" enabled="true" />
-</lights>
+	<sprite position="0.0 -2.0 3.0" width="1.0" height="1.0" texture="lamp" type="SPR_LIGHT" collision="false" />
+</objects>
 
 
 <!-- Logic Gates -->
-<logicGates>
-	<logic type="G_PASSTHROUGH" inputAPtr="0" inputBPtr="0" outputPtr="1"/>
-</logicGates>
+<logic>
+	<gate type="G_PASSTHROUGH" inAFlag="0" inBFlag="0" outFlag="1"/>
+</logic>
