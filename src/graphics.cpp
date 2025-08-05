@@ -198,7 +198,7 @@ static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformN
 		glUniform4f(location, value.x, value.y, value.z, value.w);
 	}
 }
-static void bindCommonUniforms(GLuint shaderProgram) {
+static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float currentTime) {
 	//Applies value if shader has uniform of matching name.
 
 	//Camera Data
@@ -207,6 +207,8 @@ static void bindCommonUniforms(GLuint shaderProgram) {
 	bindUniformValue(shaderProgram, "verticalFOV", verticalFOV);
 	bindUniformValue(shaderProgram, "zoomFactor", display::ZOOM_MULT);
 	bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
+	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
+	bindUniformValue(shaderProgram, "currentTime", currentTime);
 
 	//Player Data
 	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
@@ -217,7 +219,8 @@ static void bindCommonUniforms(GLuint shaderProgram) {
 	//Debug
 	bindUniformValue(shaderProgram, "debugMode", utils::configToInt("META_DEBUG_MODE"));
 
-	//Sun
+	//Sun and Sky
+	bindUniformValue(shaderProgram, "fogColour", stageData.fogColour);
 	bindUniformValue(shaderProgram, "sunDirection", stageData.sunDirection);
 	bindUniformValue(shaderProgram, "sunColour", stageData.sunColour);
 
@@ -407,7 +410,8 @@ void updateShaderStorageBufferObject(
 
 
 void findVisibleObjects(
-		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices
+		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices,
+		bool drawLightBlockers
 	) {	
 	glm::vec2 playerFDirection = glm::vec2(sin(player.viewAngle), cos(player.viewAngle));
 	glm::vec2 playerPosV2 = glm::vec2(player.position);
@@ -418,7 +422,7 @@ void findVisibleObjects(
 		structs::Visplane thisPlane = graphicsData->visplaneData.at(idx);
 
 		bool behind = true;
-		if ((thisPlane.type == V_INVALID) || (thisPlane.type == V_NODRAW)) {continue; /* Non-shown VPs */}
+		if ((thisPlane.type == V_INVALID) || (thisPlane.type == V_NODRAW) || (thisPlane.type == V_LIGHTBLOCKER && !drawLightBlockers)) {continue; /* Non-shown VPs */}
 		for (size_t vertexIdx=0; vertexIdx<thisPlane.numVertices; vertexIdx++) {
 			behind &= glm::dot(thisPlane.vertices[vertexIdx] - playerPosV2, playerFDirection) < 0.0f;
 		}
@@ -432,7 +436,7 @@ void findVisibleObjects(
 	//Walls
 	for (uint idx=0; idx<validWalls; idx++) {
 		structs::Wall thisWall = graphicsData->wallData.at(idx);
-		if ((thisWall.type == W_INVALID) || (thisWall.type == W_NODRAW)) {continue; /* Non-shown Walls */}
+		if ((thisWall.type == W_INVALID) || (thisWall.type == W_NODRAW) || (thisWall.type == W_LIGHTBLOCKER && !drawLightBlockers)) {continue; /* Non-shown Walls */}
 		bool sProj = glm::dot(glm::vec2(thisWall.start - player.position), playerFDirection) < 0.0f;
 		bool eProj = glm::dot(glm::vec2(thisWall.end - player.position), playerFDirection) < 0.0f;
 		if (sProj && eProj) {continue; /* Completely behind player view */}
@@ -1175,12 +1179,13 @@ namespace frame {
 std::vector<uint> visibleVisplaneIndices;
 std::vector<uint> visibleWallIndices;
 std::vector<uint> visibleDisplacementIndices;
-void updateSSBOs() {
+void updateSSBOs(bool drawLightBlockers) {
 	visibleVisplaneIndices.clear();
 	visibleWallIndices.clear();
 	visibleDisplacementIndices.clear();
 	graphics::findVisibleObjects(
-		 &visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices
+		&visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices,
+		drawLightBlockers
 	);
 
 
@@ -1210,7 +1215,7 @@ void updateSSBOs() {
 }
 
 
-void drawDisplacements() {
+void drawDisplacements(float blendingAlpha, float currentTime) {
 	std::vector<float> vertices;
 	std::vector<GLuint> indices;
 	std::vector<float> verticesData;
@@ -1274,7 +1279,7 @@ void drawDisplacements() {
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 
-	uniforms::bindCommonUniforms(GLIndex::displacementShader3D);
+	uniforms::bindCommonUniforms(GLIndex::displacementShader3D, blendingAlpha, currentTime);
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
@@ -1335,7 +1340,7 @@ void drawInt(glm::vec2 position, glm::vec2 scale, int value, std::vector<float>*
 	}
 }
 
-void drawHUD() {
+void drawHUD(float blendingAlpha, float currentTime) {
 	currentIdx = 0;
 	glClearTexImage(GLIndex::interfaceID, 0, GL_RGBA, GL_FLOAT, nullptr);
 	std::vector<float> vertices;
@@ -1403,13 +1408,11 @@ void drawHUD() {
 			}
 
 			glm::vec2 charPos = glm::vec2(charX, thisCharY);
-			//cout << (charX - (currentRenderResolution.x/2.0f)) * rollDecimal << endl;
 			addImage(charPos, glm::vec2(scale, scale), charIdx, true, true, &verticesData, &indicesData, distance);
 		}
 
 		utils::combineVectors(&vertices, verticesData);
 		utils::combineVectors(&indices, indicesData);
-		break;
 	}
 
 
@@ -1438,7 +1441,7 @@ void drawHUD() {
 	glBindTextureUnit(1, GLIndex::textureArrayNumeric);
 	glBindTextureUnit(2, GLIndex::renderedFrameID);
 
-	uniforms::bindCommonUniforms(GLIndex::uiShader);
+	uniforms::bindCommonUniforms(GLIndex::uiShader, blendingAlpha, currentTime);
 	GLint pvmMatrixLocation = glGetUniformLocation(GLIndex::uiShader, "pvmMatrix");
 	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(graphics::uiMatrix));
 
@@ -1469,22 +1472,23 @@ inline void renderingGeneric(const std::string& shaderName="") {
 }
 
 
-void draw(double blendingAlpha) {
+void draw(double blendingAlpha, double currentTime) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
 	if (headLampEnabled) {
 		lightFlickerRNG = utils::RNGc();
 	}
-	float viewBob = (utils::configToBool("VIEW_BOB")) ? graphics::viewBob(tickNumber) : 0.0f;
+	float viewBob = (utils::configToBool("VIEW_BOB") && !player.onConveyor) ? graphics::viewBob(tickNumber) : 0.0f;
 	player.interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
 	player.cameraPosition = player.interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
+	updateSSBOs(false);
 
 
 
 	//Raycasting compute shader.
 	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
 	glUseProgram(GLIndex::raycastShader);
-	uniforms::bindCommonUniforms(GLIndex::raycastShader);
+	uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime);
 	glDispatchCompute(
 		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
 		(numVisibleWalls + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
@@ -1504,7 +1508,7 @@ void draw(double blendingAlpha) {
 	glBindTextureUnit(1, GLIndex::skyboxTextureID);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::envShader);
+	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
 	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
@@ -1513,7 +1517,7 @@ void draw(double blendingAlpha) {
 	
 	//Displacements in 2 parts;
 	//3D portion;
-	frame::drawDisplacements();
+	frame::drawDisplacements(blendingAlpha, currentTime);
 	//2D portion;
 	glUseProgram(GLIndex::displacementShader2D);
 	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
@@ -1526,7 +1530,7 @@ void draw(double blendingAlpha) {
 	glBindTextureUnit(3, GLIndex::displacementFBONormals);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::displacementShader2D);
+	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
 	renderingGeneric("Displacements Shaders");
 
@@ -1541,7 +1545,7 @@ void draw(double blendingAlpha) {
 	glBindTextureUnit(1, GLIndex::renderedFrameID);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::spriteShader);
+	uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime);
 	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
 	renderingGeneric("Sprite Shader");
@@ -1549,6 +1553,7 @@ void draw(double blendingAlpha) {
 
 
 	//Lighting Shader
+	updateSSBOs(true);
 	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 	glUseProgram(GLIndex::lightingShader);
 
@@ -1558,7 +1563,7 @@ void draw(double blendingAlpha) {
 	glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms;
-	uniforms::bindCommonUniforms(GLIndex::lightingShader);
+	uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
 	uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
 	uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
@@ -1582,7 +1587,7 @@ void draw(double blendingAlpha) {
 		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 		avgframerate = utils::getAverage(rollingFPS);
 		avgtickrate = utils::getAverage(rollingTPS);
-		drawHUD();
+		drawHUD(blendingAlpha, currentTime);
 	}		
 
 
@@ -1597,7 +1602,7 @@ void draw(double blendingAlpha) {
 	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::displayShader);
+	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
 	//Display-Specific
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));

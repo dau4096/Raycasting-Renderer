@@ -240,7 +240,7 @@ int main() {
 
 	graphics::prepareOpenGL();
 	*graphicsData = *physicsData;
-	frame::updateSSBOs();
+	frame::updateSSBOs(true);
 	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
 
 
@@ -257,10 +257,8 @@ int main() {
 		if (keyMap["META_EXIT"]) {break; /* Quit Immediately */}
 
 
-
 		graphics::handleTextureLoadQueue();
-		frame::updateSSBOs();
-		frame::draw(blendingAlpha);
+		frame::draw(blendingAlpha, frameStart);
 		glfwSwapBuffers(Window);
 
 

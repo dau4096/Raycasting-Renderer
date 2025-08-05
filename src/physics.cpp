@@ -435,7 +435,7 @@ void playerMovement() {
 	float maxV = playerConfig::MOVE_SPEED_BASE;
 
 	glm::vec2 XYDelta = glm::vec2(player.velocity.x, player.velocity.y);
-	player.sliding = keyMap["MOVE_CROUCH"] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD);
+	player.sliding = keyMap["MOVE_CROUCH"] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD) && !player.onConveyor;
 	if (keyMap["MOVE_CROUCH"]) {
 		if (player.sliding) {
 			if (!prevSlide && player.touchingFloor) {
@@ -606,7 +606,7 @@ void playerMovement() {
 
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		structs::Wall wall = physicsData->wallData.at(wIndex);
-		if ((wall.type == W_INVALID) || (wall.type == W_TRIGGER) || (wall.type == W_PASSTHROUGH)) {continue; /* These types can be walked through. */}
+		if ((wall.type == W_INVALID) || (wall.type == W_TRIGGER) || (wall.type == W_PASSTHROUGH) || (wall.type == W_LIGHTBLOCKER)) {continue; /* These types can be walked through. */}
 
 		bool playerZCheckWall = !(
 			(playerHeadZ < std::min(wall.start.z, wall.end.z))
@@ -796,7 +796,6 @@ void updatePhysicsObjects() {
 
 void updateSpecials(bool interactKey) {
 
-
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		structs::Wall wall = physicsData->wallData.at(wIndex);
 		bool enabled = false;
@@ -905,6 +904,7 @@ void updateSpecials(bool interactKey) {
 	}
 
 
+	player.onConveyor = false;
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
 		structs::Visplane vPlane = physicsData->visplaneData.at(vIndex);
 		bool enabled = false;
@@ -1023,6 +1023,7 @@ void updateSpecials(bool interactKey) {
 					player.velocity.x += speed * vPlane.internal->first;
 					player.velocity.y += speed * vPlane.internal->second;
 					player.sliding = false;
+					player.onConveyor = true;
 				}
 			}
 

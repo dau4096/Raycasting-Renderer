@@ -12,6 +12,7 @@ uniform float maxRayAngle;
 uniform float zoomFactor;
 uniform bool zoom;
 uniform bool useMipMapping;
+uniform float currentTime;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -40,8 +41,8 @@ struct Visplane {
 	vec4 vertices[4];	//2D points
 	uint numVertices;	//Number of 2D points
 	float height;		//1D height (Z)
-	int textureID;		//Texture ID
-	uint textureData;	//Texture formatting data.
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
 	vec4 boundingBox;	//Bounding box in 2D.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
@@ -52,8 +53,8 @@ struct Wall {
 	vec3 start;			//3D start point
 	vec3 end;			//3D end point
 	vec2 direction;		//2D Direction
-	int textureID;		//Texture ID
-	uint textureData;	//Texture formatting data
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -144,7 +145,6 @@ Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
 vec2 fragPosition;
 vec4 fragColour;
 float zoomEffect;
-float halfFOV;
 double t;
 float fragZ;
 #define INF 0xFFFFFF
@@ -171,9 +171,29 @@ float fragZ;
 
 
 
+void unpackTextureFormattingBits1(
+		uint inputBits, out bvec4 textureFlags,
+		out int textureID
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	- textureFlags; (4 bit flags) [0 - 15]
+		1111 0000 0000 0000 0000 0000 0000 0000
+	- textureID; (12 bit uint) [0 - 65535]
+		0000 1111 1111 1111 0000 0000 0000 0000
+	*/
+	textureFlags = bvec4(
+		bool(inputBits & 0x80000000),
+		bool(inputBits & 0x40000000),
+		bool(inputBits & 0x20000000),
+		bool(inputBits & 0x10000000)
+	);
 
-
-void unpackTextureFormattingBits(
+	uint texIDbits = (inputBits >> 16) & 0xFFF;
+	textureID = (texIDbits == 0xFFF) ? -1 : int(texIDbits);
+}
+void unpackTextureFormattingBits2(
 		uint inputBits, out bvec2 isWorldspace,
 		out vec2 invTextureScale, out vec2 textureOffset
 	) {
@@ -260,25 +280,31 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-float getWallYUV(Wall thisWall, uint projections) {
+float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 textureFlags) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
+	//1st formatting data;
+	unpackTextureFormattingBits1(
+		thisWall.textureData1, textureFlags,
+		textureID
+	);
 
+	//2nd formatting data;
 	bvec2 useWorldSpace;
 	vec2 invTextureScale;
 	vec2 textureOffset;
-	unpackTextureFormattingBits(
-		thisWall.textureData, useWorldSpace,
+	unpackTextureFormattingBits2(
+		thisWall.textureData2, useWorldSpace,
 		invTextureScale, textureOffset
 	);
 
 
-	//The ideal offset is -0x3000 (-12288), but they have slight offsets to account for floating-point inconsistencies later. (+/- 1px.)
+	//The ideal offset is -0x7FFF (-32,767), but they have slight offsets to account for floating-point inconsistencies later. (+/- 1px.)
 	float lowOffset = (playerPosition.z < thisWall.start.z) ? 0.0f : -1.0f;
-	float screenYLow = float(int((projections >> 16) & 0xFFFF) - 0x3000) + lowOffset;
+	float screenYLow = float(int((projections >> 16) & 0xFFFF) - 0x7FFF) + lowOffset;
 
 	float topOffset = ((playerPosition.z > thisWall.end.z) ? 0.0f : 1.0f);
-	float screenYTop = float(int(projections & 0xFFFF) - 0x3000) + topOffset;
+	float screenYTop = float(int(projections & 0xFFFF) - 0x7FFF) + topOffset;
 
 	if (fragPosition.y >= screenYTop || fragPosition.y <= screenYLow) {
 		return INF;
@@ -303,12 +329,19 @@ float getWallYUV(Wall thisWall, uint projections) {
 
 
 //Visplanes
-vec2 getVisplaneUV(vec2 position2D, Visplane plane) {
+vec2 getVisplaneUV(vec2 position2D, Visplane plane, out int textureID, out bvec4 textureFlags) {
+	//1st formatting data;
+	unpackTextureFormattingBits1(
+		plane.textureData1, textureFlags,
+		textureID
+	);
+
+	//2nd formatting data;
 	bvec2 useWorldSpace;
 	vec2 invTextureScale;
 	vec2 textureOffset;
-	unpackTextureFormattingBits(
-		plane.textureData, useWorldSpace,
+	unpackTextureFormattingBits2(
+		plane.textureData2, useWorldSpace,
 		invTextureScale, textureOffset
 	);
 
@@ -316,7 +349,7 @@ vec2 getVisplaneUV(vec2 position2D, Visplane plane) {
 	vec2 localUV = (position2D - plane.boundingBox.xy) / (plane.boundingBox.xy - plane.boundingBox.zw);
 
 	vec2 UV = mix(localUV, worldUV, vec2(useWorldSpace));
-	return fract(UV) + textureOffset;
+	return fract(UV + textureOffset);
 }
 
 vec2 getVertex(Visplane plane, uint index) {
@@ -361,8 +394,7 @@ void main() {
 	bool lowerHalf = fragPosition.y < (renderResolution.y / 2.0f); //If the frag has no possible way to intersect a visplane below (or above) then skip those.
 
 
-	halfFOV = (zoom) ? maxRayAngle / zoomFactor : maxRayAngle;
-	float rayOffset = -halfFOV + (fragPosition.x / renderResolution.x) * 2.0f * halfFOV;
+	float rayOffset = -maxRayAngle + (fragPosition.x / renderResolution.x) * 2.0f * maxRayAngle;
 	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
@@ -401,13 +433,15 @@ void main() {
 		Wall thisWall = walls[wallIndex];
 		
 
-		float yUV = getWallYUV(thisWall, intersect.projections); //Check if inside wall (Valid UV)
+		int textureID;
+		bvec4 textureFlags;
+		float yUV = getWallYUV(thisWall, intersect.projections, textureID, textureFlags); //Check if inside wall (Valid UV)
 		if (yUV == INF) {continue; /* Above/Below wall */}
 
 		thisIntersect.distanceSQ = wallDistanceSQ;
 		thisIntersect.index = actualIDX;
 		thisIntersect.position = vec3(intersect.position2D, fragZ);
-		thisIntersect.UV = vec3(xUV, yUV, thisWall.textureID);
+		thisIntersect.UV = (textureFlags.x) ? vec3(yUV, xUV, textureID) : vec3(xUV, yUV, textureID);
 		thisIntersect.foundType = 1;
 		thisIntersect.normal2D = intersect.normal2D;
 
@@ -446,7 +480,12 @@ void main() {
 			thisIntersect.position = vec3(intersectPoint, thisPlane.height);
 			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
-			thisIntersect.UV = vec3(getVisplaneUV(intersectPoint, thisPlane), thisPlane.textureID);
+
+			int textureID;
+			bvec4 textureFlags;
+			vec2 uv = getVisplaneUV(intersectPoint, thisPlane, textureID, textureFlags);
+			thisIntersect.UV = (textureFlags.x) ? vec3(uv.yx, textureID) : vec3(uv.xy, textureID);
+
 			pushStack(thisIntersect);
 			foundObject = true;
 		}
@@ -513,7 +552,7 @@ void main() {
 			} else {
 				fragColour = albedo;
 			}
-			vec4 finalFragColour = vec4(fragColour.rgb, minDistance);
+			vec4 finalFragColour = vec4(albedo.rgb, minDistance);
 			imageStore(renderedFrame, framePosition, finalFragColour);
 			gl_FragDepth = minDistance / maxRayDistance;
 			return;

@@ -68,9 +68,9 @@ namespace graphics {
 
 namespace frame {
 
-	void updateSSBOs();
+	void updateSSBOs(bool drawLightBlockers);
 
-	void draw(double blendingAlpha);
+	void draw(double blendingAlpha, double currentTime);
 
 }
 

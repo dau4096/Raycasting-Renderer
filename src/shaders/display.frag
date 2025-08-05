@@ -17,6 +17,9 @@ uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform ivec2 renderResolution;
 
+//Sky
+uniform vec3 fogColour;
+
 //Debug
 uniform int debugMode;
 
@@ -35,7 +38,8 @@ uniform bool isInvertEffect;
 
 //////////////// Config stuff ////////////////
 //Lighting;
-#define DEFAULT_BRIGHTNESS 0.175f
+#define MIN_BRIGHTNESS 0.175f
+#define MAX_BRIGHTNESS 2.25f
 #define NUM_PSEUDO_LIGHTS 2
 //////////////// Config stuff ////////////////
 
@@ -121,20 +125,14 @@ vec4 smoothingFunc() {
 }
 
 
-vec3 getBrightness(vec2 UV, out float maxBrightness) {
+vec3 getBrightness(vec2 UV) {
 	if ((debugMode != 0) && (debugMode != 3)) {return vec3(1.0f, 1.0f, 1.0f); /* Not no-debug and not lighting debug. */}
 
 	vec3 lightingSum = vec3(0.0f, 0.0f, 0.0f);
 	for (int i=0; i<(numLights+NUM_PSEUDO_LIGHTS); i++) {
 		lightingSum += texture(lightMapsArray, vec3(UV.xy, i)).rgb;
 	}
-	if (length(texture(normalMap, UV).xyz) < EPSILON) {
-		//Sprites and sky.
-		maxBrightness = 1.0f;
-	} else {
-		maxBrightness = 2.25f;
-	}
-	return clamp(lightingSum, DEFAULT_BRIGHTNESS, maxBrightness);
+	return clamp(lightingSum, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
 }
 
 
@@ -142,27 +140,31 @@ void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
 	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
-	if (albedo.a >= maxRayDistance) {
+	float fragDistance = albedo.a;
+	if (fragDistance >= maxRayDistance) {
 		if (debugMode == 3) { //Debug lighting.
 			resultant = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		} else {
 			resultant = vec4(albedo.rgb, 1.0f);
 		}
 	} else {
-		float maxBrightness;
-		vec3 brightness = getBrightness(mainUV, maxBrightness);
+		vec3 brightness = getBrightness(mainUV);
 		if (debugMode == 3) { //Debug lighting.
-			resultant.rgb = brightness / maxBrightness;
+			resultant.rgb = brightness / MAX_BRIGHTNESS;
 		} else {
-			resultant = vec4(albedo.rgb * brightness, 1.0f);
+			vec3 resultantTMP = vec3(albedo.rgb * brightness);
 
 			if (isInvertEffect) {
-				vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
+				vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultantTMP.rgb;
 				float flashAlpha = screenTint.a * 2.0f - 1.0f;
-				resultant.rgb = mix(resultant.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+				resultantTMP.rgb = mix(resultantTMP.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
 			} else {
-				resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
+				resultantTMP.rgb = mix(resultantTMP.rgb, screenTint.rgb, screenTint.a);
 			}
+
+			float fogAlpha = (fragDistance / maxRayDistance);
+			fogAlpha *= fogAlpha;
+			resultant = vec4(mix(resultantTMP.rgb, fogColour, fogAlpha), 1.0f);
 		}
 	}
 
