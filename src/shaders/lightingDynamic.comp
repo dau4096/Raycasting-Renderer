@@ -1,4 +1,4 @@
-/* shadows.frag */
+/* lightingDynamic.comp */
 #version 460 core
 
 
