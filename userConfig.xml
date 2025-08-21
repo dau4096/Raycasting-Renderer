@@ -35,7 +35,7 @@
 	<option function="VIEW_SHOW_HUD" value="TRUE" />
 	<option function="VIEW_BOB" value="TRUE" />
 	<option function="VIEW_LEAN" value="TRUE" />
-	<option function="VIEW_VLOOK" value="FALSE" />
+	<option function="VIEW_VLOOK" value="TRUE" />
 	<option function="VIEW_SMOOTHING" value="FALSE" />
 	<option function="VIEW_MIPMAPPING" value="TRUE" />
 	<option function="VIEW_TEXTURE_QUALITY" value="HIGH" />
@@ -44,6 +44,7 @@
 	<option function="VIEW_MAX_FREQ" value="75.0" />
 	<option function="VIEW_INTERFACE_IN_SCREENSHOT" value="FALSE" />
 	<option function="VIEW_VSYNC" value="FALSE" />
+	<option function="VIEW_LIGHTING" value="TRUE" />
 	<option function="VIEW_ALLOW_TRANSPARENCY" value="TRUE" />
 	<option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" value="TRUE" />
 	<option function="VIEW_WIGGLY_TEXTOBJECTS" value="FALSE" />
@@ -55,7 +56,7 @@
 	<option function="META_SHOW_DT_CONSOLE" value="FALSE" />
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
 	<option function="META_SHOW_DATA" value="FALSE" />
-	<option function="META_STAGE_NAME" value="dev-quake" />
+	<option function="META_STAGE_NAME" value="model-test" />
 	<option function="META_DYNAMIC_UPD" value="FALSE" />
 	<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" value="FALSE" />
 

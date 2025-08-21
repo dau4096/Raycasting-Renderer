@@ -54,6 +54,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_MAX_FREQ", ""},
 	{"VIEW_INTERFACE_IN_SCREENSHOT", ""},
 	{"VIEW_VSYNC", ""},
+	{"VIEW_LIGHTING", ""},
 	{"VIEW_SHADOW_QUALITY", ""},
 	{"VIEW_ALLOW_TRANSPARENCY", ""},
 	{"VIEW_ALLOW_TRANSPARENT_SHADOWS", ""},
