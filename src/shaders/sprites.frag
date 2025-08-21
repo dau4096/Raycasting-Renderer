@@ -12,6 +12,7 @@ uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
 uniform bool useMipMapping;
+uniform bool viewCorrection;
 
 //Player Data
 uniform float playerViewRoll;
@@ -109,8 +110,12 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
+	float normPos = -1.0f + 2.0f * clamp(centrePixelX, 0.0f, renderResolution.x) / float(renderResolution.x);
+	float distanceOffset = cos(normPos * maxRayAngle);
+	if (distanceOffset <= EPSILON_ALT) {return INVALIDv2;}
+	float distDiv = (viewCorrection) ? clamp(1.0f / distanceOffset, 1.0f, maxRayDistance) : 1.0f;
 
-	float mult = invdistance * zoomEffect * 1.5f;
+	float mult = invdistance * zoomEffect * 1.5f * distDiv;
 	float projectedYLow = (playerPosition.z - spriteFootZ) * mult;
 	float projectedYTop = (playerPosition.z - spriteHeadZ) * mult;
 	

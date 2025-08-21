@@ -40,6 +40,7 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 uniform int numWalls;			//Total
 uniform int numVisibleWalls; 	//Onscreen
 
+//Camera data
 uniform float blendingAlpha;
 uniform float maxRayDistance;
 uniform float maxRayAngle;
@@ -48,6 +49,7 @@ uniform bool zoom;
 uniform vec3 playerPosition;
 uniform float playerViewAngle;
 uniform ivec2 renderResolution;
+uniform bool viewCorrection;
 
 
 
@@ -199,6 +201,8 @@ void main() {
 
 	zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float rayOffset = -maxRayAngle + (screenX / float(renderResolution.x)) * 2.0f * maxRayAngle;
+	float distanceScalingSQ = (viewCorrection) ? cos(rayOffset) : 1.0f;
+	distanceScalingSQ *= distanceScalingSQ;
 	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
@@ -235,6 +239,6 @@ void main() {
 	vec2 d = playerPos2D - intersectPoint;
 	intersect.distanceSQ = dot(d, d); //Cheaper length() call
 	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersectPoint, thisWall);
-	intersect.projections = getProjectedZ(intersect.distanceSQ, thisWall.start.z, thisWall.end.z);
+	intersect.projections = getProjectedZ(intersect.distanceSQ * distanceScalingSQ, thisWall.start.z, thisWall.end.z);
 	wallIntersects[SSBOIndex] = intersect;
 }

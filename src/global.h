@@ -59,6 +59,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {
 	{"VIEW_ALLOW_TRANSPARENCY", ""},
 	{"VIEW_ALLOW_TRANSPARENT_SHADOWS", ""},
 	{"VIEW_WIGGLY_TEXTOBJECTS", ""},
+	{"VIEW_CORRECTION", ""},
 
 	{"META_DEBUG_MODE", ""},
 	{"META_SHOW_TICKRATE_UI", ""},

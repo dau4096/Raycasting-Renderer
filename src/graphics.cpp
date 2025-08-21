@@ -209,6 +209,7 @@ static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float 
 	bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
 	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
 	bindUniformValue(shaderProgram, "currentTime", currentTime);
+	bindUniformValue(shaderProgram, "viewCorrection", utils::configToBool("VIEW_CORRECTION"));
 
 	//Player Data
 	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
@@ -1378,8 +1379,16 @@ void drawHUD(float blendingAlpha, float currentTime) {
 		float distance = glm::length(glm::vec2(thisTO.position - player.position));
 		float scale = thisTO.scale * zoomEffect / distance;
 
+
 		float centreX = structs::getCentreX(thisTO.position, player, display::UI_RESOLUTION);
-		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * 1.5f * zoomEffect / distance;
+
+		float normPos = -1.0f + 2.0f * glm::clamp(centreX, 0.0f, static_cast<float>(currentRenderResolution.x)) / static_cast<float>(currentRenderResolution.x);
+		float distanceOffset = cos(normPos * rayAngle);
+		if (distanceOffset <= 1e-5f) {continue;}
+		float distDiv = (utils::configToBool("VIEW_CORRECTION")) ? glm::clamp(1.0f / distanceOffset, 1.0f, utils::configToFloat("VIEW_MAX_RAY_DIST")) : 1.0f;
+
+
+		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * distDiv * 1.5f * zoomEffect / distance;
 		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
 		float charY = centreY - (scale / 2.0f);
 

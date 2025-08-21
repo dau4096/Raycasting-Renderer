@@ -8,11 +8,13 @@ layout(binding=1) uniform sampler2D skyboxTexture;
 
 //CameraData
 uniform float maxRayDistance;
+uniform float verticalFOV;
 uniform float maxRayAngle;
 uniform float zoomFactor;
 uniform bool zoom;
 uniform bool useMipMapping;
 uniform float currentTime;
+uniform bool viewCorrection;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -395,6 +397,7 @@ void main() {
 
 
 	float rayOffset = -maxRayAngle + (fragPosition.x / renderResolution.x) * 2.0f * maxRayAngle;
+	float horizontalScaling = (viewCorrection) ? cos(rayOffset) : 1.0f;
 	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
@@ -406,9 +409,6 @@ void main() {
 	vec2 rayEnd = vec2(fragRay.end.xy);
 	
 	float normY = (2.0f * fragPosition.y / renderResolution.y) - 1.0f;
-
-
-
 
 
 
@@ -469,14 +469,14 @@ void main() {
 			}
 
 
-			float t = (playerPosition.z - thisPlane.height) * invAntiProjection;
+			float t = (playerPosition.z - thisPlane.height) * invAntiProjection / horizontalScaling;
 			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
 			vec2 intersectPoint = playerPosition.xy + rayDirection * t;
 
 			if (!isInsideVP(intersectPoint, thisPlane)) {continue; /* Outside VP */}
 
 			vec2 d = playerPosition.xy - intersectPoint;
-			thisIntersect.distanceSQ = dot(d,d) ;
+			thisIntersect.distanceSQ = dot(d,d);
 			thisIntersect.position = vec3(intersectPoint, thisPlane.height);
 			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
