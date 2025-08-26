@@ -3,8 +3,9 @@
 
 layout(binding=0) uniform sampler2DArray textureArrayUI;
 layout(binding=1) uniform sampler2DArray textureArrayNumeric;
-layout(binding=2) uniform sampler2D renderedFrame;
-layout(rgba32f, binding=0) writeonly uniform image2D interfaceTexture;
+layout(binding=2) uniform sampler2D depthMap;
+
+layout(location=0) out vec4 outFragColour;
 
 
 in vec3 fragUV;
@@ -33,7 +34,7 @@ void main() {
 		fragPosition.y += (fragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
 	}
 
-	if (fragDistance >= texture(renderedFrame, fragPosition / vec2(interfaceResolution)).a) {discard;}
+	if (fragDistance >= texture(depthMap, fragPosition / vec2(interfaceResolution)).r) {discard;}
 	ivec2 framePosition = ivec2(fragPosition);
 
 	vec4 fragColour;
@@ -49,5 +50,5 @@ void main() {
 
 	if (fragColour.a < 0.5f) {discard;}
 	if (isDisplacement) {fragColour.a *= -1.0f;}
-	imageStore(interfaceTexture, framePosition, fragColour);
+	outFragColour = fragColour;
 }

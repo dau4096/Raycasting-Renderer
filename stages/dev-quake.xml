@@ -93,6 +93,11 @@
     <stairs start="6.0 -8.0 3.0" end="8.0 -1.0 0.0" static="FALSE" flag="notStairsFlag" hasEndWall="FALSE" sideTexture="brick" stepsTexture="planks2" textureScale="2.0 2.0 2.0" />
 
 
+    <!-- Small, fast lift -->
+    <visplane start="1.25 11.5" end="2.25 12.5" height="0.01" type="V_MOVEZ_FAST" flag="cuboidLift" extra="6.99" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+    <wall start="1.25 11.5 0.0" end="2.25 12.5 9.0" type="W_TRIGGER" flag="cuboidLiftA" texture="nodraw" />
+    <wall start="2.25 11.5 0.0" end="1.25 12.5 9.0" type="W_TRIGGER" flag="cuboidLiftB" texture="nodraw" />
+
 
     <!-- V_TELEPORT and other vPlane specials testing -->
     <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="90.0" />
@@ -153,5 +158,9 @@
 
 <!-- Logic Gates -->
 <logic>
+
     <gate type="G_NOT" inAFlag="stairsFlag" outFlag="notStairsFlag" />
+
+    <gate type="G_OR" inAFlag="cuboidLiftA" inBFlag="cuboidLiftB" outFlag="cuboidLift" />
+
 </logic>

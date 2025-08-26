@@ -186,7 +186,12 @@ inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, d
 //Assorted
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
-inline GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, lightingMapsArrayID;
+inline GLuint lightingMapsArrayID;
+inline GLuint screenshotImage2D;
+
+//Framebuffers
+inline GLuint frameFBO, frameAlbedoComponent, framePositionComponent, frameNormalComponent, frameDepthComponent; //Previously: renderedFrameID
+inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;

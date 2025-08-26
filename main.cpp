@@ -36,9 +36,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
 
-	GLIndex::renderedFrameID = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	GLIndex::positionMapID = graphics::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
-	GLIndex::normalMapID = graphics::createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
+	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
 	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
@@ -260,7 +258,7 @@ int main() {
 		graphics::handleTextureLoadQueue();
 		frame::draw(blendingAlpha, frameStart);
 		glfwSwapBuffers(Window);
-
+		glFinish();
 
 		float dt = glfwGetTime() - frameStart;
 		if (utils::configToBool("META_SHOW_DT_CONSOLE")) {

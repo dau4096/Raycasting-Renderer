@@ -6,9 +6,10 @@ out vec4 fragColour;
 
 
 layout(binding=0) uniform sampler2D renderedFrameSampler2D;
-layout(binding=1) uniform sampler2D interfaceTexture;
-layout(binding=2) uniform sampler2DArray lightMapsArray;
-layout(binding=3) uniform sampler2D normalMap;
+layout(binding=1) uniform sampler2D depthMap;
+layout(binding=2) uniform sampler2D interfaceTexture;
+layout(binding=3) uniform sampler2DArray lightMapsArray;
+
 layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
 
 
