@@ -467,14 +467,11 @@ void findVisibleObjects(
 
 
 void saveScreenshot(GLuint frameTextureID) {
-	GLuint fbo;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTextureID, 0);
+    std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 
-	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(0, 0, currentRenderResolution.x, currentRenderResolution.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, frameTextureID);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
 
 	//Flip image vertically.
 	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
@@ -484,16 +481,16 @@ void saveScreenshot(GLuint frameTextureID) {
 	}
 
 	std::string timeStr = utils::getTimestamp();
+	std::string imagePath = "screenshots/" + stageData.name + "-" + timeStr + ".png";
 
 	stbi_write_png(
-		("screenshots/" + timeStr + ".png").c_str(),
+		imagePath.c_str(),
 		currentRenderResolution.x, currentRenderResolution.y,
 		3, pixels.data(), currentRenderResolution.x*3
 	);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	std::cout << "Successfully saved screenshot as : [" << timeStr << ".png]" << std::endl;
+	std::cout << "Successfully saved screenshot as : [" << imagePath << "]" << std::endl;
 }
 
 
@@ -1224,6 +1221,7 @@ void prepareOpenGL() {
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true);
@@ -1767,7 +1765,7 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
 	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
 	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
-	//glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
@@ -1785,7 +1783,7 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	if (shouldTakeScreenshot) {
-		//graphics::saveScreenshot(GLIndex::screenshotImage2D);
+		graphics::saveScreenshot(GLIndex::screenshotImage2D);
 	}
 }
 

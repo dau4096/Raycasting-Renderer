@@ -31,14 +31,19 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	);
 	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 
-
+	//SSBOs
 	GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
 		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
 
-	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
+	//Image2Ds
 	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+	GLIndex::screenshotImage2D = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+
+	//Framebuffers
+	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
 	GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 }
 
@@ -134,26 +139,31 @@ inline void reloadLevel(const bool resetPlayer=false) {
 void handleInputs() {
 	glfwPollEvents();
 
+	bool lastFrameScreenshot = keyMap["META_SCREENSHOT"];
+
 	//Get inputs for this frame
+	unsigned int index = 0;
 	for (auto &pair : userBindings) {
 		std::string functionName = pair.first;
 		int keyEnum = pair.second;
 		if (keyEnum == -1) {
-			std::cout << functionName  << " was not bound to a key!" << std::endl;;
-			continue;
+			std::cout << functionName << " was not bound to a key!" << std::endl;
+			userBindings[index].second = -2; //Do not warn user multiple times.
+			index++;
 		}
+		if (keyEnum < 0) {continue;}
 
 		int keyState = glfwGetKey(Window, keyEnum);
 		if (keyState == GLFW_PRESS) {
 			if (functionName == "USE_HEADLAMP" && !keyMap["USE_HEADLAMP"]) {
 				headLampEnabled = !headLampEnabled;
 			}
-			shouldTakeScreenshot = (functionName == "META_SCREENSHOT") && (!keyMap["META_SCREENSHOT"]);
 			keyMap[functionName] = true;
 
 		} else if (keyState == GLFW_RELEASE) {
 			keyMap[functionName] = false;
 		}
+		index++;
 	}
 
 
@@ -164,6 +174,8 @@ void handleInputs() {
 		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	}
+
+	shouldTakeScreenshot = keyMap["META_SCREENSHOT"] && !shouldTakeScreenshot && !lastFrameScreenshot;
 
 	if (keyMap["META_RELOAD_STAGE"]) {
 		reloadLevel(true);
