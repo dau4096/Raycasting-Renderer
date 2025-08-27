@@ -142,14 +142,12 @@ void handleInputs() {
 	bool lastFrameScreenshot = keyMap["META_SCREENSHOT"];
 
 	//Get inputs for this frame
-	unsigned int index = 0;
 	for (auto &pair : userBindings) {
 		std::string functionName = pair.first;
 		int keyEnum = pair.second;
 		if (keyEnum == -1) {
 			std::cout << functionName << " was not bound to a key!" << std::endl;
-			userBindings[index].second = -2; //Do not warn user multiple times.
-			index++;
+			userBindings[functionName] = -2; //Do not warn user multiple times.
 		}
 		if (keyEnum < 0) {continue;}
 
@@ -163,7 +161,6 @@ void handleInputs() {
 		} else if (keyState == GLFW_RELEASE) {
 			keyMap[functionName] = false;
 		}
-		index++;
 	}
 
 

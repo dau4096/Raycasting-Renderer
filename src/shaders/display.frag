@@ -142,7 +142,7 @@ void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
 	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
-	float fragDistance = albedo.a;
+	float fragDistance = texture(depthMap, mainUV).r * maxRayDistance;
 	if (fragDistance >= maxRayDistance) {
 		if (debugMode == 3) { //Debug lighting.
 			resultant = vec4(1.0f, 1.0f, 1.0f, 1.0f);
