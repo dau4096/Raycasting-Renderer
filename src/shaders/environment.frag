@@ -8,11 +8,13 @@ layout(binding=1) uniform sampler2D skyboxTexture;
 
 //CameraData
 uniform float maxRayDistance;
+uniform float verticalFOV;
 uniform float maxRayAngle;
 uniform float zoomFactor;
 uniform bool zoom;
 uniform bool useMipMapping;
 uniform float currentTime;
+uniform bool viewCorrection;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -32,9 +34,9 @@ uniform float shadowMapQuality;
 uniform bool allowTransparency;
 
 
-layout(rgba32f, binding=0) writeonly uniform image2D renderedFrame;
-layout(rgba32f, binding=1) writeonly uniform image2D positionMap;
-layout(rgba32f, binding=2) writeonly uniform image2D normalMap;
+layout(location=0) out vec4 outFragColour;
+layout(location=1) out vec4 outFragPosition;
+layout(location=2) out vec4 outFragNormal;
 
 
 struct Visplane {
@@ -88,7 +90,8 @@ struct IntersectionData {
 	int foundType;		//The type of the found object
 	vec2 normal2D;		//Normal vector of the intersect.
 };
-IntersectionData stack[3];
+#define STACK_SIZE 8
+IntersectionData stack[STACK_SIZE];
 int topOfStack = 0;
 
 void pushStack(IntersectionData data) {
@@ -101,7 +104,7 @@ void pushStack(IntersectionData data) {
 		}
 	}
 
-	if (topOfStack < 3) {
+	if (topOfStack < STACK_SIZE) {
 		topOfStack++;
 	}
 	for (int i=topOfStack-1; i>insertIdx; i--) {
@@ -395,6 +398,7 @@ void main() {
 
 
 	float rayOffset = -maxRayAngle + (fragPosition.x / renderResolution.x) * 2.0f * maxRayAngle;
+	float horizontalScaling = (viewCorrection) ? cos(rayOffset) : 1.0f;
 	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
@@ -406,9 +410,6 @@ void main() {
 	vec2 rayEnd = vec2(fragRay.end.xy);
 	
 	float normY = (2.0f * fragPosition.y / renderResolution.y) - 1.0f;
-
-
-
 
 
 
@@ -469,14 +470,14 @@ void main() {
 			}
 
 
-			float t = (playerPosition.z - thisPlane.height) * invAntiProjection;
+			float t = (playerPosition.z - thisPlane.height) * invAntiProjection / horizontalScaling;
 			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
 			vec2 intersectPoint = playerPosition.xy + rayDirection * t;
 
 			if (!isInsideVP(intersectPoint, thisPlane)) {continue; /* Outside VP */}
 
 			vec2 d = playerPosition.xy - intersectPoint;
-			thisIntersect.distanceSQ = dot(d,d) ;
+			thisIntersect.distanceSQ = dot(d,d);
 			thisIntersect.position = vec3(intersectPoint, thisPlane.height);
 			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
@@ -538,8 +539,8 @@ void main() {
 			if (shouldDrawToPositionMap) {
 				uint idx = (validIntersect.index << 3) | typeFlag;
 				ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-				imageStore(positionMap, thisFramePosition, vec4(validIntersect.position, float(idx)));
-				imageStore(normalMap, thisFramePosition, vec4(normalize(normal.xyz), 1.0f));
+				outFragPosition = vec4(validIntersect.position, float(idx));
+				outFragNormal = vec4(normalize(normal.xyz), 1.0f);
 			}
 			trueFound = true;
 			break;
@@ -552,8 +553,7 @@ void main() {
 			} else {
 				fragColour = albedo;
 			}
-			vec4 finalFragColour = vec4(albedo.rgb, minDistance);
-			imageStore(renderedFrame, framePosition, finalFragColour);
+			outFragColour = vec4(albedo.rgb, minDistance);
 			gl_FragDepth = minDistance / maxRayDistance;
 			return;
 		}
@@ -566,9 +566,9 @@ void main() {
 	vec3 skyAlbedo = texture(skyboxTexture, UV).rgb;
 	if (shouldDrawToPositionMap) {
 		ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-		imageStore(positionMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
-		imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+		outFragPosition = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+		outFragNormal = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
-	imageStore(renderedFrame, framePosition, vec4(skyAlbedo.rgb, maxRayDistance));
+	outFragColour = vec4(skyAlbedo.rgb, 1.0f);
 	gl_FragDepth = 1.0f;
 }

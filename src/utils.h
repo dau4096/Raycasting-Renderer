@@ -204,6 +204,20 @@ namespace utils {
 		}
 		return 0.0f;
 	}
+	static inline bool isPressed(const std::string keyFunction) {
+		if (keyMap.find(keyFunction) != keyMap.end()) {
+			return keyMap.at(keyFunction);
+		} else {
+			std::cout << "[" << keyFunction << "] was not bound to a key." << std::endl;
+			return false;
+		}
+	}
+	static inline void setPressed(const std::string keyFunction, bool state) {
+		if (keyMap.find(keyFunction) != keyMap.end()) {
+			keyMap.at(keyFunction) = state;
+		}
+	}
+
 
 	static inline bool logicToBool(int A) {return (A > 0);}
 	static inline int boolToLogic(bool A) {return (A) ? 1 : 0;}

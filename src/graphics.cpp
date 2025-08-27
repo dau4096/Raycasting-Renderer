@@ -9,6 +9,8 @@ using namespace glm;
 
 
 
+#define DEFAULT_FRAMEBUFFER GL_BACK
+
 
 void APIENTRY openGLErrorCallback(
 		GLenum source,
@@ -209,6 +211,7 @@ static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float 
 	bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
 	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
 	bindUniformValue(shaderProgram, "currentTime", currentTime);
+	bindUniformValue(shaderProgram, "viewCorrection", utils::configToBool("VIEW_CORRECTION"));
 
 	//Player Data
 	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
@@ -464,14 +467,11 @@ void findVisibleObjects(
 
 
 void saveScreenshot(GLuint frameTextureID) {
-	GLuint fbo;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTextureID, 0);
+    std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 
-	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(0, 0, currentRenderResolution.x, currentRenderResolution.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, frameTextureID);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
 
 	//Flip image vertically.
 	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
@@ -481,16 +481,16 @@ void saveScreenshot(GLuint frameTextureID) {
 	}
 
 	std::string timeStr = utils::getTimestamp();
+	std::string imagePath = "screenshots/" + stageData.name + "-" + timeStr + ".png";
 
 	stbi_write_png(
-		("screenshots/" + timeStr + ".png").c_str(),
+		imagePath.c_str(),
 		currentRenderResolution.x, currentRenderResolution.y,
 		3, pixels.data(), currentRenderResolution.x*3
 	);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	std::cout << "Successfully saved screenshot as : [" << timeStr << ".png]" << std::endl;
+	std::cout << "Successfully saved screenshot as : [" << imagePath << "]" << std::endl;
 }
 
 
@@ -991,8 +991,161 @@ void initialiseVAOs() {
 	createUIVAO(&GLIndex::uiVAO, &GLIndex::uiVBO, &GLIndex::uiEBO);
 }
 
-GLuint displacementDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
-GLenum defaultBuffer = GL_BACK;
+
+//No depth texture
+GLuint createAlbedoFBO(glm::uvec2 resolution, GLuint& colourTexture) {
+    GLuint FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    //Colour
+    glGenTextures(1, &colourTexture);
+    glBindTexture(GL_TEXTURE_2D, colourTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, drawBuffers);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        raise("Colour FBO incomplete!");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return FBO;
+}
+
+//2 colour attachments
+GLuint createDualAlbedoFBO(glm::uvec2 resolution, GLuint& colourTextureA, GLuint& colourTextureB) {
+    GLuint FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    //Colour 1
+    glGenTextures(1, &colourTextureA);
+    glBindTexture(GL_TEXTURE_2D, colourTextureA);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    //Colour 2
+    glGenTextures(1, &colourTextureB);
+    glBindTexture(GL_TEXTURE_2D, colourTextureB);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, drawBuffers);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        raise("Colour FBO incomplete!");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return FBO;
+}
+
+//With depth texture
+GLuint createAlbedoDepthFBO(glm::uvec2 resolution, GLuint& colourTexture, GLuint& depthTexture) {
+    GLuint FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    //Colour
+    glGenTextures(1, &colourTexture);
+    glBindTexture(GL_TEXTURE_2D, colourTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    //Depth
+    glGenTextures(1, &depthTexture);
+    glBindTexture(GL_TEXTURE_2D, depthTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+
+    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, drawBuffers);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        raise("Colour FBO [W/ depth] incomplete!");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return FBO;
+}
+
+GLuint allDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+GLuint createEnvironmentFBO(glm::uvec2 resolution) {
+    GLuint FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    //Albedo
+    glGenTextures(1, &GLIndex::frameAlbedoComponent);
+    glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    //Position component
+    glGenTextures(1, &GLIndex::framePositionComponent);
+    glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    //Normal component
+    glGenTextures(1, &GLIndex::frameNormalComponent);
+    glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    //Depth
+    glGenTextures(1, &GLIndex::frameDepthComponent);
+    glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glDrawBuffers(3, allDrawBuffers);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        raise("Environment FBO incomplete!");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return FBO;
+}
+
+
 GLuint createDisplacementsFBO(size_t width, size_t height) {
 	GLuint dispFBO;
 	glGenFramebuffers(1, &dispFBO);
@@ -1062,18 +1215,23 @@ std::vector<structs::UIElement> UIElements;
 void prepareOpenGL() {
 	//OpenGL setup;
 
+	//Framebuffers
+	GLIndex::frameFBO = createEnvironmentFBO(currentRenderResolution);
+	GLIndex::interfaceFBO = createAlbedoFBO(display::UI_RESOLUTION, GLIndex::interfaceAlbedoComponent);
+
 	//Image2Ds
-	GLIndex::renderedFrameID = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	GLIndex::interfaceID = createGLImage2D(display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
-	GLIndex::positionMapID = createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
-	GLIndex::normalMapID = createGLImage2D(currentShadowResolution.x, currentShadowResolution.y);
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true);
 	GLIndex::textureArrayUI = createTexture2DArray(UIImageNames, "textures-sym");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
-	GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	if (!(stageData.skyboxTextureName.empty())) {
+		GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	} else {
+		GLIndex::skyboxTextureID = createGLImage2D(display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	}
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
@@ -1118,10 +1276,8 @@ void prepareOpenGL() {
 	//Sprite Shader
 	GLIndex::spriteShader = createShaderProgram("sprites");
 
-	//Lighting compute Shaders
-	GLIndex::lightingShaderDynamic = createComputeShader("lightingDynamic");
-	GLIndex::lightingShaderPrecompute = createComputeShader("lightingPrecomputePerFrame");
-	GLIndex::shadowMappingPreprocess = createComputeShader("lightingPreprocessOnce")
+	//Lighting compute Shader
+	GLIndex::lightingShader = createComputeShader("lighting");
 
 	//uiShader
 	GLIndex::uiShader = createShaderProgram("interface", "interface");
@@ -1140,9 +1296,7 @@ void prepareOpenGL() {
 
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	uiMatrix = glm::ortho(0.0f, float(display::UI_RESOLUTION.x), 0.0f, float(display::UI_RESOLUTION.y), -1.0f, 1.0f);
-	canUseARBTextures = glewIsSupported("GL_ARB_bindless_texture");
-	if (!utils::configToBool("VIEW_USE_DYNAMIC_SHADOWS") && !canUseARBTextures) {std::cout << "Cannot use premade shadows due to lack of support for OpenGL ARB Textures. Using original dynamic shadows." << std::endl;}
-	useDynamicShadows = utils::configToBool("VIEW_USE_DYNAMIC_SHADOWS") && canUseARBTextures;
+	
 
 	//Debug settings
 	glEnable(GL_DEBUG_OUTPUT);
@@ -1168,26 +1322,189 @@ void prepareOpenGL() {
 
 
 
-void createShadowMaps() {
-	const glm::uvec3 SHADOW_MAPPING_SIZE = glm::uvec3(16, 16, 1);
-	for (structs::Wall wall : graphicsData->wallData) {
-		glUseProgram(GLIndex::shadowMappingPreprocess);
-		uniforms::bindCommonUniforms(GLIndex::shadowMappingPreprocess, blendingAlpha, currentTime);
-		glDispatchCompute(
-			(wall.shadowResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
-			(wall.shadowResolution + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
-			1
-		);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-		GLErrorcheck("Raycasting Shader", true);
+
+
+
+}
+
+
+
+
+namespace ui {
+
+
+//UI
+GLuint currentIdx;
+
+inline void addImage(glm::vec2 position, glm::vec2 scale, GLuint textureID, bool isAlphaNumeric, bool hasBackground, std::vector<float>* verticesData, std::vector<GLuint>* indicesData, float distance=0.0f) {
+	float texID = (textureID << 2) | int(isAlphaNumeric) | int(hasBackground);
+	verticesData->insert(verticesData->end(), {
+		position.x, 			position.y, 			0.0f, 1.0f, texID, distance,
+		position.x, 			position.y + scale.y, 	0.0f, 0.0f, texID, distance,
+		position.x + scale.x, 	position.y, 			1.0f, 1.0f, texID, distance,
+		position.x + scale.x, 	position.y + scale.y, 	1.0f, 0.0f, texID, distance,
+	});
+
+	indicesData->insert(indicesData->end(), {
+		currentIdx + 0, currentIdx + 1, currentIdx + 2,
+		currentIdx + 1, currentIdx + 2, currentIdx + 3
+	});
+	currentIdx += 4;
+}
+
+void drawInt(glm::vec2 position, glm::vec2 scale, int value, std::vector<float>* verticesData, std::vector<GLuint>* indicesData) { //Values [-99999 <-> 99999] inclusive.
+	int absVal = abs(value);
+	int maxDigits = 5;
+	bool started = false;
+	int divisor = 10000;
+
+	glm::vec2 digitOffset = glm::vec2(scale.x * 0.65f, 0.0);
+
+
+	if (value < 0) {
+		addImage(position, scale, 10, true, false, verticesData, indicesData); //"-"
+		position += digitOffset;
+	}
+
+	for (int i = 0; i < maxDigits; i++) {
+		int digit = (absVal / divisor) % 10;
+
+		if (digit > 0 || started || (i == maxDigits - 1)) {
+			started = true;
+			addImage(position, scale, digit, true, false, verticesData, indicesData); //"[0-9]"
+			position += digitOffset;
+		}
+
+		divisor /= 10;
 	}
 }
 
+void drawHUD(float blendingAlpha, float currentTime) {
+	currentIdx = 0;
+	//glClearTexImage(GLIndex::interfaceID, 0, GL_RGBA, GL_FLOAT, nullptr);
+	std::vector<float> vertices;
+	std::vector<GLuint> indices;
+	std::vector<float> verticesData;
+	std::vector<GLuint> indicesData;
 
+	shouldShowFPS = utils::configToBool("META_SHOW_FRAMERATE_UI");
+	shouldShowTPS = utils::configToBool("META_SHOW_TICKRATE_UI");
+
+
+	for (const structs::UIElement element : graphics::UIElements) {
+		if ((element.showPtr) && !*(element.showPtr)) {continue;}
+
+		verticesData.clear();
+		indicesData.clear();
+
+		if (element.iPtr) { //Shows an integer value
+			drawInt(element.position, element.scale, *(element.iPtr), &verticesData, &indicesData);
+		} else if (element.fPtr) { //Shows an integer value
+			drawInt(element.position, element.scale, int(*(element.fPtr)), &verticesData, &indicesData);
+		} else { //Shows some UI image element
+			addImage(element.position, element.scale, element.textureID, false, false, &verticesData, &indicesData, -1.0f);
+		}
+
+		utils::combineVectors(&vertices, verticesData);
+		utils::combineVectors(&indices, indicesData);
+	}
+
+	for (structs::TextObject thisTO : graphicsData->textObjectData) {
+		verticesData.clear();
+		indicesData.clear();
+
+
+		float distance = glm::length(glm::vec2(thisTO.position - player.position));
+		float scale = thisTO.scale * zoomEffect / distance;
+
+
+		float centreX = structs::getCentreX(thisTO.position, player, display::UI_RESOLUTION);
+
+		float normPos = -1.0f + 2.0f * glm::clamp(centreX, 0.0f, static_cast<float>(currentRenderResolution.x)) / static_cast<float>(currentRenderResolution.x);
+		float distanceOffset = cos(normPos * rayAngle);
+		if (distanceOffset <= 1e-5f) {continue;}
+		float distDiv = (utils::configToBool("VIEW_CORRECTION")) ? glm::clamp(1.0f / distanceOffset, 1.0f, utils::configToFloat("VIEW_MAX_RAY_DIST")) : 1.0f;
+
+
+		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * distDiv * 1.5f * zoomEffect / distance;
+		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
+		float charY = centreY - (scale / 2.0f);
+
+
+		//ViewRoll/Pitch.
+		float rollDecimal = glm::clamp(player.viewRoll * constants::TO_DEG / 22.5f, -1.0f, 1.0f) * zoomEffect;
+		float pitchDecimal = glm::clamp(player.viewPitch * constants::TO_DEG, -22.5f, 22.5f) * zoomEffect;
+		charY += (pitchDecimal * display::UI_RESOLUTION.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
+
+
+		int letterIdx = 0;
+		int textLength = thisTO.text.size();
+		for (char ch : thisTO.text) {
+			//Iterate through letters.
+			int charIdx = structs::convertTextToIdx(ch, &symbolNames);
+			letterIdx++;
+
+			if (charIdx < 0) {continue; /* Blank Character */}
+			float charX = centreX + scale*0.65f*(letterIdx - (textLength/2.0f));
+
+			float thisCharY = charY;
+			if (utils::configToBool("VIEW_WIGGLY_TEXTOBJECTS")) {
+				thisCharY += (charX - centreX) * rollDecimal;
+			} else {
+				thisCharY -= ((currentRenderResolution.x / 2.0f) - charX) * rollDecimal;
+			}
+
+			glm::vec2 charPos = glm::vec2(charX, thisCharY);
+			addImage(charPos, glm::vec2(scale, scale), charIdx, true, true, &verticesData, &indicesData, distance);
+		}
+
+		utils::combineVectors(&vertices, verticesData);
+		utils::combineVectors(&indices, indicesData);
+	}
+
+
+	size_t newVertexSize = vertices.size() * sizeof(float);
+	size_t newIndexSize = indices.size() * sizeof(GLuint);
+	//Draw using 2D projection (pvmMatrix is just ortho projection.)
+	glUseProgram(GLIndex::uiShader);
+	glBindBuffer(GL_ARRAY_BUFFER, GLIndex::uiVBO);
+	if (newVertexSize > graphics::currentUIVertexSize) {
+		glBufferData(GL_ARRAY_BUFFER, newVertexSize, vertices.data(), GL_DYNAMIC_DRAW);
+		graphics::currentUIVertexSize = newVertexSize;
+	} else {
+		glBufferSubData(GL_ARRAY_BUFFER, 0, newVertexSize, vertices.data());
+	}
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GLIndex::uiEBO);
+	if (newIndexSize > graphics::currentUIIndexSize) {
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, newIndexSize, vertices.data(), GL_DYNAMIC_DRAW);
+		graphics::currentUIIndexSize = newIndexSize;
+	} else {
+		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, newIndexSize, indices.data());
+	}
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLIndex::interfaceFBO);
+	const GLfloat clearColour[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	glClearBufferfv(GL_COLOR, 0, clearColour);
+
+	glBindTextureUnit(0, GLIndex::textureArrayUI);
+	glBindTextureUnit(1, GLIndex::textureArrayNumeric);
+	glBindTextureUnit(2, GLIndex::frameDepthComponent);
+
+	uniforms::bindCommonUniforms(GLIndex::uiShader, blendingAlpha, currentTime);
+	GLint pvmMatrixLocation = glGetUniformLocation(GLIndex::uiShader, "pvmMatrix");
+	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(graphics::uiMatrix));
+
+	glBindVertexArray(GLIndex::uiVAO);
+	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(0);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+	utils::GLErrorcheck("Interface 3D", true);
 
 }
 
-
+}
 
 
 
@@ -1206,11 +1523,11 @@ void updateSSBOs(bool drawLightBlockers) {
 		drawLightBlockers
 	);
 
+
 	//Update SSBOs.
 	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
 		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
 	);
-	//pause();
 	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
 		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
 	);
@@ -1269,10 +1586,8 @@ void drawDisplacements(float blendingAlpha, float currentTime) {
 	size_t newIndexSize = indices.size() * sizeof(GLuint);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::displacementFBO);
-	glDrawBuffers(3, graphics::displacementDrawBuffers);
-	glEnable(GL_DEPTH_TEST);
+	glDrawBuffers(3, graphics::allDrawBuffers);
 	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
 	glClearDepth(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1298,184 +1613,19 @@ void drawDisplacements(float blendingAlpha, float currentTime) {
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 
 	uniforms::bindCommonUniforms(GLIndex::displacementShader3D, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
+	uniforms::bindUniformValue(GLIndex::displacementShader3D, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glDrawBuffers(1, &graphics::defaultBuffer);
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDrawBuffer(DEFAULT_FRAMEBUFFER);
+	glDepthFunc(GL_ALWAYS);
+
 	utils::GLErrorcheck("Displacements 3D", true);
 }
-
-
-//UI
-GLuint currentIdx;
-
-inline void addImage(glm::vec2 position, glm::vec2 scale, GLuint textureID, bool isAlphaNumeric, bool hasBackground, std::vector<float>* verticesData, std::vector<GLuint>* indicesData, float distance=0.0f) {
-	float texID = (textureID << 2) | int(isAlphaNumeric) | int(hasBackground);
-	verticesData->insert(verticesData->end(), {
-		position.x, 			position.y, 			0.0f, 1.0f, texID, distance,
-		position.x, 			position.y + scale.y, 	0.0f, 0.0f, texID, distance,
-		position.x + scale.x, 	position.y, 			1.0f, 1.0f, texID, distance,
-		position.x + scale.x, 	position.y + scale.y, 	1.0f, 0.0f, texID, distance,
-	});
-
-	indicesData->insert(indicesData->end(), {
-		currentIdx + 0, currentIdx + 1, currentIdx + 2,
-		currentIdx + 1, currentIdx + 2, currentIdx + 3
-	});
-	currentIdx += 4;
-}
-
-void drawInt(glm::vec2 position, glm::vec2 scale, int value, std::vector<float>* verticesData, std::vector<GLuint>* indicesData) { //Values [-99999 <-> 99999] inclusive.
-	int absVal = abs(value);
-	int maxDigits = 5;
-	bool started = false;
-	int divisor = 10000;
-
-	glm::vec2 digitOffset = glm::vec2(scale.x * 0.65f, 0.0);
-
-
-	if (value < 0) {
-		addImage(position, scale, 10, true, false, verticesData, indicesData); //"-"
-		position += digitOffset;
-	}
-
-	for (int i = 0; i < maxDigits; i++) {
-		int digit = (absVal / divisor) % 10;
-
-		if (digit > 0 || started || (i == maxDigits - 1)) {
-			started = true;
-			addImage(position, scale, digit, true, false, verticesData, indicesData); //"[0-9]"
-			position += digitOffset;
-		}
-
-		divisor /= 10;
-	}
-}
-
-void drawHUD(float blendingAlpha, float currentTime) {
-	currentIdx = 0;
-	glClearTexImage(GLIndex::interfaceID, 0, GL_RGBA, GL_FLOAT, nullptr);
-	std::vector<float> vertices;
-	std::vector<GLuint> indices;
-	std::vector<float> verticesData;
-	std::vector<GLuint> indicesData;
-
-	shouldShowFPS = utils::configToBool("META_SHOW_FRAMERATE_UI");
-	shouldShowTPS = utils::configToBool("META_SHOW_TICKRATE_UI");
-
-
-	for (const structs::UIElement element : graphics::UIElements) {
-		if ((element.showPtr) && !*(element.showPtr)) {continue;}
-
-		verticesData.clear();
-		indicesData.clear();
-
-		if (element.iPtr) { //Shows an integer value
-			drawInt(element.position, element.scale, *(element.iPtr), &verticesData, &indicesData);
-		} else if (element.fPtr) { //Shows an integer value
-			drawInt(element.position, element.scale, int(*(element.fPtr)), &verticesData, &indicesData);
-		} else { //Shows some UI image element
-			addImage(element.position, element.scale, element.textureID, false, false, &verticesData, &indicesData);
-		}
-
-		utils::combineVectors(&vertices, verticesData);
-		utils::combineVectors(&indices, indicesData);
-	}
-
-	for (structs::TextObject thisTO : graphicsData->textObjectData) {
-		verticesData.clear();
-		indicesData.clear();
-
-
-		float distance = glm::length(glm::vec2(thisTO.position - player.position));
-		float scale = thisTO.scale * zoomEffect / distance;
-
-		float centreX = structs::getCentreX(thisTO.position, player, display::UI_RESOLUTION);
-		float projCentreY = (player.cameraPosition.z - thisTO.position.z) * 1.5f * zoomEffect / distance;
-		float centreY = display::UI_RESOLUTION.y * (0.5f - projCentreY);
-		float charY = centreY - (scale / 2.0f);
-
-
-		//ViewRoll/Pitch.
-		float rollDecimal = glm::clamp(player.viewRoll * constants::TO_DEG / 22.5f, -1.0f, 1.0f) * zoomEffect;
-		float pitchDecimal = glm::clamp(player.viewPitch * constants::TO_DEG, -22.5f, 22.5f) * zoomEffect;
-		charY += (pitchDecimal * display::UI_RESOLUTION.y) / 54.0f; //Scaling to resolution. 10px per degree if it's 540px tall.
-
-
-		int letterIdx = 0;
-		int textLength = thisTO.text.size();
-		for (char ch : thisTO.text) {
-			//Iterate through letters.
-			int charIdx = structs::convertTextToIdx(ch, &symbolNames);
-			letterIdx++;
-
-			if (charIdx < 0) {continue; /* Blank Character */}
-			float charX = centreX + scale*0.65f*(letterIdx - (textLength/2.0f));
-
-			float thisCharY = charY;
-			if (utils::configToBool("VIEW_WIGGLY_TEXTOBJECTS")) {
-				thisCharY += (charX - centreX) * rollDecimal;
-			} else {
-				thisCharY -= ((currentRenderResolution.x / 2.0f) - charX) * rollDecimal;
-			}
-
-			glm::vec2 charPos = glm::vec2(charX, thisCharY);
-			addImage(charPos, glm::vec2(scale, scale), charIdx, true, true, &verticesData, &indicesData, distance);
-		}
-
-		utils::combineVectors(&vertices, verticesData);
-		utils::combineVectors(&indices, indicesData);
-	}
-
-
-	size_t newVertexSize = vertices.size() * sizeof(float);
-	size_t newIndexSize = indices.size() * sizeof(GLuint);
-	//Draw using 2D projection (pvmMatrix is just ortho projection.)
-	glUseProgram(GLIndex::uiShader);
-	glBindBuffer(GL_ARRAY_BUFFER, GLIndex::uiVBO);
-	if (newVertexSize > graphics::currentUIVertexSize) {
-		glBufferData(GL_ARRAY_BUFFER, newVertexSize, vertices.data(), GL_DYNAMIC_DRAW);
-		graphics::currentUIVertexSize = newVertexSize;
-	} else {
-		glBufferSubData(GL_ARRAY_BUFFER, 0, newVertexSize, vertices.data());
-	}
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, GLIndex::uiEBO);
-	if (newIndexSize > graphics::currentUIIndexSize) {
-		glBufferData(GL_ARRAY_BUFFER, newIndexSize, vertices.data(), GL_DYNAMIC_DRAW);
-		graphics::currentUIIndexSize = newIndexSize;
-	} else {
-		glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, newIndexSize, indices.data());
-	}
-
-	glBindImageTexture(0, GLIndex::interfaceID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindTextureUnit(0, GLIndex::textureArrayUI);
-	glBindTextureUnit(1, GLIndex::textureArrayNumeric);
-	glBindTextureUnit(2, GLIndex::renderedFrameID);
-
-	uniforms::bindCommonUniforms(GLIndex::uiShader, blendingAlpha, currentTime);
-	GLint pvmMatrixLocation = glGetUniformLocation(GLIndex::uiShader, "pvmMatrix");
-	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(graphics::uiMatrix));
-
-	glBindVertexArray(GLIndex::uiVAO);
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-	glBindVertexArray(0);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-	utils::GLErrorcheck("Interface 3D", true);
-
-}
-
-
-
-
-
 
 
 inline void renderingGeneric(const std::string& shaderName="") {
@@ -1517,10 +1667,11 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//Environment Shader.
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_ALWAYS);
+	glDepthMask(GL_TRUE);
 	glUseProgram(GLIndex::envShader);
-	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindImageTexture(1, GLIndex::positionMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindImageTexture(2, GLIndex::normalMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 	glBindTextureUnit(1, GLIndex::skyboxTextureID);
@@ -1538,11 +1689,9 @@ void draw(double blendingAlpha, double currentTime) {
 	frame::drawDisplacements(blendingAlpha, currentTime);
 	//2D portion;
 	glUseProgram(GLIndex::displacementShader2D);
-	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindImageTexture(1, GLIndex::positionMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindImageTexture(2, GLIndex::normalMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
-	glBindTextureUnit(0, GLIndex::renderedFrameID);
+	glBindTextureUnit(0, GLIndex::frameDepthComponent);
 	glBindTextureUnit(1, GLIndex::displacementFBOColour);
 	glBindTextureUnit(2, GLIndex::displacementFBOPosition);
 	glBindTextureUnit(3, GLIndex::displacementFBONormals);
@@ -1555,12 +1704,11 @@ void draw(double blendingAlpha, double currentTime) {
 
 	//Sprite Shader.
 	glUseProgram(GLIndex::spriteShader);
-	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-	glBindImageTexture(1, GLIndex::positionMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindImageTexture(2, GLIndex::normalMapID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-	glBindTextureUnit(1, GLIndex::renderedFrameID);
+	glBindTextureUnit(1, GLIndex::frameDepthComponent);
+	glBindTextureUnit(2, GLIndex::frameAlbedoComponent);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime);
@@ -1571,56 +1719,33 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//Lighting Shader
-	updateSSBOs(true);
-	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-	if (utils::configToBool("VIEW_USE_DYNAMIC_SHADOWS") || !canUseARBTextures) {
-		//Dynamic lighting does not need ARB textures, and can also be manually enabled.
-		glUseProgram(GLIndex::lightingShaderDynamic);
+	if (utils::configToBool("VIEW_LIGHTING")) {
+		updateSSBOs(true);
+		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
+		glUseProgram(GLIndex::lightingShader);
 
-		glBindTextureUnit(0, GLIndex::positionMapID);
-		glBindTextureUnit(1, GLIndex::normalMapID);
+		glBindTextureUnit(0, GLIndex::framePositionComponent);
+		glBindTextureUnit(1, GLIndex::frameNormalComponent);
 		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
 		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		//Uniforms;
-		uniforms::bindCommonUniforms(GLIndex::lightingShaderDynamic, blendingAlpha, currentTime);
-		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
-		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::lightingShaderDynamic, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+		uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
 
 		//Dispatch 2 extra valid lights (Sun, Headlamp.)
 		glDispatchCompute(
-			(currentShadowResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
-			(currentShadowResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
 			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
 			//maxIndex + 1 : All sunlight calculations. [SUNL]
 			//maxIndex + 2 : All headlamp calculations. [HLMP]
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-		GLErrorcheck("Dynamic Lighting Shader", true);
-
-	} else {
-		//Premade lighting can only be used if it is selected, and ARB textures are available.
-		glUseProgram(GLIndex::lightingShaderPrecompute);
-
-		glBindTextureUnit(0, GLIndex::positionMapID);
-		glBindTextureUnit(1, GLIndex::normalMapID);
-		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		//Uniforms;
-		uniforms::bindCommonUniforms(GLIndex::lightingShaderPrecompute, blendingAlpha, currentTime);
-		uniforms::bindUniformValue(GLIndex::lightingShaderPrecompute, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::lightingShaderPrecompute, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
-
-		//Dispatch for every screen position.
-		glDispatchCompute(
-			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
-			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-			1
-		);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-		GLErrorcheck("Precompute Lighting Shader", true);
+		GLErrorcheck("Lighting Shader", true);
 	}
 
 
@@ -1628,39 +1753,45 @@ void draw(double blendingAlpha, double currentTime) {
 	//UI Shader.
 	if (utils::configToBool("VIEW_SHOW_HUD")) {
 		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
+
 		avgframerate = utils::getAverage(rollingFPS);
 		avgtickrate = utils::getAverage(rollingTPS);
-		drawHUD(blendingAlpha, currentTime);
+
+		ui::drawHUD(blendingAlpha, currentTime);
 	}		
 
 
-	//Display Shader and update screen.
+
+	//Display Shader (Post-processing included).
 	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
 	glUseProgram(GLIndex::displayShader);
 
-	glBindTextureUnit(0, GLIndex::renderedFrameID);
-	glBindTextureUnit(1, GLIndex::interfaceID);
-	glBindTextureUnit(2, GLIndex::lightingMapsArrayID);
-	glBindTextureUnit(3, GLIndex::normalMapID);
-	glBindImageTexture(0, GLIndex::renderedFrameID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	//Return to default FBO
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDrawBuffer(DEFAULT_FRAMEBUFFER);
+
+	glBindTextureUnit(0, GLIndex::frameAlbedoComponent);
+	glBindTextureUnit(1, GLIndex::frameDepthComponent);
+	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
+	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
+	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
 	//Display-Specific
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
+	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
 	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
-	uniforms::bindUniformValue(GLIndex::displayShader, "useDynamicShadows", useDynamicShadows);
 
 	renderingGeneric("Display Shader");
 
 
 	if (shouldTakeScreenshot) {
-		graphics::saveScreenshot(GLIndex::renderedFrameID);
+		graphics::saveScreenshot(GLIndex::screenshotImage2D);
 	}
 }
 

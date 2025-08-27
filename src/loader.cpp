@@ -773,6 +773,8 @@ static inline structs::Visplane extractVisplane(
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
+	GLuint textureID = (type == V_NODRAW) ? assignTexture("nodraw") : getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
+
 	structs::Visplane visplane;
 	pugi::xml_node vertexNode = node.child("vertices");
 	if (vertexNode) { //Has explicit vertices.
@@ -790,8 +792,7 @@ static inline structs::Visplane extractVisplane(
 		visplane = structs::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
-			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-			type,
+			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
@@ -814,8 +815,7 @@ static inline structs::Visplane extractVisplane(
 		visplane = structs::Visplane(
 			start, end,
 			getFloat(node, "height", 0.0f),
-			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-			type,
+			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
@@ -1071,17 +1071,14 @@ void fetchBindingsFromXML(const pugi::xml_document& doc) {
 	size_t count = static_cast<size_t>(nodeList.size());
 	
 	std::string functionString, keyString;
-	for (size_t i = 0; i < count; ++i) {
+	for (size_t i=0; i<count; i++) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		if (userBindings.find(functionString) == userBindings.end()) {
-			raise("Unknown binding function: " + functionString);
-		}
-
 		keyString = strToUpper(node.attribute("key").as_string());
 		if (keyNameToGLFW.find(keyString) != keyNameToGLFW.end()) {
-			userBindings.at(functionString) = keyNameToGLFW.at(keyString);
+			userBindings[functionString] = keyNameToGLFW.at(keyString);
+			keyMap[functionString] = false;
 		} else {
 			raise("Unknown Key: " + keyString + " for binding function: " + functionString);
 		}
@@ -1098,13 +1095,9 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		if (userConfig.find(functionString) == userConfig.end()) {
-			raise("Unknown config function: " + functionString);
-		}
-
 		valueString = strToUpper(node.attribute("value").as_string());
-		if (valueString != "") {
-			userConfig.at(functionString) = valueString;
+		if (!(valueString.empty())) {
+			userConfig[functionString] = valueString;
 		} else {
 			raise("Invalid value for: " + functionString);
 		}

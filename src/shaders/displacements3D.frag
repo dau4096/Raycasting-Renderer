@@ -33,6 +33,9 @@ uniform float verticalFOV;
 uniform float rayOffset;
 uniform float maxRayDistance;
 
+//Debug
+uniform int debugMode;
+
 
 
 void main() {
@@ -47,8 +50,20 @@ void main() {
 	float dist = 1.0f / inversesqrt(dot(d,d));
 	gl_FragDepth = clamp(dist / maxRayDistance, 0.0f, 1.0f); //2D [XY] distance.
 
-
-	outColour = vec4(albedo.rgb, dist);
+	switch(debugMode){
+		case 0: { //No debugging
+			outColour = vec4(albedo.rgb, dist);
+			break;
+		}
+		case 1: { //UV
+			outColour = vec4(fragUV, 0.0f, 1.0f);
+			break;
+		}
+		case 2: { //Normals
+			outColour = vec4(thisDisp.normal_texID.xyz, 1.0f);
+			break;
+		}
+	}
 	outPosition = vec4(fragPos3D, dispIndex);
 	outNormal = vec4(thisDisp.normal_texID.xyz, 1.0f);
 }

@@ -66,8 +66,9 @@
     <!-- Sprite lighting [No extra env objects] -->
 
 
-    <!-- Displacement shadows [Maybe not.] -->
+    <!-- Displacement shadows -->
     <!--<displacement > <vertices v0="-7.25 12.5 1.0" v1="-6.25 12.5 2.0" v2="-5.25 12.5 1.0" /> </displacement>-->
+    <wall start="-7.25 12.5 1.0" end="-5.25 12.5 2.0" texture="fakeDisplacement" useWorldUVX="FALSE" useWorldUVY="FALSE" />
 
 
     <!-- Multiple shadows via 1 surface -->
@@ -135,8 +136,8 @@
     <sprite position="-9.5 9.5 0.5" width="1.0" height="1.0" texture="piloten" />
 
     <textObj position="-1.5 12.5 1.0" text="Displacement shadows" />
-    <textObj position="-1.5 12.5 0.9" text="[NONFUNCTIONAL]" />
-    <light position="-6.25 10.5 1.5" colour="1.0 0.5 0.0" intensity="7.5" />
+    <textObj position="-1.5 12.5 0.9" text="[Don't look too close please]" />
+    <light position="-6.25 10.5 1.5" colour="1.0 0.5 0.0" intensity="7.5" hasMarker="TRUE" />
 
     <textObj position="-1.5 17.5 1.0" text="Multiple shadows via 1 surface" />
     <light position="-6.25 17.5 6.0" colour="1.0 0.0 0.0" intensity="10.0" hasMarker="TRUE" />

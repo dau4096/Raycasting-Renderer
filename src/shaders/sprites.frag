@@ -4,7 +4,15 @@
 
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
-layout(binding=1) uniform sampler2D renderedFrameRO;
+layout(binding=1) uniform sampler2D depthMap;
+layout(binding=2) uniform sampler2D frameAlbedo;
+
+//FBO components
+layout(location=0) out vec4 outFragColour;
+layout(location=1) out vec4 outFragPosition;
+layout(location=2) out vec4 outFragNormal;
+
+
 
 //CameraData
 uniform float maxRayDistance;
@@ -12,6 +20,7 @@ uniform float maxRayAngle;
 uniform float verticalFOV;
 uniform float zoomFactor;
 uniform bool useMipMapping;
+uniform bool viewCorrection;
 
 //Player Data
 uniform float playerViewRoll;
@@ -27,10 +36,6 @@ uniform int debugMode;
 uniform int numSprites;
 uniform float shadowMapQuality;
 
-
-layout(rgba32f, binding=0) writeonly uniform image2D renderedFrameWO;
-layout(rgba32f, binding=1) writeonly uniform image2D positionMap;
-layout(rgba32f, binding=2) writeonly uniform image2D normalMap;
 
 
 struct Sprite {
@@ -109,8 +114,12 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
+	float normPos = -1.0f + 2.0f * clamp(centrePixelX, 0.0f, renderResolution.x) / float(renderResolution.x);
+	float distanceOffset = cos(normPos * maxRayAngle);
+	if (distanceOffset <= EPSILON_ALT) {return INVALIDv2;}
+	float distDiv = (viewCorrection) ? clamp(1.0f / distanceOffset, 1.0f, maxRayDistance) : 1.0f;
 
-	float mult = invdistance * zoomEffect * 1.5f;
+	float mult = invdistance * zoomEffect * 1.5f * distDiv;
 	float projectedYLow = (playerPosition.z - spriteFootZ) * mult;
 	float projectedYTop = (playerPosition.z - spriteHeadZ) * mult;
 	
@@ -142,8 +151,8 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);	
-	vec4 fragData = texture(renderedFrameRO, fragPosition / vec2(renderResolution));
-	float fragDepth = fragData.a;
+	vec4 fragAlbedo = texture(frameAlbedo, fragPosition / vec2(renderResolution));
+	float fragDepth = texture(depthMap, fragPosition / vec2(renderResolution)).r * maxRayDistance;
 	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 
@@ -163,7 +172,7 @@ void main() {
 	Sprite closestSprite;
 	int closestIndex;
 	bool spriteHit = false;
-	vec3 albedo;
+	vec3 spriteAlbedo;
 	float transparency;
 
 	for (int index=0; index<numSprites; index++) {
@@ -172,7 +181,7 @@ void main() {
 		vec2 delta = playerPosition.xy - thisSprite.position.xy;
 		float spriteDistanceSQ = dot(delta, delta);
 
-		if (spriteDistanceSQ > fragDepth*fragDepth || spriteDistanceSQ > maxRayDistance*maxRayDistance) {continue; /* Too far to see onscreen. */}
+		if ((spriteDistanceSQ > fragDepth*fragDepth) || (spriteDistanceSQ > maxRayDistance*maxRayDistance)) {continue; /* Too far to see onscreen. */}
 
 
 		float invdistance = inversesqrt(spriteDistanceSQ);
@@ -181,16 +190,23 @@ void main() {
 		
 		
 		uint texID = (thisSprite.textureID_transparency & 0xFFFF);
-		if (debugMode == 1) { //DrawUV
-			albedo = vec3(spriteUV.xy, texID/64.0f);
-		} else if (debugMode == 2) { //DrawNormals
-			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
-			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
-			albedo = vec3(0.5f, 0.5f, 0.5f);
-		} else {
-			vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
-			if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
-			albedo = alphaTexture.rgb;
+		switch (debugMode) {
+			case 1: { //DrawUV
+				spriteAlbedo = vec3(spriteUV.xy, texID/64.0f);
+				break;
+			}
+			case 2: { //DrawNormals
+				vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
+				if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
+				spriteAlbedo = vec3(0.5f, 0.5f, 0.5f);
+				break;
+			}
+			default: {
+				vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
+				if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
+				spriteAlbedo = alphaTexture.rgb;
+				break;
+			}
 		}
 
 		transparency = (thisSprite.textureID_transparency >> 16) / 65535.0f; //The smallest non-zero value transparency can be is 1/65535.
@@ -204,13 +220,14 @@ void main() {
 
 
 
-	if (spriteHit) {
-		if (shouldDrawToPositionMap && (transparency >= 1.0f)) {
-			int idx = (closestIndex << 3) | 0x4;
-			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-			imageStore(positionMap, thisFramePosition, vec4(closestSprite.position, float(idx)));
-			imageStore(normalMap, thisFramePosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
-		}
-		imageStore(renderedFrameWO, framePosition, vec4(mix(fragData.rgb, albedo.rgb, transparency), fragDepth));
+	if (!spriteHit) {discard;}
+	if (shouldDrawToPositionMap && (transparency >= 1.0f)) {
+		int idx = (closestIndex << 3) | 0x4;
+		ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+		outFragPosition = vec4(closestSprite.position, float(idx));
+		outFragNormal = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
+
+	outFragColour = vec4(mix(fragAlbedo.rgb, spriteAlbedo.rgb, transparency), 1.0f);
+	gl_FragDepth = fragDepth / maxRayDistance;
 }

@@ -35,7 +35,7 @@ void main() {
 	//X Coordinate;
 	vec2 direction2D = normalize(delta2D);
 	float theta = atan(direction2D.x, direction2D.y);
-	float angleDelta = degrees(theta) - playerViewAngle;
+	float angleDelta = theta - playerViewAngle;
 	if (angleDelta > PI) {angleDelta -= 2.0f*PI;}
 	if (angleDelta < -PI) {angleDelta += 2.0f*PI;}
 	float x = (angleDelta / (halfFOV));

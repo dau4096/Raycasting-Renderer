@@ -1,4 +1,4 @@
-/* lightingDynamic.comp */
+/* lighting.comp */
 #version 460 core
 
 
@@ -93,7 +93,6 @@ vec2 fragPosition;
 #define PI 3.141592f
 #define EPSILON 1e-4f
 #define EPSILON_ALT 1e-3f
-#define INVALIDdv2 dvec2(INF, INF)
 #define INVALIDv2 vec2(INF, INF)
 #define INVALIDv3 vec3(INF, INF, INF)
 #define INVALIDv4 vec4(INF, INF, INF, INF)
@@ -167,9 +166,6 @@ void unpackTextureFormattingBits2(
 
 
 //GLSL Cross only works on vec3.
-double cross2D(dvec2 a, dvec2 b) {
-	return a.x * b.y - a.y * b.x;
-}
 float cross2D(vec2 a, vec2 b) {
 	return a.x * b.y - a.y * b.x;
 }
