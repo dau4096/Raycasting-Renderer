@@ -100,32 +100,6 @@ vec4 quantisingFunc(vec2 mainUV) {
 }
 
 
-vec4 smoothingFunc() {
-	int n = 0;
-	vec2 UV;
-	vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
-	vec4 albedo;
-
-	for (int dx=-1; dx<=1; dx++) {
-		for (int dy=-1; dy<=1; dy++) {
-			UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-			albedo = texture(renderedFrameSampler2D, UV);
-			if (albedo.a != -1) {
-				n++;
-				colourSum += albedo.rgb;
-			}
-		}
-	}
-
-	UV = getUV(gl_FragCoord.xy);
-	vec4 centrePX = texture(renderedFrameSampler2D, UV);
-	if (n > 0) {
-		return vec4(colourSum / float(n), centrePX.a);
-	} else {
-		return centrePX;
-	}
-}
-
 
 vec3 getBrightness(vec2 UV) {
 	if (!useLighting || ((debugMode != 0) && (debugMode != 3))) {return vec3(1.0f, 1.0f, 1.0f); /* Not no-debug and not lighting debug. */}
@@ -176,8 +150,6 @@ void main() {
 
 	if (antiAliasingLevel > 0) { //More useful Anti-Aliasing
 		resultant = antiAliasFunc();
-	} else if (smoothingEnabled) { //Simple Anti-Aliasing
-		resultant = smoothingFunc();
 	}
 
 

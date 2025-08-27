@@ -4,77 +4,9 @@
 using namespace std;
 
 
-inline std::unordered_map<std::string, int> userBindings = {
-	{"MOVE_FORWARD", -1},
-	{"MOVE_BACKWARD", -1},
-	{"MOVE_LEFT", -1},
-	{"MOVE_RIGHT", -1},
-	{"MOVE_JUMP", -1},
-	{"MOVE_CROUCH", -1},
-	{"MOVE_SPRINT", -1},
-
-	{"USE_INTERACT", -1},
-	{"USE_HEADLAMP", -1},
-	{"USE_VIEWZOOM", -1},
-
-	{"META_SCREENSHOT", -1},
-	{"META_RELOAD_STAGE", -1},
-	{"META_RELOAD_ENV", -1},
-	{"META_EXIT", -1},
-	{"META_FREECURSOR", -1},
-};
-
-
-inline std::unordered_map<std::string, bool> keyMap = []() {
-	std::unordered_map<std::string, bool> tmp;
-	for (const auto& pair : userBindings) {
-		tmp[pair.first] = false;
-	}
-	return tmp;
-}();
-
-
-inline std::unordered_map<std::string, std::string> userConfig = {
-	{"TURN_SPEED_MOUSE", ""},
-	{"TURN_SPEED_KEYBOARD", ""},
-
-	{"VIEW_RENDER_RESOLUTION_QUALITY", ""},
-	{"VIEW_FOV", ""},
-	{"VIEW_MAX_RAY_DIST", ""},
-	{"VIEW_SHOW_HUD", ""},
-	{"VIEW_DRAW_UV", ""},
-	{"VIEW_BOB", ""},
-	{"VIEW_LEAN", ""},
-	{"VIEW_VLOOK", ""},
-	{"VIEW_SMOOTHING", ""},
-	{"VIEW_MIPMAPPING", ""},
-	{"VIEW_TEXTURE_QUALITY", ""},
-	{"VIEW_ANTIALIAS_LEVEL", ""},
-	{"VIEW_LUMINANCE_QUANTISATION", ""},
-	{"VIEW_MAX_FREQ", ""},
-	{"VIEW_INTERFACE_IN_SCREENSHOT", ""},
-	{"VIEW_VSYNC", ""},
-	{"VIEW_LIGHTING", ""},
-	{"VIEW_SHADOW_QUALITY", ""},
-	{"VIEW_ALLOW_TRANSPARENCY", ""},
-	{"VIEW_ALLOW_TRANSPARENT_SHADOWS", ""},
-	{"VIEW_WIGGLY_TEXTOBJECTS", ""},
-	{"VIEW_CORRECTION", ""},
-
-	{"META_DEBUG_MODE", ""},
-	{"META_SHOW_TICKRATE_UI", ""},
-	{"META_SHOW_FRAMERATE_UI", ""},
-	{"META_SHOW_FRAMERATE_CONSOLE", ""},
-	{"META_SHOW_DT_CONSOLE", ""},
-	{"META_SHOW_CONSOLE", ""},
-	{"META_STAGE_NAME", ""},
-	{"META_SHOW_DATA", ""},
-	{"META_DYNAMIC_UPD", ""},
-	{"META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES", ""},
-
-	{"PHYS_NO_COLLIDE", ""},
-	{"PHYS_FLY", ""},
-};
+inline std::unordered_map<std::string, int> userBindings = {};
+inline std::unordered_map<std::string, bool> keyMap = {};
+inline std::unordered_map<std::string, std::string> userConfig = {};
 
 
 

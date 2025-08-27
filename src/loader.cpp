@@ -1037,17 +1037,14 @@ void fetchBindingsFromXML(const pugi::xml_document& doc) {
 	size_t count = static_cast<size_t>(nodeList.size());
 	
 	std::string functionString, keyString;
-	for (size_t i = 0; i < count; ++i) {
+	for (size_t i=0; i<count; i++) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		if (userBindings.find(functionString) == userBindings.end()) {
-			raise("Unknown binding function: " + functionString);
-		}
-
 		keyString = strToUpper(node.attribute("key").as_string());
 		if (keyNameToGLFW.find(keyString) != keyNameToGLFW.end()) {
-			userBindings.at(functionString) = keyNameToGLFW.at(keyString);
+			userBindings[functionString] = keyNameToGLFW.at(keyString);
+			keyMap[functionString] = false;
 		} else {
 			raise("Unknown Key: " + keyString + " for binding function: " + functionString);
 		}
@@ -1064,13 +1061,9 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		if (userConfig.find(functionString) == userConfig.end()) {
-			raise("Unknown config function: " + functionString);
-		}
-
 		valueString = strToUpper(node.attribute("value").as_string());
-		if (valueString != "") {
-			userConfig.at(functionString) = valueString;
+		if (!(valueString.empty())) {
+			userConfig[functionString] = valueString;
 		} else {
 			raise("Invalid value for: " + functionString);
 		}

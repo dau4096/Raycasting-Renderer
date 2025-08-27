@@ -1780,7 +1780,6 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
 	//Display-Specific
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "smoothingEnabled", utils::configToBool("VIEW_SMOOTHING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));

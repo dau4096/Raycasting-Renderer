@@ -66,8 +66,8 @@ void physicsLoop() {
 		player.prevPosition = player.position;
 
 		//1-frame inputs;
-		interactKey = keyMap["USE_INTERACT"] && !prevInteract;
-		prevInteract = keyMap["USE_INTERACT"];
+		interactKey = utils::isPressed("USE_INTERACT") && !prevInteract;
+		prevInteract = utils::isPressed("USE_INTERACT");
 
 
 		//Update logic states.
@@ -139,7 +139,7 @@ inline void reloadLevel(const bool resetPlayer=false) {
 void handleInputs() {
 	glfwPollEvents();
 
-	bool lastFrameScreenshot = keyMap["META_SCREENSHOT"];
+	bool lastFrameScreenshot = utils::isPressed("META_SCREENSHOT");
 
 	//Get inputs for this frame
 	for (auto &pair : userBindings) {
@@ -153,36 +153,36 @@ void handleInputs() {
 
 		int keyState = glfwGetKey(Window, keyEnum);
 		if (keyState == GLFW_PRESS) {
-			if (functionName == "USE_HEADLAMP" && !keyMap["USE_HEADLAMP"]) {
+			if (functionName == "USE_HEADLAMP" && !utils::isPressed("USE_HEADLAMP")) {
 				headLampEnabled = !headLampEnabled;
 			}
-			keyMap[functionName] = true;
+			utils::setPressed(functionName, true);
 
 		} else if (keyState == GLFW_RELEASE) {
-			keyMap[functionName] = false;
+			utils::setPressed(functionName, false);
 		}
 	}
 
 
 	//Meta controls
-	if (keyMap["META_FREECURSOR"]) {
+	if (utils::isPressed("META_FREECURSOR")) {
 		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	} else {
 		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	}
 
-	shouldTakeScreenshot = keyMap["META_SCREENSHOT"] && !shouldTakeScreenshot && !lastFrameScreenshot;
+	shouldTakeScreenshot = utils::isPressed("META_SCREENSHOT") && !shouldTakeScreenshot && !lastFrameScreenshot;
 
-	if (keyMap["META_RELOAD_STAGE"]) {
+	if (utils::isPressed("META_RELOAD_STAGE")) {
 		reloadLevel(true);
-	} else if (keyMap["META_RELOAD_ENV"] || utils::configToBool("META_DYNAMIC_UPD")) {
+	} else if (utils::isPressed("META_RELOAD_ENV") || utils::configToBool("META_DYNAMIC_UPD")) {
 		reloadLevel(false);
 	}
 
 
 	//Crouch changes physical height
-	if (keyMap["MOVE_CROUCH"]) {
+	if (utils::isPressed("MOVE_CROUCH")) {
 		player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
 		player.touchingFloor = false;
 	} else {
@@ -191,9 +191,9 @@ void handleInputs() {
 
 
 
-	rayAngle = (keyMap["USE_VIEWZOOM"]) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
+	rayAngle = (utils::isPressed("USE_VIEWZOOM")) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
 	rayAngle *= constants::TO_RAD;
-	zoomEffect = ((keyMap["USE_VIEWZOOM"]) ? display::ZOOM_MULT : 1.0f);
+	zoomEffect = ((utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f);
 	double cursorXDelta = cursorXPos - cursorXPosPrev;
 	double cursorYDelta = cursorYPos - cursorYPosPrev;
 	player.viewAngle += cursorXDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
@@ -261,7 +261,7 @@ int main() {
 		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY;
 
 		handleInputs();
-		if (keyMap["META_EXIT"]) {break; /* Quit Immediately */}
+		if (utils::isPressed("META_EXIT")) {break; /* Quit Immediately */}
 
 
 		graphics::handleTextureLoadQueue();

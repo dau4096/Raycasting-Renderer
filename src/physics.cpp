@@ -435,8 +435,8 @@ void playerMovement() {
 	float maxV = playerConfig::MOVE_SPEED_BASE;
 
 	glm::vec2 XYDelta = glm::vec2(player.velocity.x, player.velocity.y);
-	player.sliding = keyMap["MOVE_CROUCH"] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD) && !player.onConveyor;
-	if (keyMap["MOVE_CROUCH"]) {
+	player.sliding = utils::isPressed("MOVE_CROUCH") && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD) && !player.onConveyor;
+	if (utils::isPressed("MOVE_CROUCH")) {
 		if (player.sliding) {
 			if (!prevSlide && player.touchingFloor) {
 				maxV *= playerConfig::MOVE_SPEED_SLIDE_ADD;
@@ -447,7 +447,7 @@ void playerMovement() {
 			playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
 			maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
 		}
-	} else if (keyMap["MOVE_SPRINT"]) {
+	} else if (utils::isPressed("MOVE_SPRINT")) {
 		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
@@ -457,29 +457,29 @@ void playerMovement() {
 	// Determine the movement vector based on key presses
 	if (!player.sliding) {
 		float reduction = 1.0f;
-		if (keyMap["MOVE_FORWARD"]) {
+		if (utils::isPressed("MOVE_FORWARD")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * sin(player.viewAngle) * reduction;
 			newY += playerSpeed * cos(player.viewAngle) * reduction;
 		}
-		if (keyMap["MOVE_BACKWARD"]) {
+		if (utils::isPressed("MOVE_BACKWARD")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * sin(player.viewAngle) * reduction;
 			newY -= playerSpeed * cos(player.viewAngle) * reduction;
 		}
-		if (keyMap["MOVE_LEFT"]) {
+		if (utils::isPressed("MOVE_LEFT")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * cos(player.viewAngle) * reduction;
 			newY -= playerSpeed * -sin(player.viewAngle) * reduction;
 		}
-		if (keyMap["MOVE_RIGHT"]) {
+		if (utils::isPressed("MOVE_RIGHT")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * cos(player.viewAngle) * reduction;
 			newY += playerSpeed * -sin(player.viewAngle) * reduction;
 		}
 		lateralMovement = glm::vec2(newX, newY);
 	}
-	if (keyMap["MOVE_JUMP"] && !prevJump && !utils::configToBool("PHYS_FLY")) {
+	if (utils::isPressed("MOVE_JUMP") && !prevJump && !utils::configToBool("PHYS_FLY")) {
 		if (player.touchingFloor) {
 			player.jumpsUsed++;
 			player.velocity.z += playerConfig::JUMP_INIT_SPEED;
@@ -495,10 +495,10 @@ void playerMovement() {
 		}
 	}
 	if (utils::configToBool("PHYS_FLY")) {
-		if (keyMap["MOVE_JUMP"]) {
+		if (utils::isPressed("MOVE_JUMP")) {
 			player.position.z += playerSpeed;
 		}
-		if (keyMap["MOVE_CROUCH"]) {
+		if (utils::isPressed("MOVE_CROUCH")) {
 			player.position.z -= playerSpeed;
 		}
 	}
@@ -546,7 +546,7 @@ void playerMovement() {
 
 
 
-	prevJump = keyMap["MOVE_JUMP"];
+	prevJump = utils::isPressed("MOVE_JUMP");
 	prevSlide = player.sliding;
 	touchingFloorCheck = false;
 
