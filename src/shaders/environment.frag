@@ -1,5 +1,6 @@
 /* environment.frag */
 #version 460 core
+#extension GL_ARB_gpu_shader_int64 : enable
 
 
 //Samplers
@@ -46,6 +47,7 @@ struct Visplane {
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
 	vec4 boundingBox;	//Bounding box in 2D.
+	uint lightingHandles[4]; //ARB shadowMap handles.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -57,6 +59,7 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];

@@ -1,46 +1,36 @@
-/* lightingDynamic.comp */
+/* lightingStaticPrecompute.comp */
+//At runtime, once
 #version 460 core
 #extension GL_ARB_gpu_shader_int64 : enable
 
+layout(rgba32f, binding=0) writeonly uniform image2D frontShadowmap;
+layout(rgba32f, binding=1) writeonly uniform image2D backShadowmap;
+layout(binding=2) uniform sampler2DArray textureArray;
 
-//CameraData
-uniform float maxRayDistance;
-uniform vec2 textureScale;
-uniform vec3 textureOffset;
-uniform bool useMipMapping;
-uniform float verticalFOV;
-uniform float maxRayAngle;
-uniform float zoomEffect;
-uniform float currentTime;
 
-//PlayerData
-uniform vec3 playerPosition;
-
-//Headlamp
-uniform bool headLampEnabled;
-uniform float headLampIntensity;
-
-//Sun
-uniform vec3 sunDirection;
-uniform vec3 sunColour;
-
-//Debug
-uniform int debugMode;
+//Shadow specific
+uniform ivec2 shadowMapResolution;
+uniform vec3 objectStart;
+uniform vec3 objectEnd;
+uniform vec3 surfaceNormal;
+uniform bool allowTransparency;
 
 //Other
 uniform int numVisplanes;
 uniform int numWalls;
 uniform int numDisplacements;
 uniform int numLights;
-uniform ivec2 shadowResolution;
-uniform ivec2 renderResolution;
-uniform bool allowTransparency;
 
 
-layout(binding=0) uniform sampler2D positionMap;
-layout(binding=1) uniform sampler2D normalMap;
-layout(binding=2) uniform sampler2DArray textureArray;
-layout(rgba32f, binding=0) writeonly uniform image2DArray lightMapArray;
+
+#define INF 0xFFFFFF
+#define PI 3.141592f
+#define EPSILON 1e-4f
+#define EPSILON_ALT 1e-3f
+#define INVALIDv2 vec2(INF, INF)
+#define INVALIDv3 vec3(INF, INF, INF)
+#define INVALIDv4 vec4(INF, INF, INF, INF)
+
 
 struct Visplane {
 	vec4 vertices[4];	//2D points
@@ -49,7 +39,7 @@ struct Visplane {
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
 	vec4 boundingBox;	//Bounding box in 2D.
-	uint lightingHandles[4]; //ARB shadowMap handles.
+	uint64_t lightingHandles[2]; //ARB shadowMap handles.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -61,7 +51,7 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
-	uint lightingHandles[4]; //ARB shadowMap handles.
+	uint64_t lightingHandles[2]; //ARB shadowMap handles.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -87,22 +77,6 @@ layout(std430, binding=3) buffer lightSSBO {
 	Light lights[];
 };
 
-
-
-
-vec2 fragPosition;
-
-#define INF 0xFFFFFF
-#define PI 3.141592f
-#define EPSILON 1e-4f
-#define EPSILON_ALT 1e-3f
-#define INVALIDv2 vec2(INF, INF)
-#define INVALIDv3 vec3(INF, INF, INF)
-#define INVALIDv4 vec4(INF, INF, INF, INF)
-
-
-
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 
 
@@ -401,126 +375,61 @@ float getNormalDot(vec3 normal, vec3 direction, out bool shouldUseSpecularHighli
 }
 
 
-void exit(ivec3 framePosition) {
-	imageStore(lightMapArray, framePosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+void exit(ivec2 fragPosition, const bool useFrontFace) {
+	if (useFrontFace) {
+		imageStore(frontShadowmap, fragPosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	} else {
+		imageStore(backShadowmap, fragPosition, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	}
 }
 
 
 
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
 
 void main() {
-	uint screenX = gl_GlobalInvocationID.x;
-	uint screenY = gl_GlobalInvocationID.y;
-	uint lightIndex = gl_GlobalInvocationID.z;
-	if ((screenX >= renderResolution.x) || (screenY >= renderResolution.y) || (lightIndex >= numLights + 2)) {return; /* Offscreen or out of range. */}
-
-	fragPosition = vec2(screenX, screenY);
-	ivec3 framePosition = ivec3(screenX, screenY, lightIndex);
-	vec2 thisFramePosition = vec2(fragPosition / vec2(shadowResolution));
-	vec4 data = texture(positionMap, thisFramePosition);
-	vec3 origin = data.xyz;
-
-	int iData = int(data.w);
-	int type = iData & 0x7;
-	int index = iData >> 3;
-
-	vec3 normal = texture(normalMap, thisFramePosition).xyz;
+	ivec2 fragPosition = ivec2(gl_GlobalInvocationID.xy);
+	vec2 fragDecimal = vec2(fragPosition) / vec2(shadowMapResolution);
+	if (max(fragDecimal.x, fragDecimal.y) > 1.0f) {return; /* Outside of the range of the texture. */}
+	vec3 position3D = vec3(
+		mix(objectStart.xy, objectEnd.xy, fragDecimal.x),
+		mix(objectStart.z, objectEnd.z, fragDecimal.y)
+	);
 
 
-	bool shouldUseSpecularHighlights = true;
+	bool useFrontFace = gl_GlobalInvocationID.z == 1;
+	vec3 thisNormal = (useFrontFace) ? surfaceNormal : -surfaceNormal;
+	position3D += thisNormal * 0.01f; //Slight offset to avoid the surface occluding itself.
+
+
 	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
-	float normalDot;
-	vec3 lightDir;
-	vec3 fragDir = normalize(origin - playerPosition);
+	for (uint index=0; index<numLights; index++) {
+		Light thisLight = lights[index];
+		if (!thisLight.enabled) {continue;}
 
-	if (lightIndex == (numLights + 0)) {
-		//Sun & sky's lighting (Highest index + 1)
-		if (dot(sunColour, sunColour) < 0.025f) {exit(framePosition); return; /* Sun's effect is near 0 and can be ignored. */}
+		vec3 lightDelta = thisLight.position - position3D;
 
-		if ((debugMode > 0) || (type == 0x0)) {
-			//Sky
-			imageStore(lightMapArray, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
-			return;
-		} else if (type == 0x4) {
-			//Sprites
-			imageStore(lightMapArray, framePosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
-			return;
+		float normalDot = dot(surfaceNormal, normalize(lightDelta));
+		if (normalDot <= EPSILON_ALT) {continue; /* Surface would reflect no lighting due to cosine of angles being negative. */}
+
+		float distSQ = dot(lightDelta, lightDelta);
+		float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
+		if (attenuation <= EPSILON_ALT) {continue; /* Light is too dim to contribute. */}
+
+		//Shadow Checks
+		bool inShadow = checkLOS(thisLight.position, position3D);
+
+		if (!inShadow) {
+			lightColour += thisLight.colour * attenuation;
 		}
-
-		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
-		vec3 offset = normal * 0.01f;
-		bool sunBlocked = checkLOS(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
-		if ((normalDot >= 0.0f) && !sunBlocked) {
-			float sunNormalContrib = (normalDot * 0.5f) + 0.5f;
-			lightColour = sunColour.rgb * sunNormalContrib;
-		}
-		lightDir = sunDirection;
+	}
 
 
 
-
-	} else if (lightIndex == (numLights + 1)) {
-		//Headlamp (Highest index + 2)
-		if (!headLampEnabled) {exit(framePosition); return; /* Headlamp is turned off, don't bother calculating. */}
-
-		const vec3 headLampColour = vec3(1.0f, 1.0f, 1.0f);
-
-		vec2 normPos = (2.0f * fragPosition / vec2(shadowResolution)) - 1.0f;
-		vec2 anglePos = normPos * vec2(maxRayAngle, verticalFOV / 2.0f);
-		if (dot(anglePos, anglePos) > 0.0625f) {exit(framePosition); return; /* Outside headlamp FOV */}
-
-		vec3 delta3D = origin - playerPosition;
-		float distanceSQ = dot(delta3D, delta3D);
-		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))); //Intensity fades with distance to light.
-		float brightness = clamp(attenuation, 0.0f, 1.0f);
-
-		lightColour = headLampColour * brightness;
-		shouldUseSpecularHighlights = false; //Headlamp originates from the player's camera and so cannot show shadows or specular highlights.
-
-
-
-
+	if (useFrontFace) {
+		imageStore(frontShadowmap, fragPosition, vec4(position3D.rgb, 1.0f));
 	} else {
-		//Iterate through all lights.
-		Light thisLight = lights[lightIndex];
-		if (!thisLight.enabled) {exit(framePosition); return; /* Light is turned off. */}
-
-		vec3 delta = thisLight.position - origin;
-		if (dot(delta,delta) < EPSILON_ALT) {
-			lightColour = thisLight.colour;
-		} else {
-			lightDir = normalize(delta);
-			normalDot = getNormalDot(normal, lightDir, shouldUseSpecularHighlights);
-			if (normalDot <= EPSILON_ALT) {exit(framePosition); return; /* Surface would reflect no lighting due to cosine of angles being negative. */}
-
-			float distSQ = dot(delta, delta);
-			float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
-			if (attenuation <= EPSILON_ALT) {exit(framePosition); return; /* Light is too dim to contribute. */}
-
-			
-			//Shadow Checks
-			bool inShadow = checkLOS(thisLight.position, origin, index, type);
-
-			if (!inShadow) {
-				lightColour = thisLight.colour * attenuation;
-			}
-		}
+		imageStore(backShadowmap, fragPosition, vec4(position3D.rgb, 1.0f));
 	}
-
-
-
-
-	if (shouldUseSpecularHighlights) {
-		//Uses the dot product between a reflected fragDir (camera to 3d position) and the lightDir (3d position to light).
-		//Power of 8 reduces range of highlight, so they are more subtle.
-		vec3 projNV = dot(fragDir, normal) * normal;
-		vec3 reflect = fragDir - 2.0f * projNV;
-		float base = dot(reflect, lightDir);
-		if (base > 0.0f) {
-			float specularHighlightIntensity = pow(base, 8.0f);
-			lightColour *= 1.0f + specularHighlightIntensity;
-		}
-	}
-
-	imageStore(lightMapArray, framePosition, vec4(lightColour.rgb, 1.0f));
 }

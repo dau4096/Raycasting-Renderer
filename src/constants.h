@@ -60,6 +60,10 @@ enum SpriteType {
 	SPR_PHYSICS, SPR_PARTICLE
 };
 
+enum LightingType {
+	LIGHT_NONE, LIGHT_SURFACE, LIGHT_DYNAMIC
+};
+
 enum LogicInput {
 	L_FALSE = 0,
 	L_TRUE = 1,
@@ -268,6 +272,7 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
+	constexpr float PREMADE_SHADOW_MAPS_TEXEL_SIZE = 0.01f;
 
 
 	//Texture Standardisation

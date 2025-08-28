@@ -82,6 +82,8 @@ inline glm::ivec2 currentRenderResolution;
 inline glm::ivec2 currentShadowResolution;
 
 
+inline LightingType lightingType;
+
 //Other
 inline float framerate;
 inline float tickrate;
@@ -127,7 +129,8 @@ inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
-inline GLuint spriteShader, lightingShader, uiShader, displayShader; 
+inline GLuint dynamicLightingShader, precomputeStaticLightingShader, frameStaticLightingShader;
+inline GLuint spriteShader, uiShader, displayShader;
 
 //Textures
 inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureArrayNumeric;
@@ -253,6 +256,7 @@ struct Visplane {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	std::pair<GLuint64, GLuint64> lightingHandles;
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
@@ -355,6 +359,7 @@ struct VisplaneGPU {
 	GLuint textureData1;
 	GLuint textureData2;
 	glm::vec4 boundingBox;
+	GLuint lightingHandles[4];
 
 	VisplaneGPU()
 		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox() {}
@@ -380,6 +385,11 @@ struct VisplaneGPU {
 				boundingBox.z = max(max(a.x, b.x), boundingBox.z);
 				boundingBox.w = max(max(a.y, b.y), boundingBox.w);
 			}
+
+			lightingHandles[0] = (visplane->lightingHandles.first) >> 32;
+			lightingHandles[1] = (visplane->lightingHandles.first) & 0xFFFFFFFF;
+			lightingHandles[2] = (visplane->lightingHandles.second) >> 32;
+			lightingHandles[3] = (visplane->lightingHandles.second) & 0xFFFFFFFF;
 		}
 };
 
@@ -393,6 +403,7 @@ struct Wall {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	std::pair<GLuint64, GLuint64> lightingHandles;
 
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
@@ -474,9 +485,10 @@ struct Wall {
 struct WallGPU {
 	alignas(16) glm::vec3 start;
 	alignas(16) glm::vec3 end;
-	alignas(8) glm::vec2 direction;
-	alignas(4) GLuint textureData1;
-	alignas(4) GLuint textureData2;
+	alignas(8)  glm::vec2 direction;
+	alignas(4)  GLuint textureData1;
+	alignas(4)  GLuint textureData2;
+	alignas(4)  GLuint lightingHandles[4];
 
 	WallGPU()
 		: start(), end(), direction(),
@@ -490,6 +502,11 @@ struct WallGPU {
 			} else {
 				textureData1 = wall->textureData1s.first;
 			}
+
+			lightingHandles[0] = (wall->lightingHandles.first) >> 32;
+			lightingHandles[1] = (wall->lightingHandles.first) & 0xFFFFFFFF;
+			lightingHandles[2] = (wall->lightingHandles.second) >> 32;
+			lightingHandles[3] = (wall->lightingHandles.second) & 0xFFFFFFFF;
 		}
 };
 

@@ -209,14 +209,6 @@ static inline float getExtra(const pugi::xml_node& node, float defaultValue=0.0f
 }
 
 
-static inline void getShadowMap(glm::vec2 minimum, glm::vec2 maximum, GLuint* shadowMapID) {
-	glm::vec2 range = maximum - minimum;
-	glm::ivec2 resolution = glm::ivec2(range / display::SHADOWMAP_SCALING);
-	cout << "Creating shadow map with resolution; (" << resolution.x << ", " << resolution.y << ")" << endl;
-	*shadowMapID = graphics::createGLImage2D(resolution.x, resolution.y);
-}
-
-
 
 void processTeleporterPartners(std::vector<structs::Visplane>* visplaneData) {
 	for (std::pair<std::string, std::pair<size_t, size_t>> pair : indexMap) {
@@ -786,8 +778,6 @@ static inline structs::Visplane extractVisplane(
 			minimum = glm::min(minimum, pt);
 			maximum = glm::max(maximum, pt);
 		}
-		GLuint shadowMapID;
-		getShadowMap(minimum, maximum, &shadowMapID);
 
 		visplane = structs::Visplane(
 			vertsVec,
@@ -800,8 +790,7 @@ static inline structs::Visplane extractVisplane(
 			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-			getFloat(node, "exitDirection", constants::INF),
-			shadowMapID
+			getFloat(node, "exitDirection", constants::INF)
 		);
 
 	} else { //Old method for compatability. 
@@ -809,8 +798,6 @@ static inline structs::Visplane extractVisplane(
 		glm::vec2 end = getVec2(node, "end", glm::vec2(0.0f, 0.0f));
 		glm::vec2 minimum = glm::min(start, end);
 		glm::vec2 maximum = glm::max(start, end);
-		GLuint shadowMapID;
-		getShadowMap(minimum, maximum, &shadowMapID);
 
 		visplane = structs::Visplane(
 			start, end,
@@ -823,8 +810,7 @@ static inline structs::Visplane extractVisplane(
 			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-			getFloat(node, "exitDirection", constants::INF),
-			shadowMapID
+			getFloat(node, "exitDirection", constants::INF)
 		);
 	}
 
@@ -848,8 +834,6 @@ static inline structs::Wall extractWall(
 	glm::vec2 minimum2D = glm::vec2(minimum3D.x, minimum3D.z);
 	glm::vec3 maximum3D = glm::max(start, end);
 	glm::vec2 maximum2D = glm::vec2(maximum3D.x, maximum3D.z);
-	GLuint shadowMapID;
-	getShadowMap(minimum2D, maximum2D, &shadowMapID);
 
 	structs::Wall wall = structs::Wall(
 		start, end,
@@ -863,8 +847,7 @@ static inline structs::Wall extractWall(
 		getBool(node, "flipUVXY", false),
 		getBool(node, "flipAltUVXY", false),
 		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
-		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-		shadowMapID
+		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
 	);
 	
 	return wall;
@@ -1140,6 +1123,12 @@ static std::unordered_map<std::string, float> shadowQualityMap = {
 	{"EIGHTH", 0.125f}, {"1/8", 0.125f}
 };
 
+static std::unordered_map<std::string, LightingType> lightTypeMap = {
+	{"", LIGHT_NONE}, {"NONE", LIGHT_NONE},
+	{"SURFACE", LIGHT_SURFACE}, {"LOW", LIGHT_SURFACE},
+	{"DYNAMIC", LIGHT_DYNAMIC}, {"FRAME", LIGHT_DYNAMIC}, {"HIGH", LIGHT_SURFACE}
+};
+
 
 //Has pointer
 template<typename T>
@@ -1197,7 +1186,7 @@ static inline void setConfigFromStringOptionsMap(
 			} else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_arithmetic_v<T>) {
 				std::cout << " for " << pair.second;
 			} else {
-				// Fallback for other types
+				//Fallback for other types
 				std::cout << " (unprintable value type)";
 			}
 		}
@@ -1268,6 +1257,9 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("META_DEBUG_MODE", &debugMap, "NONE");
 	setConfigFromStringOptionsMap("VIEW_TEXTURE_QUALITY", &texMipMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
+	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
+
+
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();

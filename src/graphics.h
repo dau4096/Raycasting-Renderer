@@ -68,13 +68,21 @@ namespace graphics {
 
 	GLuint createDisplacementsFBO(size_t width, size_t height);
 
+	void updateSSBOs(bool drawLightBlockers);
+
+}
+
+
+
+namespace lighting {
+
+	void createLightMaps();
+
 }
 
 
 
 namespace frame {
-
-	void updateSSBOs(bool drawLightBlockers);
 
 	void draw(double blendingAlpha, double currentTime);
 

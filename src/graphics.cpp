@@ -1221,6 +1221,7 @@ void prepareOpenGL() {
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+	cout << GLIndex::lightingMapsArrayID << endl;
 	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
 	//Textures
@@ -1276,8 +1277,10 @@ void prepareOpenGL() {
 	//Sprite Shader
 	GLIndex::spriteShader = createShaderProgram("sprites");
 
-	//Lighting compute Shader
-	GLIndex::lightingShader = createComputeShader("lighting");
+	//Lighting compute Shaders
+	GLIndex::dynamicLightingShader = createComputeShader("lightingDynamic");					//Per frame, heavy computation.
+	GLIndex::precomputeStaticLightingShader = createComputeShader("lightingStaticPrecompute");	//At runtime, once.
+	GLIndex::frameStaticLightingShader = createShaderProgram("lightingStaticFrame");			//Per frame, samples maps.
 
 	//uiShader
 	GLIndex::uiShader = createShaderProgram("interface", "interface");
@@ -1308,7 +1311,7 @@ void prepareOpenGL() {
 
 	UIElements = {
 		structs::UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),		//Health image
-		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
+		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),					//Health number
 		structs::UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 		//Energy image
 		structs::UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
 		structs::UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
@@ -1322,6 +1325,57 @@ void prepareOpenGL() {
 
 
 
+
+
+std::vector<uint> visibleVisplaneIndices;
+std::vector<uint> visibleWallIndices;
+std::vector<uint> visibleDisplacementIndices;
+void updateSSBOs(bool drawLightBlockers) {
+	visibleVisplaneIndices.clear();
+	visibleWallIndices.clear();
+	visibleDisplacementIndices.clear();
+	graphics::findVisibleObjects(
+		&visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices,
+		drawLightBlockers
+	);
+
+
+	//Update SSBOs.
+	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
+		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
+	);
+	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
+		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
+	);
+	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
+		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
+	);
+	graphics::updateShaderStorageBufferObject<structs::SpriteGPU>(
+		GLIndex::spriteSSBO, &(graphicsData->spriteData), validSprites
+	);
+	graphics::updateShaderStorageBufferObject<structs::LightGPU>(
+		GLIndex::lightSSBO, &(graphicsData->lightData), validLights
+	);
+	graphics::updateShaderStorageBufferObject<uint>(
+		GLIndex::visibleVisplaneIndicesSSBO, &visibleVisplaneIndices
+	);
+	graphics::updateShaderStorageBufferObject<uint>(
+		GLIndex::visibleWallIndicesSSBO, &visibleWallIndices
+	);
+	utils::GLErrorcheck("Updating SSBOs", true);
+}
+
+
+inline void renderingGeneric(const std::string& shaderName="") {
+	glBindVertexArray(GLIndex::genericVAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(0);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+	if (!shaderName.empty()) {
+		utils::GLErrorcheck(shaderName, true);
+	}
+}
 
 
 
@@ -1508,46 +1562,155 @@ void drawHUD(float blendingAlpha, float currentTime) {
 
 
 
-namespace frame {
+namespace lighting {
 
-
-std::vector<uint> visibleVisplaneIndices;
-std::vector<uint> visibleWallIndices;
-std::vector<uint> visibleDisplacementIndices;
-void updateSSBOs(bool drawLightBlockers) {
-	visibleVisplaneIndices.clear();
-	visibleWallIndices.clear();
-	visibleDisplacementIndices.clear();
-	graphics::findVisibleObjects(
-		&visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices,
-		drawLightBlockers
-	);
-
-
-	//Update SSBOs.
-	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
-		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
-	);
-	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
-		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
-	);
-	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
-		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
-	);
-	graphics::updateShaderStorageBufferObject<structs::SpriteGPU>(
-		GLIndex::spriteSSBO, &(graphicsData->spriteData), validSprites
-	);
-	graphics::updateShaderStorageBufferObject<structs::LightGPU>(
-		GLIndex::lightSSBO, &(graphicsData->lightData), validLights
-	);
-	graphics::updateShaderStorageBufferObject<uint>(
-		GLIndex::visibleVisplaneIndicesSSBO, &visibleVisplaneIndices
-	);
-	graphics::updateShaderStorageBufferObject<uint>(
-		GLIndex::visibleWallIndicesSSBO, &visibleWallIndices
-	);
-	utils::GLErrorcheck("Updating SSBOs", true);
+static inline GLuint64 createARBTexture(glm::uvec2 resolution, GLuint* textureID) {
+	*textureID = graphics::createGLImage2D(resolution.x, resolution.y);
+	GLuint64 handle = glGetTextureHandleARB(*textureID);
+	glMakeTextureHandleResidentARB(handle);
+	return handle;
 }
+
+
+template<typename T>
+void createSurfaceMaps(
+	T* thisObject, glm::uvec2 resolution,
+	glm::vec3 normalVector, glm::vec3 minPos, glm::vec3 maxPos
+) {
+
+	GLuint frontTextureID, backTextureID;
+	thisObject->lightingHandles.first = createARBTexture(resolution, &frontTextureID); //Front shadowmap.
+	thisObject->lightingHandles.second = createARBTexture(resolution, &backTextureID); //Rear shadowmap.
+	cout << "Created maps: " << frontTextureID << " and " << backTextureID << endl;
+
+	//Raycasting compute shader.
+	const glm::uvec3 SHADOWMAPPING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
+	glUseProgram(GLIndex::precomputeStaticLightingShader);
+
+	glBindImageTexture(0, frontTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(1, backTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
+
+	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "shadowMapResolution", glm::ivec2(resolution));	
+	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "objectStart", minPos);	
+	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "objectEnd", maxPos);	
+	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "surfaceNormal", normalVector);
+
+	glDispatchCompute(
+		(currentRenderResolution.x + SHADOWMAPPING_LOCAL_SIZE.x - 1) / SHADOWMAPPING_LOCAL_SIZE.x,
+		(currentRenderResolution.y + SHADOWMAPPING_LOCAL_SIZE.y - 1) / SHADOWMAPPING_LOCAL_SIZE.y,
+		2 //One dispatch for front, one dispatch for back.
+	);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("ShadowMapping Precompute Shader", true);
+
+}
+
+
+void createLightMaps() {
+	//Only run once ideally.
+
+	unsigned int index = 0;
+	for (structs::Wall thisWall : graphicsData->wallData) {
+		//Create ARB textures for this wall.
+		glm::vec2 wallDelta = glm::vec2(thisWall.end - thisWall.start);
+		glm::uvec2 mapDimensions = glm::uvec2(glm::vec2(
+			glm::length(wallDelta),
+			abs(thisWall.end.z - thisWall.start.z)
+		) / display::PREMADE_SHADOW_MAPS_TEXEL_SIZE);
+
+		glm::vec3 normalVector = glm::normalize(glm::vec3(-wallDelta.y, wallDelta.x, 0.0f));
+		glm::vec3 minPos = (thisWall.start.z < thisWall.end.z) ? thisWall.start : thisWall.end;
+		glm::vec3 maxPos = (thisWall.start.z > thisWall.end.z) ? thisWall.start : thisWall.end;
+
+		createSurfaceMaps(
+			&thisWall, mapDimensions, normalVector,
+			minPos, maxPos
+		);
+		graphicsData->wallData[index] = thisWall;
+		index++;
+	}
+
+	index = 0;
+	for (structs::Visplane thisPlane : graphicsData->visplaneData) {
+		//Create ARB textures for this visplane.
+		glm::vec2 planeMin = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 planeMax = glm::vec2(-constants::INF, -constants::INF);
+		for (glm::vec2 vert : thisPlane.vertices) {
+			planeMin = glm::min(vert, planeMin);
+			planeMax = glm::max(vert, planeMax);
+		}
+
+		glm::uvec2 mapDimensions = glm::abs(glm::uvec2((planeMax-planeMin) / display::PREMADE_SHADOW_MAPS_TEXEL_SIZE));
+		createSurfaceMaps(
+			&thisPlane, mapDimensions, glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::vec3(planeMin, thisPlane.height),
+			glm::vec3(planeMax, thisPlane.height)
+		);
+		graphicsData->visplaneData[index] = thisPlane;
+		index++;
+	}
+
+	*physicsData = *graphicsData;
+}
+
+
+
+void processLightSources() {
+	//Lighting Shaders
+	if (lightingType == LIGHT_DYNAMIC) {
+
+		graphics::updateSSBOs(true);
+		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
+		glUseProgram(GLIndex::dynamicLightingShader);
+
+		glBindTextureUnit(0, GLIndex::framePositionComponent);
+		glBindTextureUnit(1, GLIndex::frameNormalComponent);
+		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		//Uniforms;
+		uniforms::bindCommonUniforms(GLIndex::dynamicLightingShader, 0.0f, 0.0f);
+		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+
+		//Dispatch 2 extra valid lights (Sun, Headlamp.)
+		glDispatchCompute(
+			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+			//maxIndex + 1 : All sunlight calculations. [SUNL]
+			//maxIndex + 2 : All headlamp calculations. [HLMP]
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		GLErrorcheck("Dynamic Lighting Shader", true);
+
+	
+	} else if (lightingType == LIGHT_SURFACE) {
+
+		glUseProgram(GLIndex::frameStaticLightingShader);
+		glBindTextureUnit(0, GLIndex::framePositionComponent);
+		glBindTextureUnit(1, GLIndex::frameNormalComponent);
+		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		uniforms::bindUniformValue(GLIndex::frameStaticLightingShader, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::frameStaticLightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+
+		graphics::renderingGeneric("Static Lighting Shader");
+
+
+	} //else lightingType is LIGHT_NONE and so nothing happens here.
+}
+
+}
+
+
+
+namespace frame {
 
 
 void drawDisplacements(float blendingAlpha, float currentTime) {
@@ -1557,7 +1720,7 @@ void drawDisplacements(float blendingAlpha, float currentTime) {
 	std::vector<GLuint> indicesData;
 	GLuint currentIndicesCount = 0;
 
-	for (uint displacementIdx : visibleDisplacementIndices) {
+	for (uint displacementIdx : graphics::visibleDisplacementIndices) {
 		structs::Displacement thisDisp = graphicsData->displacementData.at(displacementIdx);
 		glm::vec3 dispNormal = thisDisp.normal;
 		verticesData = {
@@ -1628,18 +1791,6 @@ void drawDisplacements(float blendingAlpha, float currentTime) {
 }
 
 
-inline void renderingGeneric(const std::string& shaderName="") {
-	glBindVertexArray(GLIndex::genericVAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-	glBindVertexArray(0);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-	if (!shaderName.empty()) {
-		utils::GLErrorcheck(shaderName, true);
-	}
-}
-
-
 void draw(double blendingAlpha, double currentTime) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
@@ -1649,7 +1800,7 @@ void draw(double blendingAlpha, double currentTime) {
 	float viewBob = (utils::configToBool("VIEW_BOB") && !player.onConveyor) ? graphics::viewBob(tickNumber) : 0.0f;
 	player.interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
 	player.cameraPosition = player.interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
-	updateSSBOs(false);
+	graphics::updateSSBOs(false);
 
 
 
@@ -1681,7 +1832,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
-	renderingGeneric("Environment Shader");
+	graphics::renderingGeneric("Environment Shader");
 
 	
 	//Displacements in 2 parts;
@@ -1699,7 +1850,7 @@ void draw(double blendingAlpha, double currentTime) {
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
-	renderingGeneric("Displacements Shaders");
+	graphics::renderingGeneric("Displacements Shaders");
 
 
 	//Sprite Shader.
@@ -1714,39 +1865,11 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime);
 	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
 
-	renderingGeneric("Sprite Shader");
+	graphics::renderingGeneric("Sprite Shader");
 
 
 
-	//Lighting Shader
-	if (utils::configToBool("VIEW_LIGHTING")) {
-		updateSSBOs(true);
-		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-		glUseProgram(GLIndex::lightingShader);
-
-		glBindTextureUnit(0, GLIndex::framePositionComponent);
-		glBindTextureUnit(1, GLIndex::frameNormalComponent);
-		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		//Uniforms;
-		uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
-		uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
-
-		//Dispatch 2 extra valid lights (Sun, Headlamp.)
-		glDispatchCompute(
-			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
-			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
-			//maxIndex + 1 : All sunlight calculations. [SUNL]
-			//maxIndex + 2 : All headlamp calculations. [HLMP]
-		);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-		GLErrorcheck("Lighting Shader", true);
-	}
+	lighting::processLightSources();
 
 
 
@@ -1782,12 +1905,12 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));
+	uniforms::bindUniformValue(GLIndex::displayShader, "lightType", static_cast<int>(lightingType));
 	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
 	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
 
-	renderingGeneric("Display Shader");
+	graphics::renderingGeneric("Display Shader");
 
 
 	if (shouldTakeScreenshot) {

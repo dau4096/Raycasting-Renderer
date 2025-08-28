@@ -247,8 +247,13 @@ int main() {
 
 	graphics::prepareOpenGL();
 	*graphicsData = *physicsData;
-	frame::updateSSBOs(true);
+	graphics::updateSSBOs(true);
 	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
+
+
+
+	//Create lightmaps if required
+	if (lightingType == LIGHT_SURFACE) {lighting::createLightMaps();}
 
 
 	//Threads;

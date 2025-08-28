@@ -1,0 +1,100 @@
+/* lightingStaticFrame.frag */
+//Per frame, samples maps
+#version 460 core
+#extension GL_ARB_bindless_texture : require
+#extension GL_ARB_gpu_shader_int64 : enable
+
+
+layout(binding=0) uniform sampler2D positionMap;
+layout(rgba32f, binding=0) writeonly uniform image2DArray lightMapArray;
+
+
+uniform ivec2 renderResolution;
+
+
+struct Visplane {
+	vec4 vertices[4];	//2D points
+	uint numVertices;	//Number of 2D points
+	float height;		//1D height (Z)
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	vec4 boundingBox;	//Bounding box in 2D.
+	uint lightingHandles[4]; //ARB shadowMap handles.
+};
+layout(std430, binding=0) buffer visplaneSSBO {
+	Visplane visplanes[];
+};
+
+struct Wall {
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
+};
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
+};
+
+
+
+uint64_t getHandle(uint handles[4], const bool useFront) {
+	if (useFront) {
+		return (uint64_t(handles[0]) << 32) | uint64_t(handles[1]);
+	} else {
+		return (uint64_t(handles[2]) << 32) | uint64_t(handles[3]);
+	}
+}
+
+
+
+void main() {
+	vec2 fragPosition = gl_FragCoord.xy;
+	ivec2 framePosition = ivec2(fragPosition);
+
+	vec4 data = texture(positionMap, vec2(fragPosition / vec2(renderResolution)));
+	vec3 position3D = data.xyz;
+	int iData = int(data.w);
+	int type = iData & 0x7;
+	int index = iData >> 3;
+
+	vec4 lightColour;
+	vec2 uv;
+	switch (type) {
+		case 0x0: { //Sky
+			lightColour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			break;
+		}
+		case 0x1: { //Walls
+			Wall thisWall = walls[index];
+			sampler2D shadowMap = sampler2D(getHandle(thisWall.lightingHandles, true));
+			vec3 range = thisWall.end - thisWall.start;
+			vec3 local = position3D - thisWall.start;
+			uv = vec2(
+				dot(local.xy, local.xy) / dot(range.xy, range.xy),
+				local.z / range.z
+			);
+			lightColour = texture(shadowMap, uv.xy).rgba;
+			break;
+		}
+		case 0x2: { //Visplanes
+			Visplane thisVisplane = visplanes[index];
+			sampler2D shadowMap = sampler2D(getHandle(thisVisplane.lightingHandles, true));
+			vec2 range = thisVisplane.boundingBox.zw - thisVisplane.boundingBox.xy;
+			uv = (position3D.xy - thisVisplane.boundingBox.xy) / range;
+			lightColour = texture(shadowMap, uv.xy).rgba;
+			break;
+		}
+		case 0x3: { //Displacements
+			lightColour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			break;
+		}
+		case 0x4: { //Sprites
+			lightColour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			break;
+		}
+	}
+
+	imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4(vec2(fragPosition / vec2(renderResolution)).xy, 0.0f, 1.0f));
+}
