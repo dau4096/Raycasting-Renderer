@@ -191,17 +191,43 @@ void handleInputs() {
 
 
 
+
+
+
+
 	rayAngle = (utils::isPressed("USE_VIEWZOOM")) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
 	rayAngle *= constants::TO_RAD;
 	zoomEffect = ((utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f);
+	bool useVLOOK = utils::configToBool("VIEW_VLOOK");
+
+	//Mouse camera controls;
 	double cursorXDelta = cursorXPos - cursorXPosPrev;
 	double cursorYDelta = cursorYPos - cursorYPosPrev;
 	player.viewAngle += cursorXDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
-	if (utils::configToBool("VIEW_VLOOK")) {
-		double dY = cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-		player.vLook = glm::clamp(float(player.vLook+dY), -0.125f*constants::PI, 0.125f*constants::PI);
+	if (useVLOOK) {
+		player.vLook += cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
 	}
+
+
+
+	//Keyboard camera controls;
+	float keyboardTurnSpeed = constants::TO_RAD * utils::configToFloat("TURN_SPEED_KEYBOARD") / zoomEffect;
+	if (utils::isPressed("CAMERA_YAW_LEFT")) {
+		player.viewAngle -= keyboardTurnSpeed;
+	}
+	if (utils::isPressed("CAMERA_YAW_RIGHT")) {
+		player.viewAngle += keyboardTurnSpeed;
+	}
+	if (useVLOOK && utils::isPressed("CAMERA_PITCH_UP")) {
+		player.vLook -= keyboardTurnSpeed;
+	}
+	if (useVLOOK && utils::isPressed("CAMERA_PITCH_DOWN")) {
+		player.vLook += keyboardTurnSpeed;
+	}
+
+
+	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
+	player.vLook = glm::clamp(player.vLook, -0.125f*constants::PI, 0.125f*constants::PI);
 }
 
 

@@ -1678,7 +1678,7 @@ void draw(double blendingAlpha, double currentTime) {
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
 	renderingGeneric("Environment Shader");
@@ -1712,7 +1712,7 @@ void draw(double blendingAlpha, double currentTime) {
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 
 	renderingGeneric("Sprite Shader");
 
@@ -1732,7 +1732,7 @@ void draw(double blendingAlpha, double currentTime) {
 		//Uniforms;
 		uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
 		uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
 		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
 
@@ -1774,12 +1774,13 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
 	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
 	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
+	glBindTextureUnit(4, GLIndex::framePositionComponent);
 	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
 	//Display-Specific
-	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
+	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));
