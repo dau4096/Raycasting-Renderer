@@ -78,10 +78,13 @@ struct Light {
 	vec3 colour;		//Light Colour.
 	float intensity;	//Light Intensity.
 	bool enabled;		//Light Validity.
-	float _padding;		//Light Padding.
+	uint LOSSSBOdata;	//Data surrounding the LOSSSBO. (Start index, number of entries.)
 };
 layout(std430, binding=3) buffer lightSSBO {
 	Light lights[];
+};
+layout(std430, binding=8) buffer LOSSSBO {
+	uint losData[];
 };
 
 
@@ -282,34 +285,53 @@ bool isInsideVP(vec2 point2D, Visplane plane) {
 
 
 //LOS
-bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
-	vec3 LOSDelta = pointB - pointA;
+bool wallCheck3D(vec3 pointA, vec3 pointB, Wall thisWall, vec3 LOSDelta) {
+	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+	float projStart = dot(pointA.xy-thisWall.start.xy, wallNormal);
+	float projEnd = dot(pointB.xy-thisWall.start.xy, wallNormal);
+	if (projStart * projEnd >= 0.0f) {return false; /* Ray never crosses wall. */}
 
-	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<numWalls; idx++) {
-		Wall thisWall = walls[idx];
-		if (idx == thisIndex && foundType == 1) {continue; /* Wall is the index calling the LOS check. */}
-		vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
-		float projStart = dot(pointA.xy-thisWall.start.xy, wallNormal);
-		float projEnd = dot(pointB.xy-thisWall.start.xy, wallNormal);
-		if (projStart * projEnd >= 0.0f) {continue; /* Ray never crosses wall. */}
+	float t = projStart / (projEnd - projStart);
+	vec3 intersectPoint = pointA - LOSDelta * t;
+	vec3 minWall = min(thisWall.start, thisWall.end);
+	vec3 maxWall = max(thisWall.start, thisWall.end);
+	if (
+		intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+		intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y ||
+		intersectPoint.z + EPSILON_ALT < minWall.z || intersectPoint.z - EPSILON_ALT > maxWall.z
+	) {
+		//Outside of valid wall segment.
+		return false;
+	}
 
-		float t = projStart / (projEnd - projStart);
-		vec3 intersectPoint = pointA - LOSDelta * t;
-		vec3 minWall = min(thisWall.start, thisWall.end);
-		vec3 maxWall = max(thisWall.start, thisWall.end);
-		if (
-			intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
-			intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y ||
-			intersectPoint.z + EPSILON_ALT < minWall.z || intersectPoint.z - EPSILON_ALT > maxWall.z
-		) {
-			//Outside of valid wall segment.
-			continue;
+	if (allowTransparency) {
+		int textureID;
+		vec2 UV = getWallUV(thisWall, vec3(intersectPoint), textureID);
+		if (textureLod(textureArray, vec3(UV.xy, textureID), 0.0f).a >= 0.5f) {
+			return true;
 		}
+	} else {
+		return true;
+	}
 
+	return false;
+}
+
+
+bool visplaneCheck3D(vec3 pointA, vec3 pointB, Visplane thisVisplane, vec3 LOSDelta) {
+	if (thisVisplane.height < min(pointA.z, pointB.z) || thisVisplane.height > max(pointA.z, pointB.z)) {return false;}
+
+
+	if (abs(LOSDelta.z) < EPSILON) {return false;}
+
+	float tFrac = (thisVisplane.height - pointA.z) / LOSDelta.z;
+	if (tFrac <= 0.0 || tFrac >= 1.0) {return false;}
+
+	vec2 intersectPoint = (pointA + LOSDelta * tFrac).xy;
+	if (isInsideVP(intersectPoint.xy, thisVisplane)) {
 		if (allowTransparency) {
 			int textureID;
-			vec2 UV = getWallUV(thisWall, vec3(intersectPoint), textureID);
+			vec2 UV = getVisplaneUV(intersectPoint, thisVisplane, textureID);
 			if (textureLod(textureArray, vec3(UV.xy, textureID), 0.0f).a >= 0.5f) {
 				return true;
 			}
@@ -318,66 +340,116 @@ bool checkLOS(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=0) {
 		}
 	}
 
-
-	//Iterate through all visplanes. (3D-ish)
-	for (int idx=0; idx<numVisplanes; idx++) {
-		Visplane thisPlane = visplanes[idx];
-		if (idx == thisIndex && foundType == 2) {continue; /* Visplane is the index calling the LOS check. */}
-		if (thisPlane.height < min(pointA.z, pointB.z) || thisPlane.height > max(pointA.z, pointB.z)) {continue;}
+	return false;
+}
 
 
-		if (abs(LOSDelta.z) < EPSILON) {continue;}
+bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement, vec3 LOSDelta) {
+	vec3 edgeA = thisDisplacement.vertices[1].xyz - thisDisplacement.vertices[0].xyz;
+	vec3 edgeB = thisDisplacement.vertices[2].xyz - thisDisplacement.vertices[0].xyz;
+	vec3 rayCrossEdgeB = cross(LOSDelta, edgeB);
+	float det = dot(edgeA, rayCrossEdgeB);
 
-		float tFrac = (thisPlane.height - pointA.z) / LOSDelta.z;
-		if (tFrac <= 0.0 || tFrac >= 1.0) {continue;}
+	if (det > -EPSILON && det < EPSILON) {return false; /* Near parallel */}
 
-		vec2 intersectPoint = (pointA + LOSDelta * tFrac).xy;
-		if (isInsideVP(intersectPoint.xy, thisPlane)) {
-			if (allowTransparency) {
-				int textureID;
-				vec2 UV = getVisplaneUV(intersectPoint, thisPlane, textureID);
-				if (textureLod(textureArray, vec3(UV.xy, textureID), 0.0f).a >= 0.5f) {
-					return true;
-				}
-			} else {
+	float invDeterminant = 1.0f / det;
+	vec3 s = pointA - thisDisplacement.vertices[0].xyz;
+	float u = invDeterminant * dot(s, rayCrossEdgeB);
+	if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {return false; /* No hit. */}
+
+	vec3 sCrossEdgeA = cross(s, edgeA);
+	float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
+	if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {return false; /* No hit. */}
+
+	float t = invDeterminant * dot(edgeB, sCrossEdgeA);
+	if (t > EPSILON) {
+		if (allowTransparency) {
+			vec2 UV = ((1.0f - u - v) * thisDisplacement.UV[0]) + (u * thisDisplacement.UV[1]) + (v * thisDisplacement.UV[2]);
+			if (textureLod(textureArray, vec3(UV.xy, thisDisplacement.normal_texID.w), 0.0f).a >= 0.5f) {
 				return true;
 			}
+		} else {
+			return true;
 		}
 	}
 
+	return false;
+}
+
+
+#define T_NONE 0x0
+#define T_WALL 0x1
+#define T_VISPLANE 0x2
+#define T_DISPLACEMENT 0x3
+
+bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=T_NONE) {
+	vec3 LOSDelta = pointB - pointA;
+
+	//Iterate through all the walls. (2D)
+	for (int idx=0; idx<numWalls; idx++) {
+		Wall thisWall = walls[idx];
+		if (idx == thisIndex && foundType == T_WALL) {continue; /* Wall is the index calling the LOS check. */}
+		bool wallResult = wallCheck3D(pointA, pointB, thisWall, LOSDelta);
+		if (wallResult) {return true; /* Exit early. */}
+	}
+
+
+	//Iterate through all visplanes. (3D-ish)
+	for (int idx=0; idx<numVisplanes; idx++) {
+		Visplane thisVisplane = visplanes[idx];
+		if (idx == thisIndex && foundType == T_VISPLANE) {continue; /* Visplane is the index calling the LOS check. */}
+		bool visplaneResult = visplaneCheck3D(pointA, pointB, thisVisplane, LOSDelta);
+		if (visplaneResult) {return true; /* Exit early. */}
+	}
+
 	for (int idx=0; idx<numDisplacements; idx++) {
-		Displacement thisDisp = displacements[idx];
-		if (idx == thisIndex && foundType == 3) {continue; /* Displacement is the index calling the LOS check. */}
+		Displacement thisDisplacement = displacements[idx];
+		if (idx == thisIndex && foundType == T_DISPLACEMENT) {continue; /* Displacement is the index calling the LOS check. */}
+		bool displacementResult = displacementCheck3D(pointA, pointB, thisDisplacement, LOSDelta);
+		if (displacementResult) {return true; /* Exit early. */}
+	}
 
-		vec3 edgeA = thisDisp.vertices[1].xyz - thisDisp.vertices[0].xyz;
-		vec3 edgeB = thisDisp.vertices[2].xyz - thisDisp.vertices[0].xyz;
-		vec3 rayCrossEdgeB = cross(LOSDelta, edgeB);
-		float det = dot(edgeA, rayCrossEdgeB);
+	return false;
+}
 
-		if (det > -EPSILON && det < EPSILON) {continue; /* Near parallel */}
+bool checkLOSLightSpecific(vec3 origin, Light thisLight, int foundIndex=-1, int foundType=T_NONE) {
+	uint lightLOSDataStartIndex = thisLight.LOSSSBOdata >> 16;		//Former 4 bytes.
+	uint lightLOSDataEntryCount = thisLight.LOSSSBOdata & 0xFFFF;	//Latter 4 bytes.
+	if (lightLOSDataEntryCount < 1) {return false; /* Cannot possibly hit anything because it has nothing to hit. */}
+	vec3 LOSDelta = thisLight.position - origin;
 
-		float invDeterminant = 1.0f / det;
-		vec3 s = pointA - thisDisp.vertices[0].xyz;
-		float u = invDeterminant * dot(s, rayCrossEdgeB);
-		if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {
-			continue; //No hit.
-		}
+	for (uint entryIndex=lightLOSDataStartIndex; entryIndex<lightLOSDataStartIndex+lightLOSDataEntryCount; entryIndex++) {
+		uint thisObjectData = losData[entryIndex];
+		uint thisObjectIndex = thisObjectData >> 3; //Former 29 bits.
+		uint thisObjectType = thisObjectData & 0x7; //Latter 3 bits.
 
-		vec3 sCrossEdgeA = cross(s, edgeA);
-		float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
-		if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {
-			continue; //No hit.
-		}
+		switch(thisObjectType) {
+			case T_WALL: { //Walls
+				if (thisObjectIndex == foundIndex && foundType == T_WALL) {continue; /* Wall is the index calling the LOS check. */}
+				Wall thisWall = walls[thisObjectIndex];
+				bool wallResult = wallCheck3D(origin, thisLight.position, thisWall, LOSDelta);
+				if (wallResult) {return true; /* Exit early. */}
+				break;
+			}
 
-		float t = invDeterminant * dot(edgeB, sCrossEdgeA);
-		if (t > EPSILON) {
-			if (allowTransparency) {
-				vec2 UV = ((1.0f - u - v) * thisDisp.UV[0]) + (u * thisDisp.UV[1]) + (v * thisDisp.UV[2]);
-				if (textureLod(textureArray, vec3(UV.xy, thisDisp.normal_texID.w), 0.0f).a >= 0.5f) {
-					return true;
-				}
-			} else {
-				return true;
+			case T_VISPLANE: { //Visplanes
+				if (thisObjectIndex == foundIndex && foundType == T_VISPLANE) {continue; /* Visplane is the index calling the LOS check. */}
+				Visplane thisVisplane = visplanes[thisObjectIndex];
+				bool visplaneResult = visplaneCheck3D(origin, thisLight.position, thisVisplane, LOSDelta);
+				if (visplaneResult) {return true; /* Exit early. */}
+				break;
+			}
+
+			case T_DISPLACEMENT: { //Displacements
+				if (thisObjectIndex == foundIndex && foundType == T_DISPLACEMENT) {continue; /* Displacement is the index calling the LOS check. */}
+				Displacement thisDisplacement = displacements[thisObjectIndex];
+				bool displacementResult = displacementCheck3D(origin, thisLight.position, thisDisplacement, LOSDelta);
+				if (displacementResult) {return true; /* Exit early. */}
+				break;
+			}
+
+			default: { //Should not be called as LOS data only stores the former 3; but handle it someway anyway.
+				break;
 			}
 		}
 	}
@@ -446,7 +518,7 @@ void main() {
 
 		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
-		bool sunBlocked = checkLOS(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
+		bool sunBlocked = checkLOSGeneral(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
 		if ((normalDot >= 0.0f) && !sunBlocked) {
 			float sunNormalContrib = (normalDot * 0.5f) + 0.5f;
 			lightColour = sunColour.rgb * sunNormalContrib;
@@ -496,7 +568,7 @@ void main() {
 
 			
 			//Shadow Checks
-			bool inShadow = checkLOS(thisLight.position, origin, index, type);
+			bool inShadow = checkLOSLightSpecific(origin, thisLight, index, type);
 
 			if (!inShadow) {
 				lightColour = thisLight.colour * attenuation;

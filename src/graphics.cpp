@@ -400,6 +400,7 @@ void updateShaderStorageBufferObject(
 	size_t count
 ) {
 	size_t size = sizeof(T) * count;
+
 	if (count > 0) {
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
 		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data);
@@ -409,6 +410,110 @@ void updateShaderStorageBufferObject(
 
 
 
+inline GLuint encodeIndex(structs::Wall thisWall, GLuint index) {
+	return (index << 3) | 0x1;
+}
+inline GLuint encodeIndex(structs::Visplane thisVisplane, GLuint index) {
+	return (index << 3) | 0x2;
+}
+inline GLuint encodeIndex(structs::Displacement thisDisplacement, GLuint index) {
+	return (index << 3) | 0x3;
+}
+
+void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* visibleObjects) {
+
+	for (unsigned int wallIndex=0; wallIndex<physicsData->wallData.size(); wallIndex++) {
+		structs::Wall thisWall = physicsData->wallData.at(wallIndex);
+
+		float actualDistance;
+		bool intersect2D = utils::circleWallIntersect( //If the light's radius intersects with the wall at all (2D)
+			thisWall, thisLight.position, thisLight.intensity, &actualDistance
+		);
+		if (!intersect2D) {continue; /* No 2D intersect. */}
+
+		float zOffset = sqrt(std::max(
+			0.0f, (thisLight.intensity*thisLight.intensity) - (actualDistance*actualDistance)
+		));
+		float minZ = thisLight.position.z - zOffset;
+		float maxZ = thisLight.position.z + zOffset;
+		if ((thisWall.start.z <= maxZ) && (thisWall.end.z >= minZ)) {
+			visibleObjects->push_back(encodeIndex(thisWall, wallIndex));
+		}
+	}
+
+
+
+	for (unsigned int visplaneIndex=0; visplaneIndex<physicsData->visplaneData.size(); visplaneIndex++) {
+		structs::Visplane thisVisplane = physicsData->visplaneData.at(visplaneIndex);
+
+		if (
+			(thisVisplane.height <= thisLight.position.z - thisLight.intensity) ||
+			(thisVisplane.height >= thisLight.position.z + thisLight.intensity)
+		) {continue; /* Vertically outside of light's sphere. */}
+
+		glm::vec2 minPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maxPoint = glm::vec2(-constants::INF, -constants::INF);
+		for (glm::vec2 vertex : thisVisplane.vertices) {
+			minPoint = glm::min(minPoint, vertex);
+			maxPoint = glm::max(maxPoint, vertex);
+		}
+
+		bool visplaneInRange = (
+			((thisLight.position.x + thisLight.intensity) >= minPoint.x) && ((thisLight.position.x - thisLight.intensity) <= maxPoint.x) &&
+			((thisLight.position.y + thisLight.intensity) >= minPoint.y) && ((thisLight.position.y - thisLight.intensity) <= maxPoint.y)
+		);
+
+		if (visplaneInRange) {
+			visibleObjects->push_back(encodeIndex(thisVisplane, visplaneIndex));
+		}
+	}
+
+
+	return; //Implement later.
+	for (unsigned int displacementIndex=0; displacementIndex<physicsData->displacementData.size(); displacementIndex++) {
+		structs::Displacement thisDisplacement = physicsData->displacementData.at(displacementIndex);
+
+		bool displacementInRange = (
+			false
+		);
+
+		if (displacementInRange) {
+			visibleObjects->push_back(encodeIndex(thisDisplacement, displacementIndex));
+		}
+	}
+
+}
+
+void createLightLOSSSBO(unsigned int binding) {
+	std::vector<GLuint> objectSSBOVec;
+	size_t totalSize = 0;
+
+	//If an object could possibly occlude a light, then it is added. Otherwise it is not checked in the shader LOS pass.
+	std::vector<GLuint> objectsInRange;
+	for (unsigned int lightIndex=0; lightIndex<validLights; lightIndex++) {
+		objectsInRange.clear();
+
+		structs::Light thisLight = physicsData->lightData.at(lightIndex);
+		findObjectsInRangeOfLight(thisLight, &objectsInRange);
+		size_t thisSize = objectsInRange.size();
+		//Light stores the start index and number of indices in the dataset.
+		physicsData->lightData.at(lightIndex).LOSSSBOstart = totalSize;
+		physicsData->lightData.at(lightIndex).LOSSSBOcount = thisSize;
+		totalSize += thisSize;
+
+		for (GLuint datum : objectsInRange) {
+			//Fun fact; datum is the singular of data.
+			objectSSBOVec.push_back(datum);
+		}
+	}
+
+	GLIndex::lightLOSSSBO = createShaderStorageBufferObject(
+		binding, sizeof(GLuint) * totalSize
+	);
+	if (!objectSSBOVec.empty()) {
+		updateShaderStorageBufferObject(GLIndex::lightLOSSSBO, objectSSBOVec.data(), objectSSBOVec.size());
+	}
+}
 
 
 
@@ -1237,6 +1342,7 @@ void prepareOpenGL() {
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
 
 
+	createLightLOSSSBO(8); //At binding 8.
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);

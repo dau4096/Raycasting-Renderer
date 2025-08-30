@@ -134,7 +134,7 @@ inline GLuint textureArrayEnvironment, skyboxTextureID, textureArrayUI, textureA
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
-inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO;
+inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
 
 }
 
@@ -609,11 +609,13 @@ struct Light {
 	glm::vec3 colour;
 	float intensity;
 	bool* IOPtr;
+	GLuint LOSSSBOstart;
+	GLuint LOSSSBOcount;
 
 	Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), IOPtr(&(constants::C_FALSE)) {}
 
 	Light(glm::vec3 position, glm::vec3 colour, float intensity, bool* IOPtr=&(constants::C_TRUE))
-		: position(position), colour(colour), intensity(intensity), IOPtr(IOPtr) {}
+		: position(position), colour(colour), intensity(intensity), IOPtr(IOPtr), LOSSSBOstart(0), LOSSSBOcount(0) {}
 };
 
 struct LightGPU {
@@ -621,15 +623,17 @@ struct LightGPU {
 	alignas(16) glm::vec3 colour;
 	alignas(4) float intensity;
 	alignas(4) bool enabled;
-	alignas(4) float _padding;
+	alignas(4) GLuint LOSSSBOdata;
 
-	LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), _padding{0.0f} {}
+	LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), LOSSSBOdata(0.0f) {}
 
 	LightGPU(Light* light, Player player)
 		: position(light->position), colour(light->colour),
-		  intensity(light->intensity), _padding{0.0f} {
+		  intensity(light->intensity) {
 			if (light->IOPtr) {enabled = *(light->IOPtr);}
 			else {enabled = true;}
+
+			LOSSSBOdata = ((light->LOSSSBOstart & 0xFFFF) << 16) | (light->LOSSSBOcount & 0xFFFF);
 		  }
 };
 

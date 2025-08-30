@@ -50,26 +50,6 @@ bool quickIntersect(glm::vec3 pointA, glm::vec3 pointB, structs::Wall wall, floa
 
 
 
-bool circleLineIntersect(structs::Wall line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr) {
-	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
-	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
-
-	glm::vec2 lineDir = lineEndV2 - lineStartV2;
-	glm::vec2 lineToCircle = circlePosition - lineStartV2;
-
-	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
-	t = glm::clamp(t, 0.0f, 1.0f);
-
-	glm::vec2 closestPoint = lineStartV2 + t * lineDir;
-	float distToCircle = glm::length(circlePosition - closestPoint);
-
-	if (distToLine) {
-		*distToLine = distToCircle;
-	}
-	return distToCircle <= radius;
-}
-
-
 
 float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
 	float sign = (positiveSolution) ? 1.0f : -1.0f;
@@ -612,7 +592,7 @@ void playerMovement() {
 			(playerHeadZ < std::min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > std::max(wall.start.z, wall.end.z))
 		); //!aboveOrBelow.
-		bool touchingWallCheck = circleLineIntersect(
+		bool touchingWallCheck = utils::circleWallIntersect(
 			wall,
 			glm::vec2(player.position) + glm::vec2(player.velocity),
 			playerConfig::PLAYER_COLLISION_RADIUS
@@ -645,7 +625,7 @@ void playerMovement() {
 				glm::vec2 correctedV = wallDir * glm::dot(glm::normalize(glm::vec2(player.velocity.x, player.velocity.y)), wallDir) * playerSpeed;
 				player.velocity.x = correctedV.x; player.velocity.y = correctedV.y;
 				float distToWall;
-				touchingWallCheck = circleLineIntersect(
+				touchingWallCheck = utils::circleWallIntersect(
 					wall,
 					glm::vec2(player.position) + glm::vec2(player.velocity),
 					playerConfig::PLAYER_COLLISION_RADIUS,
@@ -809,7 +789,7 @@ void updateSpecials(bool interactKey) {
 					(playerHeadZ < (std::min(wall.start.z, wall.end.z)))
 					 || (playerFootZ + constants::MAX_STEP_HEIGHT > (std::max(wall.start.z, wall.end.z)))
 				); //!aboveOrBelow.
-				bool touchingWallCheck = circleLineIntersect(
+				bool touchingWallCheck = utils::circleWallIntersect(
 					wall,
 					glm::vec2(player.position) + glm::vec2(player.velocity.x, player.velocity.y),
 					playerConfig::PLAYER_COLLISION_RADIUS
@@ -873,7 +853,7 @@ void updateSpecials(bool interactKey) {
 					}
 				}
 				bool shouldBeOpen = wall.internal->second > 0.0f;
-				bool inDoorCheck = circleLineIntersect(
+				bool inDoorCheck = utils::circleWallIntersect(
 					wall,
 					glm::vec2(player.position) + glm::vec2(player.velocity),
 					playerConfig::PLAYER_COLLISION_RADIUS

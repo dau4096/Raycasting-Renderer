@@ -95,7 +95,7 @@
 
 	<!-- Post-processing -->
 	<option function="VIEW_LUMINANCE_QUANTISATION" value="0.0" />
-	<option function="VIEW_ANTIALIAS" value="TRUE" />
+	<option function="VIEW_ANTIALIAS" value="FALSE" />
 
 
 	<!-- Tickrate/Framerate -->
@@ -120,7 +120,7 @@
 
 
 	<!-- Stage-specific -->
-	<option function="META_STAGE_NAME" value="dev-quake" />
+	<option function="META_STAGE_NAME" value="dev-lighting" />
 	<option function="META_DYNAMIC_UPD" value="FALSE" />
 	<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" value="FALSE" />
 
