@@ -65,7 +65,7 @@
 
 
 	<!-- Rendering specific -->
-	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
+	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="HIGH" />
 	<option function="VIEW_TEXTURE_QUALITY" value="HIGH" />
 	<option function="VIEW_USE_MIPMAPPING" value="TRUE" />
 	<option function="VIEW_MAX_RAY_DIST" value="127.0" />
