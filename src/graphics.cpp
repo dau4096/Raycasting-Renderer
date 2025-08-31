@@ -687,7 +687,12 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 
 
 
-GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false) {
+GLuint createTexture2DArray(
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames,
+		std::string subFolder="textures-env",
+		bool hasMipMap=false, bool isNormals=false,
+		const char* fallbackTextureName = display::FALLBACK_TEXTURE_PATH
+	) {
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
@@ -712,8 +717,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 	bool usedFallback;
 
 	unsigned char* fallbackTextureData = stbi_load(
-		display::FALLBACK_TEXTURE_PATH,
-		&fallbackTextureWidth, &fallbackTextureHeight,
+		fallbackTextureName, &fallbackTextureWidth, &fallbackTextureHeight,
 		&fallbackTextureChannels, 4
 	);
 
@@ -728,12 +732,13 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 
 	int width, height, channels;
 	int layerIndex = 0;
+	std::string extension = (isNormals) ? ".normal.png" : ".png";
 	for (const std::string& textureName : textureNames) {
 		if (textureName.empty()) {continue;}
 		usedFallback = false;
 
 		std::string reportedTextureName = textureName;
-		std::string texturePath = "src/" + subFolder + "/" + textureName + ".png";
+		std::string texturePath = "src/" + subFolder + "/" + textureName + extension;
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -742,7 +747,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 
 		if (!textureData) {
 			//Try in folder beside stage XML with same name.
-			texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+			texturePath = "stages/assets-" + stageData.name + "/" + textureName + extension;
 			textureData = stbi_load(
 				texturePath.c_str(),
 				&width, &height,
@@ -750,7 +755,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 			);
 
 			if (!textureData) {
-				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
+				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + extension) << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + extension) << "]. Reverting to fallback." << std::endl;
 				//Use fallback texture.
 				textureData = fallbackTextureData;
 				width = fallbackTextureWidth;
@@ -1329,7 +1334,8 @@ void prepareOpenGL() {
 	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
 	//Textures
-	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true);
+	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
+	GLIndex::normalArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, true, display::FALLBACK_NORMAL_PATH);
 	GLIndex::textureArrayUI = createTexture2DArray(UIImageNames, "textures-sym");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
 	if (!(stageData.skyboxTextureName.empty())) {
@@ -1780,7 +1786,8 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-	glBindTextureUnit(1, GLIndex::skyboxTextureID);
+	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+	glBindTextureUnit(2, GLIndex::skyboxTextureID);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);

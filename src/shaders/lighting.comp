@@ -532,9 +532,8 @@ void main() {
 		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
 		bool sunBlocked = checkLOSGeneral(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
-		if ((normalDot >= 0.0f) && !sunBlocked) {
-			float sunNormalContrib = (normalDot * 0.5f) + 0.5f;
-			lightColour = sunColour.rgb * sunNormalContrib * globalLightTint.rgb * globalLightTint.a;
+		if ((normalDot >= -EPSILON_ALT) && !sunBlocked) {
+			lightColour = sunColour.rgb * normalDot * globalLightTint.rgb * globalLightTint.a;
 		}
 		lightDir = sunDirection;
 
@@ -551,9 +550,10 @@ void main() {
 		vec2 anglePos = normPos * vec2(maxRayAngle, verticalFOV / 2.0f);
 		if (dot(anglePos, anglePos) > 0.0625f) {exit(framePosition); return; /* Outside headlamp FOV */}
 
-		vec3 delta3D = origin - playerPosition;
+		vec3 delta3D = playerPosition - origin;
 		float distanceSQ = dot(delta3D, delta3D);
-		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))); //Intensity fades with distance to light.
+		float normalDot = clamp(getNormalDot(normal, normalize(delta3D), shouldUseSpecularHighlights), 0.0f, 1.0f);
+		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))) * normalDot; //Intensity fades with distance to light.
 		float brightness = clamp(attenuation, 0.0f, 1.0f);
 
 		lightColour = headLampColour * brightness;
@@ -576,7 +576,7 @@ void main() {
 			if (normalDot <= EPSILON_ALT) {exit(framePosition); return; /* Surface would reflect no lighting due to cosine of angles being negative. */}
 
 			float distSQ = dot(delta, delta);
-			float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))); //Intensity fades with distance to light.
+			float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))) * normalDot; //Intensity fades with distance to light.
 			if (attenuation <= EPSILON_ALT) {exit(framePosition); return; /* Light is too dim to contribute. */}
 
 			
