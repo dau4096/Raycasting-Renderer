@@ -172,7 +172,7 @@ static inline int getCentreX(glm::vec3& objPos, Player player, glm::ivec2 resolu
 	float angleDelta = theta - player.viewAngle;
 	if (angleDelta > constants::PI) {angleDelta -= constants::PI2;}
 	if (angleDelta < -constants::PI) {angleDelta += constants::PI2;}
-	float centreX = (resolution.x / 2.0f) * ((angleDelta * zoomEffect / rayAngle) + 1.0f);
+	float centreX = (resolution.x / 2.0f) * ((angleDelta / rayAngle) + 1.0f);
 	return int(round(centreX));
 }
 

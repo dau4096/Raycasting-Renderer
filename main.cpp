@@ -173,6 +173,7 @@ void handleInputs() {
 	}
 
 	shouldTakeScreenshot = utils::isPressed("META_SCREENSHOT") && !shouldTakeScreenshot && !lastFrameScreenshot;
+	zoomEffect = (utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f;
 
 	if (utils::isPressed("META_RELOAD_STAGE")) {
 		reloadLevel(true);
