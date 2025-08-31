@@ -4,74 +4,9 @@
 using namespace std;
 
 
-inline std::unordered_map<std::string, int> userBindings = {
-	{"MOVE_FORWARD", -1},
-	{"MOVE_BACKWARD", -1},
-	{"MOVE_LEFT", -1},
-	{"MOVE_RIGHT", -1},
-	{"MOVE_JUMP", -1},
-	{"MOVE_CROUCH", -1},
-	{"MOVE_SPRINT", -1},
-
-	{"USE_INTERACT", -1},
-	{"USE_HEADLAMP", -1},
-	{"USE_VIEWZOOM", -1},
-
-	{"META_SCREENSHOT", -1},
-	{"META_RELOAD_STAGE", -1},
-	{"META_RELOAD_ENV", -1},
-	{"META_EXIT", -1},
-	{"META_FREECURSOR", -1},
-};
-
-
-inline std::unordered_map<std::string, bool> keyMap = []() {
-	std::unordered_map<std::string, bool> tmp;
-	for (const auto& pair : userBindings) {
-		tmp[pair.first] = false;
-	}
-	return tmp;
-}();
-
-
-inline std::unordered_map<std::string, std::string> userConfig = {
-	{"TURN_SPEED_MOUSE", ""},
-	{"TURN_SPEED_KEYBOARD", ""},
-
-	{"VIEW_RENDER_RESOLUTION_QUALITY", ""},
-	{"VIEW_FOV", ""},
-	{"VIEW_MAX_RAY_DIST", ""},
-	{"VIEW_SHOW_HUD", ""},
-	{"VIEW_DRAW_UV", ""},
-	{"VIEW_BOB", ""},
-	{"VIEW_LEAN", ""},
-	{"VIEW_VLOOK", ""},
-	{"VIEW_SMOOTHING", ""},
-	{"VIEW_MIPMAPPING", ""},
-	{"VIEW_TEXTURE_QUALITY", ""},
-	{"VIEW_ANTIALIAS_LEVEL", ""},
-	{"VIEW_LUMINANCE_QUANTISATION", ""},
-	{"VIEW_MAX_FREQ", ""},
-	{"VIEW_INTERFACE_IN_SCREENSHOT", ""},
-	{"VIEW_VSYNC", ""},
-	{"VIEW_SHADOW_QUALITY", ""},
-	{"VIEW_ALLOW_TRANSPARENCY", ""},
-	{"VIEW_ALLOW_TRANSPARENT_SHADOWS", ""},
-
-	{"META_DEBUG_MODE", ""},
-	{"META_SHOW_TICKRATE_UI", ""},
-	{"META_SHOW_FRAMERATE_UI", ""},
-	{"META_SHOW_FRAMERATE_CONSOLE", ""},
-	{"META_SHOW_DT_CONSOLE", ""},
-	{"META_SHOW_CONSOLE", ""},
-	{"META_STAGE_NAME", ""},
-	{"META_SHOW_DATA", ""},
-	{"META_DYNAMIC_UPD", ""},
-	{"META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES", ""},
-
-	{"PHYS_NO_COLLIDE", ""},
-	{"PHYS_FLY", ""},
-};
+inline std::unordered_map<std::string, int> userBindings = {};
+inline std::unordered_map<std::string, bool> keyMap = {};
+inline std::unordered_map<std::string, std::string> userConfig = {};
 
 
 
@@ -86,6 +21,8 @@ struct StageData {
 	std::string filePath;
 
 	std::string skyboxTextureName;
+	glm::vec3 fogColour;
+
 	glm::vec3 sunDirection, sunColour;
 	
 	float gravity;
@@ -98,7 +35,7 @@ struct StageData {
 
 	StageData()
 		: name("<NONE>"), filePath(""),
-		  skyboxTextureName("fallback-skybox"),
+		  skyboxTextureName("fallback-skybox"), fogColour(0.4157f, 0.6039f, 0.7098f),
 		  sunDirection(0.0f, 0.0f, 1.0f), sunColour(1.0f, 1.0f, 1.0f),
 		  gravity(0.486), killPlaneZ(-64.0f),
 		  playerStartPoint(0.0f, 0.0f, 0.0f), playerStartAngle(0.0f),
@@ -181,7 +118,12 @@ inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, d
 //Assorted
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
-inline GLuint renderedFrameID, interfaceID, positionMapID, normalMapID, lightingMapsArrayID;
+inline GLuint lightingMapsArrayID;
+inline GLuint screenshotImage2D;
+
+//Framebuffers
+inline GLuint frameFBO, frameAlbedoComponent, framePositionComponent, frameNormalComponent, frameDepthComponent; //Previously: renderedFrameID
+inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
@@ -193,7 +135,7 @@ inline GLuint textureArrayUI, textureArrayNumeric;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
-inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO;
+inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
 
 }
 
@@ -205,9 +147,9 @@ namespace structs {
 
 
 struct Player {
-	glm::vec3 position, prevPosition, velocity, cameraPosition;
+	glm::vec3 position, prevPosition, velocity, cameraPosition, interpPosition;
 	float viewAngle, viewRoll, viewPitch, vLook, height;
-	bool touchingFloor, sliding;
+	bool touchingFloor, sliding, onConveyor;
 	Event state, previousState;
 	int health, energy;
 	unsigned int jumpsUsed;
@@ -216,6 +158,7 @@ struct Player {
 	Player()
 		: position(stageData.playerStartPoint), prevPosition(stageData.playerStartPoint), velocity(glm::vec3(0.0f, 0.0f, 0.0f)),
 		  cameraPosition(stageData.playerStartPoint + glm::vec3(0.0f, 0.0f, playerConfig::PLAYER_COLLISION_HEIGHT_STAND/3.0f)),
+		  interpPosition(stageData.playerStartPoint),
 		  viewAngle(stageData.playerStartAngle * constants::TO_RAD), viewRoll(0.0f), viewPitch(0.0f), vLook(0.0f),
 		  height(playerConfig::PLAYER_COLLISION_HEIGHT_STAND), touchingFloor(false),
 		  health(stageData.playerStartHealth), energy(stageData.playerStartEnergy),
@@ -224,17 +167,36 @@ struct Player {
 
 
 static inline int getCentreX(glm::vec3& objPos, Player player, glm::ivec2 resolution) {
-	glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player.position));
+	glm::vec2 direction = glm::normalize(glm::vec2(objPos) - glm::vec2(player.interpPosition));
 	float theta = atan2(direction.x, direction.y);
 	float angleDelta = theta - player.viewAngle;
 	if (angleDelta > constants::PI) {angleDelta -= constants::PI2;}
 	if (angleDelta < -constants::PI) {angleDelta += constants::PI2;}
-	float centreX = (resolution.x / 2.0f) * ((angleDelta / rayAngle) + 1.0f);
+	float centreX = (resolution.x / 2.0f) * ((angleDelta * zoomEffect / rayAngle) + 1.0f);
 	return int(round(centreX));
 }
 
 
-static inline GLuint combineTextureData(
+
+static inline GLuint combineTextureData1(
+	GLint textureID, bool swapUVXY
+) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	- animationFlags; (4 bit flags) [0 - 15]
+		1111 0000 0000 0000 0000 0000 0000 0000
+	- textureID; (12 bit uint) [0 - 65535]
+		0000 1111 1111 1111 0000 0000 0000 0000
+	*/
+	return (
+		((GLuint(swapUVXY) & 0x1u) << 31) |
+		((GLuint(textureID) & 0xFFFu) << 16)
+	);
+}
+
+
+static inline GLuint combineTextureData2(
 	bool isWorldSpaceX, bool isWorldSpaceY,
 	glm::vec2 textureScale, glm::vec2 textureOffset
 ) {
@@ -286,8 +248,8 @@ struct Visplane {
 	glm::vec2 originalVertices[8];
 	size_t numVertices;
 	float height, originalHeight;
-	GLint textureID;
-	GLuint textureData;
+	GLuint textureData1;
+	GLuint textureData2;
 	VisplaneType type;
 	bool* IOPtr;
 	float data;
@@ -295,7 +257,7 @@ struct Visplane {
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
-		  textureID(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
+		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
 			internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
 			internal = &(internalsData.at(internalsData.size()-1));
 		}
@@ -303,13 +265,16 @@ struct Visplane {
 	Visplane(
 			std::vector<glm::vec2> verts, float heightZ, GLint textureID,
 			VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
-			bool isWorldSpaceX=true, bool isWorldSpaceY=true,
+			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
-			textureID(textureID),
+			textureData1(textureData1),
 			type(type),	IOPtr(IOPtr), data(data) {
-				textureData = combineTextureData(
+				textureData1 = combineTextureData1(
+					textureID, swapUVXY
+				);
+				textureData2 = combineTextureData2(
 					isWorldSpaceX, isWorldSpaceY,
 					textureScale, textureOffset
 				);
@@ -323,7 +288,7 @@ struct Visplane {
 
 
 				if (type == V_TELEPORT) {
-					internal->second = exitDirection;
+					internal->second = exitDirection * constants::TO_RAD;
 				}
 
 
@@ -344,13 +309,15 @@ struct Visplane {
 	Visplane(
 			glm::vec2 start, glm::vec2 end, float heightZ, GLint textureID,
 			VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
-			bool isWorldSpaceX=true, bool isWorldSpaceY=true,
+			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
-			textureID(textureID),
 			type(type),	IOPtr(IOPtr), data(data) {
-				textureData = combineTextureData(
+				textureData1 = combineTextureData1(
+					textureID, swapUVXY
+				);
+				textureData2 = combineTextureData2(
 					isWorldSpaceX, isWorldSpaceY,
 					textureScale, textureOffset
 				);
@@ -364,7 +331,7 @@ struct Visplane {
 
 
 				if (type == V_TELEPORT) {
-					internal->second = exitDirection;
+					internal->second = exitDirection * constants::TO_RAD;
 				}
 
 
@@ -386,16 +353,16 @@ struct VisplaneGPU {
 	glm::vec4 vertices[4];
 	GLuint numVertices;
 	float height;
-	GLint textureID;
-	GLuint textureData;
+	GLuint textureData1;
+	GLuint textureData2;
 	glm::vec4 boundingBox;
 
 	VisplaneGPU()
-		: vertices(), height(0.0f), numVertices(0), textureID(0), textureData(), boundingBox() {}
+		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox() {}
 
 	VisplaneGPU(Visplane *visplane, Player player)
 		: numVertices(visplane->numVertices), height(visplane->height),
-		  textureID(visplane->textureID), textureData(visplane->textureData) {
+		  textureData1(visplane->textureData1), textureData2(visplane->textureData2) {
 			for (int i=0; i<4; i++) {
 				vertices[i] = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 			}
@@ -421,8 +388,8 @@ struct VisplaneGPU {
 struct Wall {
 	glm::vec3 start, originalStart;
 	glm::vec3 end, originalEnd;
-	std::pair<GLint, GLint> textures;
-	GLuint textureData;
+	std::pair<GLuint, GLuint> textureData1s;
+	GLuint textureData2;
 	WallType type;
 	bool* IOPtr;
 	float data;
@@ -431,7 +398,7 @@ struct Wall {
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
 		  end(0.0f, 0.0f, 0.0f), originalEnd(0.0f, 0.0f, 0.0f),
-		  textures(),
+		  textureData1s(),
 		  type(W_INVALID),
 		  IOPtr(nullptr), data(0.0f) {
 			if ((type != W_NORMAL) && (type != W_INVALID)) {
@@ -447,20 +414,20 @@ struct Wall {
 			GLint textureID0,
 			WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
 			GLint textureID1=-1,
-			bool isWorldSpaceX=true, bool isWorldSpaceY=true,
+			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY1=false, bool swapUVXY2=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
 			end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
 			type(type), 
 			IOPtr(IOPtr), data(data) {
-				textures.first = textureID0;
+				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
-					textures.second = textureID0;
+					textureData1s.second = combineTextureData1(textureID0, swapUVXY2);
 				} else {
-					textures.second = textureID1;
+					textureData1s.second = combineTextureData1(textureID1, swapUVXY2);
 				}
 
-				textureData = combineTextureData(
+				textureData2 = combineTextureData2(
 					isWorldSpaceX, isWorldSpaceY,
 					textureScale, textureOffset
 				);
@@ -475,21 +442,23 @@ struct Wall {
 
 	Wall(
 			glm::vec3 start, glm::vec3 end,
-			GLint textureID0, WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f, GLint textureID1=-1,
-			bool isWorldSpaceX=true, bool isWorldSpaceY=true,
+			GLint textureID0,
+			WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
+			GLint textureID1=-1,
+			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY1=false, bool swapUVXY2=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			type(type), 
 			IOPtr(IOPtr), data(data) {
-				textures.first = textureID0;
+				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
-					textures.second = textureID0;
+					textureData1s.second = combineTextureData1(textureID0, swapUVXY2);
 				} else {
-					textures.second = textureID1;
+					textureData1s.second = combineTextureData1(textureID1, swapUVXY2);
 				}
 
-				textureData = combineTextureData(
+				textureData2 = combineTextureData2(
 					isWorldSpaceX, isWorldSpaceY,
 					textureScale, textureOffset
 				);
@@ -507,20 +476,20 @@ struct WallGPU {
 	alignas(16) glm::vec3 start;
 	alignas(16) glm::vec3 end;
 	alignas(8) glm::vec2 direction;
-	alignas(4) GLint textureID;
-	alignas(4) GLuint textureData;
+	alignas(4) GLuint textureData1;
+	alignas(4) GLuint textureData2;
 
 	WallGPU()
 		: start(), end(), direction(),
-		  textureID(), textureData() {}
+		  textureData1(), textureData2() {}
 
 	WallGPU(Wall *wall, Player player)
 		: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
-		  textureData(wall->textureData) {
+		  textureData2(wall->textureData2) {
 			if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
-				textureID = wall->textures.second;
+				textureData1 = wall->textureData1s.second;
 			} else {
-				textureID = wall->textures.first;
+				textureData1 = wall->textureData1s.first;
 			}
 		}
 };
@@ -631,7 +600,7 @@ struct SpriteGPU {
 		: position(sprite->position),
 		  width(sprite->width), height(sprite->height),
 		  screenCentreX(getCentreX(sprite->position, player, currentRenderResolution)) {
-		  	textureID_transparency = ((GLuint(sprite->transparency * 65535) & 0xFFFF) << 16) | (sprite->textureID & 0xFFFF);
+			textureID_transparency = ((GLuint(sprite->transparency * 65535) & 0xFFFF) << 16) | (sprite->textureID & 0xFFFF);
 		  }
 };
 
@@ -641,11 +610,13 @@ struct Light {
 	glm::vec3 colour;
 	float intensity;
 	bool* IOPtr;
+	GLuint LOSSSBOstart;
+	GLuint LOSSSBOcount;
 
 	Light() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), IOPtr(&(constants::C_FALSE)) {}
 
 	Light(glm::vec3 position, glm::vec3 colour, float intensity, bool* IOPtr=&(constants::C_TRUE))
-		: position(position), colour(colour), intensity(intensity), IOPtr(IOPtr) {}
+		: position(position), colour(colour), intensity(intensity), IOPtr(IOPtr), LOSSSBOstart(0), LOSSSBOcount(0) {}
 };
 
 struct LightGPU {
@@ -653,15 +624,17 @@ struct LightGPU {
 	alignas(16) glm::vec3 colour;
 	alignas(4) float intensity;
 	alignas(4) bool enabled;
-	alignas(4) float _padding;
+	alignas(4) GLuint LOSSSBOdata;
 
-	LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), _padding{0.0f} {}
+	LightGPU() : position(0.0f, 0.0f, 0.0f), colour(0.0f, 0.0f, 0.0f), intensity(0.0f), LOSSSBOdata(0.0f) {}
 
 	LightGPU(Light* light, Player player)
 		: position(light->position), colour(light->colour),
-		  intensity(light->intensity), _padding{0.0f} {
-		  	if (light->IOPtr) {enabled = *(light->IOPtr);}
-		  	else {enabled = true;}
+		  intensity(light->intensity) {
+			if (light->IOPtr) {enabled = *(light->IOPtr);}
+			else {enabled = true;}
+
+			LOSSSBOdata = ((light->LOSSSBOstart & 0xFFFF) << 16) | (light->LOSSSBOcount & 0xFFFF);
 		  }
 };
 

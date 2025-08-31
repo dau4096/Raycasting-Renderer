@@ -1,21 +1,22 @@
 /* displacements.frag */
 #version 460 core
 
-layout(binding=0) uniform sampler2D renderedFrameRO;
+layout(binding=0) uniform sampler2D depthMap;
 layout(binding=1) uniform sampler2D FBOColour;
 layout(binding=2) uniform sampler2D FBOPosition;
 layout(binding=3) uniform sampler2D FBONormal;
-layout(rgba32f, binding=0) uniform image2D renderedFrameWO;
-layout(rgba32f, binding=1) uniform image2D positionMap;
-layout(rgba32f, binding=2) uniform image2D normalMap;
 
+//FBO components
+layout(location=0) out vec4 outFragColour;
+layout(location=1) out vec4 outFragPosition;
+layout(location=2) out vec4 outFragNormal;
 
 
 uniform float shadowMapQuality;
 uniform ivec2 renderResolution;
 uniform float maxRayDistance;
 
-const float EPSILON = 1e-4f;
+#define EPSILON 1e-4f
 
 
 
@@ -25,18 +26,23 @@ void main() {
 	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 	vec2 UV = fragPosition / vec2(renderResolution);
-	float fragDepth = texture(renderedFrameRO, UV).w;
+	float fragDepth = texture(depthMap, UV).w * maxRayDistance;
+
 	vec4 albedo = texture(FBOColour, UV);
-	if ((albedo.w > fragDepth) || (albedo.w >= maxRayDistance - EPSILON)) {return; /* Displacement frag is obscured. */}
+	float dispDepth = albedo.r * maxRayDistance;
+	if ((dispDepth > fragDepth) || (dispDepth >= maxRayDistance - EPSILON)) {discard; /* Displacement frag is obscured. */}
+
 	vec4 normal = texture(FBONormal, UV);
-	if (normal.w > 0) { //Disp was hit.
-		imageStore(renderedFrameWO, framePosition, albedo);
-		if (shouldDrawToPositionMap) {
-			vec4 pos = texture(FBOPosition, UV);
-			uint idx = (int(pos.w) << 3) | 0x3;
-			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-			imageStore(positionMap, thisFramePosition, vec4(pos.xyz, float(idx)));
-			imageStore(normalMap, thisFramePosition, vec4(normal.xyz, 1.0f));
-		}
+	if (normal.w <= 0) {discard; /* Disp was not hit. */}
+
+	outFragColour = vec4(albedo.rgb, 1.0f);
+	gl_FragDepth = dispDepth;
+
+	if (shouldDrawToPositionMap) {
+		vec4 pos = texture(FBOPosition, UV);
+		uint idx = (int(pos.w) << 3) | 0x3;
+		ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+		outFragPosition = vec4(pos.xyz, float(idx));
+		outFragNormal = vec4(normal.xyz, 1.0f);
 	}
 }

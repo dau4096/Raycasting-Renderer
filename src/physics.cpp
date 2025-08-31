@@ -50,26 +50,6 @@ bool quickIntersect(glm::vec3 pointA, glm::vec3 pointB, structs::Wall wall, floa
 
 
 
-bool circleLineIntersect(structs::Wall line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr) {
-	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
-	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
-
-	glm::vec2 lineDir = lineEndV2 - lineStartV2;
-	glm::vec2 lineToCircle = circlePosition - lineStartV2;
-
-	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
-	t = glm::clamp(t, 0.0f, 1.0f);
-
-	glm::vec2 closestPoint = lineStartV2 + t * lineDir;
-	float distToCircle = glm::length(circlePosition - closestPoint);
-
-	if (distToLine) {
-		*distToLine = distToCircle;
-	}
-	return distToCircle <= radius;
-}
-
-
 
 float quadraticFormula(float a, float b, float determinant, bool positiveSolution=true) {
 	float sign = (positiveSolution) ? 1.0f : -1.0f;
@@ -435,8 +415,8 @@ void playerMovement() {
 	float maxV = playerConfig::MOVE_SPEED_BASE;
 
 	glm::vec2 XYDelta = glm::vec2(player.velocity.x, player.velocity.y);
-	player.sliding = keyMap["MOVE_CROUCH"] && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD);
-	if (keyMap["MOVE_CROUCH"]) {
+	player.sliding = utils::isPressed("MOVE_CROUCH") && (glm::length(XYDelta) > playerConfig::SLIDE_THRESHOLD) && !player.onConveyor;
+	if (utils::isPressed("MOVE_CROUCH")) {
 		if (player.sliding) {
 			if (!prevSlide && player.touchingFloor) {
 				maxV *= playerConfig::MOVE_SPEED_SLIDE_ADD;
@@ -447,7 +427,7 @@ void playerMovement() {
 			playerSpeed *= playerConfig::MOVE_SPEED_CROUCH_MULT;
 			maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_CROUCH_MULT;
 		}
-	} else if (keyMap["MOVE_SPRINT"]) {
+	} else if (utils::isPressed("MOVE_SPRINT")) {
 		playerSpeed *= playerConfig::MOVE_SPEED_RUN_MULT;
 		maxV = playerConfig::MOVE_SPEED_BASE * playerConfig::MOVE_SPEED_RUN_MULT;
 	}
@@ -457,49 +437,48 @@ void playerMovement() {
 	// Determine the movement vector based on key presses
 	if (!player.sliding) {
 		float reduction = 1.0f;
-		if (keyMap["MOVE_FORWARD"]) {
+		if (utils::isPressed("MOVE_FORWARD")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * sin(player.viewAngle) * reduction;
 			newY += playerSpeed * cos(player.viewAngle) * reduction;
 		}
-		if (keyMap["MOVE_BACKWARD"]) {
+		if (utils::isPressed("MOVE_BACKWARD")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * sin(player.viewAngle) * reduction;
 			newY -= playerSpeed * cos(player.viewAngle) * reduction;
 		}
-		if (keyMap["MOVE_LEFT"]) {
+		if (utils::isPressed("MOVE_LEFT")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX -= playerSpeed * cos(player.viewAngle) * reduction;
 			newY -= playerSpeed * -sin(player.viewAngle) * reduction;
 		}
-		if (keyMap["MOVE_RIGHT"]) {
+		if (utils::isPressed("MOVE_RIGHT")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * cos(player.viewAngle) * reduction;
 			newY += playerSpeed * -sin(player.viewAngle) * reduction;
 		}
 		lateralMovement = glm::vec2(newX, newY);
 	}
-	if (keyMap["MOVE_JUMP"] && !prevJump && !utils::configToBool("PHYS_FLY")) {
+	if (utils::isPressed("MOVE_JUMP") && !prevJump && !utils::configToBool("PHYS_FLY")) {
 		if (player.touchingFloor) {
 			player.jumpsUsed++;
 			player.velocity.z += playerConfig::JUMP_INIT_SPEED;
-			player.position.z += 0.025;
+			player.position.z += 0.025f;
 		} else if (player.jumpsUsed < playerConfig::MAX_JUMPS) {
 			player.jumpsUsed = playerConfig::MAX_JUMPS;
 			if (player.velocity.z < 0.0f) {
 				player.velocity.z = playerConfig::JUMP_INIT_SPEED;
 			} else {
-				const float maxJumpSpeed = playerConfig::JUMP_INIT_SPEED * 2.0f;
-				float maxJump = glm::min(player.velocity.z + playerConfig::JUMP_INIT_SPEED, maxJumpSpeed);
+				float maxJump = glm::min(player.velocity.z + playerConfig::JUMP_INIT_SPEED, playerConfig::JUMP_INIT_SPEED);
 				player.velocity.z = maxJump;
 			}
 		}
 	}
 	if (utils::configToBool("PHYS_FLY")) {
-		if (keyMap["MOVE_JUMP"]) {
+		if (utils::isPressed("MOVE_JUMP")) {
 			player.position.z += playerSpeed;
 		}
-		if (keyMap["MOVE_CROUCH"]) {
+		if (utils::isPressed("MOVE_CROUCH")) {
 			player.position.z -= playerSpeed;
 		}
 	}
@@ -547,7 +526,7 @@ void playerMovement() {
 
 
 
-	prevJump = keyMap["MOVE_JUMP"];
+	prevJump = utils::isPressed("MOVE_JUMP");
 	prevSlide = player.sliding;
 	touchingFloorCheck = false;
 
@@ -607,13 +586,13 @@ void playerMovement() {
 
 	for (int wIndex=0; wIndex<validWalls; wIndex++) {
 		structs::Wall wall = physicsData->wallData.at(wIndex);
-		if ((wall.type == W_INVALID) || (wall.type == W_TRIGGER) || (wall.type == W_PASSTHROUGH)) {continue; /* These types can be walked through. */}
+		if ((wall.type == W_INVALID) || (wall.type == W_TRIGGER) || (wall.type == W_PASSTHROUGH) || (wall.type == W_LIGHTBLOCKER)) {continue; /* These types can be walked through. */}
 
 		bool playerZCheckWall = !(
 			(playerHeadZ < std::min(wall.start.z, wall.end.z))
 			 || (playerFootZ + constants::MAX_STEP_HEIGHT > std::max(wall.start.z, wall.end.z))
 		); //!aboveOrBelow.
-		bool touchingWallCheck = circleLineIntersect(
+		bool touchingWallCheck = utils::circleWallIntersect(
 			wall,
 			glm::vec2(player.position) + glm::vec2(player.velocity),
 			playerConfig::PLAYER_COLLISION_RADIUS
@@ -646,7 +625,7 @@ void playerMovement() {
 				glm::vec2 correctedV = wallDir * glm::dot(glm::normalize(glm::vec2(player.velocity.x, player.velocity.y)), wallDir) * playerSpeed;
 				player.velocity.x = correctedV.x; player.velocity.y = correctedV.y;
 				float distToWall;
-				touchingWallCheck = circleLineIntersect(
+				touchingWallCheck = utils::circleWallIntersect(
 					wall,
 					glm::vec2(player.position) + glm::vec2(player.velocity),
 					playerConfig::PLAYER_COLLISION_RADIUS,
@@ -797,7 +776,6 @@ void updatePhysicsObjects() {
 
 void updateSpecials(bool interactKey) {
 
-
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
 		structs::Wall wall = physicsData->wallData.at(wIndex);
 		bool enabled = false;
@@ -811,7 +789,7 @@ void updateSpecials(bool interactKey) {
 					(playerHeadZ < (std::min(wall.start.z, wall.end.z)))
 					 || (playerFootZ + constants::MAX_STEP_HEIGHT > (std::max(wall.start.z, wall.end.z)))
 				); //!aboveOrBelow.
-				bool touchingWallCheck = circleLineIntersect(
+				bool touchingWallCheck = utils::circleWallIntersect(
 					wall,
 					glm::vec2(player.position) + glm::vec2(player.velocity.x, player.velocity.y),
 					playerConfig::PLAYER_COLLISION_RADIUS
@@ -875,7 +853,7 @@ void updateSpecials(bool interactKey) {
 					}
 				}
 				bool shouldBeOpen = wall.internal->second > 0.0f;
-				bool inDoorCheck = circleLineIntersect(
+				bool inDoorCheck = utils::circleWallIntersect(
 					wall,
 					glm::vec2(player.position) + glm::vec2(player.velocity),
 					playerConfig::PLAYER_COLLISION_RADIUS
@@ -906,6 +884,7 @@ void updateSpecials(bool interactKey) {
 	}
 
 
+	player.onConveyor = false;
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
 		structs::Visplane vPlane = physicsData->visplaneData.at(vIndex);
 		bool enabled = false;
@@ -1024,6 +1003,7 @@ void updateSpecials(bool interactKey) {
 					player.velocity.x += speed * vPlane.internal->first;
 					player.velocity.y += speed * vPlane.internal->second;
 					player.sliding = false;
+					player.onConveyor = true;
 				}
 			}
 

@@ -65,6 +65,7 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"W_DOORZ", 11},		{"V_NODRAW", 11},
 	{"W_DOORSWING", 12},	{"V_TELEPORT", 12},
 	{"W_NODRAW", 13},		{"V_CONVEY", 13},
+	{"W_LIGHTBLOCKER", 14}, {"V_LIGHTBLOCKER", 14},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -304,7 +305,7 @@ void extractCuboid(
 		visplaneData->push_back(structs::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), upperCorner.z,
 			topTexture, typesSet.planeType, ptr, extra,
-			worldSpaceTextures.x, worldSpaceTextures.y,
+			worldSpaceTextures.x, worldSpaceTextures.y, false,
 			glm::vec2(textureScale), glm::vec2(textureOffset)
 		));
 		validVisplanes++;
@@ -313,7 +314,7 @@ void extractCuboid(
 		visplaneData->push_back(structs::Visplane(
 			glm::vec2(lowerCorner), glm::vec2(upperCorner), lowerCorner.z,
 			lowTexture, typesSet.planeType, ptr, extra,
-			worldSpaceTextures.x, worldSpaceTextures.y,
+			worldSpaceTextures.x, worldSpaceTextures.y, false,
 			glm::vec2(textureScale), glm::vec2(textureOffset)
 		));
 		validVisplanes++;
@@ -324,25 +325,25 @@ void extractCuboid(
 		structs::Wall(
 			glm::vec3(lowerCorner.x, upperCorner.y, upperCorner.z), lowerCorner,
 			sideTexture, typesSet.XType, ptr, (extra),
-			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 			wTexScale, wTexOffset
 		),
 		structs::Wall(
 			glm::vec3(lowerCorner.x, upperCorner.y, lowerCorner.z), upperCorner,
 			sideTexture, typesSet.YType, ptr, ((cType==C_MOVEY_FAST || cType == C_MOVEY_SLOW) ? -extra : extra),
-			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 			wTexScale, wTexOffset
 		),
 		structs::Wall(
 			lowerCorner, glm::vec3(upperCorner.x, lowerCorner.y, upperCorner.z),
 			sideTexture, typesSet.YType, ptr, ((cType==C_MOVEY_FAST || cType == C_MOVEY_SLOW) ? -extra : extra),
-			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 			wTexScale, wTexOffset
 		),
 		structs::Wall(
 			upperCorner, glm::vec3(upperCorner.x, lowerCorner.y, lowerCorner.z),
 			sideTexture, typesSet.XType, ptr, (extra),
-			-1, worldSpaceTextures.x, worldSpaceTextures.z,
+			-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 			wTexScale, wTexOffset
 		),
 	};
@@ -407,7 +408,7 @@ void extractStairs(
 		visplaneData->push_back(structs::Visplane(
 			stairMin, stairMax, (lowerCorner.z + upperCorner.z) / 2.0f, //Average the Z.
 			stepsTexture, V_NORMAL, nullptr, 0.0f,
-			worldSpaceTextures.x, worldSpaceTextures.y,
+			worldSpaceTextures.x, worldSpaceTextures.y, false,
 			glm::vec2(textureScale), glm::vec2(textureOffset)
 		));
 		validVisplanes++;
@@ -433,7 +434,7 @@ void extractStairs(
 			visplaneData->push_back(structs::Visplane(
 				glm::vec2(lowerCorner.x, currentY), glm::vec2(upperCorner.x, currentY + stairWidth), stepHeight,
 				stepsTexture, vType, ptr, -0.01f-stepHeight,
-				worldSpaceTextures.x, worldSpaceTextures.y,
+				worldSpaceTextures.x, worldSpaceTextures.y, false,
 				glm::vec2(textureScale), glm::vec2(textureOffset)
 
 			));
@@ -444,13 +445,13 @@ void extractStairs(
 				wallData->push_back(structs::Wall(
 					glm::vec3(lowerCorner.x, currentY, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(lowerCorner.x, currentY + stairWidth, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				wallData->push_back(structs::Wall(
 					glm::vec3(upperCorner.x, currentY, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(upperCorner.x, currentY + stairWidth, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				validWalls += 2;
@@ -462,7 +463,7 @@ void extractStairs(
 				wallData->push_back(structs::Wall(
 					glm::vec3(lowerCorner.x, currentY, stepHeight), glm::vec3(upperCorner.x, currentY, stepHeight + stepDelta),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				validWalls++;
@@ -475,7 +476,7 @@ void extractStairs(
 					glm::vec3(lowerCorner.x, (lowerIsLower) ? upperCorner.y : lowerCorner.y, lowerCorner.z),
 					glm::vec3(upperCorner.x, (lowerIsLower) ? upperCorner.y : lowerCorner.y, upperCorner.z),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				validWalls++;
@@ -497,7 +498,7 @@ void extractStairs(
 			visplaneData->push_back(structs::Visplane(
 				glm::vec2(currentX, lowerCorner.y), glm::vec2(currentX + stairWidth, upperCorner.y), stepHeight,
 				stepsTexture, vType, ptr, -0.01f-stepHeight,
-				worldSpaceTextures.x, worldSpaceTextures.y,
+				worldSpaceTextures.x, worldSpaceTextures.y, false,
 				glm::vec2(textureScale), glm::vec2(textureOffset)
 
 			));
@@ -508,13 +509,13 @@ void extractStairs(
 				wallData->push_back(structs::Wall(
 					glm::vec3(currentX, lowerCorner.y, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(currentX + stairWidth, lowerCorner.y, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				wallData->push_back(structs::Wall(
 					glm::vec3(currentX, upperCorner.y, (lowerIsLower) ? lowerCorner.z : upperCorner.z), glm::vec3(currentX + stairWidth, upperCorner.y, stepHeight),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				validWalls += 2;
@@ -526,7 +527,7 @@ void extractStairs(
 				wallData->push_back(structs::Wall(
 					glm::vec3(currentX, lowerCorner.y, stepHeight), glm::vec3(currentX, upperCorner.y, stepHeight + stepDelta),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				validWalls++;
@@ -539,7 +540,7 @@ void extractStairs(
 					glm::vec3((lowerIsLower) ? upperCorner.x : lowerCorner.x, lowerCorner.y, lowerCorner.z),
 					glm::vec3((lowerIsLower) ? upperCorner.x : lowerCorner.x, upperCorner.y, upperCorner.z),
 					sideTexture, wType, ptr, -0.01f-stepHeight,
-					-1, worldSpaceTextures.x, worldSpaceTextures.z,
+					-1, worldSpaceTextures.x, worldSpaceTextures.z, false, false,
 					wTexScale, wTexOffset
 				));
 				validWalls++;
@@ -764,6 +765,8 @@ static inline structs::Visplane extractVisplane(
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
+	GLuint textureID = (type == V_NODRAW) ? assignTexture("nodraw") : getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
+
 	structs::Visplane visplane;
 	pugi::xml_node vertexNode = node.child("vertices");
 	if (vertexNode) { //Has explicit vertices.
@@ -772,12 +775,12 @@ static inline structs::Visplane extractVisplane(
 		visplane = structs::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
-			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-			type,
+			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
 			getBool(node, "useWorldUVY", true),
+			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
 			getFloat(node, "exitDirection", constants::INF)
@@ -788,12 +791,12 @@ static inline structs::Visplane extractVisplane(
 			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
 			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
 			getFloat(node, "height", 0.0f),
-			getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-			type,
+			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
 			getExtra(node, 0.0f, objectIndex),
 			getBool(node, "useWorldUVX", true),
 			getBool(node, "useWorldUVY", true),
+			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
 			getFloat(node, "exitDirection", constants::INF)
@@ -824,6 +827,8 @@ static inline structs::Wall extractWall(
 		getTexture(node, "altTexture", getString(node, "texture", initial::FALLBACK_TEXTURE_NAME).c_str()),
 		getBool(node, "useWorldUVX", true),
 		getBool(node, "useWorldUVY", true),
+		getBool(node, "flipUVXY", false),
+		getBool(node, "flipAltUVXY", false),
 		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
 	);
@@ -1001,6 +1006,7 @@ void retrieveStageMetaData(const pugi::xml_document& doc) {
 	stageData.sunDirection = getVec3(sunNode, "sunDirection", initial::SUN_DIRECTION);
 	float sunIntensity = getFloat(sunNode, "sunIntensity", initial::SUN_INTENSITY);
 	stageData.sunColour = getVec3(sunNode, "sunColour", initial::SUN_COLOUR) * sunIntensity;
+	stageData.fogColour = getVec3(skyNode, "fogColour", glm::vec3(0.4157f, 0.6039f, 0.7098f));
 
 
 	//Physics
@@ -1031,17 +1037,14 @@ void fetchBindingsFromXML(const pugi::xml_document& doc) {
 	size_t count = static_cast<size_t>(nodeList.size());
 	
 	std::string functionString, keyString;
-	for (size_t i = 0; i < count; ++i) {
+	for (size_t i=0; i<count; i++) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		if (userBindings.find(functionString) == userBindings.end()) {
-			raise("Unknown binding function: " + functionString);
-		}
-
 		keyString = strToUpper(node.attribute("key").as_string());
 		if (keyNameToGLFW.find(keyString) != keyNameToGLFW.end()) {
-			userBindings.at(functionString) = keyNameToGLFW.at(keyString);
+			userBindings[functionString] = keyNameToGLFW.at(keyString);
+			keyMap[functionString] = false;
 		} else {
 			raise("Unknown Key: " + keyString + " for binding function: " + functionString);
 		}
@@ -1058,13 +1061,9 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		if (userConfig.find(functionString) == userConfig.end()) {
-			raise("Unknown config function: " + functionString);
-		}
-
 		valueString = strToUpper(node.attribute("value").as_string());
-		if (valueString != "") {
-			userConfig.at(functionString) = valueString;
+		if (!(valueString.empty())) {
+			userConfig[functionString] = valueString;
 		} else {
 			raise("Invalid value for: " + functionString);
 		}
@@ -1089,6 +1088,9 @@ static std::unordered_map<std::string, int> debugMap = {
 	{"", 0}, {"NONE", 0},
 	{"UV", 1}, {"TEXTURE_UV", 1},
 	{"NORMALS", 2}, {"SURFACE_NORMALS", 2},
+	{"BRIGHTNESS", 3}, {"LIGHTING", 3},
+	{"EDGE", 4}, {"ANTIALIAS", 4},
+	{"WIREFRAME", 5}, //Pseudo wireframe.
 };
 
 static std::unordered_map<std::string, int> texMipMap = {

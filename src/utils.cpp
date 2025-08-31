@@ -1,7 +1,6 @@
 #include "includes.h"
 #include "global.h"
 #include "constants.h"
-#include "utils.h"
 using namespace std;
 using namespace glm;
 
@@ -12,7 +11,7 @@ namespace utils {
 std::string readFile(const std::string& filePath) {
 	std::ifstream fileStream(filePath);
 	if (!fileStream.is_open()) {
-		raise("Error: Could not open file: " + string(filePath));
+		std::cerr << "Error: Could not open file: " << std::string(filePath) << std::endl;
 		return "";
 	}
 
@@ -59,6 +58,27 @@ int RNGw() {
 
 void clearRNG() {
 	RNGcIdx = RNGwIdx = 0;
+}
+
+
+
+bool circleWallIntersect(structs::Wall& line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr) {
+	glm::vec2 lineStartV2 = glm::vec2(line.start.x, line.start.y);
+	glm::vec2 lineEndV2 = glm::vec2(line.end.x, line.end.y);
+
+	glm::vec2 lineDir = lineEndV2 - lineStartV2;
+	glm::vec2 lineToCircle = circlePosition - lineStartV2;
+
+	float t = glm::dot(lineToCircle, lineDir) / glm::dot(lineDir, lineDir);
+	t = glm::clamp(t, 0.0f, 1.0f);
+
+	glm::vec2 closestPoint = lineStartV2 + t * lineDir;
+	float distToCircle = glm::length(circlePosition - closestPoint);
+
+	if (distToLine) {
+		*distToLine = distToCircle;
+	}
+	return distToCircle <= radius;
 }
 
 

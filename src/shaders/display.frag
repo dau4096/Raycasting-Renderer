@@ -6,10 +6,12 @@ out vec4 fragColour;
 
 
 layout(binding=0) uniform sampler2D renderedFrameSampler2D;
-layout(binding=1) uniform sampler2D interfaceTexture;
-layout(binding=2) uniform sampler2DArray lightMapsArray;
-layout(binding=3) uniform sampler2D normalMap;
-layout(rgba32f, binding=0) uniform image2D renderedFrameImage2D;
+layout(binding=1) uniform sampler2D depthMap;
+layout(binding=2) uniform sampler2D interfaceTexture;
+layout(binding=3) uniform sampler2DArray lightMapsArray;
+layout(binding=4) uniform sampler2D positionMap;
+
+layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
 
 
 //Camera
@@ -17,18 +19,31 @@ uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform ivec2 renderResolution;
 
+//Sky
+uniform vec3 fogColour;
+
+//Debug
+uniform int debugMode;
+
 //Other
-uniform int antiAliasingLevel;
-uniform bool smoothingEnabled;
+uniform bool antiAliasing;
 uniform int quantisingLevel;
+uniform bool useLighting;
 uniform bool screenshotHasHUD;
+uniform bool shouldTakeScreenshot;
 uniform int numLights;
 uniform vec4 screenTint;
 uniform bool isInvertEffect;
 
 
-const float EPSILON = 1e-4f;
-const float DEFAULT_BRIGHTNESS = 0.175f;
+#define EPSILON 1e-4f
+
+//////////////// Config stuff ////////////////
+//Lighting;
+#define MIN_BRIGHTNESS 0.175f
+#define MAX_BRIGHTNESS 2.25f
+#define NUM_PSEUDO_LIGHTS 2
+//////////////// Config stuff ////////////////
 
 
 vec2 getUV(vec2 pos) {
@@ -36,40 +51,46 @@ vec2 getUV(vec2 pos) {
 }
 
 
-vec4 antiAliasFunc() {
-	const float edgeThreshold = 1.0f;
+const vec2 offsets[8] = {
+	vec2(-1.0f, -1.0f), vec2( 0.0f, -1.0f), vec2( 1.0f, -1.0f),
+	vec2(-1.0f,  0.0f),                     vec2( 1.0f,  0.0f),
+	vec2(-1.0f,  1.0f), vec2( 0.0f,  1.0f), vec2( 1.0f,  1.0f)
+};
+vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
+	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
+	vec2 inverseScreenRes = 1.0f / vec2(screenResolution);
+	
+	int centreIData = int(texture(positionMap, mainUV).w); //Contains object index and type, encoded as bits.
+	vec3 colourSum = centreColour.rgb;
+	bool isEdge = false;
 
-    vec2 baseUV = getUV(gl_FragCoord.xy);
-    vec4 centrePX = texture(renderedFrameSampler2D, baseUV);
-    float centreDepth = centrePX.a;
-
-    float minDepth = centreDepth, maxDepth = centreDepth;
-
-    vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
-    int n = 0;
-
-	for (int dx=-antiAliasingLevel; dx<=antiAliasingLevel; dx++) {
-		for (int dy=-antiAliasingLevel; dy<=antiAliasingLevel; dy++) {
-            vec2 UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-            vec4 sampledPX = texture(renderedFrameSampler2D, UV);
-
-            float depth = sampledPX.a;
-            if (depth < 0.0) {continue; /* fragment was UI */}
-
-            minDepth = min(minDepth, depth);
-            maxDepth = max(maxDepth, depth);
-            colourSum += sampledPX.rgb;
-            n++;
+	for (uint offsetIndex=0; offsetIndex<8; offsetIndex++) {
+		vec2 thisUV = mainUV + (offsets[offsetIndex] * inverseScreenRes);
+		int thisIData = int(texture(positionMap, thisUV).w);
+		colourSum += texture(renderedFrameSampler2D, thisUV).rgb;
+		if (abs(thisIData - centreIData) > 0) {
+			//Different object/surface was hit. Apply anti-aliasing.
+			isEdge = true;
 		}
 	}
 
-	if ((maxDepth - minDepth) > edgeThreshold) { //Edge found.
-		vec3 meanColour = colourSum / float(n);
-		return vec4(meanColour.rgb, 1.0f);
-	} else { //No edge found.
-		return centrePX;
-	}
-
+	//Rather unfortunate how large this is.
+	return vec4(
+		mix(
+			mix(
+				centreColour.rgb,
+				vec3(0.0f, 0.0f, 0.0f),
+				int(debugMode == 5)
+			),
+			mix(
+				colourSum / 8.0f,
+				vec3(1.0f, 0.0f, 1.0f),
+				int((debugMode == 4) || (debugMode == 5))
+			),
+			int(isEdge)
+		),
+		1.0f
+	);
 }
 
 
@@ -85,46 +106,15 @@ vec4 quantisingFunc(vec2 mainUV) {
 }
 
 
-vec4 smoothingFunc() {
-	int n = 0;
-	vec2 UV;
-	vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
-	vec4 albedo;
-
-	for (int dx=-1; dx<=1; dx++) {
-		for (int dy=-1; dy<=1; dy++) {
-			UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-			albedo = texture(renderedFrameSampler2D, UV);
-			if (albedo.a != -1) {
-				n++;
-				colourSum += albedo.rgb;
-			}
-		}
-	}
-
-	UV = getUV(gl_FragCoord.xy);
-	vec4 centrePX = texture(renderedFrameSampler2D, UV);
-	if (n > 0) {
-		return vec4(colourSum / float(n), centrePX.a);
-	} else {
-		return centrePX;
-	}
-}
-
 
 vec3 getBrightness(vec2 UV) {
+	if (!useLighting || ((debugMode != 0) && (debugMode != 3))) {return vec3(1.0f, 1.0f, 1.0f); /* Not no-debug and not lighting debug. */}
+
 	vec3 lightingSum = vec3(0.0f, 0.0f, 0.0f);
-	for (int i=0; i<(numLights+2); i++) {
+	for (int i=0; i<(numLights+NUM_PSEUDO_LIGHTS); i++) {
 		lightingSum += texture(lightMapsArray, vec3(UV.xy, i)).rgb;
 	}
-	float maxBright;
-	if (length(texture(normalMap, UV).xyz) < EPSILON) {
-		//Sprites and sky.
-		maxBright = 1.0f;
-	} else {
-		maxBright = 1.75f;
-	}
-	return clamp(lightingSum, DEFAULT_BRIGHTNESS, maxBright);
+	return clamp(lightingSum, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
 }
 
 
@@ -132,12 +122,13 @@ void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
 	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
-	if (albedo.a >= maxRayDistance) {
-		resultant = vec4(albedo.rgb, 1.0f);
-	} else {
-		vec3 brightness = getBrightness(mainUV);
-		resultant = vec4(albedo.rgb * brightness, 1.0f);
-
+	float fragDistance = texture(depthMap, mainUV).r * maxRayDistance;
+	if (fragDistance >= maxRayDistance) {
+		if (debugMode == 3) { //Debug lighting.
+			resultant = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		} else {
+			resultant = vec4(albedo.rgb, 1.0f);
+		}
 		if (isInvertEffect) {
 			vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
 			float flashAlpha = screenTint.a * 2.0f - 1.0f;
@@ -145,26 +136,61 @@ void main() {
 		} else {
 			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
 		}
+	} else {
+		vec3 brightness = getBrightness(mainUV);
+		if (debugMode == 3) { //Debug lighting.
+			resultant.rgb = brightness / MAX_BRIGHTNESS;
+		} else {
+			vec3 resultantTMP = vec3(albedo.rgb * brightness);
+
+			if (isInvertEffect) {
+				vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultantTMP.rgb;
+				float flashAlpha = screenTint.a * 2.0f - 1.0f;
+				resultantTMP.rgb = mix(resultantTMP.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+			} else {
+				resultantTMP.rgb = mix(resultantTMP.rgb, screenTint.rgb, screenTint.a);
+			}
+
+			float fogAlpha = (fragDistance / maxRayDistance);
+			fogAlpha *= fogAlpha;
+			resultant = vec4(mix(resultantTMP.rgb, fogColour, fogAlpha), 1.0f);
+		}
 	}
 
-	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not adequate. Works based on luminance.
+	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not allowed. Works based on luminance.
 		resultant = quantisingFunc(mainUV);
 	}
 
-	if (antiAliasingLevel > 0) { //More useful Anti-Aliasing
-		resultant = antiAliasFunc();
-	} else if (smoothingEnabled) { //Simple Anti-Aliasing
-		resultant = smoothingFunc();
+	if (antiAliasing) { //More useful Anti-Aliasing
+		resultant = antiAliasFunc(mainUV, resultant.rgb);
 	}
 
 
 	ivec2 framePosition = ivec2((gl_FragCoord.xy * vec2(renderResolution)) / vec2(screenResolution));
-	if (!screenshotHasHUD) {
-		imageStore(renderedFrameImage2D, framePosition, vec4(resultant.rgb, 1.0f));
-	}
 	vec4 interfaceColour = texture(interfaceTexture, mainUV);
+
+	//TextObjects use negative distance as their alpha. General UI uses 0-1 alpha values.
+	bool isTextObject = interfaceColour.a == 2.0f;
+	interfaceColour.a = (isTextObject) ? 1.0f : interfaceColour.a;
+
+	//Final fragment output (blend of scene and UI)
 	fragColour = vec4(mix(resultant.rgb, interfaceColour.rgb, interfaceColour.a), 1.0f);
-	if (screenshotHasHUD) {
-		imageStore(renderedFrameImage2D, framePosition, fragColour);
+
+	if (shouldTakeScreenshot) {
+		//Check if the pixel references a TextObject or HUD before choosing between the interface colour or environment colour.
+		vec4 screenshotColour = vec4(
+			mix(
+				mix(
+					resultant.rgb,
+					interfaceColour.rgb,
+					int(isTextObject)
+				),
+				fragColour.rgb,
+				int(screenshotHasHUD)
+			),
+			1.0f
+		);
+
+		imageStore(frameToScreenshot, framePosition, screenshotColour);
 	}
 }

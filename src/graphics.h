@@ -57,6 +57,12 @@ namespace graphics {
 	glm::vec4 manageScreenTint();
 
 
+	GLuint createAlbedoFBO(glm::uvec2 resolution, GLuint& colourTexture);
+	GLuint createDualAlbedoFBO(glm::uvec2 resolution, GLuint& colourTextureA, GLuint& colourTextureB);
+	GLuint createAlbedoDepthFBO(glm::uvec2 resolution, GLuint& colourTexture, GLuint& depthTexture);
+	GLuint createEnvironmentFBO(glm::uvec2 resolution);
+
+
 	void initialiseVAOs();
 	void prepareOpenGL();
 
@@ -68,9 +74,9 @@ namespace graphics {
 
 namespace frame {
 
-	void updateSSBOs();
+	void updateSSBOs(bool drawLightBlockers);
 
-	void draw(double blendingAlpha);
+	void draw(double blendingAlpha, double currentTime);
 
 }
 

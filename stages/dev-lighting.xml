@@ -1,0 +1,190 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="" fogColour="0.0 0.0 0.0" />
+    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 0.925" sunIntensity="1.0" />
+    <physics gravity="0.486" killPlaneZ="-16.0" />
+    <player startPoint="0.0 0.0 1.0" startAngle="-90.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+
+<environment>
+
+    <!-- Generic environment containers. [-X] -->
+    <visplane start="-10.0 -20.0" end="-2.5 20.0" height="0.0" texture="blank" />
+    <visplane start="-10.0 -20.0" end="-2.5 15.0" height="3.0" texture="blank" />
+    <wall start="-2.5 -20.0 0.0" end="-2.5 20.0 3.0" type="W_LIGHTBLOCKER" />
+    <wall start="-10.0 -20.0 0.0" end="-10.0  20.0 3.0" texture="blank" />
+    <wall start="-10.0 -20.0 0.0" end="-2.5 -20.0 3.0" texture="blank" />
+    <wall start="-10.0 -15.0 0.0" end="-2.5 -15.0 3.0" texture="blank" />
+    <wall start="-10.0 -10.0 0.0" end="-2.5 -10.0 3.0" texture="blank" />
+    <wall start="-10.0 -5.0 0.0" end="-2.5 -5.0 3.0" texture="blank" />
+    <wall start="-10.0  5.0 0.0" end="-2.5  5.0 3.0" texture="blank" />
+    <wall start="-10.0 10.0 0.0" end="-2.5 10.0 3.0" texture="blank" />
+    <wall start="-10.0 15.0 0.0" end="-2.5 15.0 3.0" texture="blank" />
+    <wall start="-10.0  20.0 0.0" end="-2.5  20.0 3.0" texture="blank" />
+
+    <!-- Generic environment containers. [+X] -->
+    <visplane start="10.0 -20.0" end="2.5 20.0" height="0.0" texture="blank" />
+    <visplane start="10.0 -20.0" end="2.5 20.0" height="3.0" texture="blank" />
+    <wall start="2.5 -20.0 0.0" end="2.5 20.0 3.0" type="W_LIGHTBLOCKER" />
+    <wall start="10.0 -20.0 0.0" end="10.0  20.0 3.0" texture="blank" />
+    <wall start="10.0 -20.0 0.0" end="2.5 -20.0 3.0" texture="blank" />
+    <wall start="10.0 -15.0 0.0" end="2.5 -15.0 3.0" texture="blank" />
+    <wall start="10.0 -10.0 0.0" end="2.5 -10.0 3.0" texture="blank" />
+    <wall start="10.0 -5.0 0.0" end="2.5 -5.0 3.0" texture="blank" />
+    <wall start="10.0  5.0 0.0" end="2.5  5.0 3.0" texture="blank" />
+    <wall start="10.0 10.0 0.0" end="2.5 10.0 3.0" texture="blank" />
+    <wall start="10.0 15.0 0.0" end="2.5 15.0 3.0" texture="blank" />
+    <wall start="10.0  20.0 0.0" end="2.5  20.0 3.0" texture="blank" />
+
+    <!-- Nicer looking connecting surfaces -->
+    <visplane start="-2.5 -20.0" end="2.5 20.0" height="0.0" texture="planks" textureScale="2.0 2.0" flipUVXY="TRUE" />
+    <wall start="-2.5 -20.0 0.0" end="2.5 -20.0 3.0" texture="brick3" />
+    <wall start="-2.5 20.0 0.0" end="2.5 20.0 3.0" texture="brick3" />
+    <visplane start="-2.5 -20.0" end="2.5 15.0" height="3.0" type="V_NODRAW" />
+    <wall start="-2.5 15.0 3.0" end="2.5 15.0 9.0" type="W_NODRAW" />
+    <wall start="-2.5 20.0 3.0" end="2.5 20.0 9.0" type="W_NODRAW" />
+    <wall start="2.5 15.0 3.0" end="2.5 20.0 9.0" type="W_NODRAW" />
+    <wall start="-2.5 15.0 3.0" end="-2.5 20.0 9.0" type="W_NODRAW" />
+    <visplane start="-2.5 15.0" end="2.5 20.0" height="9.0" type="V_NODRAW" />
+
+
+
+    <!--######## -X environment containers ########-->
+    <!-- Movable specials -->
+    <wall start="-10.0 -17.5 0.0" end="-2.5 -17.5 3.0" texture="metal" useWorldUVX="FALSE" useWorldUVY="FALSE" textureScale="2.0 2.0" textureOffset="0.5 0.5" type="W_MOVEZ_SLOW" flag="lightSprite" extra="-3.0" />
+    <wall start="-1.0 -19.975 1.0" end="-2.0 -19.975 2.0" texture="quake" altTexture="quake2" type="W_SWITCH" flag="lightSprite" />
+
+    <!-- Light in a caged box -->
+    <cuboid start="-7.0 -13.0 1.0" end="-6.0 -12.0 2.0" sideTexture="metal2" topTexture="metal2" bottomTexture="metal2" />
+
+    <!-- Coloured lights on a textured wall -->
+    <wall start="-6.0 -10.0 0.0" end="-6.0 -5.0 3.0" texture="brick" />
+
+    <!-- Sprite lighting [No extra env objects] -->
+
+
+    <!-- Displacement shadows -->
+    <!-- I don't care enough about displacements to make this work for now. Faking it is fine. -->
+    <!-- Some nice formatting though. Look at that indentation!
+    <displacement>
+        <vertices v0="-7.25 12.5 1.0" v1="-6.25 12.5 2.0" v2="-5.25 12.5 1.0" />
+        <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="0.0 1.0" />
+    </displacement>
+    -->
+    <wall start="-7.25 12.5 1.0" end="-5.25 12.5 2.0" texture="fakeDisplacement" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+
+
+    <!-- Multiple shadows via 1 surface -->
+    <wall start="-10.0 15.0 3.0" end="-10.0 20.0 9.0" type="W_LIGHTBLOCKER" />
+    <wall start="-2.5 15.0 3.0" end="-2.5 20.0 9.0" type="W_LIGHTBLOCKER" />
+    <wall start="-10.0 15.0 3.0" end="-2.5 15.0 9.0" type="W_LIGHTBLOCKER" />
+    <wall start="-10.0 20.0 3.0" end="-2.5 20.0 9.0" type="W_LIGHTBLOCKER" />
+    <visplane start="-10.0 15.0" end="-2.5 20.0" height="9.0" type="V_LIGHTBLOCKER" />
+    <visplane start="-10.0 15.0" end="-2.5 20.0" height="3.0" texture="metal2" textureScale="3.0 2.0" textureOffset="0.3333 0.0" />
+
+
+
+    <!--######## +X environment containers ########-->
+    <!-- Unusual geometry [With no physics collision] -->
+    <wall start="10.0 -18.5 0.0" end="9.0 -17.5 1.0" type="W_PASSTHROUGH" texture="a" />
+    <wall start="8.0 -17.5 0.0" end="7.0 -19.5 1.0" textureOffset="0.5 0.0" type="W_PASSTHROUGH" texture="a" />
+    <visplane height="1.0" textureOffset="0.0 0.5" type="V_PASSTHROUGH" texture="a" > <vertices v0="8.0 -17.5" v1="7.0 -17.5" v2="7.0 -18.5" /> </visplane>
+    <visplane start="6.0 -19.5" end="7.0 -17.5" height="1.0" textureOffset="0.0 0.5" type="V_PASSTHROUGH" texture="a" />
+    <wall start="5.0 -16.5 2.5" end="8.0 -16.5 1.5" textureOffset="0.0 0.5" type="W_PASSTHROUGH" texture="a" />
+    <visplane height="2.5" textureOffset="0.5 0.0" type="V_PASSTHROUGH" texture="a" > <vertices v0="8.0 -16.5" v1="5.0 -16.5" v2="8.0 -18.5" /> </visplane>
+    <wall start="10.0 -15.0 1.25" end="2.5 -20.0 1.35" type="W_PASSTHROUGH" texture="a" />
+
+
+    <!-- Filtered light showcase -->
+    <wall start="5.75 -12.0 0.0" end="5.0 -11.0 1.0" texture="filter" type="W_PASSTHROUGH" />
+    <wall start="5.75 -13.0 0.0" end="5.75 -12.0 1.0" texture="filter2" type="W_PASSTHROUGH" />
+    <wall start="5.0 -14.0 0.0" end="5.75 -13.0 1.0" texture="filter3" type="W_PASSTHROUGH" />
+
+    <wall start="5.75 -12.0 1.0" end="5.0 -11.0 3.0" texture="stainedTraaWindow" type="W_PASSTHROUGH" textureScale="2.0 1.0" textureOffset="0.5 0.0" useWorldUVY="FALSE" />
+    <wall start="5.75 -13.0 1.0" end="5.75 -12.0 3.0" texture="stainedTraaWindow" type="W_PASSTHROUGH" textureScale="2.0 1.0" textureOffset="0.75 0.0" useWorldUVY="FALSE" />
+    <wall start="5.0 -14.0 1.0" end="5.75 -13.0 3.0" texture="stainedTraaWindow" type="W_PASSTHROUGH" textureScale="2.0 1.0" useWorldUVY="FALSE" />
+
+    <wall start="7.0 -10.0 0.0" end="7.75 -11.0 3.0" texture="blank" />
+    <wall start="7.75 -11.0 0.0" end="7.75 -14.0 3.0" texture="blank" />
+    <wall start="7.0 -15.0 0.0" end="7.75 -14.0 3.0" texture="blank" />
+
+
+    <!-- [Empty Area] [SMALL] -->
+
+
+    <!-- [Empty Area] [LARGE] -->
+
+
+    <!-- [Empty Area] [SMALL] -->
+
+
+    <!-- [Empty Area] [SMALL] -->
+
+
+    <!-- [Empty Area] [SMALL] -->
+
+
+</environment>
+
+<objects>
+
+    <!--######## -X environment containers ########-->
+    <textObj position="-1.5 -17.5 1.0" text="Movable specials" />
+    <light position="-6.5 -18.5 1.5" colour="1.0 1.0 1.0" intensity="5.0" hasMarker="TRUE" />
+    <sprite position="-6.5 -16.5 1.0" texture="piloten" width="2.0" height="2.0" />
+
+    <textObj position="-1.5 -12.5 1.0" text="Light in a caged box" />
+    <light position="-6.5 -12.5 1.5" colour="1.0 1.0 1.0" intensity="5.0" hasMarker="TRUE" />
+
+    <textObj position="-1.5 -7.5 1.0" text="Coloured lights on a textured wall" />
+    <light position="-5.0 -9.0 1.5" colour="1.0 0.0 0.0" intensity="2.5" hasMarker="TRUE" />
+    <light position="-5.0 -6.0 1.5" colour="0.0 0.0 1.0" intensity="2.5" hasMarker="TRUE" />
+
+    <textObj position="-1.5 0.0 1.0" text="Blending colours" />
+    <light position="-8.0 -2.5 1.5" colour="1.0 0.0 0.0" intensity="5.0" hasMarker="TRUE" />
+    <light position="-5.0  0.0 1.5" colour="0.0 1.0 0.0" intensity="5.0" hasMarker="TRUE" />
+    <light position="-8.0  2.5 1.5" colour="0.0 0.0 1.0" intensity="5.0" hasMarker="TRUE" />
+
+    <textObj position="-1.5 7.5 1.0" text="Sprite lighting" />
+    <light position="-6.25 7.5 1.5" colour="1.0 1.0 1.0" intensity="4.5" hasMarker="TRUE" />
+    <sprite position="-6.25 7.0 1.0" width="1.0" height="1.0" texture="piloten" />
+    <sprite position="-4.0 9.5 2.0" width="1.0" height="1.0" texture="piloten" />
+    <sprite position="-9.5 9.5 0.5" width="1.0" height="1.0" texture="piloten" />
+
+    <textObj position="-1.5 12.5 1.0" text="Displacement shadows" />
+    <textObj position="-1.5 12.5 0.9" text="[Don't look too close please]" />
+    <light position="-6.25 10.5 1.5" colour="1.0 0.5 0.0" intensity="7.5" hasMarker="TRUE" />
+
+    <textObj position="-1.5 17.5 1.0" text="Multiple shadows via 1 surface" />
+    <light position="-6.25 17.5 6.0" colour="1.0 0.0 0.0" intensity="9.0" hasMarker="TRUE" />
+    <light position="-6.25 17.5 7.0" colour="0.0 1.0 0.0" intensity="10.0" hasMarker="TRUE" />
+    <light position="-6.25 17.5 8.0" colour="0.0 0.0 1.0" intensity="11.0" hasMarker="TRUE" />
+
+
+    <!--######## +X environment containers ########-->
+    <textObj position="1.5 -17.5 1.0" text="Unusual geometry" />
+    <light position="9.75 -19.75 2.75" colour="1.0 1.0 1.0" intensity="12.5" hasMarker="TRUE" />
+
+    <textObj position="1.5 -12.5 1.0" text="Filters and light" />
+    <light position="3.5 -12.5 1.0" colour="1.0 1.0 1.0" intensity="12.5" hasMarker="TRUE" />
+
+    <textObj position="1.5 -7.5 1.0" text="[Empty Area] [SMALL]" />
+    <light position="6.25 -7.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+
+    <textObj position="1.5 0.0 1.0" text="[Empty Area] [LARGE]" />
+    <light position="6.25 -2.5 1.5" colour="0.5 0.5 0.5" intensity="6.5" />
+    <light position="6.25 2.5 1.5" colour="0.5 0.5 0.5" intensity="6.5" />
+
+    <textObj position="1.5 7.5 1.0" text="[Empty Area] [SMALL]" />
+    <light position="6.25 7.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+
+    <textObj position="1.5 12.5 1.0" text="[Empty Area] [SMALL]" />
+    <light position="6.25 12.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+
+    <textObj position="1.5 17.5 1.0" text="[Empty Area] [SMALL]" />
+    <light position="6.25 17.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+
+</objects>
