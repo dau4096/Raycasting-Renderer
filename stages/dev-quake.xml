@@ -3,7 +3,7 @@
 <!-- Metadata -->
 <meta>
     <sky skyboxTexture="default-skybox" fogColour="0.4157 0.6039 0.7098" />
-    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 0.925" sunIntensity="2.25" />
+    <sun sunDirection="0.25 0.25 1.0" sunColour="1.0 1.0 0.925" sunIntensity="0.0" />
     <physics gravity="0.486" killPlaneZ="-16.0" />
     <player startPoint="-3.5 -3.5 1.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
 </meta>

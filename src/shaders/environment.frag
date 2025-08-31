@@ -4,7 +4,8 @@
 
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
-layout(binding=1) uniform sampler2D skyboxTexture;
+layout(binding=1) uniform sampler2DArray normalMapArray;
+layout(binding=2) uniform sampler2D skyboxTexture;
 
 //CameraData
 uniform float maxRayDistance;
@@ -243,15 +244,47 @@ void unpackTextureFormattingBits2(
 
 
 
+#define NORMAL_UP vec3(0.0f, 0.0f, 1.0f)
+
 #define T_NONE 0x0
 #define T_WALL 0x1
 #define T_VISPLANE 0x2
 
-vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition, bool fetchTexture=true) {
+float sign(float value) {
+	return (value < 0.0f) ? -1.0f : 1.0f;
+}
+
+void getNormal(vec3 UV, float LODIndex, inout vec3 surfaceNormal, uint surfaceType) {
+	vec3 normalMapValue = textureLod(normalMapArray, UV, ceil(LODIndex)).xyz;
+
+	switch(surfaceType) {
+		case T_WALL: {
+            //Tangent-space decode method.
+            vec3 tangentNormal = normalize(normalMapValue * 2.0 - 1.0);
+            vec3 N = normalize(surfaceNormal);
+            vec3 T = normalize(cross(NORMAL_UP, N));
+            if (length(T) < 1e-5) {
+                T = vec3(1.0, 0.0, 0.0);
+            }
+            vec3 B = cross(N, T);
+
+            //Transform tangent-space normal into world-space.
+            surfaceNormal = normalize(mat3(T, B, N) * tangentNormal) * vec3(1.0f, 1.0f, -1.0f);
+            break;
+		}
+		case T_VISPLANE: {
+			surfaceNormal = normalMapValue * vec3(1.0f, 1.0f, surfaceNormal.z) * 2.0f - 1.0f; //Only ever +/- 1.0f.
+			break;
+		}
+	}
+
+}
+
+
+vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePosition, uint surfaceType) {
 	if (debugMode == 1) {
 		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
-	if (!fetchTexture || (UV.z < 0)) return vec4(1.0f, 0.0f, 1.0f, 1.0f);
 	if (!useMipMapping) {
 		return textureLod(textureArray, UV, 0.0f);
 	}
@@ -268,10 +301,13 @@ vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition,
 	if (MIPMAP_DEBUG_LEVEL) {
 		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0f, 1.0f);
 	}
+
 	vec4 mipMapColour = textureLod(textureArray, UV, ceil(LODIndex));
+	getNormal(UV, ceil(LODIndex), surfaceNormal, surfaceType);
 	if (!MIPMAP_BLEND_ENABLED) {
 		return mipMapColour;
 	}
+
 	vec4 MipMapMinusOneColour = textureLod(textureArray, UV, ceil(LODIndex) - 1.0f);
 	return mix(MipMapMinusOneColour, mipMapColour, fract(LODIndex));
 }
@@ -302,7 +338,7 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal)
 		thisIntersect.UV,
 		1.0f / inversesqrt(thisIntersect.distanceSQ),
 		surfaceNormal, thisIntersect.position,
-		true
+		thisIntersect.foundType
 	);
 }
 
@@ -553,6 +589,7 @@ void main() {
 				closestHalfAlphaIntersect = stackIntersect;
 				closestNormal = thisNormal;
 			}
+			//mixColour = thisNormal;
 		}
 
 		if (foundShadowmappingObject) {

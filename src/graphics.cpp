@@ -739,7 +739,6 @@ GLuint createTexture2DArray(
 
 		std::string reportedTextureName = textureName;
 		std::string texturePath = "src/" + subFolder + "/" + textureName + extension;
-		cout << texturePath << endl;
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -1787,8 +1786,8 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-	glBindTextureUnit(2, GLIndex::normalArrayEnvironment);
-	glBindTextureUnit(1, GLIndex::skyboxTextureID);
+	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+	glBindTextureUnit(2, GLIndex::skyboxTextureID);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
