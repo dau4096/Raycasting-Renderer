@@ -26,7 +26,7 @@ void main() {
 	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 	vec2 UV = fragPosition / vec2(renderResolution);
-	float fragDepth = texture(depthMap, UV).w;
+	float fragDepth = texture(depthMap, UV).w * maxRayDistance;
 
 	vec4 albedo = texture(FBOColour, UV);
 	float dispDepth = albedo.r * maxRayDistance;

@@ -67,7 +67,13 @@
 
 
     <!-- Displacement shadows -->
-    <!--<displacement > <vertices v0="-7.25 12.5 1.0" v1="-6.25 12.5 2.0" v2="-5.25 12.5 1.0" /> </displacement>-->
+    <!-- I don't care enough about displacements to make this work for now. Faking it is fine. -->
+    <!-- Some nice formatting though. Look at that indentation!
+    <displacement>
+        <vertices v0="-7.25 12.5 1.0" v1="-6.25 12.5 2.0" v2="-5.25 12.5 1.0" />
+        <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="0.0 1.0" />
+    </displacement>
+    -->
     <wall start="-7.25 12.5 1.0" end="-5.25 12.5 2.0" texture="fakeDisplacement" useWorldUVX="FALSE" useWorldUVY="FALSE" />
 
 
@@ -128,6 +134,7 @@
     <!--######## -X environment containers ########-->
     <textObj position="-1.5 -17.5 1.0" text="Movable specials" />
     <light position="-6.5 -18.5 1.5" colour="1.0 1.0 1.0" intensity="5.0" hasMarker="TRUE" />
+    <sprite position="-6.5 -16.5 1.0" texture="piloten" width="2.0" height="2.0" />
 
     <textObj position="-1.5 -12.5 1.0" text="Light in a caged box" />
     <light position="-6.5 -12.5 1.5" colour="1.0 1.0 1.0" intensity="5.0" hasMarker="TRUE" />
@@ -152,9 +159,9 @@
     <light position="-6.25 10.5 1.5" colour="1.0 0.5 0.0" intensity="7.5" hasMarker="TRUE" />
 
     <textObj position="-1.5 17.5 1.0" text="Multiple shadows via 1 surface" />
-    <light position="-6.25 17.5 6.0" colour="1.0 0.0 0.0" intensity="10.0" hasMarker="TRUE" />
+    <light position="-6.25 17.5 6.0" colour="1.0 0.0 0.0" intensity="9.0" hasMarker="TRUE" />
     <light position="-6.25 17.5 7.0" colour="0.0 1.0 0.0" intensity="10.0" hasMarker="TRUE" />
-    <light position="-6.25 17.5 8.0" colour="0.0 0.0 1.0" intensity="10.0" hasMarker="TRUE" />
+    <light position="-6.25 17.5 8.0" colour="0.0 0.0 1.0" intensity="11.0" hasMarker="TRUE" />
 
 
     <!--######## +X environment containers ########-->
