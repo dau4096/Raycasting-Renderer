@@ -17,15 +17,14 @@ uniform ivec2 interfaceResolution;
 uniform float zoomFactor;
 uniform bool zoom;
 uniform float playerViewRoll;
-uniform float playerViewPitch;
-uniform float maxRayAngle;
+uniform float maxRayDistance;
 
 
 void main() {
 	vec2 fragPosition = gl_FragCoord.xy;
 
-	bool isDisplacement = fragDistance > 0.0f;
-	if (isDisplacement) {
+	bool isTextObject = fragDistance > 0.0f;
+	if (isTextObject) {
 		//TextObjects have roll and pitch applied, pitch being done during VAO data creation.
 		//Both use the same calculation as environment.frag and sprites.frag
 		float zoomEffect = (zoom) ? zoomFactor : 1.0f;
@@ -34,7 +33,7 @@ void main() {
 		fragPosition.y += (fragPosition.x - interfaceResolution.x / 2.0f) * rollDecimal;
 	}
 
-	if (fragDistance >= texture(depthMap, fragPosition / vec2(interfaceResolution)).r) {discard;}
+	if (fragDistance >= texture(depthMap, fragPosition / vec2(interfaceResolution)).r * maxRayDistance) {discard;}
 	ivec2 framePosition = ivec2(fragPosition);
 
 	vec4 fragColour;
@@ -49,6 +48,6 @@ void main() {
 	}
 
 	if (fragColour.a < 0.5f) {discard;}
-	if (isDisplacement) {fragColour.a *= -1.0f;}
+	if (isTextObject) {fragColour.a = 2.0f;}
 	outFragColour = fragColour;
 }

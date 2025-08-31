@@ -91,7 +91,19 @@
     <visplane height="2.5" textureOffset="0.5 0.0" type="V_PASSTHROUGH" texture="a" > <vertices v0="8.0 -16.5" v1="5.0 -16.5" v2="8.0 -18.5" /> </visplane>
     <wall start="10.0 -15.0 1.25" end="2.5 -20.0 1.35" type="W_PASSTHROUGH" texture="a" />
 
-    <!-- [Empty Area] [SMALL] -->
+
+    <!-- Filtered light showcase -->
+    <wall start="5.75 -12.0 0.0" end="5.0 -11.0 1.0" texture="filter" type="W_PASSTHROUGH" />
+    <wall start="5.75 -13.0 0.0" end="5.75 -12.0 1.0" texture="filter2" type="W_PASSTHROUGH" />
+    <wall start="5.0 -14.0 0.0" end="5.75 -13.0 1.0" texture="filter3" type="W_PASSTHROUGH" />
+
+    <wall start="5.75 -12.0 1.0" end="5.0 -11.0 3.0" texture="stainedTraaWindow" type="W_PASSTHROUGH" textureScale="2.0 1.0" textureOffset="0.5 0.0" useWorldUVY="FALSE" />
+    <wall start="5.75 -13.0 1.0" end="5.75 -12.0 3.0" texture="stainedTraaWindow" type="W_PASSTHROUGH" textureScale="2.0 1.0" textureOffset="0.75 0.0" useWorldUVY="FALSE" />
+    <wall start="5.0 -14.0 1.0" end="5.75 -13.0 3.0" texture="stainedTraaWindow" type="W_PASSTHROUGH" textureScale="2.0 1.0" useWorldUVY="FALSE" />
+
+    <wall start="7.0 -10.0 0.0" end="7.75 -11.0 3.0" texture="blank" />
+    <wall start="7.75 -11.0 0.0" end="7.75 -14.0 3.0" texture="blank" />
+    <wall start="7.0 -15.0 0.0" end="7.75 -14.0 3.0" texture="blank" />
 
 
     <!-- [Empty Area] [SMALL] -->
@@ -149,15 +161,15 @@
     <textObj position="1.5 -17.5 1.0" text="Unusual geometry" />
     <light position="9.75 -19.75 2.75" colour="1.0 1.0 1.0" intensity="12.5" hasMarker="TRUE" />
 
-    <textObj position="1.5 -12.5 1.0" text="[Empty Area] [SMALL]" />
-    <light position="6.25 -12.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+    <textObj position="1.5 -12.5 1.0" text="Filters and light" />
+    <light position="3.5 -12.5 1.0" colour="1.0 1.0 1.0" intensity="12.5" hasMarker="TRUE" />
 
     <textObj position="1.5 -7.5 1.0" text="[Empty Area] [SMALL]" />
     <light position="6.25 -7.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
 
     <textObj position="1.5 0.0 1.0" text="[Empty Area] [LARGE]" />
-    <light position="6.25 -2.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
-    <light position="6.25 2.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+    <light position="6.25 -2.5 1.5" colour="0.5 0.5 0.5" intensity="6.5" />
+    <light position="6.25 2.5 1.5" colour="0.5 0.5 0.5" intensity="6.5" />
 
     <textObj position="1.5 7.5 1.0" text="[Empty Area] [SMALL]" />
     <light position="6.25 7.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />

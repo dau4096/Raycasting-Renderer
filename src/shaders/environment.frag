@@ -92,10 +92,10 @@ struct IntersectionData {
 };
 #define STACK_SIZE 8
 IntersectionData stack[STACK_SIZE];
-int topOfStack = 0;
+uint topOfStack = 0;
 
-void pushStack(IntersectionData data) {
-	int insertIdx = topOfStack;
+void pushStack(in IntersectionData data) {
+	uint insertIdx = topOfStack;
 
 	for (int i=0; i<topOfStack; i++) {
 		if (data.distanceSQ < stack[i].distanceSQ) {
@@ -107,7 +107,7 @@ void pushStack(IntersectionData data) {
 	if (topOfStack < STACK_SIZE) {
 		topOfStack++;
 	}
-	for (int i=topOfStack-1; i>insertIdx; i--) {
+	for (uint i=topOfStack-1; i>insertIdx; i--) {
 		stack[i] = stack[i-1];
 	}
 
@@ -163,13 +163,20 @@ float fragZ;
 
 //////////////// Config stuff ////////////////
 //Mip-mapping;
-#define blendMipMap true
-#define forceMipMapLevel false
-#define forcedMipMapLevel 0.0f
-#define debugMipMapLevel false
+//Debugging for mipmapping
+#define MIPMAP_FORCE_LEVEL_ENABLED false
+#define MIPMAP_FORCE_LEVEL_VALUE 0.0f
+#define MIPMAP_DEBUG_LEVEL false
 
-#define mipMapLevels 7.0f
-#define minMipMapDistance 5.0f
+//Blending between variable numbers of mipmap levels.
+#define MIPMAP_BLEND_ENABLED true
+#define MIPMAP_LEVELS 7.0f
+#define MIPMAP_MIN_DISTANCE 5.0f
+
+
+//Lighting;
+//Any alpha above this value contributes to lighting FBO components.
+#define LIGHTING_THRESHOLD_ALPHA 0.75
 //////////////// Config stuff ////////////////
 
 
@@ -236,6 +243,9 @@ void unpackTextureFormattingBits2(
 
 
 
+#define T_NONE 0x0
+#define T_WALL 0x1
+#define T_VISPLANE 0x2
 
 vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition, bool fetchTexture=true) {
 	if (debugMode == 1) {
@@ -245,25 +255,55 @@ vec4 fetchUV(vec3 UV, double distance, vec3 surfaceNormal, vec3 surfacePosition,
 	if (!useMipMapping) {
 		return textureLod(textureArray, UV, 0.0f);
 	}
-	if (forceMipMapLevel) {
-		return textureLod(textureArray, UV, forcedMipMapLevel);
+	if (MIPMAP_FORCE_LEVEL_ENABLED) {
+		return textureLod(textureArray, UV, MIPMAP_FORCE_LEVEL_VALUE);
 	}
 
-	//Linear, uses MM1 from minMipMapDistance and so on.
-	float depthComponent = (mipMapLevels * 2.0f / maxRayDistance) * (float(distance) - minMipMapDistance);
+	//Linear, uses MM1 from MIPMAP_MIN_DISTANCE and so on.
+	float depthComponent = (MIPMAP_LEVELS * 2.0f / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
 	//Walls facing camera appear sharper, visplanes at grazing angles appear smoother etc.
 	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
-	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, mipMapLevels); 
+	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS); 
 
-	if (debugMipMapLevel) {
-		return vec4(LODIndex / mipMapLevels, fract(LODIndex), 0.0f, 1.0f);
+	if (MIPMAP_DEBUG_LEVEL) {
+		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0f, 1.0f);
 	}
 	vec4 mipMapColour = textureLod(textureArray, UV, ceil(LODIndex));
-	if (!blendMipMap) {
+	if (!MIPMAP_BLEND_ENABLED) {
 		return mipMapColour;
 	}
 	vec4 MipMapMinusOneColour = textureLod(textureArray, UV, ceil(LODIndex) - 1.0f);
 	return mix(MipMapMinusOneColour, mipMapColour, fract(LODIndex));
+}
+
+vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal) {
+	switch(thisIntersect.foundType) {
+		case T_WALL: {
+			surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0f);
+			break;
+		}
+
+		case T_VISPLANE: {
+			Visplane referencedVisplane = visplanes[thisIntersect.index];
+			surfaceNormal = vec3(
+				0.0f, 0.0f,
+				((referencedVisplane.height < playerPosition.z) ? 1.0f : -1.0f)
+			);
+			break;
+		}
+
+		default: {
+			return vec4(0.0f, 0.0f, 0.0f, 0.0f);
+			break;
+		}
+	}
+
+	return fetchUV(
+		thisIntersect.UV,
+		1.0f / inversesqrt(thisIntersect.distanceSQ),
+		surfaceNormal, thisIntersect.position,
+		true
+	);
 }
 
 
@@ -380,7 +420,6 @@ bool isInsideVP(vec2 point2D, Visplane plane) {
 
 
 
-
 void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
@@ -402,12 +441,6 @@ void main() {
 	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
-	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;
-
-	Ray fragRay = createRay(playerPosition.xy, rayDirection);
-
-	vec2 rayStart = playerPosition.xy;
-	vec2 rayEnd = vec2(fragRay.end.xy);
 	
 	float normY = (2.0f * fragPosition.y / renderResolution.y) - 1.0f;
 
@@ -496,74 +529,47 @@ void main() {
 
 
 
-	if (foundObject) { //An intersect was found.
-		IntersectionData validIntersect;
-		bool success = true;
-		vec3 normal;
-		int typeFlag;
-		vec4 albedo;
-		float minDistance;
-		bool trueFound = false;
-		while (success) {
-			success = popStack(validIntersect);
-			
-			Wall closestWall;
-			Visplane closestPlane;
-			if (validIntersect.foundType == 1) { //Wall
-				closestWall = walls[validIntersect.index];
-
-				vec2 wallDirection = normalize(closestWall.end - closestWall.start).xy;
-				vec2 normalv2 = vec2(wallDirection.y, -wallDirection.x);
-				if (dot(normalv2, playerPosition.xy - validIntersect.position.xy) < 0.0) {
-					normalv2 *= -1;
-					validIntersect.UV.x *= -1;
-				}
-				normal = vec3(validIntersect.normal2D.xy, 0.0f);
-				typeFlag = 0x1;
-
-			} else if (validIntersect.foundType == 2) { //Visplane
-				closestPlane = visplanes[validIntersect.index];
-
-				if (closestPlane.height > playerPosition.z) {
-					normal = vec3(0.0f, 0.0f, -1.0f);
-				} else {
-					normal = vec3(0.0f, 0.0f, 1.0f);
-				}
-				typeFlag = 0x2;
-			}
-
-
-			minDistance = 1.0f / inversesqrt(validIntersect.distanceSQ);
-			albedo = fetchUV(validIntersect.UV, minDistance, normal, validIntersect.position);
-			if ((albedo.a < 0.5f) && (allowTransparency)) {continue;}
-			if (shouldDrawToPositionMap) {
-				uint idx = (validIntersect.index << 3) | typeFlag;
-				ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-				outFragPosition = vec4(validIntersect.position, float(idx));
-				outFragNormal = vec4(normalize(normal.xyz), 1.0f);
-			}
-			trueFound = true;
-			break;
-
-		}
-
-		if (trueFound) {
-			if (debugMode == 2) { //Drawing normals.
-				fragColour = vec4((normal.xyz * 0.5f) + 0.5f, 1.0f);
-			} else {
-				fragColour = albedo;
-			}
-			outFragColour = vec4(albedo.rgb, minDistance);
-			gl_FragDepth = minDistance / maxRayDistance;
-			return;
-		}
-	}
-
 	vec2 UV = vec2(
-		fract(rayAngleYaw / 6.28318530718f), //Over 2*Pi.
+		fract(rayAngleYaw / 6.283185f), //Over 2*Pi.
 		1.0f - ((normY + 1.0f) / 2.0f) //Invert Y coordinate.
 	);
 	vec3 skyAlbedo = texture(skyboxTexture, UV).rgb;
+
+	if (foundObject) { //An intersect was found.
+		vec3 mixColour = skyAlbedo;
+		IntersectionData closestHalfAlphaIntersect;
+		vec3 closestNormal;
+		bool foundShadowmappingObject = false;
+
+		for (int index=int(topOfStack)-1; index>=0; index--) {
+			uint stackIndex = uint(clamp(index, 0, STACK_SIZE-1));
+			IntersectionData stackIntersect = stack[index];
+			vec3 thisNormal;
+			vec4 surfaceColour = fetchUVIntersect(stackIntersect, thisNormal);
+			mixColour = mix(mixColour, surfaceColour.rgb, surfaceColour.a);
+
+			if (surfaceColour.a >= LIGHTING_THRESHOLD_ALPHA) {
+				foundShadowmappingObject = true;
+				closestHalfAlphaIntersect = stackIntersect;
+				closestNormal = thisNormal;
+			}
+		}
+
+		if (foundShadowmappingObject) {
+			gl_FragDepth = 1.0f / (inversesqrt(closestHalfAlphaIntersect.distanceSQ) * maxRayDistance);
+		}
+		outFragColour = vec4(mixColour.rgb, 1.0f);
+		if (shouldDrawToPositionMap) {
+			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
+			uint iData = (closestHalfAlphaIntersect.index << 3) | (closestHalfAlphaIntersect.foundType & 0x7);
+			outFragPosition = vec4(closestHalfAlphaIntersect.position.xyz, iData);
+			outFragNormal = vec4(closestNormal.xyz, 0.0f);
+		}
+		if (foundShadowmappingObject) {return;}
+	}
+
+
+	//No object was hit; the sky should be drawn.
 	if (shouldDrawToPositionMap) {
 		ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 		outFragPosition = vec4(0.0f, 0.0f, 0.0f, 0.0f);

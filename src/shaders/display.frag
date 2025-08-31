@@ -129,6 +129,13 @@ void main() {
 		} else {
 			resultant = vec4(albedo.rgb, 1.0f);
 		}
+		if (isInvertEffect) {
+			vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
+			float flashAlpha = screenTint.a * 2.0f - 1.0f;
+			resultant.rgb = mix(resultant.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+		} else {
+			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
+		}
 	} else {
 		vec3 brightness = getBrightness(mainUV);
 		if (debugMode == 3) { //Debug lighting.
@@ -163,7 +170,7 @@ void main() {
 	vec4 interfaceColour = texture(interfaceTexture, mainUV);
 
 	//TextObjects use negative distance as their alpha. General UI uses 0-1 alpha values.
-	bool isTextObject = interfaceColour.a < 0.0f;
+	bool isTextObject = interfaceColour.a == 2.0f;
 	interfaceColour.a = (isTextObject) ? 1.0f : interfaceColour.a;
 
 	//Final fragment output (blend of scene and UI)

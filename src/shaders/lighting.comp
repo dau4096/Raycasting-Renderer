@@ -285,6 +285,7 @@ bool isInsideVP(vec2 point2D, Visplane plane) {
 
 
 //LOS
+vec4 globalLightTint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 bool wallCheck3D(vec3 pointA, vec3 pointB, Wall thisWall, vec3 LOSDelta) {
 	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
 	float projStart = dot(pointA.xy-thisWall.start.xy, wallNormal);
@@ -307,7 +308,11 @@ bool wallCheck3D(vec3 pointA, vec3 pointB, Wall thisWall, vec3 LOSDelta) {
 	if (allowTransparency) {
 		int textureID;
 		vec2 UV = getWallUV(thisWall, vec3(intersectPoint), textureID);
-		if (textureLod(textureArray, vec3(UV.xy, textureID), 0.0f).a >= 0.5f) {
+		vec4 surfaceColour = textureLod(textureArray, vec3(UV.xy, textureID), 0.0f);
+		if (surfaceColour.a > EPSILON_ALT) {
+			globalLightTint.rgba *= surfaceColour.rgba;
+		}
+		if (surfaceColour.a > 0.5f) {
 			return true;
 		}
 	} else {
@@ -332,7 +337,11 @@ bool visplaneCheck3D(vec3 pointA, vec3 pointB, Visplane thisVisplane, vec3 LOSDe
 		if (allowTransparency) {
 			int textureID;
 			vec2 UV = getVisplaneUV(intersectPoint, thisVisplane, textureID);
-			if (textureLod(textureArray, vec3(UV.xy, textureID), 0.0f).a >= 0.5f) {
+			vec4 surfaceColour = textureLod(textureArray, vec3(UV.xy, textureID), 0.0f);
+			if (surfaceColour.a > EPSILON_ALT) {
+				globalLightTint.rgba *= surfaceColour.rgba;
+			}
+			if (surfaceColour.a > 0.5f) {
 				return true;
 			}
 		} else {
@@ -365,7 +374,11 @@ bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement
 	if (t > EPSILON) {
 		if (allowTransparency) {
 			vec2 UV = ((1.0f - u - v) * thisDisplacement.UV[0]) + (u * thisDisplacement.UV[1]) + (v * thisDisplacement.UV[2]);
-			if (textureLod(textureArray, vec3(UV.xy, thisDisplacement.normal_texID.w), 0.0f).a >= 0.5f) {
+			vec4 surfaceColour = textureLod(textureArray, vec3(UV.xy, thisDisplacement.normal_texID.w), 0.0f);
+			if (surfaceColour.a > EPSILON_ALT) {
+				globalLightTint.rgba *= surfaceColour.rgba;
+			}
+			if (surfaceColour.a >= 0.5f) {
 				return true;
 			}
 		} else {
@@ -521,7 +534,7 @@ void main() {
 		bool sunBlocked = checkLOSGeneral(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
 		if ((normalDot >= 0.0f) && !sunBlocked) {
 			float sunNormalContrib = (normalDot * 0.5f) + 0.5f;
-			lightColour = sunColour.rgb * sunNormalContrib;
+			lightColour = sunColour.rgb * sunNormalContrib * globalLightTint.rgb * globalLightTint.a;
 		}
 		lightDir = sunDirection;
 
@@ -571,7 +584,7 @@ void main() {
 			bool inShadow = checkLOSLightSpecific(origin, thisLight, index, type);
 
 			if (!inShadow) {
-				lightColour = thisLight.colour * attenuation;
+				lightColour = thisLight.colour * attenuation * globalLightTint.rgb * globalLightTint.a;
 			}
 		}
 	}
