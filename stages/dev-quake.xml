@@ -137,6 +137,7 @@
     <!-- Lights and their markers -->
     <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="7.5" inputPTR="always" hasMarker="TRUE" />
     <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="12.5" inputPTR="always" hasMarker="TRUE" />
+    <light position="2.0 -3.0 1.0" colour="1.0 1.0 1.0" intensity="7.5" inputPTR="always" hasMarker="TRUE" />
 
 
     <!-- Various labels -->

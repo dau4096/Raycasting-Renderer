@@ -273,7 +273,8 @@ void getNormal(vec3 UV, float LODIndex, inout vec3 surfaceNormal, uint surfaceTy
             break;
 		}
 		case T_VISPLANE: {
-			surfaceNormal = normalMapValue * vec3(1.0f, 1.0f, surfaceNormal.z) * 2.0f - 1.0f; //Only ever +/- 1.0f.
+			vec3 thisNormal = normalMapValue * 2.0f - 1.0f;
+			surfaceNormal = thisNormal * vec3(1.0f, 1.0f, sign(surfaceNormal.z));
 			break;
 		}
 	}
