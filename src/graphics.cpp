@@ -738,7 +738,8 @@ GLuint createTexture2DArray(
 		usedFallback = false;
 
 		std::string reportedTextureName = textureName;
-		std::string texturePath = "src/" + subFolder + "/" + textureName + extension;
+		//Try in folder beside stage XML with same name.
+		std::string texturePath = "stages/assets-" + stageData.name + "/" + textureName + extension;
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -746,8 +747,8 @@ GLuint createTexture2DArray(
 		);
 
 		if (!textureData) {
-			//Try in folder beside stage XML with same name.
-			texturePath = "stages/assets-" + stageData.name + "/" + textureName + extension;
+			//Fallback to default textures
+			texturePath = "src/" + subFolder + "/" + textureName + extension;
 			textureData = stbi_load(
 				texturePath.c_str(),
 				&width, &height,
