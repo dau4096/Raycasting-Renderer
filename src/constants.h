@@ -259,9 +259,13 @@ namespace constants {
 	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 64;
 	constexpr size_t MAX_SPRITE_PARTICLES = 2048;
 
+
+	//Random assorted values
 	constexpr float PARTICLE_LIFETIME_FRAMES = 2.0f * PHYSICS_FREQUENCY;
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
+	constexpr float BLOCKMAP_UNIT_SIZE = 8.0f;
+
 }
 
 namespace display {

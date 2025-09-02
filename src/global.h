@@ -728,6 +728,28 @@ struct UIElement {
 		: position(pos), scale(scale), textureID(0), fPtr(ptr), iPtr(nullptr), showPtr(showPtr) {}
 };
 
+
+
+
+struct Block {
+	glm::ivec2 position;
+	size_t numberOfObjects;
+	std::vector<GLuint> objectData;
+	bool isDynamicBlock;
+
+	Block() : position(0.0f, 0.0f), numberOfObjects(0), objectData(), isDynamicBlock(false) {}
+
+	Block(glm::ivec2 pos, bool isDyn)
+		: position(pos), numberOfObjects(0), objectData(), isDynamicBlock(isDyn) {}
+
+	void addNewIndex(GLuint index) {
+		objectData.push_back(index);
+		numberOfObjects = objectData.size();
+	}
+};
+
+
+
 }
 
 
@@ -742,3 +764,5 @@ inline std::atomic<bool> runPhysics = true;
 inline structs::DataSet stateA, stateB;
 inline structs::DataSet* physicsData = &stateA;
 inline structs::DataSet* graphicsData = &stateB;
+
+inline std::unordered_map<uint64_t, structs::Block> blockMap;

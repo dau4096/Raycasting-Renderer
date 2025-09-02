@@ -9,6 +9,124 @@ using namespace glm;
 using namespace pugi;
 
 
+
+
+
+
+namespace BlockMap {
+
+
+
+inline GLuint createIDX(structs::Wall& thisWall, unsigned int index) {return (index << 3) | 0x1u;}
+inline GLuint createIDX(structs::Visplane& thisVisplane, unsigned int index) {return (index << 3) | 0x2u;}
+inline GLuint createIDX(structs::Displacement& thisDisplacement, unsigned int index) {return (index << 3) | 0x3u;}
+
+inline bool isObjectDynamic(structs::Wall& thisWall) {
+	return !(
+		(thisWall.type == W_INVALID) || (thisWall.type == W_NORMAL) ||
+		(thisWall.type == W_TRIGGER) || (thisWall.type == W_SWITCH) ||
+		(thisWall.type == W_PASSTHROUGH) || (thisWall.type == W_NODRAW) ||
+		(thisWall.type == W_LIGHTBLOCKER)
+	);
+}
+inline bool isObjectDynamic(structs::Visplane& thisVisplane) {
+	return (
+		(thisVisplane.type == V_MOVEX_FAST) || (thisVisplane.type == V_MOVEX_SLOW) ||
+		(thisVisplane.type == V_MOVEY_FAST) || (thisVisplane.type == V_MOVEY_SLOW) || 
+		(thisVisplane.type == V_MOVEZ_FAST) || (thisVisplane.type == V_MOVEZ_SLOW)
+	);
+}
+inline bool isObjectDynamic(structs::Displacement& thisDisplacement) {
+	return true; //No dynamic types for this yet.
+}
+
+
+
+inline uint64_t pseudoHashVector(const glm::ivec2& v) {
+    return (static_cast<uint64_t>(static_cast<uint32_t>(v.x)) << 32) |
+           static_cast<uint32_t>(v.y);
+}
+
+template<typename T>
+void addObjectToBlockMap(T& thisObject, unsigned int index, glm::vec2 minimumPoint, glm::vec2 maximumPoint) {
+	GLuint objectReferenceIndex = createIDX(thisObject, index);
+
+	glm::ivec2 minBlockmap = glm::ivec2(glm::ceil(minimumPoint / constants::BLOCKMAP_UNIT_SIZE));
+	glm::ivec2 maxBlockmap = glm::ivec2(glm::ceil(maximumPoint / constants::BLOCKMAP_UNIT_SIZE));
+
+	glm::ivec2 thisPos = minBlockmap;
+	while (thisPos.x <= maxBlockmap.x) {
+		int y = thisPos.y;
+		while (y <= maxBlockmap.y) {
+			glm::ivec2 currentPos = glm::ivec2(thisPos.x, y);
+			uint64_t vecKey = pseudoHashVector(currentPos);
+
+			auto it = blockMap.find(vecKey);
+			if (it != blockMap.end()) {
+				it->second.addNewIndex(objectReferenceIndex);
+			} else {
+				structs::Block newBlock = structs::Block(currentPos, false);
+				newBlock.addNewIndex(objectReferenceIndex);
+				blockMap[vecKey] = newBlock;
+			}
+			y++;
+		}
+		thisPos.x += 1;
+	}
+}
+
+void createBlockmap(structs::DataSet* thisDataset) {
+	structs::Block dynamicsBlock = structs::Block(glm::ivec2(0, 0), true);
+
+	unsigned int index = 0u;
+	for (structs::Wall thisWall : thisDataset->wallData) {
+		if (isObjectDynamic(thisWall)) {
+			dynamicsBlock.addNewIndex(createIDX(thisWall, index));
+			continue;
+		}
+
+		glm::vec2 minimumPoint = glm::vec2(glm::min(thisWall.start, thisWall.end));
+		glm::vec2 maximumPoint = glm::vec2(glm::max(thisWall.start, thisWall.end));
+
+		addObjectToBlockMap(thisWall, index, minimumPoint, maximumPoint);
+	}
+
+
+	index = 0u;
+	for (structs::Visplane thisVisplane : thisDataset->visplaneData) {
+		if (isObjectDynamic(thisVisplane)) {
+			dynamicsBlock.addNewIndex(createIDX(thisVisplane, index));
+			continue;
+		}
+
+		glm::vec2 minimumPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maximumPoint = glm::vec2(-constants::INF, -constants::INF);
+
+		for (glm::vec2 point : thisVisplane.vertices) {
+			minimumPoint = glm::min(minimumPoint, point);
+			maximumPoint = glm::max(maximumPoint, point);
+		}
+
+		addObjectToBlockMap(thisVisplane, index, minimumPoint, maximumPoint);
+
+	}
+}
+
+
+void createBlockmapBuffers() {
+	return; //TBA.
+}
+
+
+
+
+}
+
+
+
+
+
+
 namespace xmlFallbackAttribFunc {
 
 static inline glm::vec3 parseVec3(const std::string& str) {
@@ -1214,6 +1332,8 @@ void loadStage(
 	stageData.filePath = filePath;
 	xml::retrieveStageMetaData(doc);
 	processTeleporterPartners(&(physicsData->visplaneData));
+
+	BlockMap::createBlockmap(physicsData);
 }
 
 
