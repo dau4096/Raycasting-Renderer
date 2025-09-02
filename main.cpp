@@ -91,9 +91,12 @@ void physicsLoop() {
 			std::swap(physicsData, graphicsData);
 		}
 
+		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
+		
 		float dt = glfwGetTime() - tickStart;
 		tickrate = floor(1.0f / dt);
-		rollingTPS.push_back(tickrate);
+		if (!shouldTakeScreenshot) {rollingTPS.push_back(tickrate);}
+
 		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {
 			std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;
 		}
@@ -102,7 +105,6 @@ void physicsLoop() {
 		}
 
 
-		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
 		tickNumber++;
 
 
@@ -304,7 +306,7 @@ int main() {
 			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		}
 		framerate = floor(1.0f / (glfwGetTime() - frameStart));
-		rollingFPS.push_back(framerate);
+		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);}
 		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {
 			std::cout << "Framerate: " << framerate << "Hz" << std::endl;
 		}
