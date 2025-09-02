@@ -578,18 +578,16 @@ void saveScreenshot(GLuint frameTextureID) {
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
     glBindTexture(GL_TEXTURE_2D, 0);
 
-	//Flip image vertically.
-	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
-		for (int x = 0; x < currentRenderResolution.x * 3; ++x) {
-			std::swap(pixels[y * currentRenderResolution.x * 3 + x], pixels[(currentRenderResolution.y - 1 - y) * currentRenderResolution.x * 3 + x]);
-		}
-	}
+	stbi_flip_vertically_on_write(true);
+
+	std::filesystem::path dirName = std::filesystem::path("screenshots") / stageData.name;
+	std::filesystem::create_directories(dirName);
 
 	std::string timeStr = utils::getTimestamp();
-	std::string imagePath = "screenshots/" + stageData.name + "-" + timeStr + ".png";
+	std::filesystem::path imagePath = dirName / (timeStr + ".png");
 
 	stbi_write_png(
-		imagePath.c_str(),
+		imagePath.string().c_str(),
 		currentRenderResolution.x, currentRenderResolution.y,
 		3, pixels.data(), currentRenderResolution.x*3
 	);
