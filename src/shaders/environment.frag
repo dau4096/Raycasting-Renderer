@@ -167,7 +167,7 @@ float fragZ;
 //Debugging for mipmapping
 #define MIPMAP_FORCE_LEVEL_ENABLED false
 #define MIPMAP_FORCE_LEVEL_VALUE 0.0f
-#define MIPMAP_DEBUG_LEVEL false
+#define MIPMAP_DEBUG false
 
 //Blending between variable numbers of mipmap levels.
 #define MIPMAP_BLEND_ENABLED true
@@ -299,7 +299,7 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
 	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS); 
 
-	if (MIPMAP_DEBUG_LEVEL) {
+	if (MIPMAP_DEBUG) {
 		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0f, 1.0f);
 	}
 

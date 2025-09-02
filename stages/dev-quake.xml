@@ -90,7 +90,7 @@
 
     <!-- Testing "Macros" -->
     <cuboid start="-1.0 11.0 6.0" end="1.0 13.0 7.0" bottomTexture="metal2" sideTexture="metal" topTexture="metal2" />
-    <stairs start="6.0 -8.0 3.0" end="8.0 -1.0 0.0" static="FALSE" flag="notStairsFlag" hasEndWall="FALSE" sideTexture="brick" stepsTexture="planks2" textureScale="2.0 2.0 2.0" />
+    <stairs start="6.0 -8.0 3.0" end="8.0 -1.0 0.0" static="FALSE" flag="notStairsFlag" hasEndWall="FALSE" sideTexture="concrete2" stepsTexture="concrete" textureScale="2.0 2.0 2.0" />
 
 
     <!-- Small, fast lift -->
@@ -103,7 +103,7 @@
     <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="90.0" />
     <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="-90.0" />
     <visplane start="-8.0 13.0" end="-7.0 14.0" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="90.0" />
-    <visplane start="4.5 -9.5" end="5.5 -10.5" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="-90.0" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+    <visplane start="6.5 -9.5" end="7.5 -10.5" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="-90.0" useWorldUVX="FALSE" useWorldUVY="FALSE" />
 
     <!-- Circle conveyor -->
     <visplane start="-0.5 14.0" end="0.5 15.0" direction="1.0 0.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
@@ -137,6 +137,7 @@
     <!-- Lights and their markers -->
     <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="7.5" inputPTR="always" hasMarker="TRUE" />
     <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="12.5" inputPTR="always" hasMarker="TRUE" />
+    <light position=" 5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="12.5" inputPTR="always" hasMarker="TRUE" />
 
 
     <!-- Various labels -->

@@ -531,11 +531,14 @@ void main() {
 
 		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
-		bool sunBlocked = checkLOSGeneral(origin + offset, origin + offset + sunDirection * maxRayDistance, index, type);
-		if ((normalDot >= -EPSILON_ALT) && !sunBlocked) {
-			lightColour = sunColour.rgb * normalDot * globalLightTint.rgb * globalLightTint.a;
+		if (normalDot > -0.125f) {
+			bool sunBlocked = checkLOSGeneral(origin + offset, origin + sunDirection * maxRayDistance);
+			if (!sunBlocked) {
+				float sunNormalDot = normalDot * 0.5f + 0.5f;
+				lightColour = sunColour.rgb * sunNormalDot * globalLightTint.rgb * globalLightTint.a;
+			}
+			lightDir = sunDirection;
 		}
-		lightDir = sunDirection;
 
 
 
