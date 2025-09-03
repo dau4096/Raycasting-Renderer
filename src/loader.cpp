@@ -79,7 +79,7 @@ void createBlockmap(structs::DataSet* thisDataset) {
 	structs::Block dynamicsBlock = structs::Block(glm::ivec2(0, 0), true);
 
 	unsigned int index = 0u;
-	for (structs::Wall thisWall : thisDataset->wallData) {
+	for (structs::Wall& thisWall : thisDataset->wallData) {
 		if (isObjectDynamic(thisWall)) {
 			dynamicsBlock.addNewIndex(createIDX(thisWall, index));
 			continue;
@@ -89,11 +89,12 @@ void createBlockmap(structs::DataSet* thisDataset) {
 		glm::vec2 maximumPoint = glm::vec2(glm::max(thisWall.start, thisWall.end));
 
 		addObjectToBlockMap(thisWall, index, minimumPoint, maximumPoint);
+		index++;
 	}
 
 
 	index = 0u;
-	for (structs::Visplane thisVisplane : thisDataset->visplaneData) {
+	for (structs::Visplane& thisVisplane : thisDataset->visplaneData) {
 		if (isObjectDynamic(thisVisplane)) {
 			dynamicsBlock.addNewIndex(createIDX(thisVisplane, index));
 			continue;
@@ -108,13 +109,25 @@ void createBlockmap(structs::DataSet* thisDataset) {
 		}
 
 		addObjectToBlockMap(thisVisplane, index, minimumPoint, maximumPoint);
+		index++;
 
 	}
 }
 
 
 void createBlockmapBuffers() {
-	return; //TBA.
+	GPUblockIndicesData.clear();
+	GPUblocksData.clear();
+	size_t endIndex = 0u;
+
+	for (std::pair<uint64_t, structs::Block> thisPair : blockMap) {
+		utils::combineVectors(&GPUblockIndicesData, thisPair.second.objectData);
+		GPUblocksData.push_back(glm::uvec2(
+			endIndex, 					//Start
+			thisPair.second.numberOfObjects	//Count
+		));
+		endIndex += thisPair.second.numberOfObjects;
+	}
 }
 
 
@@ -1334,6 +1347,7 @@ void loadStage(
 	processTeleporterPartners(&(physicsData->visplaneData));
 
 	BlockMap::createBlockmap(physicsData);
+	BlockMap::createBlockmapBuffers();
 }
 
 

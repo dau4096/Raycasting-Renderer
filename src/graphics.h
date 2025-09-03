@@ -17,7 +17,9 @@ namespace graphics {
 
 
 	
-	GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint glType=GL_DYNAMIC_DRAW);
+	template<typename T>
+	GLuint createShaderStorageBufferObject(int binding, std::vector<T>* data);
+	GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0);
 
 	template<typename TGPU, typename TCPU>
 	void updateShaderStorageBufferObject(GLuint SSBO, structs::Player* player, std::vector<TCPU>* dataSetIn);

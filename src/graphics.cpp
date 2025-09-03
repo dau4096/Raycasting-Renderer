@@ -23,10 +23,11 @@ void APIENTRY openGLErrorCallback(
 	Nicely formatted callback from;
 	[https://learnopengl.com/In-Practice/Debugging]
 	*/
-	if(id == 131169 || id == 131185 || id == 131218 || id == 131204) {return;}
+	if((id == 131169) || (id == 131185) || (id == 131218) || (id == 131204) || (id == 131188)) {return;}
 
 	std::cout << "---------------" << std::endl << "Debug message (" << id << ") | " << message << std::endl;
 
+	bool shouldPause;
 	switch (source)
 	{
 		case GL_DEBUG_SOURCE_API:             {std::cout << "Source: API"; break;}
@@ -52,14 +53,14 @@ void APIENTRY openGLErrorCallback(
 	
 	switch (severity)
 	{
-		case GL_DEBUG_SEVERITY_HIGH:         {std::cout << "Severity: high"; break;}
-		case GL_DEBUG_SEVERITY_MEDIUM:       {std::cout << "Severity: medium"; break;}
-		case GL_DEBUG_SEVERITY_LOW:          {std::cout << "Severity: low"; break;}
-		case GL_DEBUG_SEVERITY_NOTIFICATION: {std::cout << "Severity: notification"; break;}
+		case GL_DEBUG_SEVERITY_HIGH:         {std::cout << "Severity: high"; shouldPause=true; break;}
+		case GL_DEBUG_SEVERITY_MEDIUM:       {std::cout << "Severity: medium"; shouldPause=true; break;}
+		case GL_DEBUG_SEVERITY_LOW:          {std::cout << "Severity: low"; shouldPause=false; break;}
+		case GL_DEBUG_SEVERITY_NOTIFICATION: {std::cout << "Severity: notification"; shouldPause=false; break;}
 	} std::cout << std::endl;
 	std::cout << std::endl;
 
-	if (dev::PAUSE_ON_OPENGL_ERROR) {
+	if (dev::PAUSE_ON_OPENGL_ERROR && shouldPause) {
 		utils::pause();
 	}
 }
@@ -310,6 +311,7 @@ GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderN
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
+	glObjectLabel(GL_PROGRAM, shaderProgram, -1, fragShaderName.c_str());
 	return shaderProgram;
 }
 
@@ -336,22 +338,37 @@ GLuint createComputeShader(std::string compShaderName) {
 
 	glDeleteShader(computeShader);
 
+	glObjectLabel(GL_PROGRAM, shaderProgram, -1, compShaderName.c_str());
 	return shaderProgram;
 }
 
 
 
+template<typename T>
+GLuint createShaderStorageBufferObject(int binding, std::vector<T>* data) {
+	size_t bufferSize = sizeof(T) * data->size();
 
-GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint glType=GL_DYNAMIC_DRAW) {
 	GLuint SSBO;
 	glGenBuffers(1, &SSBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, glType);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, data->data(), GL_STATIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, SSBO);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return SSBO;
 }
+
+GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0) {
+	GLuint SSBO;
+	glGenBuffers(1, &SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize, nullptr, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, SSBO);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	return SSBO;
+}
+
 
 template<typename TGPU, typename TCPU>
 void updateShaderStorageBufferObject(
@@ -507,11 +524,11 @@ void createLightLOSSSBO(unsigned int binding) {
 		}
 	}
 
-	GLIndex::lightLOSSSBO = createShaderStorageBufferObject(
-		binding, sizeof(GLuint) * totalSize
-	);
 	if (!objectSSBOVec.empty()) {
-		updateShaderStorageBufferObject(GLIndex::lightLOSSSBO, objectSSBOVec.data(), objectSSBOVec.size());
+		GLIndex::lightLOSSSBO = createShaderStorageBufferObject(
+			binding, &objectSSBOVec
+		);
+		glObjectLabel(GL_BUFFER, GLIndex::lightLOSSSBO, -1, "lightLOSSSBO");
 	}
 }
 
@@ -1330,52 +1347,91 @@ void prepareOpenGL() {
 
 	//Framebuffers
 	GLIndex::frameFBO = createEnvironmentFBO(currentRenderResolution);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::frameFBO, -1, "mainFrameFBO");
 	GLIndex::interfaceFBO = createAlbedoFBO(display::UI_RESOLUTION, GLIndex::interfaceAlbedoComponent);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::interfaceFBO, -1, "interfaceFBO");
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
 	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::screenshotImage2D, -1, "screenshotImage2D");
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayEnvironment, -1, "textureArrayEnvironment");
 	GLIndex::normalArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, true, display::FALLBACK_NORMAL_PATH);
+	glObjectLabel(GL_TEXTURE, GLIndex::normalArrayEnvironment, -1, "normalArrayEnvironment");
 	GLIndex::textureArrayUI = createTexture2DArray(UIImageNames, "textures-sym");
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayUI, -1, "textureArrayUI");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayNumeric, -1, "textureArrayNumeric");
 	if (!(stageData.skyboxTextureName.empty())) {
 		GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	} else {
 		GLIndex::skyboxTextureID = createGLImage2D(display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	}
+	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::displacementFBO, -1, "displacementFBO");
 
 
 	createLightLOSSSBO(8); //At binding 8.
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::allVisplanesSSBO, -1, "allVisplanesSSBO");
+
 	GLIndex::allWallsSSBO = createShaderStorageBufferObject(
 		1, sizeof(structs::WallGPU) * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::allWallsSSBO, -1, "allWallsSSBO");
+
 	GLIndex::spriteSSBO = createShaderStorageBufferObject(
 		2, sizeof(structs::SpriteGPU) * (validSprites + constants::MAX_SPRITE_PARTICLES)
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::spriteSSBO, -1, "spriteSSBO");
+
 	GLIndex::lightSSBO = createShaderStorageBufferObject(
 		3, sizeof(structs::LightGPU) * validLights
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::lightSSBO, -1, "lightSSBO");
+
 	GLIndex::displacementSSBO = createShaderStorageBufferObject(
 		4, sizeof(structs::DisplacementGPU) * validDisplacements
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::displacementSSBO, -1, "displacementSSBO");
+
 	GLIndex::visibleVisplaneIndicesSSBO = createShaderStorageBufferObject(
 		5, sizeof(uint) * validVisplanes
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::visibleVisplaneIndicesSSBO, -1, "visibleVisplaneIndicesSSBO");
+
 	GLIndex::visibleWallIndicesSSBO = createShaderStorageBufferObject(
 		6, sizeof(uint) * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::visibleWallIndicesSSBO, -1, "visibleWallIndicesSSBO");
+
 	GLIndex::wallIntersectSSBO = createShaderStorageBufferObject(
 		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::wallIntersectSSBO, -1, "wallIntersectSSBO");
+
+	//BlockMap
+	if (!GPUblockIndicesData.empty()) {
+		GLIndex::blockIndicesSSBO = createShaderStorageBufferObject(
+			9, &GPUblockIndicesData
+		);
+		glObjectLabel(GL_BUFFER, GLIndex::blockIndicesSSBO, -1, "blockIndicesSSBO");
+	}
+	if (!GPUblocksData.empty()) {
+		GLIndex::blockVecSSBO = createShaderStorageBufferObject(
+			10, &GPUblocksData
+		);
+		glObjectLabel(GL_BUFFER, GLIndex::blockVecSSBO, -1, "blockVecSSBO");
+	}
 
 
 	//Raycast compute shader

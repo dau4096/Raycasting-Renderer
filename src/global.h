@@ -136,6 +136,7 @@ inline GLuint textureArrayUI, textureArrayNumeric;
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
+inline GLuint blockIndicesSSBO, blockVecSSBO;
 
 }
 
@@ -765,4 +766,6 @@ inline structs::DataSet stateA, stateB;
 inline structs::DataSet* physicsData = &stateA;
 inline structs::DataSet* graphicsData = &stateB;
 
-inline std::unordered_map<uint64_t, structs::Block> blockMap;
+inline std::map<uint64_t, structs::Block> blockMap;
+inline std::vector<GLuint> GPUblockIndicesData;
+inline std::vector<glm::uvec2> GPUblocksData;

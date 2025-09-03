@@ -82,6 +82,14 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 };
 
 
+layout(std430, binding=9) buffer blockIndicesSSBO {
+	uint blockIndices[];
+};
+layout(std430, binding=10) buffer blockVecSSBO {
+	uvec2 blocks[];
+};
+
+
 
 struct IntersectionData {
 	vec3 position;		//3D intersect location
