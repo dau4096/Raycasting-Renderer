@@ -22,15 +22,18 @@ uniform float headLampIntensity;
 //Sun
 uniform vec3 sunDirection;
 uniform vec3 sunColour;
+uniform int numberOfSunLOSCheckBlocks;
+uniform float blockSize;
+uniform uint numberOfBlocks;
 
 //Debug
 uniform int debugMode;
 
 //Other
-uniform int numVisplanes;
-uniform int numWalls;
-uniform int numDisplacements;
-uniform int numLights;
+uniform uint numVisplanes;
+uniform uint numWalls;
+uniform uint numDisplacements;
+uniform uint numLights;
 uniform ivec2 shadowResolution;
 uniform ivec2 renderResolution;
 uniform bool allowTransparency;
@@ -85,6 +88,14 @@ layout(std430, binding=3) buffer lightSSBO {
 };
 layout(std430, binding=8) buffer LOSSSBO {
 	uint losData[];
+};
+
+
+layout(std430, binding=9) buffer blockIndicesSSBO {
+	uint blockIndices[];
+};
+layout(std430, binding=10) buffer blockVecSSBO {
+	uvec4 blocks[]; //[XY: Position | Z: Start Index | W: Index Count]
 };
 
 
@@ -395,32 +406,84 @@ bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement
 #define T_VISPLANE 0x2
 #define T_DISPLACEMENT 0x3
 
-bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=T_NONE) {
+
+bool getBlockFromPosition(ivec2 requestedPosition, out uvec4 foundBlock) {
+	for (uint blockIndex=0; blockIndex<numberOfBlocks; blockIndex++) {
+		uvec4 thisBlock = blocks[blockIndex];
+		ivec2 blockPosition = ivec2(thisBlock.xy);
+		if (requestedPosition == blockPosition) {
+			foundBlock = thisBlock;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool runLOSforThisBlock(uvec4 thisBlock, vec3 pointA, vec3 pointB, vec3 LOSDelta, int thisIndex, uint foundType) {
+	uint thisIndexUnsigned = uint(thisIndex);
+
+	uint blockStartIndex = thisBlock.z;
+	uint blockEndIndex = thisBlock.z + thisBlock.w;
+
+	for (uint objectIndex=blockStartIndex; objectIndex<blockEndIndex; objectIndex++){
+		uint thisObjectData = blockIndices[objectIndex];
+		uint objectType = thisObjectData & 0x7;
+		uint objectLocalIndex = thisObjectData >> 3;
+		bool foundTypeIsOfSameTypeAsLOSCaller = objectType == foundType;
+
+		switch (objectType) {
+			//Iterate through all the walls. (2D)
+			case T_WALL: {
+				Wall thisWall = walls[objectLocalIndex];
+				if (objectLocalIndex == thisIndexUnsigned && foundTypeIsOfSameTypeAsLOSCaller) {break; /* Wall is the index calling the LOS check. */}
+				bool wallResult = wallCheck3D(pointA, pointB, thisWall, LOSDelta);
+				if (wallResult) {return true; /* Exit early. */}
+				break;
+			}
+
+
+			//Iterate through all visplanes. (3D-ish)
+			case T_VISPLANE: {
+				Visplane thisVisplane = visplanes[objectLocalIndex];
+				if (objectLocalIndex == thisIndexUnsigned && foundTypeIsOfSameTypeAsLOSCaller) {break; /* Visplane is the index calling the LOS check. */}
+				bool visplaneResult = visplaneCheck3D(pointA, pointB, thisVisplane, LOSDelta);
+				if (visplaneResult) {return true; /* Exit early. */}
+				break;
+			}
+
+			case T_DISPLACEMENT: {
+				Displacement thisDisplacement = displacements[objectLocalIndex];
+				if (objectLocalIndex == thisIndexUnsigned && foundTypeIsOfSameTypeAsLOSCaller) {break; /* Displacement is the index calling the LOS check. */}
+				bool displacementResult = displacementCheck3D(pointA, pointB, thisDisplacement, LOSDelta);
+				if (displacementResult) {return true; /* Exit early. */}
+				break;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool checkLOSSun(vec3 pointA, vec3 pointB, int thisIndex=-1, uint foundType=T_NONE) {
 	vec3 LOSDelta = pointB - pointA;
 
-	//Iterate through all the walls. (2D)
-	for (int idx=0; idx<numWalls; idx++) {
-		Wall thisWall = walls[idx];
-		if (idx == thisIndex && foundType == T_WALL) {continue; /* Wall is the index calling the LOS check. */}
-		bool wallResult = wallCheck3D(pointA, pointB, thisWall, LOSDelta);
-		if (wallResult) {return true; /* Exit early. */}
+	uint actualNumberOfSunLOSBlocks = (length(sunDirection.xy) < EPSILON_ALT) ? 1 : numberOfSunLOSCheckBlocks;
+
+	uvec4 dynBlock = blocks[0];
+	//bool result = runLOSforThisBlock(dynBlock, pointA, pointB, LOSDelta, thisIndex, foundType);
+	//if (result) {return true;}
+
+	for (uint blockIndex=0; blockIndex<actualNumberOfSunLOSBlocks; blockIndex++) {
+		ivec2 blockPosition = ivec2(floor(pointA.xy / blockSize) + blockIndex * ivec2(sign(sunDirection.xy)));
+
+		uvec4 foundBlock;
+		bool success = getBlockFromPosition(blockPosition, foundBlock);
+		if (!success) {continue; /* No block found with that position */}
+
+		bool result = runLOSforThisBlock(foundBlock, pointA, pointB, LOSDelta, thisIndex, foundType); //Some indices seem to be checked (see central triangle, left wall.) but most are not?
+		if (result) {return true;}
 	}
 
-
-	//Iterate through all visplanes. (3D-ish)
-	for (int idx=0; idx<numVisplanes; idx++) {
-		Visplane thisVisplane = visplanes[idx];
-		if (idx == thisIndex && foundType == T_VISPLANE) {continue; /* Visplane is the index calling the LOS check. */}
-		bool visplaneResult = visplaneCheck3D(pointA, pointB, thisVisplane, LOSDelta);
-		if (visplaneResult) {return true; /* Exit early. */}
-	}
-
-	for (int idx=0; idx<numDisplacements; idx++) {
-		Displacement thisDisplacement = displacements[idx];
-		if (idx == thisIndex && foundType == T_DISPLACEMENT) {continue; /* Displacement is the index calling the LOS check. */}
-		bool displacementResult = displacementCheck3D(pointA, pointB, thisDisplacement, LOSDelta);
-		if (displacementResult) {return true; /* Exit early. */}
-	}
 
 	return false;
 }
@@ -532,7 +595,7 @@ void main() {
 		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
 		if (normalDot > -0.125f) {
-			bool sunBlocked = checkLOSGeneral(origin + offset, origin + sunDirection * maxRayDistance);
+			bool sunBlocked = checkLOSSun(origin + offset, origin + offset + sunDirection * maxRayDistance);
 			if (!sunBlocked) {
 				float sunNormalDot = normalDot * 0.5f + 0.5f;
 				lightColour = sunColour.rgb * sunNormalDot * globalLightTint.rgb * globalLightTint.a;
@@ -576,15 +639,17 @@ void main() {
 		} else {
 			lightDir = normalize(delta);
 			normalDot = getNormalDot(normal, lightDir, shouldUseSpecularHighlights);
-			if (normalDot <= EPSILON_ALT) {exit(framePosition); return; /* Surface would reflect no lighting due to cosine of angles being negative. */}
+			if (normalDot < -0.125f) {exit(framePosition); return; /* Surface would reflect no lighting due to cosine of angles being negative. */}
 
 			float distSQ = dot(delta, delta);
-			float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))) * normalDot; //Intensity fades with distance to light.
+			float lightNormalDot = normalDot * 0.5f + 0.5f;
+			float attenuation = max(0.0, 1.0 - abs(distSQ / (thisLight.intensity*thisLight.intensity))) * lightNormalDot; //Intensity fades with distance to light.
 			if (attenuation <= EPSILON_ALT) {exit(framePosition); return; /* Light is too dim to contribute. */}
 
 			
 			//Shadow Checks
-			bool inShadow = checkLOSLightSpecific(origin, thisLight, index, type);
+			vec3 offset = normal * 0.01f;
+			bool inShadow = checkLOSLightSpecific(origin + offset, thisLight);
 
 			if (!inShadow) {
 				lightColour = thisLight.colour * attenuation * globalLightTint.rgb * globalLightTint.a;

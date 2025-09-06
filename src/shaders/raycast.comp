@@ -37,8 +37,8 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 
 
-uniform int numWalls;			//Total
-uniform int numVisibleWalls; 	//Onscreen
+uniform uint numWalls;			//Total
+uniform uint numVisibleWalls; 	//Onscreen
 
 //Camera data
 uniform float blendingAlpha;

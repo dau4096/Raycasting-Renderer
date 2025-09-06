@@ -68,13 +68,14 @@
 	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
 	<option function="VIEW_TEXTURE_QUALITY" value="HIGH" />
 	<option function="VIEW_USE_MIPMAPPING" value="TRUE" />
-	<option function="VIEW_MAX_RAY_DIST" value="127.0" />
+	<option function="VIEW_MAX_RAY_DIST" value="127" />
 	<option function="VIEW_CORRECTION" value="TRUE" />
-	<option function="VIEW_MAX_FREQ" value="75.0" />
+	<option function="VIEW_MAX_FREQ" value="75" />
 
 
 	<!-- Lighting -->
 	<option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" value="TRUE" />
+	<option function="VIEW_SUN_SHADOW_RANGE_BLOCKS" value="2" />
 	<option function="VIEW_ALLOW_TRANSPARENCY" value="TRUE" />
 	<option function="VIEW_SHADOW_QUALITY" value="FULL" />
 	<option function="VIEW_LIGHTING" value="TRUE" />

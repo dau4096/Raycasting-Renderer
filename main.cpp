@@ -2,6 +2,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #pragma execution_character_set("utf-8")
 
+
 #include "C:/Users/User/Documents/code/.cpp/stb_image.h"
 #include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
 #include "src/includes.h"
@@ -15,6 +16,16 @@ using namespace utils;
 using namespace glm;
 
 
+
+void winSetup() {
+	#ifdef _WIN32
+	    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	    DWORD dwMode = 0;
+	    GetConsoleMode(hOut, &dwMode);
+	    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	    SetConsoleMode(hOut, dwMode);
+	#endif
+}
 
 
 GLFWwindow* Window;
@@ -56,6 +67,30 @@ std::vector<utils::LogicGate> logicGates;
 
 
 
+void showData() {
+	glm::ivec2 blockMapPosition = glm::ivec2(glm::ceil(player.position / constants::BLOCKMAP_UNIT_SIZE));
+	const std::vector<std::string> message = {
+		"Data for tick: 	[" + std::to_string(tickNumber) + "]",
+		"Camera Position: 	[" + std::to_string(player.position.x) + ", " + std::to_string(player.position.y) + ", " + std::to_string(player.position.z) + "]",
+		"Camera Angle:		[" + std::to_string(player.viewAngle) + ", " + std::to_string(player.viewPitch) + ", " + std::to_string(player.viewRoll) + "]",
+		"Blockmap Position: [" + std::to_string(blockMapPosition.x) + ", " + std::to_string(blockMapPosition.y) + "]",
+	};
+    static size_t prevLines = 0;
+
+    //Clear previous message.
+    for (size_t i = 0; i < prevLines; ++i) {
+        std::cout << "\x1b[1A";
+    }
+
+    //Clear and write new message.
+    for (const auto& line : message) {
+        std::cout << "\x1b[2K" << line << "\n";
+    }
+
+    prevLines = message.size();
+}
+
+
 double tickStart;
 void physicsLoop() {
 	double maxTickTime = 1.0f/constants::PHYSICS_FREQUENCY;
@@ -91,15 +126,16 @@ void physicsLoop() {
 			std::swap(physicsData, graphicsData);
 		}
 
+
+		if (configToBool("META_SHOW_DATA"))	{showData();}
+
 		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
 		
 		float dt = glfwGetTime() - tickStart;
 		tickrate = floor(1.0f / dt);
 		if (!shouldTakeScreenshot) {rollingTPS.push_back(tickrate);}
 
-		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {
-			std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;
-		}
+		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;}
 		if constexpr (dev::SHOW_PHYSICS_DT) {
 			std::cout << "Tick #" << tickNumber << " took " << std::setprecision(6) << (dt * 1e6f) << "µs / Hypothetical tickrate: " << static_cast<int>(1.0f / dt) << endl;
 		}
@@ -245,6 +281,7 @@ inline void stopPhysics() {
 int main() {
 	try { //Catch exceptions
 	SetConsoleOutputCP(65001); //CP_UTF8
+	winSetup();
 
 	loader::loadBindings();
 	loader::loadStage(

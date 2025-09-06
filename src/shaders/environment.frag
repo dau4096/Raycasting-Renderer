@@ -28,11 +28,12 @@ uniform ivec2 renderResolution;
 uniform int debugMode;
 
 //Other
-uniform int numVisibleVisplanes;
-uniform int numWalls;			//Total
-uniform int numVisibleWalls; 	//Onscreen
+uniform uint numVisibleVisplanes;
+uniform uint numWalls;			//Total
+uniform uint numVisibleWalls; 	//Onscreen
 uniform float shadowMapQuality;
 uniform bool allowTransparency;
+uniform float blockSize;
 
 
 layout(location=0) out vec4 outFragColour;
@@ -79,14 +80,6 @@ struct WallIntersect {
 };
 layout(std430, binding=7) buffer wallIntersectSSBO {
 	WallIntersect wallIntersects[];
-};
-
-
-layout(std430, binding=9) buffer blockIndicesSSBO {
-	uint blockIndices[];
-};
-layout(std430, binding=10) buffer blockVecSSBO {
-	uvec2 blocks[];
 };
 
 
@@ -598,7 +591,6 @@ void main() {
 				closestHalfAlphaIntersect = stackIntersect;
 				closestNormal = thisNormal;
 			}
-			//mixColour = thisNormal;
 		}
 
 		if (foundShadowmappingObject) {
@@ -610,6 +602,12 @@ void main() {
 			uint iData = (closestHalfAlphaIntersect.index << 3) | (closestHalfAlphaIntersect.foundType & 0x7);
 			outFragPosition = vec4(closestHalfAlphaIntersect.position.xyz, iData);
 			outFragNormal = vec4(closestNormal.xyz, 0.0f);
+		}
+		if (debugMode == 6) { //Debugging blockmap;
+			vec3 intersectPoint = closestHalfAlphaIntersect.position.xyz;
+			ivec2 intersectBlockMapPosition = ivec2(intersectPoint.xy / blockSize);
+			ivec2 cameraBlockMapPosition = ivec2(playerPosition.xy / blockSize);
+			if (intersectBlockMapPosition != cameraBlockMapPosition) {fragColour *= 0.5f;}
 		}
 		if (foundShadowmappingObject) {return;}
 	}

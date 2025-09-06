@@ -347,4 +347,5 @@ namespace dev {
 	constexpr bool SHOW_PHYSICS_TICKRATE = false;
 	constexpr bool SHOW_PHYSICS_DT = false;
 	constexpr bool PAUSE_ON_OPENGL_ERROR = true;
+	constexpr bool SHOW_UNBOUND_UNIFORMS = false;
 }

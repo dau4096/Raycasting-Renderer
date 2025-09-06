@@ -140,67 +140,41 @@ std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> symbolNames = {
 
 namespace uniforms {
 
+template <typename Func, typename... Args>
+static inline void _bindUniform(GLuint shaderProgram, const GLchar* uniformName, Func uniformFunc, Args... args) {
+	GLint location = glGetUniformLocation(shaderProgram, uniformName);
+
+	if (location >= 0) {
+		uniformFunc(location, args...);
+	} else if constexpr (dev::SHOW_UNBOUND_UNIFORMS) {
+		std::cout << "[UniformBind] program=" << shaderProgram << " uniform=" << uniformName << " loc=" << location;
+		((std::cout << " value=" << args), ...);
+		std::cout << std::endl;
+	}
+}
+
+
 //Uniforms; [Many overloads]
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, bool value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform1i(location, value);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, size_t value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform1i(location, value);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, int value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform1i(location, value);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, float value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform1f(location, value);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec2 value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform2i(location, value.x, value.y);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec2 value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform2f(location, value.x, value.y);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec3 value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform3i(location, value.x, value.y, value.z);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec3 value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform3f(location, value.x, value.y, value.z);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec4 value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform4i(location, value.x, value.y, value.z, value.w);
-	}
-}
-static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec4 value) {
-	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
-	if (location >= 0) {
-		glUniform4f(location, value.x, value.y, value.z, value.w);
-	}
-}
+
+//Unsigned Integer;
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, GLuint value) {_bindUniform(shaderProgram, uniformName, glUniform1ui, value);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, size_t value) {_bindUniform(shaderProgram, uniformName, glUniform1ui, GLuint(value));}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::uvec2 value) {_bindUniform(shaderProgram, uniformName, glUniform2ui, value.x, value.y);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::uvec3 value) {_bindUniform(shaderProgram, uniformName, glUniform3ui, value.x, value.y, value.z);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::uvec4 value) {_bindUniform(shaderProgram, uniformName, glUniform4ui, value.x, value.y, value.z, value.w);}
+//Integer;
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, int value) {_bindUniform(shaderProgram, uniformName, glUniform1i, value);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, bool value) {_bindUniform(shaderProgram, uniformName, glUniform1i, int(value));}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec2 value) {_bindUniform(shaderProgram, uniformName, glUniform2i, value.x, value.y);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec3 value) {_bindUniform(shaderProgram, uniformName, glUniform3i, value.x, value.y, value.z);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::ivec4 value) {_bindUniform(shaderProgram, uniformName, glUniform4i, value.x, value.y, value.z, value.w);}
+
+//Floating-Point;
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, float value) {_bindUniform(shaderProgram, uniformName, glUniform1f, value);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec2 value) {_bindUniform(shaderProgram, uniformName, glUniform2f, value.x, value.y);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec3 value) {_bindUniform(shaderProgram, uniformName, glUniform3f, value.x, value.y, value.z);}
+static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, glm::vec4 value) {_bindUniform(shaderProgram, uniformName, glUniform4f, value.x, value.y, value.z, value.w);}
+
 static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float currentTime) {
 	//Applies value if shader has uniform of matching name.
 
@@ -533,6 +507,54 @@ void createLightLOSSSBO(unsigned int binding) {
 }
 
 
+inline uint64_t pseudoHashVector(const glm::ivec2& v) {
+    return (static_cast<uint64_t>(static_cast<uint32_t>(v.x)) << 32) |
+           static_cast<uint32_t>(v.y);
+}
+bool fetchBlockFromPosition(glm::ivec2 position, structs::Block* thisBlock) {
+	uint64_t hash = pseudoHashVector(position);
+	auto it = blockMap.find(hash);
+	if (it == blockMap.end()) {
+		return false;
+	}
+	*thisBlock = blockMap[hash];
+	return true;
+}
+
+#define T_NONE 0x0
+#define T_WALL 0x1
+#define T_VISPLANE 0x2
+#define T_DISPLACEMENT 0x3
+
+void debugBlock(
+		glm::ivec2 blockPosition,
+		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices
+	) {
+	structs::Block thisBlock;
+	if (!fetchBlockFromPosition(blockPosition, &thisBlock)) {return;};
+
+	for (GLuint object : thisBlock.objectData) {
+		uint localIndex = object >> 3;
+		switch(object & 0x7) { //Match type bits.
+			case T_WALL: {
+				visibleWallIndices->push_back(localIndex);
+				break;
+			}
+			case T_VISPLANE: {
+				visibleVisplaneIndices->push_back(localIndex);
+				break;
+			}
+			case T_DISPLACEMENT: {
+				visibleDisplacementIndices->push_back(localIndex);
+				break;
+			}
+		}
+	}
+	numVisibleWalls = visibleWallIndices->size();
+	numVisibleVisplanes = visibleVisplaneIndices->size();
+	numVisibleDisplacements = visibleDisplacementIndices->size();
+}
+
 
 void findVisibleObjects(
 		std::vector<uint>* visibleVisplaneIndices, std::vector<uint>* visibleWallIndices, std::vector<uint>* visibleDisplacementIndices,
@@ -541,6 +563,14 @@ void findVisibleObjects(
 	glm::vec2 playerFDirection = glm::vec2(sin(player.viewAngle), cos(player.viewAngle));
 	glm::vec2 playerPosV2 = glm::vec2(player.position);
 
+
+	if (utils::configToInt("META_DEBUG_MODE") == 6) { //Debug blockmap.
+		glm::ivec2 playerBlock = glm::ivec2(playerPosV2 / constants::BLOCKMAP_UNIT_SIZE);
+		debugBlock(
+			playerBlock, visibleVisplaneIndices, visibleWallIndices, visibleDisplacementIndices
+		);
+		return;
+	}
 
 	//Visplanes
 	for (uint idx=0; idx<validVisplanes; idx++) {
@@ -589,11 +619,11 @@ void findVisibleObjects(
 
 
 void saveScreenshot(GLuint frameTextureID) {
-    std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
+	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 
-    glBindTexture(GL_TEXTURE_2D, frameTextureID);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, frameTextureID);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	stbi_flip_vertically_on_write(true);
 
@@ -1124,155 +1154,155 @@ void initialiseVAOs() {
 
 //No depth texture
 GLuint createAlbedoFBO(glm::uvec2 resolution, GLuint& colourTexture) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour
-    glGenTextures(1, &colourTexture);
-    glBindTexture(GL_TEXTURE_2D, colourTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour
+	glGenTextures(1, &colourTexture);
+	glBindTexture(GL_TEXTURE_2D, colourTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);
+	GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 //2 colour attachments
 GLuint createDualAlbedoFBO(glm::uvec2 resolution, GLuint& colourTextureA, GLuint& colourTextureB) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour 1
-    glGenTextures(1, &colourTextureA);
-    glBindTexture(GL_TEXTURE_2D, colourTextureA);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour 1
+	glGenTextures(1, &colourTextureA);
+	glBindTexture(GL_TEXTURE_2D, colourTextureA);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Colour 2
-    glGenTextures(1, &colourTextureB);
-    glBindTexture(GL_TEXTURE_2D, colourTextureB);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour 2
+	glGenTextures(1, &colourTextureB);
+	glBindTexture(GL_TEXTURE_2D, colourTextureB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, drawBuffers);
+	GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	glDrawBuffers(2, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 //With depth texture
 GLuint createAlbedoDepthFBO(glm::uvec2 resolution, GLuint& colourTexture, GLuint& depthTexture) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour
-    glGenTextures(1, &colourTexture);
-    glBindTexture(GL_TEXTURE_2D, colourTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour
+	glGenTextures(1, &colourTexture);
+	glBindTexture(GL_TEXTURE_2D, colourTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Depth
-    glGenTextures(1, &depthTexture);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+	//Depth
+	glGenTextures(1, &depthTexture);
+	glBindTexture(GL_TEXTURE_2D, depthTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
 
-    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);
+	GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO [W/ depth] incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO [W/ depth] incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 GLuint allDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
 GLuint createEnvironmentFBO(glm::uvec2 resolution) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Albedo
-    glGenTextures(1, &GLIndex::frameAlbedoComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Albedo
+	glGenTextures(1, &GLIndex::frameAlbedoComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Position component
-    glGenTextures(1, &GLIndex::framePositionComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Position component
+	glGenTextures(1, &GLIndex::framePositionComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Normal component
-    glGenTextures(1, &GLIndex::frameNormalComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Normal component
+	glGenTextures(1, &GLIndex::frameNormalComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Depth
-    glGenTextures(1, &GLIndex::frameDepthComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Depth
+	glGenTextures(1, &GLIndex::frameDepthComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glDrawBuffers(3, allDrawBuffers);
+	glDrawBuffers(3, allDrawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Environment FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Environment FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 
@@ -1852,6 +1882,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
 	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
+	uniforms::bindUniformValue(GLIndex::envShader, "blockSize", constants::BLOCKMAP_UNIT_SIZE);
 
 	renderingGeneric("Environment Shader");
 
@@ -1872,6 +1903,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
 	renderingGeneric("Displacements Shaders");
+
 
 
 	//Sprite Shader.
@@ -1907,6 +1939,9 @@ void draw(double blendingAlpha, double currentTime) {
 		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
 		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+		uniforms::bindUniformValue(GLIndex::lightingShader, "numberOfSunLOSCheckBlocks", utils::configToInt("VIEW_SUN_SHADOW_RANGE_BLOCKS"));
+		uniforms::bindUniformValue(GLIndex::lightingShader, "numberOfBlocks", numberOfBlocks);
+		uniforms::bindUniformValue(GLIndex::lightingShader, "blockSize", constants::BLOCKMAP_UNIT_SIZE);
 
 		//Dispatch 2 extra valid lights (Sun, Headlamp.)
 		glDispatchCompute(

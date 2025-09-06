@@ -33,7 +33,7 @@ uniform ivec2 renderResolution;
 uniform int debugMode;
 
 //Other
-uniform int numSprites;
+uniform uint numSprites;
 uniform float shadowMapQuality;
 
 

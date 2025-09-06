@@ -31,7 +31,7 @@ uniform int quantisingLevel;
 uniform bool useLighting;
 uniform bool screenshotHasHUD;
 uniform bool shouldTakeScreenshot;
-uniform int numLights;
+uniform uint numLights;
 uniform vec4 screenTint;
 uniform bool isInvertEffect;
 

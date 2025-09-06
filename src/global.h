@@ -73,6 +73,7 @@ inline size_t validLights = 0;
 inline size_t validTextObjects = 0;
 inline size_t validGates = 0;
 inline size_t currentTextureIndex = 0;
+inline size_t numberOfBlocks = 0;
 
 
 
@@ -768,4 +769,4 @@ inline structs::DataSet* graphicsData = &stateB;
 
 inline std::map<uint64_t, structs::Block> blockMap;
 inline std::vector<GLuint> GPUblockIndicesData;
-inline std::vector<glm::uvec2> GPUblocksData;
+inline std::vector<glm::uvec4> GPUblocksData;

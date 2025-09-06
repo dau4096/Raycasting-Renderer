@@ -48,8 +48,12 @@ inline uint64_t pseudoHashVector(const glm::ivec2& v) {
 }
 
 template<typename T>
-void addObjectToBlockMap(T& thisObject, unsigned int index, glm::vec2 minimumPoint, glm::vec2 maximumPoint) {
+void addObjectToBlockMap(T& thisObject, unsigned int index, glm::vec2 minimumPoint, glm::vec2 maximumPoint, bool isDynBlock=false) {
 	GLuint objectReferenceIndex = createIDX(thisObject, index);
+	if (isDynBlock) {
+		blockMap[0].addNewIndex(objectReferenceIndex);
+		return;
+	}
 
 	glm::ivec2 minBlockmap = glm::ivec2(glm::ceil(minimumPoint / constants::BLOCKMAP_UNIT_SIZE));
 	glm::ivec2 maxBlockmap = glm::ivec2(glm::ceil(maximumPoint / constants::BLOCKMAP_UNIT_SIZE));
@@ -60,6 +64,7 @@ void addObjectToBlockMap(T& thisObject, unsigned int index, glm::vec2 minimumPoi
 		while (y <= maxBlockmap.y) {
 			glm::ivec2 currentPos = glm::ivec2(thisPos.x, y);
 			uint64_t vecKey = pseudoHashVector(currentPos);
+
 
 			auto it = blockMap.find(vecKey);
 			if (it != blockMap.end()) {
@@ -76,12 +81,13 @@ void addObjectToBlockMap(T& thisObject, unsigned int index, glm::vec2 minimumPoi
 }
 
 void createBlockmap(structs::DataSet* thisDataset) {
-	structs::Block dynamicsBlock = structs::Block(glm::ivec2(0, 0), true);
+	//structs::Block dynamicsBlock = structs::Block(glm::ivec2(constants::INF, constants::INF), true);
+	//blockMap[pseudoHashVector(dynamicsBlock.position)] = (dynamicsBlock);
 
 	unsigned int index = 0u;
 	for (structs::Wall& thisWall : thisDataset->wallData) {
 		if (isObjectDynamic(thisWall)) {
-			dynamicsBlock.addNewIndex(createIDX(thisWall, index));
+			//dynamicsBlock.addNewIndex(createIDX(thisWall, index));
 			continue;
 		}
 
@@ -96,7 +102,7 @@ void createBlockmap(structs::DataSet* thisDataset) {
 	index = 0u;
 	for (structs::Visplane& thisVisplane : thisDataset->visplaneData) {
 		if (isObjectDynamic(thisVisplane)) {
-			dynamicsBlock.addNewIndex(createIDX(thisVisplane, index));
+			//dynamicsBlock.addNewIndex(createIDX(thisVisplane, index));
 			continue;
 		}
 
@@ -122,12 +128,15 @@ void createBlockmapBuffers() {
 
 	for (std::pair<uint64_t, structs::Block> thisPair : blockMap) {
 		utils::combineVectors(&GPUblockIndicesData, thisPair.second.objectData);
-		GPUblocksData.push_back(glm::uvec2(
-			endIndex, 					//Start
-			thisPair.second.numberOfObjects	//Count
+		GPUblocksData.push_back(glm::uvec4(
+			glm::uvec2(thisPair.second.position),	//Block position
+			endIndex, 								//Start
+			thisPair.second.numberOfObjects			//Count
 		));
 		endIndex += thisPair.second.numberOfObjects;
 	}
+
+	numberOfBlocks = GPUblocksData.size();
 }
 
 
@@ -1222,6 +1231,7 @@ static std::unordered_map<std::string, int> debugMap = {
 	{"BRIGHTNESS", 3}, {"LIGHTING", 3},
 	{"EDGE", 4}, {"ANTIALIAS", 4},
 	{"WIREFRAME", 5}, //Pseudo wireframe.
+	{"BLOCKMAP", 6}, //Shows all objects in the current block around the camera.
 };
 
 static std::unordered_map<std::string, int> texMipMap = {
