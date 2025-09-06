@@ -134,7 +134,7 @@ inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
 
 //Storage Buffers and similar.
-inline GLuint wallIntersectSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
+inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
 
 }

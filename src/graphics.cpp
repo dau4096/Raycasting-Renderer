@@ -1322,6 +1322,23 @@ GLuint createDisplacementsFBO(size_t width, size_t height) {
 }
 
 
+GLuint zero = 0;
+void fetchAndClearAtomic(GLuint atomicCounter, GLuint* counterValue) {
+	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+	if (counterValue) {
+		glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), counterValue, 0, nullptr);	
+	}
+	glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
+}
+GLuint createAtomicCounter(unsigned int binding) {
+	GLuint atomicCounter;
+	glGenBuffers(1, &atomicCounter);
+	fetchAndClearAtomic(atomicCounter, nullptr);
+	glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding, atomicCounter);
+	return atomicCounter;
+}
+
+
 
 glm::mat4 uiMatrix;
 std::vector<structs::UIElement> UIElements;
@@ -1330,52 +1347,83 @@ void prepareOpenGL() {
 
 	//Framebuffers
 	GLIndex::frameFBO = createEnvironmentFBO(currentRenderResolution);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::frameFBO, -1, "mainFrameFBO");
 	GLIndex::interfaceFBO = createAlbedoFBO(display::UI_RESOLUTION, GLIndex::interfaceAlbedoComponent);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::interfaceFBO, -1, "interfaceFBO");
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
 	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::screenshotImage2D, -1, "screenshotImage2D");
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayEnvironment, -1, "textureArrayEnvironment");
 	GLIndex::normalArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, true, display::FALLBACK_NORMAL_PATH);
+	glObjectLabel(GL_TEXTURE, GLIndex::normalArrayEnvironment, -1, "normalArrayEnvironment");
 	GLIndex::textureArrayUI = createTexture2DArray(UIImageNames, "textures-sym");
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayUI, -1, "textureArrayUI");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayNumeric, -1, "textureArrayNumeric");
 	if (!(stageData.skyboxTextureName.empty())) {
 		GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	} else {
 		GLIndex::skyboxTextureID = createGLImage2D(display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	}
+	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::displacementFBO, -1, "displacementFBO");
 
 
-	createLightLOSSSBO(8); //At binding 8.
+	createLightLOSSSBO(8); //At binding 9.
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::allVisplanesSSBO, -1, "allVisplanesSSBO");
+
 	GLIndex::allWallsSSBO = createShaderStorageBufferObject(
 		1, sizeof(structs::WallGPU) * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::allWallsSSBO, -1, "allWallsSSBO");
+
 	GLIndex::spriteSSBO = createShaderStorageBufferObject(
 		2, sizeof(structs::SpriteGPU) * (validSprites + constants::MAX_SPRITE_PARTICLES)
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::spriteSSBO, -1, "spriteSSBO");
+
 	GLIndex::lightSSBO = createShaderStorageBufferObject(
 		3, sizeof(structs::LightGPU) * validLights
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::lightSSBO, -1, "lightSSBO");
+
 	GLIndex::displacementSSBO = createShaderStorageBufferObject(
 		4, sizeof(structs::DisplacementGPU) * validDisplacements
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::displacementSSBO, -1, "displacementSSBO");
+
 	GLIndex::visibleVisplaneIndicesSSBO = createShaderStorageBufferObject(
 		5, sizeof(uint) * validVisplanes
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::visibleVisplaneIndicesSSBO, -1, "visibleVisplaneIndicesSSBO");
+
 	GLIndex::visibleWallIndicesSSBO = createShaderStorageBufferObject(
 		6, sizeof(uint) * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::visibleWallIndicesSSBO, -1, "visibleWallIndicesSSBO");
+
 	GLIndex::wallIntersectSSBO = createShaderStorageBufferObject(
 		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::wallIntersectSSBO, -1, "wallIntersectSSBO");
+
+	GLIndex::visplaneCheckSSBO = createShaderStorageBufferObject(
+		8, sizeof(uint) * currentRenderResolution.x * validVisplanes
+	);
+	glObjectLabel(GL_BUFFER, GLIndex::visplaneCheckSSBO, -1, "visplaneCheckSSBO");
+
 
 
 	//Raycast compute shader
@@ -1434,6 +1482,7 @@ void prepareOpenGL() {
 
 	utils::GLErrorcheck("Initialisation", true); //Old basic debugging
 }
+
 
 
 
@@ -1755,6 +1804,7 @@ inline void renderingGeneric(const std::string& shaderName="") {
 }
 
 
+
 void draw(double blendingAlpha, double currentTime) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
@@ -1772,9 +1822,10 @@ void draw(double blendingAlpha, double currentTime) {
 	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
 	glUseProgram(GLIndex::raycastShader);
 	uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime);
+	size_t numberOfObjects = numVisibleWalls + numVisibleVisplanes;
 	glDispatchCompute(
 		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
-		(numVisibleWalls + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
+		(numberOfObjects + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
 		1
 	);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

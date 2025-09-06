@@ -28,9 +28,10 @@ uniform ivec2 renderResolution;
 uniform int debugMode;
 
 //Other
-uniform int numVisibleVisplanes;
 uniform int numWalls;			//Total
 uniform int numVisibleWalls; 	//Onscreen
+uniform int numVisplanes;			//Total
+uniform int numVisibleVisplanes;	//Onscreen
 uniform float shadowMapQuality;
 uniform bool allowTransparency;
 
@@ -78,7 +79,10 @@ struct WallIntersect {
 	float _padding;
 };
 layout(std430, binding=7) buffer wallIntersectSSBO {
-	WallIntersect wallIntersects[];
+	WallIntersect wallIntersects[]; //2D Raycast results;
+};
+layout(std430, binding=8) buffer visplaneCheckSSBO {
+	uint visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 };
 
 
@@ -96,8 +100,13 @@ IntersectionData stack[STACK_SIZE];
 uint topOfStack = 0;
 
 void pushStack(in IntersectionData data) {
-	uint insertIdx = topOfStack;
+	if (topOfStack == 0) {
+		stack[0] = data;
+		topOfStack = 1;
+		return;
+	}
 
+	uint insertIdx = topOfStack;
 	for (int i=0; i<topOfStack; i++) {
 		if (data.distanceSQ < stack[i].distanceSQ) {
 			insertIdx = i;
@@ -105,17 +114,22 @@ void pushStack(in IntersectionData data) {
 		}
 	}
 
+	if ((topOfStack == STACK_SIZE) && (insertIdx == STACK_SIZE)) {
+		return;
+	}
+
 	if (topOfStack < STACK_SIZE) {
 		topOfStack++;
 	}
+
 	for (uint i=topOfStack-1; i>insertIdx; i--) {
-		stack[i] = stack[i-1];
+		stack[i] = stack[i - 1];
 	}
 
 	stack[insertIdx] = data;
 }
 
-
+//Unused;
 bool popStack(out IntersectionData data) {
 	if (topOfStack > 0) {
 		data = stack[0];
@@ -243,105 +257,88 @@ void unpackTextureFormattingBits2(
 
 
 
+#define NORMAL_UP vec3(0.0, 0.0, 1.0)
 
-#define NORMAL_UP vec3(0.0f, 0.0f, 1.0f)
-
-#define T_NONE 0x0
-#define T_WALL 0x1
+#define T_NONE     0x0
+#define T_WALL     0x1
 #define T_VISPLANE 0x2
 
-float sign(float value) {
-	return (value < 0.0f) ? -1.0f : 1.0f;
-}
-
 void getNormal(vec3 UV, float LODIndex, inout vec3 surfaceNormal, uint surfaceType) {
-	vec3 normalMapValue = textureLod(normalMapArray, UV, ceil(LODIndex)).xyz;
+    vec3 normalMapValue = textureLod(normalMapArray, UV, LODIndex).xyz;
 
-	switch(surfaceType) {
-		case T_WALL: {
-            //Tangent-space decode method.
-            vec3 tangentNormal = normalize(normalMapValue * 2.0 - 1.0);
-            vec3 N = normalize(surfaceNormal);
-            vec3 T = normalize(cross(NORMAL_UP, N));
-            if (length(T) < 1e-5) {
-                T = vec3(1.0, 0.0, 0.0);
-            }
-            vec3 B = cross(N, T);
+    if (surfaceType == T_WALL) {
+        //Tangent-space normals.
+        vec3 tangentNormal = normalize(normalMapValue * 2.0 - 1.0);
+        vec3 N = surfaceNormal;
+        vec3 T = (abs(N.z) > 0.999) ? vec3(1.0, 0.0, 0.0) : normalize(cross(NORMAL_UP, N));
+        vec3 B = cross(N, T);
 
-            //Transform tangent-space normal into world-space.
-            surfaceNormal = normalize(mat3(T, B, N) * tangentNormal) * vec3(1.0f, 1.0f, -1.0f);
-            break;
-		}
-		case T_VISPLANE: {
-			vec3 thisNormal = normalMapValue * 2.0f - 1.0f;
-			surfaceNormal = thisNormal * vec3(1.0f, 1.0f, sign(surfaceNormal.z));
-			break;
-		}
-	}
+        //Tangent-space to worldspace.
+        surfaceNormal = normalize(mat3(T, B, N) * tangentNormal) * vec3(1.0, 1.0, -1.0);
 
+    } else if (surfaceType == T_VISPLANE) {
+        vec3 thisNormal = normalMapValue * 2.0 - 1.0;
+        surfaceNormal = thisNormal * vec3(1.0, 1.0, sign(surfaceNormal.z));
+    }
 }
 
 
 vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePosition, uint surfaceType) {
-	if (debugMode == 1) {
-		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
-	}
-	if (!useMipMapping) {
-		return textureLod(textureArray, UV, 0.0f);
-	}
-	if (MIPMAP_FORCE_LEVEL_ENABLED) {
-		return textureLod(textureArray, UV, MIPMAP_FORCE_LEVEL_VALUE);
-	}
+    if (debugMode == 1) {
+        return vec4(UV.xy, UV.z / 32.0, maxRayDistance);
+    }
 
-	//Linear, uses MM1 from MIPMAP_MIN_DISTANCE and so on.
-	float depthComponent = (MIPMAP_LEVELS * 2.0f / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
-	//Walls facing camera appear sharper, visplanes at grazing angles appear smoother etc.
-	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
-	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS); 
+    if (!useMipMapping) {
+        return textureLod(textureArray, UV, 0.0);
+    }
 
-	if (MIPMAP_DEBUG) {
-		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0f, 1.0f);
-	}
+    if (MIPMAP_FORCE_LEVEL_ENABLED) {
+        return textureLod(textureArray, UV, MIPMAP_FORCE_LEVEL_VALUE);
+    }
 
-	vec4 mipMapColour = textureLod(textureArray, UV, ceil(LODIndex));
-	getNormal(UV, ceil(LODIndex), surfaceNormal, surfaceType);
-	if (!MIPMAP_BLEND_ENABLED) {
-		return mipMapColour;
-	}
+    //LODIndex takes depth and slope components to be as unobtrusive as possible.
+    float depthComponent = (MIPMAP_LEVELS * 2.0 / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
+    float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
+    float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS);
 
-	vec4 MipMapMinusOneColour = textureLod(textureArray, UV, ceil(LODIndex) - 1.0f);
-	return mix(MipMapMinusOneColour, mipMapColour, fract(LODIndex));
+    if (MIPMAP_DEBUG) {
+        return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0, 1.0);
+    }
+
+    float lod = ceil(LODIndex);
+    vec4 mipColour = textureLod(textureArray, UV, lod);
+    getNormal(UV, lod, surfaceNormal, surfaceType);
+
+    if (!MIPMAP_BLEND_ENABLED) {
+        return mipColour;
+    }
+
+    vec4 mipColourLow = textureLod(textureArray, UV, lod - 1.0);
+    return mix(mipColourLow, mipColour, fract(LODIndex));
 }
+
 
 vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal) {
-	switch(thisIntersect.foundType) {
-		case T_WALL: {
-			surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0f);
-			break;
-		}
+    if (thisIntersect.foundType == T_WALL) {
+        surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0);
 
-		case T_VISPLANE: {
-			Visplane referencedVisplane = visplanes[thisIntersect.index];
-			surfaceNormal = vec3(
-				0.0f, 0.0f,
-				((referencedVisplane.height < playerPosition.z) ? 1.0f : -1.0f)
-			);
-			break;
-		}
+    } else if (thisIntersect.foundType == T_VISPLANE) {
+        Visplane vp = visplanes[thisIntersect.index];
+        surfaceNormal = vec3(0.0, 0.0, (vp.height < playerPosition.z) ? 1.0 : -1.0);
 
-		default: {
-			return vec4(0.0f, 0.0f, 0.0f, 0.0f);
-			break;
-		}
-	}
+    } else {
+        return vec4(0.0);
+    }
 
-	return fetchUV(
-		thisIntersect.UV,
-		1.0f / inversesqrt(thisIntersect.distanceSQ),
-		surfaceNormal, thisIntersect.position,
-		thisIntersect.foundType
-	);
+    return fetchUV(
+        thisIntersect.UV,
+        inversesqrt(thisIntersect.distanceSQ),
+        surfaceNormal,
+        thisIntersect.position,
+        thisIntersect.foundType
+    );
 }
+
 
 
 
@@ -398,7 +395,7 @@ float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 t
 
 	float yUV = mix(yUVLocal, yUVWorld, float(useWorldSpace.y));
 
-	return fract(yUV + textureOffset.y);
+	return yUV + textureOffset.y;
 }
 
 
@@ -410,49 +407,22 @@ float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 t
 
 //Visplanes
 vec2 getVisplaneUV(vec2 position2D, Visplane plane, out int textureID, out bvec4 textureFlags) {
-	//1st formatting data;
-	unpackTextureFormattingBits1(
-		plane.textureData1, textureFlags,
-		textureID
-	);
-
-	//2nd formatting data;
+	//Unpack formatting bits
+	unpackTextureFormattingBits1(plane.textureData1, textureFlags, textureID);
 	bvec2 useWorldSpace;
-	vec2 invTextureScale;
-	vec2 textureOffset;
-	unpackTextureFormattingBits2(
-		plane.textureData2, useWorldSpace,
-		invTextureScale, textureOffset
+	vec2 invTextureScale, textureOffset;
+	unpackTextureFormattingBits2(plane.textureData2, useWorldSpace, invTextureScale, textureOffset);
+
+	//Select UV type from bits;
+	vec2 uv = mix(
+		(position2D - plane.boundingBox.xy) / (plane.boundingBox.xy - plane.boundingBox.zw),	//Local UV
+		position2D * invTextureScale,															//World UV
+		useWorldSpace
 	);
 
-	vec2 worldUV = position2D * invTextureScale;
-	vec2 localUV = (position2D - plane.boundingBox.xy) / (plane.boundingBox.xy - plane.boundingBox.zw);
-
-	vec2 UV = mix(localUV, worldUV, vec2(useWorldSpace));
-	return fract(UV + textureOffset);
+	return uv + textureOffset;
 }
 
-vec2 getVertex(Visplane plane, uint index) {
-	uint actualIndex = index / 2;
-	return (index % 2 == 0) ? plane.vertices[actualIndex].xy : plane.vertices[actualIndex].zw;
-}
-
-bool isInsideVP(vec2 point2D, Visplane plane) {
-	if (
-		((point2D.x < plane.boundingBox.x) || (point2D.x > plane.boundingBox.z)) ||
-		((point2D.y < plane.boundingBox.y) || (point2D.y > plane.boundingBox.w))
-	) {return false; /* Outside bounding box. */}
-	for (uint i=0; i<plane.numVertices; i++) {
-		vec2 a = getVertex(plane, i);
-		vec2 b = getVertex(plane, (i + 1) % plane.numVertices);
-		vec2 edge = b - a;
-		vec2 toPoint = point2D - a;
-		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
-
-		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
-	}
-	return true;
-}
 
 
 
@@ -461,7 +431,7 @@ void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
+	bool shouldDrawToPositionMap = true;//(framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
@@ -491,10 +461,11 @@ void main() {
 	bool foundObject = false;
 
 	//Iterate through all the walls. (2D)
+	uint wallStartIndex = uint(framePosition.x * numWalls);
 	for (int idx=0; idx<numVisibleWalls; idx++) {
 		//Access walls via a buffer containing indices of visible walls (could be onscreen.)
 		uint actualIDX = visibleWallIndices[idx];
-		uint SSBOIndex = uint(framePosition.x * numWalls) + actualIDX;
+		uint SSBOIndex = wallStartIndex + actualIDX;
 		WallIntersect intersect = wallIntersects[SSBOIndex];
 		float wallDistanceSQ = intersect.distanceSQ;
 		if (wallDistanceSQ <= MIN_WALL_DIST * MIN_WALL_DIST) {continue; /* No intersect found, i.e. distance is impossible. */}
@@ -526,36 +497,49 @@ void main() {
 	if (abs(antiProjection) > EPSILON) {/* Avoids DivZero error */
 		float invAntiProjection = 1.5f * zoomEffect / antiProjection;
 		//Iterate through all visplanes. (3D)
+		uint visplaneStartIndex = uint(framePosition.x * numVisplanes);
 		for (int idx=0; idx<numVisibleVisplanes; idx++) {
 			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
 			uint actualIDX = visibleVisplaneIndices[idx];
-			Visplane thisPlane = visplanes[actualIDX];
+			uint SSBOIndex = visplaneStartIndex + actualIDX;
+			uint visplaneValue = visplaneCheckIndices[SSBOIndex];
+			if ((visplaneValue & 0x1) == 0u) {continue; /* No intersect. */}
+			Visplane thisVisplane = visplanes[visplaneValue >> 1];
 
 			if (
-				(lowerHalf && thisPlane.height > playerPosition.z) ||
-				(!lowerHalf && thisPlane.height < playerPosition.z)
+				(lowerHalf && thisVisplane.height > playerPosition.z) ||
+				(!lowerHalf && thisVisplane.height < playerPosition.z)
 			) {
 				//Fragray cannot possibly hit visplane.
 				continue;
 			}
 
 
-			float t = (playerPosition.z - thisPlane.height) * invAntiProjection / horizontalScaling;
+			float t = (playerPosition.z - thisVisplane.height) * invAntiProjection / horizontalScaling;
 			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
 			vec2 intersectPoint = playerPosition.xy + rayDirection * t;
 
-			if (!isInsideVP(intersectPoint, thisPlane)) {continue; /* Outside VP */}
+			if (
+				(intersectPoint.x < thisVisplane.boundingBox.x) || (intersectPoint.x > thisVisplane.boundingBox.z) ||
+				(intersectPoint.y < thisVisplane.boundingBox.y) || (intersectPoint.y > thisVisplane.boundingBox.w)
+			) {
+				//Fragray does not hit VP.
+				continue;
+			}
 
 			vec2 d = playerPosition.xy - intersectPoint;
 			thisIntersect.distanceSQ = dot(d,d);
-			thisIntersect.position = vec3(intersectPoint, thisPlane.height);
+			thisIntersect.position = vec3(intersectPoint, thisVisplane.height);
 			thisIntersect.index = actualIDX;
 			thisIntersect.foundType = 2;
 
 			int textureID;
 			bvec4 textureFlags;
-			vec2 uv = getVisplaneUV(intersectPoint, thisPlane, textureID, textureFlags);
-			thisIntersect.UV = (textureFlags.x) ? vec3(uv.yx, textureID) : vec3(uv.xy, textureID);
+			vec2 uv = getVisplaneUV(intersectPoint, thisVisplane, textureID, textureFlags);
+			thisIntersect.UV = vec3(
+				mix(uv.xy, uv.xy, textureFlags.x),
+				textureID
+			);
 
 			pushStack(thisIntersect);
 			foundObject = true;
