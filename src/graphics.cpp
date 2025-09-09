@@ -1326,7 +1326,7 @@ GLuint zero = 0;
 void fetchAndClearAtomic(GLuint atomicCounter, GLuint* counterValue) {
 	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
 	if (counterValue) {
-		glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), counterValue, 0, nullptr);	
+		glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), counterValue);	
 	}
 	glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
 }
