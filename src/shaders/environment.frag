@@ -519,9 +519,12 @@ void main() {
 			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
 			vec2 intersectPoint = playerPosition.xy + rayDirection * t;
 
+			vec2 minBB = min(thisVisplane.boundingBox.xy, thisVisplane.boundingBox.zw);
+			vec2 maxBB = max(thisVisplane.boundingBox.xy, thisVisplane.boundingBox.zw);
+
 			if (
-				(intersectPoint.x < thisVisplane.boundingBox.x) || (intersectPoint.x > thisVisplane.boundingBox.z) ||
-				(intersectPoint.y < thisVisplane.boundingBox.y) || (intersectPoint.y > thisVisplane.boundingBox.w)
+				(intersectPoint.x < minBB.x) || (intersectPoint.x > maxBB.x) ||
+				(intersectPoint.y < minBB.y) || (intersectPoint.y > maxBB.y)
 			) {
 				//Fragray does not hit VP.
 				continue;

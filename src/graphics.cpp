@@ -429,7 +429,12 @@ void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* v
 		bool intersect2D = utils::circleWallIntersect( //If the light's radius intersects with the wall at all (2D)
 			thisWall, thisLight.position, thisLight.intensity, &actualDistance
 		);
-		if (!intersect2D) {continue; /* No 2D intersect. */}
+		if (!intersect2D) {
+			//Check endpoints.
+			intersect2D |= glm::length(glm::vec2(thisWall.start - thisLight.position)) < thisLight.intensity;
+			intersect2D |= glm::length(glm::vec2(thisWall.end - thisLight.position)) < thisLight.intensity;
+			if (!intersect2D) {continue; /* Wall is not in range of light. */}
+		}
 
 		float zOffset = sqrt(std::max(
 			0.0f, (thisLight.intensity*thisLight.intensity) - (actualDistance*actualDistance)
@@ -499,12 +504,9 @@ void createLightLOSSSBO(unsigned int binding) {
 		//Light stores the start index and number of indices in the dataset.
 		physicsData->lightData.at(lightIndex).LOSSSBOstart = totalSize;
 		physicsData->lightData.at(lightIndex).LOSSSBOcount = thisSize;
-		totalSize += thisSize;
 
-		for (GLuint datum : objectsInRange) {
-			//Fun fact; datum is the singular of data.
-			objectSSBOVec.push_back(datum);
-		}
+		utils::combineVectors(&objectSSBOVec, objectsInRange);
+		totalSize = objectSSBOVec.size();
 	}
 
 	GLIndex::lightLOSSSBO = createShaderStorageBufferObject(
@@ -1378,7 +1380,7 @@ void prepareOpenGL() {
 	glObjectLabel(GL_FRAMEBUFFER, GLIndex::displacementFBO, -1, "displacementFBO");
 
 
-	createLightLOSSSBO(8); //At binding 9.
+	createLightLOSSSBO(9); //At binding 9.
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);

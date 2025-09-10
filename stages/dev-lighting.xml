@@ -113,6 +113,10 @@
 
 
     <!-- [Empty Area] [SMALL] -->
+    <wall start="4.5 -10.0 0.0" end="4.5 -5.0 3.0" texture="blank" />
+    <wall start="2.5 -8.5 0.0" end="4.5 -8.5 1.0" texture="filterB" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+    <wall start="2.5 -7.5 0.0" end="4.5 -7.5 2.0" texture="filterG" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+    <wall start="2.5 -6.5 0.0" end="4.5 -6.5 3.0" texture="filterR" useWorldUVX="FALSE" useWorldUVY="FALSE" />
 
 
     <!-- [Empty Area] [LARGE] -->
@@ -171,8 +175,9 @@
     <textObj position="1.5 -12.5 1.0" text="Filters and light" />
     <light position="3.5 -12.5 1.0" colour="1.0 1.0 1.0" intensity="12.5" hasMarker="TRUE" />
 
-    <textObj position="1.5 -7.5 1.0" text="[Empty Area] [SMALL]" />
-    <light position="6.25 -7.5 1.5" colour="0.5 0.5 0.5" intensity="7.5" />
+    <textObj position="1.5 -7.5 1.0" text="Filters into filters" />
+    <textObj position="1.5 -7.5 0.9" text="No light can bypass multiple coloured filters" />
+    <light position="3.5 -9.5 1.75" colour="1.0 1.0 1.0" intensity="12.5" hasMarker="TRUE" />
 
     <textObj position="1.5 0.0 1.0" text="[Empty Area] [LARGE]" />
     <light position="6.25 -2.5 1.5" colour="0.5 0.5 0.5" intensity="6.5" />

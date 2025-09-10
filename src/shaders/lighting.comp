@@ -83,7 +83,7 @@ struct Light {
 layout(std430, binding=3) buffer lightSSBO {
 	Light lights[];
 };
-layout(std430, binding=8) buffer LOSSSBO {
+layout(std430, binding=9) buffer LOSSSBO { //Seems to be very wrong.
 	uint losData[];
 };
 
@@ -312,7 +312,7 @@ bool wallCheck3D(vec3 pointA, vec3 pointB, Wall thisWall, vec3 LOSDelta) {
 		if (surfaceColour.a > EPSILON_ALT) {
 			globalLightTint.rgba *= surfaceColour.rgba;
 		}
-		if (surfaceColour.a > 0.5f) {
+		if (surfaceColour.a > 0.75f) {
 			return true;
 		}
 	} else {
@@ -341,7 +341,7 @@ bool visplaneCheck3D(vec3 pointA, vec3 pointB, Visplane thisVisplane, vec3 LOSDe
 			if (surfaceColour.a > EPSILON_ALT) {
 				globalLightTint.rgba *= surfaceColour.rgba;
 			}
-			if (surfaceColour.a > 0.5f) {
+			if (surfaceColour.a > 0.75f) {
 				return true;
 			}
 		} else {
@@ -378,7 +378,7 @@ bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement
 			if (surfaceColour.a > EPSILON_ALT) {
 				globalLightTint.rgba *= surfaceColour.rgba;
 			}
-			if (surfaceColour.a >= 0.5f) {
+			if (surfaceColour.a >= 0.75f) {
 				return true;
 			}
 		} else {

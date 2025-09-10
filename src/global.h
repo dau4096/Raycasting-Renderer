@@ -229,19 +229,20 @@ static inline GLuint combineTextureData2(
 static void ensureACW(glm::vec2 vertices[8], size_t numVertices) {
 	//Ensures the winding order is always Anti-Clockwise.
 	float signedArea = 0.0f;
-	for (int i = 0; i < numVertices; ++i) {
-		glm::vec2 a = vertices[i];
-		glm::vec2 b = vertices[(i + 1) % numVertices];
-		signedArea += (b.x - a.x) * (b.y + a.y);
+	for (size_t i = 0; i < numVertices; ++i) {
+		const glm::vec2& a = vertices[i];
+		const glm::vec2& b = vertices[(i + 1) % numVertices];
+		signedArea += (a.x * b.y) - (b.x * a.y);
 	}
 
-	if (signedArea > 0.0f) {
+	if (signedArea < 0.0f) {
 		//The winding order was clockwise, reverse order.
-		for (int i = 0; i < numVertices / 2; ++i) {
+		for (size_t i = 0; i < numVertices / 2; ++i) {
 			std::swap(vertices[i], vertices[numVertices - 1 - i]);
 		}
 	}
 }
+
 
 struct Visplane {
 	glm::vec2 vertices[8];
@@ -350,12 +351,12 @@ struct Visplane {
 };
 
 struct VisplaneGPU {
-	glm::vec4 vertices[4];
-	GLuint numVertices;
-	float height;
-	GLuint textureData1;
-	GLuint textureData2;
-	glm::vec4 boundingBox;
+	alignas(16) glm::vec4 vertices[4];
+	alignas(4)  GLuint numVertices;
+	alignas(4)  float height;
+	alignas(4)  GLuint textureData1;
+	alignas(4)  GLuint textureData2;
+	alignas(16) glm::vec4 boundingBox;
 
 	VisplaneGPU()
 		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox() {}
@@ -373,13 +374,17 @@ struct VisplaneGPU {
 			);
 			for (size_t i=0; i<visplane->numVertices; i += 2) {
 				glm::vec2 a = visplane->vertices[i];
-				glm::vec2 b = (i+1 < visplane->numVertices) ? visplane->vertices[i+1] : glm::vec2(0.0f, 0.0f);
+				bool hasAnotherVertex = (i+1 < visplane->numVertices);
+				glm::vec2 b = (hasAnotherVertex) ? visplane->vertices[i+1] : glm::vec2(0.0f, 0.0f);
 				vertices[i/2] = glm::vec4(a, b);
 
-				boundingBox.x = min(min(a.x, b.x), boundingBox.x);
-				boundingBox.y = min(min(a.y, b.y), boundingBox.y);
-				boundingBox.z = max(max(a.x, b.x), boundingBox.z);
-				boundingBox.w = max(max(a.y, b.y), boundingBox.w);
+				glm::vec2 minPT = (hasAnotherVertex) ? glm::min(a,b) : a;
+				glm::vec2 maxPT = (hasAnotherVertex) ? glm::max(a,b) : a;
+
+				boundingBox = glm::vec4(
+					min(minPT, glm::vec2(boundingBox)),
+					max(maxPT, glm::vec2(boundingBox.z, boundingBox.w))
+				);
 			}
 		}
 };
@@ -496,12 +501,12 @@ struct WallGPU {
 
 
 struct WallIntersect {
-	glm::vec2 position2D;
-	glm::vec2 normal2D;
-	glm::uint projections;
-	glm::uint wallIndexAndXUV;
-	float distanceSQ;
-	float _padding;
+	alignas(8) glm::vec2 position2D;
+	alignas(8) glm::vec2 normal2D;
+	alignas(4) glm::uint projections;
+	alignas(4) glm::uint wallIndexAndXUV;
+	alignas(4) float distanceSQ;
+	alignas(4) float _padding;
 
 	WallIntersect()
 		: position2D(), normal2D(),
