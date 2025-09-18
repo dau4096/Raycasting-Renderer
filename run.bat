@@ -1,5 +1,5 @@
 @ECHO off
-CD C:\Users\User\Documents\GitHub\Raycasting-Renderer\src
+CD src
 
 
 REM Delete all .o files and force recompile.
@@ -9,8 +9,8 @@ IF EXIST "constants.o" (
 IF EXIST "physics.o" (
     DEL /Q "physics.o"
 )
-IF EXIST "render.o" (
-    DEL /Q "render.o"
+IF EXIST "graphics.o" (
+    DEL /Q "graphics.o"
 )
 IF EXIST "utils.o" (
     DEL /Q "utils.o"
@@ -20,7 +20,7 @@ IF EXIST "loader.o" (
 )
 
 
-CD C:\Users\User\Documents\GitHub\Raycasting-Renderer
+CD ..
 IF EXIST "main.o" (
     DEL /Q "main.o"
 )
@@ -30,3 +30,7 @@ mingw32-make
 REM Wait for user, then start app.exe.
 PAUSE
 start app.exe
+IF %ERROR_LEVEL% NEQ 0 (
+    ECHO An error occurred; %ERROR_LEVEL% &Exit /b 1
+    PAUSE
+)

@@ -3,6 +3,8 @@
 
 <!-- Keybinds -->
 <keybinds>
+
+	<!-- Movement keys -->
 	<bind function="MOVE_FORWARD" key="KEY_W" />
 	<bind function="MOVE_BACKWARD" key="KEY_S" />
 	<bind function="MOVE_LEFT" key="KEY_A" />
@@ -11,41 +13,120 @@
 	<bind function="MOVE_CROUCH" key="KEY_LEFT_CONTROL" />
 	<bind function="MOVE_SPRINT" key="KEY_LEFT_SHIFT" />
 
+
+	<!-- Keyboard camera control -->
+	<bind function="CAMERA_PITCH_UP" key="KEY_UP" />
+	<bind function="CAMERA_PITCH_DOWN" key="KEY_DOWN" />
+	<bind function="CAMERA_YAW_LEFT" key="KEY_LEFT" />
+	<bind function="CAMERA_YAW_RIGHT" key="KEY_RIGHT" />
+
+
+
+	<!-- Interaction keys -->
 	<bind function="USE_INTERACT" key="KEY_E" />
 	<bind function="USE_HEADLAMP" key="KEY_F" />
 	<bind function="USE_VIEWZOOM" key="KEY_C" />
 
+
+
+	<!-- Misc keys -->
 	<bind function="META_SCREENSHOT" key="KEY_F10" />
 	<bind function="META_RELOAD_STAGE" key="KEY_F5" />
 	<bind function="META_RELOAD_ENV" key="KEY_F4" />
 	<bind function="META_EXIT" key="KEY_ESCAPE" />
 	<bind function="META_FREECURSOR" key="KEY_1" />
+
 </keybinds>
 
 
 <!-- Configs -->
 <config>
-	<option function="TURN_SPEED_MOUSE" value="0.25" />
+
+	<!-- - - - - - - - -->
+	<!-- Mouse Control -->
+	<!-- - - - - - - - -->
+	<!-- Sensitivity -->
 	<option function="TURN_SPEED_KEYBOARD" value="1.0" />
+	<option function="TURN_SPEED_MOUSE" value="0.125" />
 
-	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
-	<option function="VIEW_FOV" value="70.0" />
-	<option function="VIEW_MAX_RAY_DIST" value="128.0" />
-	<option function="VIEW_SHOW_HUD" value="FALSE" />
-	<option function="VIEW_BOB" value="TRUE" />
+
+
+
+
+
+	<!-- - - - - - - - - - - - -->
+	<!-- Environment rendering -->
+	<!-- - - - - - - - - - - - -->
+	<!-- View Preference -->
+	<option function="VIEW_VLOOK" value="TRUE" />
 	<option function="VIEW_LEAN" value="TRUE" />
-	<option function="VIEW_VLOOK" value="FALSE" />
-	<option function="VIEW_SMOOTHING" value="FALSE" />
-	<option function="VIEW_ANTIALIAS_LEVEL" value="0.0" />
-	<option function="VIEW_LUMINANCE_QUANTISATION" value="12.0" />
+	<option function="VIEW_FOV" value="70.0" />
+	<option function="VIEW_BOB" value="TRUE" />
+
+
+	<!-- Rendering specific -->
+	<option function="VIEW_RENDER_RESOLUTION_QUALITY" value="MEDIUM" />
+	<option function="VIEW_TEXTURE_QUALITY" value="HIGH" />
+	<option function="VIEW_USE_MIPMAPPING" value="TRUE" />
+	<option function="VIEW_MAX_RAY_DIST" value="127.0" />
+	<option function="VIEW_CORRECTION" value="TRUE" />
 	<option function="VIEW_MAX_FREQ" value="75.0" />
-	<option function="VIEW_MAX_PORTAL_RECURSIONS" value="8.0" />
 
-	<option function="META_DRAW_UV" value="FALSE" />
-	<option function="META_SHOW_FREQ_UI" value="TRUE" />
-	<option function="META_SHOW_FREQ_CONSOLE" value="FALSE" />
+
+	<!-- Lighting -->
+	<option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" value="TRUE" />
+	<option function="VIEW_ALLOW_TRANSPARENCY" value="TRUE" />
+	<option function="VIEW_SHADOW_QUALITY" value="FULL" />
+	<option function="VIEW_LIGHTING" value="TRUE" />
+
+
+
+
+
+
+	<!-- - - - - - - - - - - - -->
+	<!-- Screenspace rendering -->
+	<!-- - - - - - - - - - - - -->
+	<!-- HUD/UI -->
+	<option function="VIEW_INTERFACE_IN_SCREENSHOT" value="FALSE" />
+	<option function="VIEW_WIGGLY_TEXTOBJECTS" value="FALSE" />
+	<option function="VIEW_SHOW_HUD" value="TRUE" />
+
+
+	<!-- Post-processing -->
+	<option function="VIEW_LUMINANCE_QUANTISATION" value="0.0" />
+	<option function="VIEW_ANTIALIAS" value="FALSE" />
+
+
+	<!-- Tickrate/Framerate -->
+	<option function="META_SHOW_FRAMERATE_CONSOLE" value="FALSE" />
+	<option function="META_SHOW_FRAMERATE_UI" value="TRUE" />
+	<option function="META_SHOW_TICKRATE_UI" value="FALSE" />
+	<option function="META_SHOW_DT_CONSOLE" value="FALSE" />
+	<option function="VIEW_VSYNC" value="FALSE" />
+
+
+
+
+
+
+	<!-- - - - - - - - - - - - -->
+	<!-- Miscellaneous options -->
+	<!-- - - - - - - - - - - - -->
+	<!-- Debug -->
 	<option function="META_SHOW_CONSOLE" value="TRUE" />
-	<option function="META_STAGE_NAME" value="dev-quake" />
+	<option function="META_DEBUG_MODE" value="NONE" />
+	<option function="META_SHOW_DATA" value="FALSE" />
 
+
+	<!-- Stage-specific -->
+	<option function="META_STAGE_NAME" value="dev-lighting" />
+	<option function="META_DYNAMIC_UPD" value="FALSE" />
+	<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" value="FALSE" />
+
+
+	<!-- Misc -->
 	<option function="PHYS_NO_COLLIDE" value="FALSE" />
+	<option function="PHYS_FLY" value="FALSE" />
+
 </config>

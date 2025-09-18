@@ -6,20 +6,13 @@
 
 namespace physics {
 
-	bool circleLineIntersect(utils::Wall line, glm::vec2 circlePosition, float radius);
+	bool circleLineIntersect(structs::Wall line, glm::vec2 circlePosition, float radius);
 
-	void playerMove(
-		utils::Player *player, float freq,
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Sprite, constants::MAX_SPRITES>* spriteData,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData
-	);
+	void playerMovement();
 
-	void updateSpecials(
-		std::array<utils::Wall, constants::MAX_WALLS>* wallData,
-		std::array<utils::Visplane, constants::MAX_VISPLANES>* visplaneData,
-		utils::Player *player, float freq, bool interactKey
-	);
+	void updatePhysicsObjects();
+
+	void updateSpecials(bool interactKey);
 }
 
 #endif

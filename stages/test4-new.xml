@@ -1,0 +1,88 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="" />
+    <texture scale="1.0 1.0" offset="0.0 0.0 0.0" />
+    <sun sunDirection="0.0 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="0.0" />
+    <physics gravity="0.486" killPlaneZ="-32.0" />
+    <player startPoint="10.0 0.0 0.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+
+<environment>
+    <visplane start="-20.0 -10.0" end="20.0 10.0" height="-1.0" texture="classic3" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+
+
+    <cuboid start="-0.5 -2.5 -0.25" end="0.5 -1.5 0.75" sideTexture="classic2" topTexture="classic2" bottomTexture="classic2" useWorldUVX="FALSE" useWorldUVY="FALSE" useWorldUVZ="FALSE" />
+    <cuboid start="4.5 -2.5 0.5" end="5.5 -1.5 3.5" sideTexture="classic2" topTexture="classic2" bottomTexture="classic2" useWorldUVX="FALSE" useWorldUVY="FALSE" useWorldUVZ="FALSE" />
+
+
+    <!-- Slopes -->
+    <displacement texture="wall2" > <vertices v0="1.0 0.0 -1.0" v1="-3.2 0.0 1.0" v2="-3.2 3.2 1.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+    <displacement texture="wall2" > <vertices v0="1.0 0.0 -1.0" v1="-3.2 3.2 1.0" v2="1.0 3.2 -1.0" /> <uv uv0="0.0 0.0" uv1="1.0 1.0" uv2="0.0 1.0" /> </displacement>
+
+    <displacement texture="classic2" > <vertices v0="-5.0 -5.0 3.0" v1="-5.0 -2.5 2.0" v2="-2.5 -2.5 2.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+
+    <displacement texture="classic2" > <vertices v0="-5.0 -5.0 3.0" v1="-2.5 -5.0 3.0" v2="-2.5 -2.5 2.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+
+
+    <!-- Leaning wall -->
+    <displacement texture="classic2" > <vertices v0="0.0 7.0 1.0" v1="2.5 7.0 1.0" v2="2.5 7.5 -1.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+    <displacement texture="classic2" > <vertices v0="0.0 7.0 1.0" v1="0.0 7.5 -1.0" v2="2.5 7.5 -1.0" /> <uv uv0="0.0 0.0" uv1="0.0 1.0" uv2="1.0 1.0" /> </displacement>
+
+    <displacement texture="classic2" > <vertices v0="0.0 7.5 -1.0" v1="-2.5 7.5 -1.0" v2="-2.5 7.5 1.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+    <displacement texture="classic2" > <vertices v0="0.0 7.5 -1.0" v1="0.0 7.0 1.0" v2="-2.5 7.5 1.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+
+    <displacement texture="classic2" > <vertices v0="-5.0 7.5 -1.0" v1="-2.5 7.5 -1.0" v2="-2.5 7.5 1.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+    <displacement texture="classic2" > <vertices v0="-5.0 7.5 -1.0" v1="-5.0 7.5 1.0" v2="-2.5 7.5 1.0" /> <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+
+
+
+    <!-- Other -->
+    <visplane start="-5.0 -5.0" end="-2.5 -2.5" height="0.0" texture="classic3" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+
+    <displacement texture="2tone" > <vertices v0="6.0 -4.0 0.0" v1="5.0 -5.0 0.0" v2="5.5 -4.5 1.0" /> <uv uv0="0.0 1.0" uv1="1.0 0.0" uv2="1.0 1.0" /> </displacement>
+
+    <visplane start="9.0 10.0" end="10.0 10000.0" height="-1.0" texture="2tone" useWorldUVY="FALSE" />
+
+    <cuboid start="14.5 4.5 -0.75" end="15.5 5.5 0.25" type="C_PASSTHROUGH" sideTexture="tint" topTexture="tint" bottomTexture="tint" useWorldUVX="FALSE" useWorldUVY="FALSE" useWorldUVZ="FALSE" />
+    <wall start="14.5 4.5 -0.75" end="15.5 5.5 0.25" type="W_TRIGGER" flag="triggerTest" texture="nodraw" />
+
+
+    <!-- "CUBE_PATH" (C_MOVEY_SLOW) area -->
+    <wall start="15.0 -10.0 -1.0" end="15.0 -8.5 0.5" type="W_SWITCH" flag="doorTest" texture="button3" altTexture="button3" useWorldUVX="FALSE" />
+    <cuboid start="15.01 -8.5 -1.0" end="15.11 -7.5 0.5" type="C_MOVEY_SLOW" flag="doorTest" extra="-1.0" useWorldUVX="FALSE" useWorldUVZ="FALSE" sideTexture="classic" topTexture="classic" bottomTexture="classic" />
+    <wall start="15.0 -7.5 0.0" end="15.0 -6.5 0.5" texture="blank" />
+    <wall start="15.0 -10.0 0.5" end="15.0 -6.5 1.0" texture="blank" />
+
+
+    <!-- W_SWITCHes. -->
+    <wall start="15.0 -7.5 -1.0" end="15.0 -6.5 0.0" type="W_SWITCH" flag="flag2" texture="button" useWorldUVX="FALSE" />
+    <wall start="15.0 -6.0 -1.0" end="15.0 -5.0 0.0" type="W_SWITCH" flag="flag3" texture="button2" useWorldUVX="FALSE" />
+
+</environment>
+
+<objects>
+
+    <!-- Generic lights. -->
+    <light position="-5.0 0.0 10.0" intensity="25.0" />
+    <light position="10.0 -9.25 15.0" intensity="25.0" />
+
+
+    <!-- Supplies sprites -->
+    <sprite position="9.25 -9.5 -0.65" texture="health" width="1.0" height="1.0" />
+    <sprite position="9.75 -9.5 -0.65" texture="health2" width="1.0" height="1.0" />
+    <sprite position="10.25 -9.5 -0.65" texture="energy" width="1.0" height="1.0" />
+    <sprite position="10.75 -9.5 -0.65" texture="energy2" width="1.0" height="1.0" />
+
+
+    <!-- Logic lights -->
+    <light position="13.0 5.0 2.0" intensity="7.5" flag="triggerTest" />
+    <light position="14.0 -9.25 5.0" intensity="10.0" flag="doorTest" />
+
+</objects>
+
+<logic>
+
+</logic>
