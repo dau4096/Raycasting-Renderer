@@ -1,11 +1,13 @@
 /* environment.frag */
 #version 460 core
 
+layout(rgba32f, binding=0) writeonly uniform image2D portalMaskWO;
 
 //Samplers
 layout(binding=0) uniform sampler2DArray textureArray;
 layout(binding=1) uniform sampler2DArray normalMapArray;
 layout(binding=2) uniform sampler2D skyboxTexture;
+layout(binding=3) uniform sampler2D portalMaskRO;
 
 //CameraData
 uniform float maxRayDistance;
@@ -16,6 +18,7 @@ uniform bool zoom;
 uniform bool useMipMapping;
 uniform float currentTime;
 uniform bool viewCorrection;
+uniform int portalIteration;
 
 //PlayerData
 uniform float playerViewAngle;
@@ -59,6 +62,8 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Wall Type
+	float extra;		//Extra data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -94,6 +99,7 @@ struct IntersectionData {
 	uint index;			//The index of the found object
 	int foundType;		//The type of the found object
 	vec2 normal2D;		//Normal vector of the intersect.
+	bool isPortal;		//Is surface a portal.
 };
 #define STACK_SIZE 8
 IntersectionData stack[STACK_SIZE];
@@ -431,7 +437,16 @@ void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-	bool shouldDrawToPositionMap = true;//(framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
+	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
+
+
+
+	if (portalIteration > 0u) {
+		vec4 maskValue = texture(portalMaskRO, framePosition);
+		if (!(maskValue.r)) {return; /* Not in mask. */}
+		
+	}
+
 
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
@@ -473,6 +488,7 @@ void main() {
 		uint wallIndex = (intersect.wallIndexAndXUV >> 8);
 		float xUV = (intersect.wallIndexAndXUV & 0xFF) / 255.0f;
 		Wall thisWall = walls[wallIndex];
+		thisIntersect.isPortal = (thisWall.type == 15.0f); //Portal surface.
 		
 
 		int textureID;
@@ -584,6 +600,9 @@ void main() {
 			gl_FragDepth = 1.0f / (inversesqrt(closestHalfAlphaIntersect.distanceSQ) * maxRayDistance);
 		}
 		outFragColour = vec4(mixColour.rgb, 1.0f);
+		if (closestHalfAlphaIntersect.isPortal) {
+			imageStore(portalMask);
+		}
 		if (shouldDrawToPositionMap) {
 			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 			uint iData = (closestHalfAlphaIntersect.index << 3) | (closestHalfAlphaIntersect.foundType & 0x7);

@@ -200,7 +200,7 @@ static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformN
 		glUniform4f(location, value.x, value.y, value.z, value.w);
 	}
 }
-static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float currentTime) {
+static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float currentTime, unsigned int portalIteration=0u) {
 	//Applies value if shader has uniform of matching name.
 
 	//Camera Data
@@ -212,6 +212,7 @@ static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float 
 	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
 	bindUniformValue(shaderProgram, "currentTime", currentTime);
 	bindUniformValue(shaderProgram, "viewCorrection", utils::configToBool("VIEW_CORRECTION"));
+	bindUniformValue(shaderProgram, "portalIteration", static_cast<int>(portalIteration));
 
 	//Player Data
 	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
@@ -1358,6 +1359,8 @@ void prepareOpenGL() {
 	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
 	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	glObjectLabel(GL_TEXTURE, GLIndex::screenshotImage2D, -1, "screenshotImage2D");
+	GLIndex::portalMask = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y+1u);
+	glObjectLabel(GL_TEXTURE, GLIndex::portalMask, -1, "portalMask");
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
@@ -1817,42 +1820,65 @@ void draw(double blendingAlpha, double currentTime) {
 	player.interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
 	player.cameraPosition = player.interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
 	updateSSBOs(false);
+	glClearTexImage(GLIndex::portalMask, 0, GL_RGBA, GL_FLOAT, nullptr);
 
 
 
-	//Raycasting compute shader.
-	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
-	glUseProgram(GLIndex::raycastShader);
-	uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime);
-	size_t numberOfObjects = numVisibleWalls + numVisibleVisplanes;
-	glDispatchCompute(
-		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
-		(numberOfObjects + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
-		1
-	);
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	GLErrorcheck("Raycasting Shader", true);
+	for (unsigned int portalIteration=0u; portalIteration<=utils::configToInt("VIEW_PORTAL_ITERATIONS"); portalIteration++) {
+		//Raycasting compute shader.
+		const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
+		glUseProgram(GLIndex::raycastShader);
+		uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime, portalIteration);
+		glBindTextureUnit(0, GLIndex::portalMask);
+		size_t numberOfObjects = numVisibleWalls + numVisibleVisplanes;
+		glDispatchCompute(
+			(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
+			(numberOfObjects + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
+			1
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		GLErrorcheck("Raycasting Shader", true);
 
 
-	//Environment Shader.
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_ALWAYS);
-	glDepthMask(GL_TRUE);
-	glUseProgram(GLIndex::envShader);
-	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
+		//Environment Shader.
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_ALWAYS);
+		glDepthMask(GL_TRUE);
+		glUseProgram(GLIndex::envShader);
+		glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
-	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
-	glBindTextureUnit(2, GLIndex::skyboxTextureID);
+		glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
+		glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+		glBindTextureUnit(2, GLIndex::skyboxTextureID);
+		glBindTextureUnit(3, GLIndex::portalMask);
 
-	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
-	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
+		//Uniforms
+		uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime, portalIteration);
+		glBindImageTexture(0, GLIndex::portalMask, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
-	renderingGeneric("Environment Shader");
+		renderingGeneric("Environment Shader");
 
-	
+
+		//Sprite Shader.
+		glUseProgram(GLIndex::spriteShader);
+		glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
+
+		glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
+		glBindTextureUnit(1, GLIndex::frameDepthComponent);
+		glBindTextureUnit(2, GLIndex::frameAlbedoComponent);
+
+		//Uniforms
+		uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime, portalIteration);
+		glBindImageTexture(0, GLIndex::portalMask, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+		uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
+
+		renderingGeneric("Sprite Shader");
+
+	}
+
+	/*
 	//Displacements in 2 parts;
 	//3D portion;
 	frame::drawDisplacements(blendingAlpha, currentTime);
@@ -1869,22 +1895,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
 	renderingGeneric("Displacements Shaders");
-
-
-	//Sprite Shader.
-	glUseProgram(GLIndex::spriteShader);
-	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
-
-	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-	glBindTextureUnit(1, GLIndex::frameDepthComponent);
-	glBindTextureUnit(2, GLIndex::frameAlbedoComponent);
-
-	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
-
-	renderingGeneric("Sprite Shader");
-
+	*/
 
 
 	//Lighting Shader

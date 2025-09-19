@@ -39,6 +39,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	GLIndex::screenshotImage2D = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	GLIndex::portalMask = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y+1u);
 
 	//Framebuffers
 	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);

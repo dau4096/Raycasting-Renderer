@@ -2,6 +2,8 @@
 #version 460 core
 
 
+layout(binding=0) uniform sampler2D portalMask;
+
 
 struct Visplane {
 	vec4 vertices[4];	//2D points
@@ -20,6 +22,8 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Wall Type
+	float extra;		//Extra data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -44,8 +48,6 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 layout(std430, binding=8) buffer visplaneCheckSSBO {
 	uint visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 };
-layout(binding=0) uniform atomic_uint validWallIntersects;
-layout(binding=1) uniform atomic_uint validVisplaneIntersects;
 
 
 
@@ -68,6 +70,7 @@ uniform vec3 playerPosition;
 uniform float playerViewAngle;
 uniform ivec2 renderResolution;
 uniform bool viewCorrection;
+uniform int portalIteration;
 
 
 
@@ -307,10 +310,25 @@ void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D) {
 
 void main() {
 	uint screenX = gl_GlobalInvocationID.x;
+
 	uint IDX = gl_GlobalInvocationID.y;
 	bool isWall = IDX < numVisibleWalls;
 	bool isVP = (IDX >= numVisibleWalls) && (IDX < numVisibleWalls + numVisibleVisplanes);
 	if ((screenX >= renderResolution.x) || (!isWall && !isVP)) {return; /* Offscreen or out of range. */}
+
+	//Portal-masking;
+	if ((portalIteration > 0u) && bool(texture(portalMask, ivec2(screenX, renderResolution.y)).r)) {
+		if (isWall) {
+			uint wallIndex = visibleWallIndices[IDX];
+			uint SSBOIndex = (screenX * numWalls) + wallIndex;
+			writeNoWallIntersect(SSBOIndex); //No intersect.
+		} else if (isVP) {
+			uint wallIndex = visibleWallIndices[IDX];
+			uint SSBOIndex = (screenX * numWalls) + wallIndex;
+			visplaneCheckIndices[SSBOIndex] = 0u; //No intersect.			
+		}
+		return; //Skip this horizontal position as no portal is present on this render, and is not initial pass.
+	}
 
 
 	zoomEffect = (zoom) ? zoomFactor : 1.0f;

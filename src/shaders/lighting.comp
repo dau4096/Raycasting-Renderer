@@ -59,6 +59,8 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Wall Type
+	float extra;		//Extra data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];

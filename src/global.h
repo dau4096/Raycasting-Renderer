@@ -96,6 +96,7 @@ inline bool shouldShowFPS, shouldShowTPS;
 inline std::vector<float> rollingFPS;
 inline std::vector<float> rollingTPS;
 
+inline int numPortalRenders;
 inline bool headLampEnabled;
 inline bool interactKey;
 inline bool prevInteract;
@@ -132,6 +133,7 @@ inline GLuint spriteShader, lightingShader, uiShader, displayShader;
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
+inline GLuint portalMask;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
@@ -483,14 +485,17 @@ struct WallGPU {
 	alignas(8) glm::vec2 direction;
 	alignas(4) GLuint textureData1;
 	alignas(4) GLuint textureData2;
+	alignas(4) GLuint wallType;
+	alignas(4) float extra;
 
 	WallGPU()
 		: start(), end(), direction(),
-		  textureData1(), textureData2() {}
+		  textureData1(), textureData2()
+		  wallType(), extra() {}
 
 	WallGPU(Wall *wall, Player player)
 		: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
-		  textureData2(wall->textureData2) {
+		  textureData2(wall->textureData2), wallType(static_cast<GLuint>(wall->type)), extra(wall->data) {
 			if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
 				textureData1 = wall->textureData1s.second;
 			} else {
