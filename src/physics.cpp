@@ -958,6 +958,7 @@ void updateSpecials(bool interactKey) {
 				break;
 			}
 
+			case V_PORTAL:
 			case V_TELEPORT: {
 				if (planeTouch && (vPlane.internal->first <= 0.0f)) {
 					int partnerIndex = int(vPlane.data);

@@ -100,8 +100,6 @@
 
 
     <!-- V_TELEPORT and other vPlane specials testing -->
-    <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="90.0" />
-    <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_TELEPORT" extra="TeleTest" texture="quake" exitDirection="-90.0" />
     <visplane start="-8.0 13.0" end="-7.0 14.0" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="90.0" />
     <visplane start="6.5 -9.5" end="7.5 -10.5" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="-90.0" useWorldUVX="FALSE" useWorldUVY="FALSE" />
 
@@ -126,6 +124,13 @@
     <visplane start="-9.0 17.0" end="-10.0 250.0" height="0.125" type="V_CONVEY" extra="8.0" direction="0.0 -1.0" texture="brick2" />
     <wall start="9.0 251.0 0.0" end="10.0 251.0 1.0" texture="brick3" />
     <wall start="-9.0 16.0 0.0" end="-10.0 16.0 1.0" texture="brick3" />
+
+
+    <!-- Portal testing -->
+    <wall start="-0.5 7.5 0.0" end="0.5 7.5 2.0" type="W_PORTAL" flag="portalTest" />
+    <wall start="-0.5 -11.5 3.0" end="0.5 -11.5 5.0" type="W_PORTAL" flag="portalTest" />
+    <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="90.0" />
+    <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="-90.0" />
 
 </environment>
 

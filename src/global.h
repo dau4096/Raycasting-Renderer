@@ -132,6 +132,7 @@ inline GLuint spriteShader, lightingShader, uiShader, displayShader;
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
+inline GLuint portalTextureID;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
@@ -357,13 +358,16 @@ struct VisplaneGPU {
 	alignas(4)  GLuint textureData1;
 	alignas(4)  GLuint textureData2;
 	alignas(16) glm::vec4 boundingBox;
+	alignas(4)  GLuint type;
+	alignas(4)  float extra;
 
 	VisplaneGPU()
-		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox() {}
+		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox(), type(), extra() {}
 
 	VisplaneGPU(Visplane *visplane, Player player)
 		: numVertices(visplane->numVertices), height(visplane->height),
-		  textureData1(visplane->textureData1), textureData2(visplane->textureData2) {
+		  textureData1(visplane->textureData1), textureData2(visplane->textureData2),
+		  type(visplane->type), extra(visplane->data) {
 			for (int i=0; i<4; i++) {
 				vertices[i] = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 			}
@@ -432,6 +436,7 @@ struct Wall {
 					textureData1s.second = combineTextureData1(textureID1, swapUVXY2);
 				}
 
+				isWorldSpaceY |= (type == W_PORTAL);
 				textureData2 = combineTextureData2(
 					isWorldSpaceX, isWorldSpaceY,
 					textureScale, textureOffset
@@ -463,6 +468,7 @@ struct Wall {
 					textureData1s.second = combineTextureData1(textureID1, swapUVXY2);
 				}
 
+				isWorldSpaceY |= (type == W_PORTAL);
 				textureData2 = combineTextureData2(
 					isWorldSpaceX, isWorldSpaceY,
 					textureScale, textureOffset
@@ -483,14 +489,18 @@ struct WallGPU {
 	alignas(8) glm::vec2 direction;
 	alignas(4) GLuint textureData1;
 	alignas(4) GLuint textureData2;
+	alignas(4) GLuint type;
+	alignas(4) float extra;
+
 
 	WallGPU()
 		: start(), end(), direction(),
-		  textureData1(), textureData2() {}
+		  textureData1(), textureData2(),
+		  type(), extra() {}
 
 	WallGPU(Wall *wall, Player player)
 		: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
-		  textureData2(wall->textureData2) {
+		  textureData2(wall->textureData2), type(static_cast<GLuint>(wall->type)), extra(wall->data) {
 			if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
 				textureData1 = wall->textureData1s.second;
 			} else {

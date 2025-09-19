@@ -6,6 +6,8 @@
 layout(binding=0) uniform sampler2DArray textureArray;
 layout(binding=1) uniform sampler2DArray normalMapArray;
 layout(binding=2) uniform sampler2D skyboxTexture;
+layout(binding=3) uniform sampler2D portalTexture;
+
 
 //CameraData
 uniform float maxRayDistance;
@@ -48,6 +50,8 @@ struct Visplane {
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
 	vec4 boundingBox;	//Bounding box in 2D.
+	uint type;			//Visplanetype.
+	float extra;		//Extra data.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -59,6 +63,8 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Walltype.
+	float extra;		//Extra data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -94,6 +100,7 @@ struct IntersectionData {
 	uint index;			//The index of the found object
 	int foundType;		//The type of the found object
 	vec2 normal2D;		//Normal vector of the intersect.
+	bool isPortal;		//No lighting applied.
 };
 #define STACK_SIZE 8
 IntersectionData stack[STACK_SIZE];
@@ -264,79 +271,99 @@ void unpackTextureFormattingBits2(
 #define T_VISPLANE 0x2
 
 void getNormal(vec3 UV, float LODIndex, inout vec3 surfaceNormal, uint surfaceType) {
-    vec3 normalMapValue = textureLod(normalMapArray, UV, LODIndex).xyz;
+	vec3 normalMapValue = textureLod(normalMapArray, UV, LODIndex).xyz;
 
-    if (surfaceType == T_WALL) {
-        //Tangent-space normals.
-        vec3 tangentNormal = normalize(normalMapValue * 2.0 - 1.0);
-        vec3 N = surfaceNormal;
-        vec3 T = (abs(N.z) > 0.999) ? vec3(1.0, 0.0, 0.0) : normalize(cross(NORMAL_UP, N));
-        vec3 B = cross(N, T);
+	if (surfaceType == T_WALL) {
+		//Tangent-space normals.
+		vec3 tangentNormal = normalize(normalMapValue * 2.0 - 1.0);
+		vec3 N = surfaceNormal;
+		vec3 T = (abs(N.z) > 0.999) ? vec3(1.0, 0.0, 0.0) : normalize(cross(NORMAL_UP, N));
+		vec3 B = cross(N, T);
 
-        //Tangent-space to worldspace.
-        surfaceNormal = normalize(mat3(T, B, N) * tangentNormal) * vec3(1.0, 1.0, -1.0);
+		//Tangent-space to worldspace.
+		surfaceNormal = normalize(mat3(T, B, N) * tangentNormal) * vec3(1.0, 1.0, -1.0);
 
-    } else if (surfaceType == T_VISPLANE) {
-        vec3 thisNormal = normalMapValue * 2.0 - 1.0;
-        surfaceNormal = thisNormal * vec3(1.0, 1.0, sign(surfaceNormal.z));
-    }
+	} else if (surfaceType == T_VISPLANE) {
+		vec3 thisNormal = normalMapValue * 2.0 - 1.0;
+		surfaceNormal = thisNormal * vec3(1.0, 1.0, sign(surfaceNormal.z));
+	}
 }
 
 
 vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePosition, uint surfaceType) {
-    if (debugMode == 1) {
-        return vec4(UV.xy, UV.z / 32.0, maxRayDistance);
-    }
+	if (debugMode == 1) {
+		return vec4(UV.xy, UV.z / 32.0, maxRayDistance);
+	}
 
-    if (!useMipMapping) {
-        return textureLod(textureArray, UV, 0.0);
-    }
+	if (!useMipMapping) {
+		return textureLod(textureArray, UV, 0.0);
+	}
 
-    if (MIPMAP_FORCE_LEVEL_ENABLED) {
-        return textureLod(textureArray, UV, MIPMAP_FORCE_LEVEL_VALUE);
-    }
+	if (MIPMAP_FORCE_LEVEL_ENABLED) {
+		return textureLod(textureArray, UV, MIPMAP_FORCE_LEVEL_VALUE);
+	}
 
-    //LODIndex takes depth and slope components to be as unobtrusive as possible.
-    float depthComponent = (MIPMAP_LEVELS * 2.0 / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
-    float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
-    float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS);
+	//LODIndex takes depth and slope components to be as unobtrusive as possible.
+	float depthComponent = (MIPMAP_LEVELS * 2.0 / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
+	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
+	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS);
+	float lod = ceil(LODIndex);
 
-    if (MIPMAP_DEBUG) {
-        return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0, 1.0);
-    }
 
-    float lod = ceil(LODIndex);
-    vec4 mipColour = textureLod(textureArray, UV, lod);
-    getNormal(UV, lod, surfaceNormal, surfaceType);
+	if (UV.z < 0) {
+		//Portal
+		return textureLod(portalTexture, fract(UV.xy), lod);
+	}
 
-    if (!MIPMAP_BLEND_ENABLED) {
-        return mipColour;
-    }
+	if (MIPMAP_DEBUG) {
+		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0, 1.0);
+	}
 
-    vec4 mipColourLow = textureLod(textureArray, UV, lod - 1.0);
-    return mix(mipColourLow, mipColour, fract(LODIndex));
+	vec4 mipColour = textureLod(textureArray, UV, lod);
+	getNormal(UV, lod, surfaceNormal, surfaceType);
+
+	if (!MIPMAP_BLEND_ENABLED) {
+		return mipColour;
+	}
+
+	vec4 mipColourLow = textureLod(textureArray, UV, lod - 1.0);
+	return mix(mipColourLow, mipColour, fract(LODIndex));
 }
 
 
-vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal) {
-    if (thisIntersect.foundType == T_WALL) {
-        surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0);
+vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal, out bool isPortal) {
+	vec3 UV = thisIntersect.UV;
+	isPortal = false;
+	if (thisIntersect.foundType == T_WALL) {
+		surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0);
+		Wall thisWall = walls[thisIntersect.index];
+		if (thisWall.type == 15) { //Portal type.
+			vec2 surfaceDirection = vec2(-thisIntersect.normal2D.y, thisIntersect.normal2D.x);
+			vec2 fragDirection = normalize(thisIntersect.position.xy - playerPosition.xy);
+			float dotProd = 0.5f - abs(dot(fragDirection.xy, surfaceDirection.xy));
+			UV = vec3(dotProd, thisIntersect.UV.y, -1.0f);
+			isPortal = true;
+		}
 
-    } else if (thisIntersect.foundType == T_VISPLANE) {
-        Visplane vp = visplanes[thisIntersect.index];
-        surfaceNormal = vec3(0.0, 0.0, (vp.height < playerPosition.z) ? 1.0 : -1.0);
+	} else if (thisIntersect.foundType == T_VISPLANE) {
+		Visplane thisVisplane = visplanes[thisIntersect.index];
+		surfaceNormal = vec3(0.0, 0.0, (thisVisplane.height < playerPosition.z) ? 1.0 : -1.0);
+		if (thisVisplane.type == 15) { //Portal type.
+			UV = vec3(fract(thisIntersect.position.xy), -1.0f);
+			isPortal = true;
+		}
 
-    } else {
-        return vec4(0.0);
-    }
+	} else {
+		return vec4(0.0);
+	}
 
-    return fetchUV(
-        thisIntersect.UV,
-        inversesqrt(thisIntersect.distanceSQ),
-        surfaceNormal,
-        thisIntersect.position,
-        thisIntersect.foundType
-    );
+	return fetchUV(
+		UV,
+		inversesqrt(thisIntersect.distanceSQ),
+		surfaceNormal,
+		thisIntersect.position,
+		thisIntersect.foundType
+	);
 }
 
 
@@ -569,7 +596,7 @@ void main() {
 			uint stackIndex = uint(clamp(index, 0, STACK_SIZE-1));
 			IntersectionData stackIntersect = stack[index];
 			vec3 thisNormal;
-			vec4 surfaceColour = fetchUVIntersect(stackIntersect, thisNormal);
+			vec4 surfaceColour = fetchUVIntersect(stackIntersect, thisNormal, stackIntersect.isPortal);
 			mixColour = mix(mixColour, surfaceColour.rgb, surfaceColour.a);
 
 			if (surfaceColour.a >= LIGHTING_THRESHOLD_ALPHA) {
@@ -577,8 +604,8 @@ void main() {
 				closestHalfAlphaIntersect = stackIntersect;
 				closestNormal = thisNormal;
 			}
-			//mixColour = thisNormal;
 		}
+
 
 		if (foundShadowmappingObject) {
 			gl_FragDepth = 1.0f / (inversesqrt(closestHalfAlphaIntersect.distanceSQ) * maxRayDistance);
@@ -586,9 +613,15 @@ void main() {
 		outFragColour = vec4(mixColour.rgb, 1.0f);
 		if (shouldDrawToPositionMap) {
 			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
-			uint iData = (closestHalfAlphaIntersect.index << 3) | (closestHalfAlphaIntersect.foundType & 0x7);
+			uint iData;
+			if (closestHalfAlphaIntersect.isPortal) {
+				iData = (closestHalfAlphaIntersect.index << 3) | (0x4);
+				outFragNormal = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+			} else {
+				iData = (closestHalfAlphaIntersect.index << 3) | (closestHalfAlphaIntersect.foundType & 0x7);
+				outFragNormal = vec4(closestNormal.xyz, 0.0f);
+			}
 			outFragPosition = vec4(closestHalfAlphaIntersect.position.xyz, iData);
-			outFragNormal = vec4(closestNormal.xyz, 0.0f);
 		}
 		if (foundShadowmappingObject) {return;}
 	}

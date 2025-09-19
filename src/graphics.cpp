@@ -1368,12 +1368,15 @@ void prepareOpenGL() {
 	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayUI, -1, "textureArrayUI");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
 	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayNumeric, -1, "textureArrayNumeric");
+
 	if (!(stageData.skyboxTextureName.empty())) {
 		GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	} else {
 		GLIndex::skyboxTextureID = createGLImage2D(display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	}
 	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
+
+	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
@@ -1844,6 +1847,7 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
 	glBindTextureUnit(2, GLIndex::skyboxTextureID);
+	glBindTextureUnit(3, GLIndex::portalTextureID);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
