@@ -147,6 +147,44 @@ inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSS
 namespace structs {
 
 
+
+struct Material {
+	bool normalMap;
+	bool diffraction;
+	bool castShadow;
+	bool lighting;
+	bool specular;
+	MaterialID special;
+
+
+	Material()
+		: normalMap(false), diffraction(false), castShadow(false),
+		  lighting(false), specular(false), special(MAT_NONE) {}
+
+
+	Material(
+		bool normalMap, bool diffraction, bool castShadow,
+		bool lighting, bool specular, MaterialID special=MAT_NONE
+	) : normalMap(normalMap), diffraction(diffraction), castShadow(castShadow),
+		lighting(lighting), specular(specular), special(special) {}
+
+
+	GLuint getUInt() {
+		//cout << normalMap << " " << diffraction << " " << castShadow << " " << lighting << " " << specular << " " << special << endl;
+		return (
+			(GLuint(normalMap) << 7u) |
+			(GLuint(diffraction) << 6u) |
+			(GLuint(castShadow) << 5u) |
+			(GLuint(lighting) << 4u) |
+			(GLuint(specular) << 3u) |
+			(GLuint(special) & 0x7u)
+		);
+	}
+};
+
+
+
+
 struct Player {
 	glm::vec3 position, prevPosition, velocity, cameraPosition, interpPosition;
 	float viewAngle, viewRoll, viewPitch, vLook, height;
@@ -256,10 +294,11 @@ struct Visplane {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	structs::Material material;
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
-		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
+		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), material() {
 			internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
 			internal = &(internalsData.at(internalsData.size()-1));
 		}
@@ -269,10 +308,10 @@ struct Visplane {
 			VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
-			float exitDirection=constants::INF
+			float exitDirection=constants::INF, structs::Material mat=structs::Material()
 		) : height(heightZ), originalHeight(heightZ), 
 			textureData1(textureData1),
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), material(mat) {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -313,9 +352,9 @@ struct Visplane {
 			VisplaneType type=V_NORMAL, bool* IOPtr=nullptr, float data=0,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
-			float exitDirection=constants::INF
+			float exitDirection=constants::INF, structs::Material mat=structs::Material()
 		) : height(heightZ), originalHeight(heightZ), 
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), material(mat) {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -358,16 +397,16 @@ struct VisplaneGPU {
 	alignas(4)  GLuint textureData1;
 	alignas(4)  GLuint textureData2;
 	alignas(16) glm::vec4 boundingBox;
-	alignas(4)  GLuint type;
+	alignas(4)  GLuint typeAndMaterialID;
 	alignas(4)  float extra;
 
 	VisplaneGPU()
-		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox(), type(), extra() {}
+		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox(), typeAndMaterialID(), extra() {}
 
 	VisplaneGPU(Visplane *visplane, Player player)
 		: numVertices(visplane->numVertices), height(visplane->height),
 		  textureData1(visplane->textureData1), textureData2(visplane->textureData2),
-		  type(visplane->type), extra(visplane->data) {
+		  extra(visplane->data) {
 			for (int i=0; i<4; i++) {
 				vertices[i] = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 			}
@@ -390,6 +429,8 @@ struct VisplaneGPU {
 					max(maxPT, glm::vec2(boundingBox.z, boundingBox.w))
 				);
 			}
+
+			typeAndMaterialID = (GLuint(visplane->type) << 8) | visplane->material.getUInt();
 		}
 };
 
@@ -403,13 +444,13 @@ struct Wall {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	std::pair<structs::Material, structs::Material> materials;
 
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
 		  end(0.0f, 0.0f, 0.0f), originalEnd(0.0f, 0.0f, 0.0f),
-		  textureData1s(),
-		  type(W_INVALID),
-		  IOPtr(nullptr), data(0.0f) {
+		  textureData1s(), type(W_INVALID), IOPtr(nullptr), data(0.0f),
+		  materials() {
 			if ((type != W_NORMAL) && (type != W_INVALID)) {
 				internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
 				internal = &(internalsData.at(internalsData.size()-1));
@@ -424,11 +465,11 @@ struct Wall {
 			WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
 			GLint textureID1=-1,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY1=false, bool swapUVXY2=false,
-			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
+			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
+			structs::Material mat0=structs::Material(), structs::Material mat1=structs::Material()
 		) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
 			end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
-			type(type), 
-			IOPtr(IOPtr), data(data) {
+			type(type), IOPtr(IOPtr), data(data), materials(mat0, mat1) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
 					textureData1s.second = combineTextureData1(textureID0, swapUVXY2);
@@ -456,11 +497,11 @@ struct Wall {
 			WallType type=W_NORMAL, bool* IOPtr=nullptr, float data=0.0f,
 			GLint textureID1=-1,
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY1=false, bool swapUVXY2=false,
-			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
+			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
+			structs::Material mat0=structs::Material(), structs::Material mat1=structs::Material()
 		) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
-			type(type), 
-			IOPtr(IOPtr), data(data) {
+			type(type), IOPtr(IOPtr), data(data), materials(mat0, mat1) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
 					textureData1s.second = combineTextureData1(textureID0, swapUVXY2);
@@ -489,22 +530,24 @@ struct WallGPU {
 	alignas(8) glm::vec2 direction;
 	alignas(4) GLuint textureData1;
 	alignas(4) GLuint textureData2;
-	alignas(4) GLuint type;
+	alignas(4) GLuint typeAndMaterialID;
 	alignas(4) float extra;
 
 
 	WallGPU()
 		: start(), end(), direction(),
 		  textureData1(), textureData2(),
-		  type(), extra() {}
+		  typeAndMaterialID(), extra() {}
 
 	WallGPU(Wall *wall, Player player)
 		: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
-		  textureData2(wall->textureData2), type(static_cast<GLuint>(wall->type)), extra(wall->data) {
+		  textureData2(wall->textureData2), extra(wall->data) {
 			if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
 				textureData1 = wall->textureData1s.second;
+				typeAndMaterialID = (GLuint(wall->type) << 8) | wall->materials.second.getUInt();
 			} else {
 				textureData1 = wall->textureData1s.first;
+				typeAndMaterialID = (GLuint(wall->type) << 8) | wall->materials.first.getUInt();
 			}
 		}
 };

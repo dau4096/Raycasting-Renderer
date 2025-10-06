@@ -3,7 +3,7 @@
 <!-- Metadata -->
 <meta>
     <sky skyboxTexture="default-skybox" fogColour="0.4157 0.6039 0.7098" />
-    <sun sunDirection="-0.5 0.5 1.0" sunColour="1.0 1.0 0.925" sunIntensity="2.25" />
+    <sun sunDirection="-0.5 0.5 1.0" sunColour="1.0 1.0 0.925" sunIntensity="1.25" />
     <physics gravity="0.486" killPlaneZ="-16.0" />
     <player startPoint="-3.5 -3.5 1.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
 </meta>
@@ -131,6 +131,12 @@
     <wall start="-0.5 -11.5 3.0" end="0.5 -11.5 5.0" type="W_PORTAL" flag="portalTest" />
     <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="90.0" />
     <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="-90.0" />
+
+
+    <!-- Material testing -->
+    <wall start="-7.5 20.0 0.0" end="-7.5 21.0 2.0" texture="blank"> <materials> <main name="fullbright" lighting="FALSE" specular="FALSE" normalMap="FALSE" /> </materials> </wall>
+    <wall start="-7.5 21.0 0.0" end="-7.5 24.0 2.0" texture="frost" useWorldUVX="FALSE" useWorldUVY="FALSE"> <materials> <main name="" /> </materials> </wall>
+    <wall start="-7.5 24.0 0.0" end="-7.5 25.0 2.0" texture="blank"> <materials> <main name="fullbright" /> </materials> </wall>
 
 </environment>
 

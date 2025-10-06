@@ -20,6 +20,14 @@ enum ItemHeld {
 	IH_NONE
 };
 
+enum MaterialID {
+	MAT_NONE = 0x0u,
+	MAT_SKY = 0x1u,
+	MAT_FABRIC = 0x2u,
+	MAT_HALL = 0x3u,
+	MAT_SHELL = 0x4u
+};
+
 enum VisplaneType {
 	V_INVALID, V_NORMAL,
 	V_TRIGGER,

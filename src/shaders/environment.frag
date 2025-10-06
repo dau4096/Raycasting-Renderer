@@ -44,27 +44,27 @@ layout(location=2) out vec4 outFragNormal;
 
 
 struct Visplane {
-	vec4 vertices[4];	//2D points
-	uint numVertices;	//Number of 2D points
-	float height;		//1D height (Z)
-	uint textureData1;	//1st Texture formatting data.
-	uint textureData2;	//2nd Texture formatting data.
-	vec4 boundingBox;	//Bounding box in 2D.
-	uint type;			//Visplanetype.
-	float extra;		//Extra data.
+	vec4 vertices[4];		//2D points
+	uint numVertices;		//Number of 2D points
+	float height;			//1D height (Z)
+	uint textureData1;		//1st Texture formatting data.
+	uint textureData2;		//2nd Texture formatting data.
+	vec4 boundingBox;		//Bounding box in 2D.
+	uint typeAndMaterialID;	//Visplanetype.
+	float extra;			//Extra data.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
 };
 
 struct Wall {
-	vec3 start;			//3D start point
-	vec3 end;			//3D end point
-	vec2 direction;		//2D Direction
-	uint textureData1;	//1st Texture formatting data.
-	uint textureData2;	//2nd Texture formatting data.
-	uint type;			//Walltype.
-	float extra;		//Extra data.
+	vec3 start;				//3D start point
+	vec3 end;				//3D end point
+	vec2 direction;			//2D Direction
+	uint textureData1;		//1st Texture formatting data.
+	uint textureData2;		//2nd Texture formatting data.
+	uint typeAndMaterialID;	//Walltype.
+	float extra;			//Extra data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -100,7 +100,7 @@ struct IntersectionData {
 	uint index;			//The index of the found object
 	int foundType;		//The type of the found object
 	vec2 normal2D;		//Normal vector of the intersect.
-	bool isPortal;		//No lighting applied.
+	uint material;		//No lighting applied.
 };
 #define STACK_SIZE 8
 IntersectionData stack[STACK_SIZE];
@@ -290,7 +290,67 @@ void getNormal(vec3 UV, float LODIndex, inout vec3 surfaceNormal, uint surfaceTy
 }
 
 
-vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePosition, uint surfaceType) {
+
+uint getType(uint typeAndMaterialID) {
+	return typeAndMaterialID >> 8u;
+}
+
+
+bool accessBit(uint value, uint n) {
+	return bool((value >> n) & 0x1u);
+}
+
+void getMaterialSpecifiers(
+	uint material, out bool shouldUseSpecularHighlights,
+	out bool hasLighting, out bool diffraction,
+	out bool castShadow, out bool hasNormalMap,
+	out uint materialSpecial
+) {
+
+	hasNormalMap = 					accessBit(material, 7u);
+	diffraction = 					accessBit(material, 6u);
+	castShadow =					accessBit(material, 5u);
+	hasLighting = 					accessBit(material, 4u);
+	shouldUseSpecularHighlights = 	accessBit(material, 3u);
+	materialSpecial = material & 0x7u;
+
+}
+
+
+uint getMaterial(uint typeAndMaterialID) {
+	/*
+	-- Possible Materials --
+	MAT_FLAT		|	Default material, does not expect normal map.
+	MAT_NORMAL		|	Default material. Acts as all surfaces do now.
+	MAT_DIFFRACT	|	Diffracts whatever is behind it.
+	MAT_LIQUID		|	Wiggly and wavey.
+	MAT_SHINY		|	Has specular reflection.
+	MAT_MATT		|	Does not have specular light reflection.
+	MAT_SKY			|	Like W_PORTAL/V_PORTAL currently render.
+	MAT_INVERSE		|	Applies the display shader's inverse effect to whatever is behind it.
+	MAT_FABRIC		|	Like MAT_LIQUID but more flag-like?
+	MAT_HALL		|	"Hall of mirrors", do not clear previous frame's pixel colour?
+	MAT_FULLBRIGHT	|	No lighting.
+	MAT_SHELL		|	Fake shell texturing for grass or whatever.
+
+	Could make these specific bit flags;
+	0bABCDEFFF
+	A: has normal
+	B: diffract
+	C: shadow
+	D: lighting
+	E: use specular
+	FFF: index for SKY/FABRIC/HALL/INVERSE/SHELL etc.
+	i.e. current normal map mat would be 	:   0b10011000 	:  152 	: 0x98
+	current portal sky mat would be			:   0b00000001 	:   33 	: 0x21
+	some sort of liquid 					:   0b01111000	:  120	: 0x78
+	current sprites							:	0b10010000	:  144	: 0x90
+	*/
+	return typeAndMaterialID & 0xFFu;
+}
+
+
+vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePosition, uint surfaceType, uint material) {
 	if (debugMode == 1) {
 		return vec4(UV.xy, UV.z / 32.0, maxRayDistance);
 	}
@@ -320,7 +380,19 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 	}
 
 	vec4 mipColour = textureLod(textureArray, UV, lod);
-	getNormal(UV, lod, surfaceNormal, surfaceType);
+
+	//Material specifiers;
+	bool shouldUseSpecularHighlights, hasLighting;
+	bool diffraction, castShadow, hasNormalMap;
+	uint materialSpecial;
+	getMaterialSpecifiers(
+		material, shouldUseSpecularHighlights,
+		hasLighting, diffraction, castShadow,
+		hasNormalMap, materialSpecial
+	);
+	if (hasNormalMap) {
+		getNormal(UV, lod, surfaceNormal, surfaceType);
+	}
 
 	if (!MIPMAP_BLEND_ENABLED) {
 		return mipColour;
@@ -334,10 +406,12 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal, out bool isPortal) {
 	vec3 UV = thisIntersect.UV;
 	isPortal = false;
+
+
 	if (thisIntersect.foundType == T_WALL) {
 		surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0);
 		Wall thisWall = walls[thisIntersect.index];
-		if (thisWall.type == 15) { //Portal type.
+		if (getType(thisWall.typeAndMaterialID) == 15) { //Portal type.
 			vec2 surfaceDirection = vec2(-thisIntersect.normal2D.y, thisIntersect.normal2D.x);
 			vec2 fragDirection = normalize(thisIntersect.position.xy - playerPosition.xy);
 			float dotProd = 0.5f - abs(dot(fragDirection.xy, surfaceDirection.xy));
@@ -347,14 +421,14 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 
 	} else if (thisIntersect.foundType == T_VISPLANE) {
 		Visplane thisVisplane = visplanes[thisIntersect.index];
-		surfaceNormal = vec3(0.0, 0.0, (thisVisplane.height < playerPosition.z) ? 1.0 : -1.0);
-		if (thisVisplane.type == 15) { //Portal type.
+		surfaceNormal = vec3(0.0f, 0.0f, (thisVisplane.height < playerPosition.z) ? 1.0f : -1.0f);
+		if (getType(thisVisplane.typeAndMaterialID) == 15u) { //Portal type.
 			UV = vec3(fract(thisIntersect.position.xy), -1.0f);
 			isPortal = true;
 		}
 
 	} else {
-		return vec4(0.0);
+		return vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 	return fetchUV(
@@ -362,7 +436,8 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 		inversesqrt(thisIntersect.distanceSQ),
 		surfaceNormal,
 		thisIntersect.position,
-		thisIntersect.foundType
+		thisIntersect.foundType,
+		thisIntersect.material
 	);
 }
 
@@ -458,7 +533,7 @@ void main() {
 	fragPosition = gl_FragCoord.xy;
 	ivec2 framePosition = ivec2(fragPosition);
 	fragColour = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-	bool shouldDrawToPositionMap = true;//(framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
+	bool shouldDrawToPositionMap = (framePosition.x % int(shadowMapQuality) == 0) && (framePosition.y % int(shadowMapQuality) == 0);
 
 
 	zoomEffect = ((zoom) ? zoomFactor : 1.0f);
@@ -511,8 +586,9 @@ void main() {
 		thisIntersect.index = actualIDX;
 		thisIntersect.position = vec3(intersect.position2D, fragZ);
 		thisIntersect.UV = (textureFlags.x) ? vec3(yUV, xUV, textureID) : vec3(xUV, yUV, textureID);
-		thisIntersect.foundType = 1;
+		thisIntersect.foundType = T_WALL;
 		thisIntersect.normal2D = intersect.normal2D;
+		thisIntersect.material = getMaterial(thisWall.typeAndMaterialID);
 
 		//Set closest.
 		pushStack(thisIntersect);
@@ -561,7 +637,8 @@ void main() {
 			thisIntersect.distanceSQ = dot(d,d);
 			thisIntersect.position = vec3(intersectPoint, thisVisplane.height);
 			thisIntersect.index = actualIDX;
-			thisIntersect.foundType = 2;
+			thisIntersect.foundType = T_VISPLANE;
+			thisIntersect.material = getMaterial(thisVisplane.typeAndMaterialID);
 
 			int textureID;
 			bvec4 textureFlags;
@@ -596,10 +673,15 @@ void main() {
 			uint stackIndex = uint(clamp(index, 0, STACK_SIZE-1));
 			IntersectionData stackIntersect = stack[index];
 			vec3 thisNormal;
-			vec4 surfaceColour = fetchUVIntersect(stackIntersect, thisNormal, stackIntersect.isPortal);
+			bool isPortal;
+			vec4 surfaceColour = fetchUVIntersect(stackIntersect, thisNormal, isPortal);
+			if (isPortal) {
+				stackIntersect.material = 0x21u;
+			}
 			mixColour = mix(mixColour, surfaceColour.rgb, surfaceColour.a);
+			bool isDiffracting = accessBit(stackIntersect.material, 5u);
 
-			if (surfaceColour.a >= LIGHTING_THRESHOLD_ALPHA) {
+			if ((surfaceColour.a >= LIGHTING_THRESHOLD_ALPHA) || isDiffracting) {
 				foundShadowmappingObject = true;
 				closestHalfAlphaIntersect = stackIntersect;
 				closestNormal = thisNormal;
@@ -614,12 +696,13 @@ void main() {
 		if (shouldDrawToPositionMap) {
 			ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 			uint iData;
-			if (closestHalfAlphaIntersect.isPortal) {
+
+			if (closestHalfAlphaIntersect.material == 0x21) { //Portal type
 				iData = (closestHalfAlphaIntersect.index << 3) | (0x4);
-				outFragNormal = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+				outFragNormal = vec4(0.0f, 0.0f, 0.0f, float(0x21u));
 			} else {
 				iData = (closestHalfAlphaIntersect.index << 3) | (closestHalfAlphaIntersect.foundType & 0x7);
-				outFragNormal = vec4(closestNormal.xyz, 0.0f);
+				outFragNormal = vec4(closestNormal.xyz, float(closestHalfAlphaIntersect.material));
 			}
 			outFragPosition = vec4(closestHalfAlphaIntersect.position.xyz, iData);
 		}

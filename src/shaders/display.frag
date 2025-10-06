@@ -10,6 +10,7 @@ layout(binding=1) uniform sampler2D depthMap;
 layout(binding=2) uniform sampler2D interfaceTexture;
 layout(binding=3) uniform sampler2DArray lightMapsArray;
 layout(binding=4) uniform sampler2D positionMap;
+layout(binding=5) uniform sampler2D normalMap;
 
 layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
 
@@ -18,6 +19,7 @@ layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
 uniform float maxRayDistance;
 uniform ivec2 screenResolution;
 uniform ivec2 renderResolution;
+uniform vec3 playerPosition;
 
 //Sky
 uniform vec3 fogColour;
@@ -56,11 +58,11 @@ const vec2 offsets[8] = {
 	vec2(-1.0f,  0.0f),                     vec2( 1.0f,  0.0f),
 	vec2(-1.0f,  1.0f), vec2( 0.0f,  1.0f), vec2( 1.0f,  1.0f)
 };
-vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
+vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour, vec4 positionData) {
 	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
 	vec2 inverseScreenRes = 1.0f / vec2(screenResolution);
 	
-	int centreIData = int(texture(positionMap, mainUV).w); //Contains object index and type, encoded as bits.
+	int centreIData = int(positionData.w); //Contains object index and type, encoded as bits.
 	vec3 colourSum = centreColour.rgb;
 	bool isEdge = false;
 
@@ -94,6 +96,71 @@ vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
 }
 
 
+
+bool accessBit(uint value, uint n) {
+	return bool((value >> n) & 0x1u);
+}
+
+uint getMaterial(uint typeAndMaterialID) {
+	/*
+	-- Possible Materials --
+	MAT_FLAT		|	Default material, does not expect normal map.
+	MAT_NORMAL		|	Default material. Acts as all surfaces do now.
+	MAT_DIFFRACT	|	Diffracts whatever is behind it.
+	MAT_LIQUID		|	Wiggly and wavey.
+	MAT_SHINY		|	Has specular reflection.
+	MAT_MATT		|	Does not have specular light reflection.
+	MAT_SKY			|	Like W_PORTAL/V_PORTAL currently render.
+	MAT_INVERSE		|	Applies the display shader's inverse effect to whatever is behind it.
+	MAT_FABRIC		|	Like MAT_LIQUID but more flag-like?
+	MAT_HALL		|	"Hall of mirrors", do not clear previous frame's pixel colour?
+	MAT_FULLBRIGHT	|	No lighting.
+	MAT_SHELL		|	Fake shell texturing for grass or whatever.
+
+	Could make these specific bit flags;
+	0bABCDEFFF
+	A: has normal
+	B: diffract
+	C: shadow
+	D: lighting
+	E: use specular
+	FFF: index for SKY/FABRIC/HALL/INVERSE/SHELL etc.
+	i.e. current normal map mat would be 	:   0b10011000 	:  152 	: 0x98
+	current portal sky mat would be			:   0b00000001 	:   33 	: 0x21
+	some sort of liquid 					:   0b01111000	:  120	: 0x78
+	current sprites							:	0b10010000	:  144	: 0x90
+	*/
+	return typeAndMaterialID & 0xFFu;
+}
+
+#define DIFFRACTION_SCALING vec2(200.0f, 0.1f)
+vec4 getAlbedo(vec2 mainUV, vec4 positionData) {
+	vec4 normalMapData = texture(normalMap, mainUV);
+	uint material = getMaterial(uint(normalMapData.a));
+
+	if (accessBit(material, 5u)) { //Diffraction
+		vec3 surfaceDirection = vec3(-normalMapData.y, normalMapData.x, 0.0f);
+		vec3 delta = positionData.xyz - playerPosition;
+		vec3 dirToFrag = normalize(delta);
+
+		float horizontalDot = dot(surfaceDirection.xy, dirToFrag.xy);
+		float xOffset = DIFFRACTION_SCALING.x * horizontalDot / renderResolution.x;
+
+		float yOffset = DIFFRACTION_SCALING.y * delta.y / renderResolution.y;
+
+		vec2 UVoffset = vec2(xOffset, yOffset);
+		return vec4(UVoffset, normalMapData.a, 0.0f);
+		vec2 newUV = mainUV + UVoffset;
+		float newSurfaceData = texture(positionMap, newUV).a;
+		if (newSurfaceData == positionData.a) {
+			//return texture(renderedFrameSampler2D, newUV).rgba;
+		}
+
+	}
+	return texture(renderedFrameSampler2D, mainUV).rgba;
+}
+
+
 vec4 quantisingFunc(vec2 mainUV) {
 	float delta = 255.0f / (quantisingLevel - 1.0f);
 
@@ -121,7 +188,12 @@ vec3 getBrightness(vec2 UV) {
 void main() {
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_FragCoord.xy);
-	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
+
+
+	vec4 positionData = texture(positionMap, mainUV);
+	vec4 albedo = getAlbedo(mainUV, positionData);
+
+
 	float fragDistance = texture(depthMap, mainUV).r * maxRayDistance;
 	if (fragDistance >= maxRayDistance) {
 		if (debugMode == 3) { //Debug lighting.
@@ -162,7 +234,7 @@ void main() {
 	}
 
 	if (antiAliasing) { //More useful Anti-Aliasing
-		resultant = antiAliasFunc(mainUV, resultant.rgb);
+		resultant = antiAliasFunc(mainUV, resultant.rgb, positionData);
 	}
 
 
@@ -190,7 +262,15 @@ void main() {
 			),
 			1.0f
 		);
-
 		imageStore(frameToScreenshot, framePosition, screenshotColour);
 	}
+
+	/*
+	//Motion extraction test.
+	vec4 oldCol = imageLoad(frameToScreenshot, framePosition);
+	imageStore(frameToScreenshot, framePosition, fragColour);
+
+	vec4 inv = 1.0f - oldCol;
+	fragColour = (fragColour * 0.5f) + (inv * 0.5f);
+	*/
 }

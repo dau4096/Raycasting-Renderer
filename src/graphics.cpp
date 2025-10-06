@@ -1948,6 +1948,7 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
 	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
 	glBindTextureUnit(4, GLIndex::framePositionComponent);
+	glBindTextureUnit(5, GLIndex::frameNormalComponent);
 	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms

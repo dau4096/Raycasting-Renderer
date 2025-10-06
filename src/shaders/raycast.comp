@@ -4,27 +4,27 @@
 
 
 struct Visplane {
-	vec4 vertices[4];	//2D points
-	uint numVertices;	//Number of 2D points
-	float height;		//1D height (Z)
-	uint textureData1;	//1st Texture formatting data.
-	uint textureData2;	//2nd Texture formatting data.
-	vec4 boundingBox;	//Bounding box in 2D.
-	uint type;			//Visplanetype.
-	float extra;		//Extra data.
+	vec4 vertices[4];		//2D points
+	uint numVertices;		//Number of 2D points
+	float height;			//1D height (Z)
+	uint textureData1;		//1st Texture formatting data.
+	uint textureData2;		//2nd Texture formatting data.
+	vec4 boundingBox;		//Bounding box in 2D.
+	uint typeAndMaterialID;	//Visplanetype.
+	float extra;			//Extra data.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
 };
 
 struct Wall {
-	vec3 start;			//3D start point
-	vec3 end;			//3D end point
-	vec2 direction;		//2D Direction
-	uint textureData1;	//1st Texture formatting data.
-	uint textureData2;	//2nd Texture formatting data.
-	uint type;			//Walltype.
-	float extra;		//Extra data.
+	vec3 start;				//3D start point
+	vec3 end;				//3D end point
+	vec2 direction;			//2D Direction
+	uint textureData1;		//1st Texture formatting data.
+	uint textureData2;		//2nd Texture formatting data.
+	uint typeAndMaterialID;	//Walltype.
+	float extra;			//Extra data.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];

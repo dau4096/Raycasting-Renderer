@@ -225,7 +225,7 @@ void main() {
 		int idx = (closestIndex << 3) | 0x4;
 		ivec2 thisFramePosition = ivec2(gl_FragCoord.xy / shadowMapQuality);
 		outFragPosition = vec4(closestSprite.position, float(idx));
-		outFragNormal = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		outFragNormal = vec4(normalize(closestSprite.position - playerPosition), float(0x90)); //See environment::getMaterial() comment for bit value meanings.
 	}
 
 	outFragColour = vec4(mix(fragAlbedo.rgb, spriteAlbedo.rgb, transparency), 1.0f);

@@ -762,12 +762,89 @@ static std::vector<glm::vec3> getVertsV3(const pugi::xml_node& node, size_t maxV
 	return verts;
 }
 
+
+std::unordered_map<std::string, structs::Material> materials = {
+	{"<MAT_DEFAULT>", structs::Material(true, false, true, true, true, MAT_NONE)}, //Default material to use.
+};
+std::unordered_map<std::string, MaterialID> matEnumMap = {
+	{"NONE", MAT_NONE},
+	{"SKY", MAT_SKY},
+	{"FABRIC", MAT_FABRIC},
+	{"HALL", MAT_HALL},
+	{"SHELL", MAT_SHELL}
+};
+
+inline structs::Material addMaterial(
+		const pugi::xml_node& node
+	) {
+
+	std::string enumStr = utils::strToUpper(getString(node, "special", ""));
+	auto it = matEnumMap.find(enumStr);
+	MaterialID matEnum;
+	if (it == matEnumMap.end()) {
+		matEnum = MAT_NONE;
+	} else {
+		matEnum = matEnumMap[enumStr];
+	}
+
+	return structs::Material(
+		getBool(node, "normalMap", true),
+		getBool(node, "diffract", false),
+		getBool(node, "castShadow", true),
+		getBool(node, "lighting", true),
+		getBool(node, "specular", true),
+		matEnum
+	);
+}
+
+
+inline structs::Material getMaterial(
+		const pugi::xml_node& node
+	) {
+
+	std::string matName = getString(node, "name", "");
+	if (matName.empty()) {
+		return materials["<MAT_DEFAULT>"];
+	}
+
+	auto it = materials.find(matName);
+	if (it == materials.end()) {
+		structs::Material newMat = addMaterial(node);
+		materials[matName] = newMat;
+		return newMat;
+
+	} else {
+		return materials[matName];
+
+	}
+
+}
+
+
 static inline structs::Visplane extractVisplane(
 		const pugi::xml_node& node
 	) {
 
 	VisplaneType type = static_cast<VisplaneType>(getEnum(node, "type", V_NORMAL));
-	GLuint textureID = (type == V_NODRAW) ? assignTexture("nodraw") : getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
+
+
+	pugi::xml_node materialNode = node.child("material");
+	structs::Material visplaneMaterial;
+	if (materialNode) {
+		visplaneMaterial = getMaterial(materialNode);
+	} else {
+		visplaneMaterial = materials["<MAT_DEFAULT>"];
+	}
+
+
+	GLuint textureID;
+	if ((type == V_NODRAW) || (getString(node, "texture", "") == "nodraw")) {
+		textureID = assignTexture("nodraw");
+		visplaneMaterial.castShadow = false;
+		cout << "visplane" << endl;
+	} else {
+		textureID = getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
+	}
 
 	structs::Visplane visplane;
 	pugi::xml_node vertexNode = node.child("vertices");
@@ -785,7 +862,8 @@ static inline structs::Visplane extractVisplane(
 			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-			getFloat(node, "exitDirection", constants::INF)
+			getFloat(node, "exitDirection", constants::INF),
+			visplaneMaterial
 		);
 
 	} else { //Old method for compatability. 
@@ -801,7 +879,8 @@ static inline structs::Visplane extractVisplane(
 			getBool(node, "flipUVXY", false),
 			getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
 			getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
-			getFloat(node, "exitDirection", constants::INF)
+			getFloat(node, "exitDirection", constants::INF),
+			visplaneMaterial
 		);
 	}
 
@@ -819,20 +898,49 @@ static inline structs::Wall extractWall(
 		const pugi::xml_node& node
 	) {
 
+
+	WallType type = static_cast<WallType>(getEnum(node, "type", W_NORMAL));
+	bool isNodraw = (type == W_NODRAW) || (getString(node, "texture", "") == "nodraw");
+	GLuint textureID = getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME);
+	GLuint altTextureID = getTexture(node, "altTexture", getString(node, "texture", initial::FALLBACK_TEXTURE_NAME).c_str());
+
+	pugi::xml_node materialsNode = node.child("materials");
+	std::pair<structs::Material, structs::Material> wallMaterials = std::pair(materials["<MAT_DEFAULT>"], materials["MAT_DEFAULT"]);
+	if (materialsNode) {
+		pugi::xml_node mat0Node = materialsNode.child("main");
+		if (mat0Node) {
+			wallMaterials.first = getMaterial(mat0Node);
+			if (isNodraw) {
+				cout << "first" << endl;
+				wallMaterials.first.castShadow = false;
+				textureID = assignTexture("nodraw");
+			}
+		}
+		pugi::xml_node mat1Node = materialsNode.child("alt");
+		if (mat0Node) {
+			wallMaterials.second = getMaterial(mat1Node);
+			if (isNodraw) {
+				cout << "second" << endl;
+				wallMaterials.second.castShadow = false;
+				altTextureID = assignTexture("nodraw");
+			}
+		}
+	}
+
 	structs::Wall wall = structs::Wall(
 		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
 		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
-		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
+		textureID, type,
 		getPTR(node, "flag", &(constants::C_FALSE)),
 		getFloat(node, "extra", 0.0f),
-		getTexture(node, "altTexture", getString(node, "texture", initial::FALLBACK_TEXTURE_NAME).c_str()),
+		altTextureID,
 		getBool(node, "useWorldUVX", true),
 		getBool(node, "useWorldUVY", true),
 		getBool(node, "flipUVXY", false),
 		getBool(node, "flipAltUVXY", false),
 		getVec2(node, "textureScale", glm::vec2(1.0f, 1.0f)),
-		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f))
+		getVec2(node, "textureOffset", glm::vec2(0.0f, 0.0f)),
+		wallMaterials.first, wallMaterials.second
 	);
 	
 	return wall;
