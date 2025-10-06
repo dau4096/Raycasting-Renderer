@@ -247,6 +247,10 @@ namespace utils {
 	int RNGc(); //Client
 	int RNGw(); //World
 	void clearRNG(); //Reset both
+
+
+
+	bool circleWallIntersect(structs::Wall& line, glm::vec2 circlePosition, float radius, float* distToLine=nullptr);
 	
 
 

@@ -28,7 +28,8 @@ enum VisplaneType {
 	V_MOVEZ_FAST, V_MOVEZ_SLOW,
 	V_HURT, V_PASSTHROUGH,
 	V_NODRAW, V_TELEPORT,
-	V_CONVEY, V_LIGHTBLOCKER
+	V_CONVEY, V_LIGHTBLOCKER,
+	V_PORTAL
 };
 
 enum WallType {
@@ -39,7 +40,8 @@ enum WallType {
 	W_MOVEZ_FAST, W_MOVEZ_SLOW,
 	W_SWITCH, W_PASSTHROUGH,
 	W_DOORZ, W_DOORSWING,
-	W_NODRAW, W_LIGHTBLOCKER
+	W_NODRAW, W_LIGHTBLOCKER,
+	W_PORTAL
 };
 
 enum CuboidType {
@@ -279,7 +281,8 @@ namespace display {
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
 	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
-	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback-general.png";
+	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback.png";
+	constexpr const char* FALLBACK_NORMAL_PATH = "src/textures-env/fallback.normal.png";
 	constexpr const char* FALLBACK_SKYBOX_PATH = "src/textures-env/fallback-skybox.png";
 
 
@@ -291,7 +294,7 @@ namespace display {
 
 namespace initial {
 	//Textures
-	constexpr const char* FALLBACK_TEXTURE_NAME = "fallback-general";
+	constexpr const char* FALLBACK_TEXTURE_NAME = "fallback";
 	constexpr const char* FALLBACK_SKYBOX_NAME = "fallback-skybox";
 	constexpr glm::vec2 TEXTURE_SCALE = glm::vec2(1.0f, 1.0f);
 	constexpr glm::vec3 TEXTURE_OFFSET = glm::vec3(0.0f, 0.0f, 0.0f);

@@ -400,6 +400,7 @@ void updateShaderStorageBufferObject(
 	size_t count
 ) {
 	size_t size = sizeof(T) * count;
+
 	if (count > 0) {
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
 		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data);
@@ -409,6 +410,112 @@ void updateShaderStorageBufferObject(
 
 
 
+inline GLuint encodeIndex(structs::Wall thisWall, GLuint index) {
+	return (index << 3) | 0x1;
+}
+inline GLuint encodeIndex(structs::Visplane thisVisplane, GLuint index) {
+	return (index << 3) | 0x2;
+}
+inline GLuint encodeIndex(structs::Displacement thisDisplacement, GLuint index) {
+	return (index << 3) | 0x3;
+}
+
+void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* visibleObjects) {
+
+	for (unsigned int wallIndex=0; wallIndex<physicsData->wallData.size(); wallIndex++) {
+		structs::Wall thisWall = physicsData->wallData.at(wallIndex);
+
+		float actualDistance;
+		bool intersect2D = utils::circleWallIntersect( //If the light's radius intersects with the wall at all (2D)
+			thisWall, thisLight.position, thisLight.intensity, &actualDistance
+		);
+		if (!intersect2D) {
+			//Check endpoints.
+			intersect2D |= glm::length(glm::vec2(thisWall.start - thisLight.position)) < thisLight.intensity;
+			intersect2D |= glm::length(glm::vec2(thisWall.end - thisLight.position)) < thisLight.intensity;
+			if (!intersect2D) {continue; /* Wall is not in range of light. */}
+		}
+
+		float zOffset = sqrt(std::max(
+			0.0f, (thisLight.intensity*thisLight.intensity) - (actualDistance*actualDistance)
+		));
+		float minZ = thisLight.position.z - zOffset;
+		float maxZ = thisLight.position.z + zOffset;
+		if ((thisWall.start.z <= maxZ) && (thisWall.end.z >= minZ)) {
+			visibleObjects->push_back(encodeIndex(thisWall, wallIndex));
+		}
+	}
+
+
+
+	for (unsigned int visplaneIndex=0; visplaneIndex<physicsData->visplaneData.size(); visplaneIndex++) {
+		structs::Visplane thisVisplane = physicsData->visplaneData.at(visplaneIndex);
+
+		if (
+			(thisVisplane.height <= thisLight.position.z - thisLight.intensity) ||
+			(thisVisplane.height >= thisLight.position.z + thisLight.intensity)
+		) {continue; /* Vertically outside of light's sphere. */}
+
+		glm::vec2 minPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maxPoint = glm::vec2(-constants::INF, -constants::INF);
+		for (glm::vec2 vertex : thisVisplane.vertices) {
+			minPoint = glm::min(minPoint, vertex);
+			maxPoint = glm::max(maxPoint, vertex);
+		}
+
+		bool visplaneInRange = (
+			((thisLight.position.x + thisLight.intensity) >= minPoint.x) && ((thisLight.position.x - thisLight.intensity) <= maxPoint.x) &&
+			((thisLight.position.y + thisLight.intensity) >= minPoint.y) && ((thisLight.position.y - thisLight.intensity) <= maxPoint.y)
+		);
+
+		if (visplaneInRange) {
+			visibleObjects->push_back(encodeIndex(thisVisplane, visplaneIndex));
+		}
+	}
+
+
+	return; //Implement later.
+	for (unsigned int displacementIndex=0; displacementIndex<physicsData->displacementData.size(); displacementIndex++) {
+		structs::Displacement thisDisplacement = physicsData->displacementData.at(displacementIndex);
+
+		bool displacementInRange = (
+			false
+		);
+
+		if (displacementInRange) {
+			visibleObjects->push_back(encodeIndex(thisDisplacement, displacementIndex));
+		}
+	}
+
+}
+
+void createLightLOSSSBO(unsigned int binding) {
+	std::vector<GLuint> objectSSBOVec;
+	size_t totalSize = 0;
+
+	//If an object could possibly occlude a light, then it is added. Otherwise it is not checked in the shader LOS pass.
+	std::vector<GLuint> objectsInRange;
+	for (unsigned int lightIndex=0; lightIndex<validLights; lightIndex++) {
+		objectsInRange.clear();
+
+		structs::Light thisLight = physicsData->lightData.at(lightIndex);
+		findObjectsInRangeOfLight(thisLight, &objectsInRange);
+		size_t thisSize = objectsInRange.size();
+		//Light stores the start index and number of indices in the dataset.
+		physicsData->lightData.at(lightIndex).LOSSSBOstart = totalSize;
+		physicsData->lightData.at(lightIndex).LOSSSBOcount = thisSize;
+
+		utils::combineVectors(&objectSSBOVec, objectsInRange);
+		totalSize = objectSSBOVec.size();
+	}
+
+	GLIndex::lightLOSSSBO = createShaderStorageBufferObject(
+		binding, sizeof(GLuint) * totalSize
+	);
+	if (!objectSSBOVec.empty()) {
+		updateShaderStorageBufferObject(GLIndex::lightLOSSSBO, objectSSBOVec.data(), objectSSBOVec.size());
+	}
+}
 
 
 
@@ -473,18 +580,16 @@ void saveScreenshot(GLuint frameTextureID) {
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
     glBindTexture(GL_TEXTURE_2D, 0);
 
-	//Flip image vertically.
-	for (int y = 0; y < currentRenderResolution.y / 2; ++y) {
-		for (int x = 0; x < currentRenderResolution.x * 3; ++x) {
-			std::swap(pixels[y * currentRenderResolution.x * 3 + x], pixels[(currentRenderResolution.y - 1 - y) * currentRenderResolution.x * 3 + x]);
-		}
-	}
+	stbi_flip_vertically_on_write(true);
+
+	std::filesystem::path dirName = std::filesystem::path("screenshots") / stageData.name;
+	std::filesystem::create_directories(dirName);
 
 	std::string timeStr = utils::getTimestamp();
-	std::string imagePath = "screenshots/" + stageData.name + "-" + timeStr + ".png";
+	std::filesystem::path imagePath = dirName / (timeStr + ".png");
 
 	stbi_write_png(
-		imagePath.c_str(),
+		imagePath.string().c_str(),
 		currentRenderResolution.x, currentRenderResolution.y,
 		3, pixels.data(), currentRenderResolution.x*3
 	);
@@ -582,7 +687,12 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 
 
 
-GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false) {
+GLuint createTexture2DArray(
+		std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames,
+		std::string subFolder="textures-env",
+		bool hasMipMap=false, bool isNormals=false,
+		const char* fallbackTextureName = display::FALLBACK_TEXTURE_PATH
+	) {
 	GLuint sheetArrayID;
 	glGenTextures(1, &sheetArrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, sheetArrayID);
@@ -596,7 +706,11 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 	} else {
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	}
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	if (isNormals) {
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else {
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -607,8 +721,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 	bool usedFallback;
 
 	unsigned char* fallbackTextureData = stbi_load(
-		display::FALLBACK_TEXTURE_PATH,
-		&fallbackTextureWidth, &fallbackTextureHeight,
+		fallbackTextureName, &fallbackTextureWidth, &fallbackTextureHeight,
 		&fallbackTextureChannels, 4
 	);
 
@@ -623,12 +736,14 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 
 	int width, height, channels;
 	int layerIndex = 0;
+	std::string extension = (isNormals) ? ".normal.png" : ".png";
 	for (const std::string& textureName : textureNames) {
 		if (textureName.empty()) {continue;}
 		usedFallback = false;
 
 		std::string reportedTextureName = textureName;
-		std::string texturePath = "src/" + subFolder + "/" + textureName + ".png";
+		//Try in folder beside stage XML with same name.
+		std::string texturePath = "stages/assets-" + stageData.name + "/" + textureName + extension;
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -636,8 +751,8 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 		);
 
 		if (!textureData) {
-			//Try in folder beside stage XML with same name.
-			texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+			//Fallback to default textures
+			texturePath = "src/" + subFolder + "/" + textureName + extension;
 			textureData = stbi_load(
 				texturePath.c_str(),
 				&width, &height,
@@ -645,7 +760,7 @@ GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_L
 			);
 
 			if (!textureData) {
-				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
+				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + extension) << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + extension) << "]. Reverting to fallback." << std::endl;
 				//Use fallback texture.
 				textureData = fallbackTextureData;
 				width = fallbackTextureWidth;
@@ -1209,6 +1324,23 @@ GLuint createDisplacementsFBO(size_t width, size_t height) {
 }
 
 
+GLuint zero = 0;
+void fetchAndClearAtomic(GLuint atomicCounter, GLuint* counterValue) {
+	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, atomicCounter);
+	if (counterValue) {
+		glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), counterValue);	
+	}
+	glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), &zero);
+}
+GLuint createAtomicCounter(unsigned int binding) {
+	GLuint atomicCounter;
+	glGenBuffers(1, &atomicCounter);
+	fetchAndClearAtomic(atomicCounter, nullptr);
+	glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding, atomicCounter);
+	return atomicCounter;
+}
+
+
 
 glm::mat4 uiMatrix;
 std::vector<structs::UIElement> UIElements;
@@ -1217,51 +1349,86 @@ void prepareOpenGL() {
 
 	//Framebuffers
 	GLIndex::frameFBO = createEnvironmentFBO(currentRenderResolution);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::frameFBO, -1, "mainFrameFBO");
 	GLIndex::interfaceFBO = createAlbedoFBO(display::UI_RESOLUTION, GLIndex::interfaceAlbedoComponent);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::interfaceFBO, -1, "interfaceFBO");
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
-	cout << GLIndex::lightingMapsArrayID << endl;
+	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
 	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::screenshotImage2D, -1, "screenshotImage2D");
 
 	//Textures
-	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true);
+	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayEnvironment, -1, "textureArrayEnvironment");
+	GLIndex::normalArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, true, display::FALLBACK_NORMAL_PATH);
+	glObjectLabel(GL_TEXTURE, GLIndex::normalArrayEnvironment, -1, "normalArrayEnvironment");
 	GLIndex::textureArrayUI = createTexture2DArray(UIImageNames, "textures-sym");
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayUI, -1, "textureArrayUI");
 	GLIndex::textureArrayNumeric = createTexture2DArray(symbolNames, "textures-sym");
+	glObjectLabel(GL_TEXTURE, GLIndex::textureArrayNumeric, -1, "textureArrayNumeric");
+
 	if (!(stageData.skyboxTextureName.empty())) {
 		GLIndex::skyboxTextureID = loadGLTexture2D(stageData.skyboxTextureName, "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	} else {
 		GLIndex::skyboxTextureID = createGLImage2D(display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	}
+	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
+
+	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_FRAMEBUFFER, GLIndex::displacementFBO, -1, "displacementFBO");
 
 
+	createLightLOSSSBO(9); //At binding 9.
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::allVisplanesSSBO, -1, "allVisplanesSSBO");
+
 	GLIndex::allWallsSSBO = createShaderStorageBufferObject(
 		1, sizeof(structs::WallGPU) * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::allWallsSSBO, -1, "allWallsSSBO");
+
 	GLIndex::spriteSSBO = createShaderStorageBufferObject(
 		2, sizeof(structs::SpriteGPU) * (validSprites + constants::MAX_SPRITE_PARTICLES)
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::spriteSSBO, -1, "spriteSSBO");
+
 	GLIndex::lightSSBO = createShaderStorageBufferObject(
 		3, sizeof(structs::LightGPU) * validLights
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::lightSSBO, -1, "lightSSBO");
+
 	GLIndex::displacementSSBO = createShaderStorageBufferObject(
 		4, sizeof(structs::DisplacementGPU) * validDisplacements
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::displacementSSBO, -1, "displacementSSBO");
+
 	GLIndex::visibleVisplaneIndicesSSBO = createShaderStorageBufferObject(
 		5, sizeof(uint) * validVisplanes
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::visibleVisplaneIndicesSSBO, -1, "visibleVisplaneIndicesSSBO");
+
 	GLIndex::visibleWallIndicesSSBO = createShaderStorageBufferObject(
 		6, sizeof(uint) * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::visibleWallIndicesSSBO, -1, "visibleWallIndicesSSBO");
+
 	GLIndex::wallIntersectSSBO = createShaderStorageBufferObject(
 		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
 	);
+	glObjectLabel(GL_BUFFER, GLIndex::wallIntersectSSBO, -1, "wallIntersectSSBO");
+
+	GLIndex::visplaneCheckSSBO = createShaderStorageBufferObject(
+		8, sizeof(uint) * currentRenderResolution.x * validVisplanes
+	);
+	glObjectLabel(GL_BUFFER, GLIndex::visplaneCheckSSBO, -1, "visplaneCheckSSBO");
+
 
 
 	//Raycast compute shader
@@ -1277,10 +1444,8 @@ void prepareOpenGL() {
 	//Sprite Shader
 	GLIndex::spriteShader = createShaderProgram("sprites");
 
-	//Lighting compute Shaders
-	GLIndex::dynamicLightingShader = createComputeShader("lightingDynamic");					//Per frame, heavy computation.
-	GLIndex::precomputeStaticLightingShader = createComputeShader("lightingStaticPrecompute");	//At runtime, once.
-	GLIndex::frameStaticLightingShader = createShaderProgram("lightingStaticFrame");			//Per frame, samples maps.
+	//Lighting compute Shader
+	GLIndex::lightingShader = createComputeShader("lighting");
 
 	//uiShader
 	GLIndex::uiShader = createShaderProgram("interface", "interface");
@@ -1311,7 +1476,7 @@ void prepareOpenGL() {
 
 	UIElements = {
 		structs::UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),		//Health image
-		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),					//Health number
+		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
 		structs::UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 		//Energy image
 		structs::UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
 		structs::UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
@@ -1326,56 +1491,6 @@ void prepareOpenGL() {
 
 
 
-
-std::vector<uint> visibleVisplaneIndices;
-std::vector<uint> visibleWallIndices;
-std::vector<uint> visibleDisplacementIndices;
-void updateSSBOs(bool drawLightBlockers) {
-	visibleVisplaneIndices.clear();
-	visibleWallIndices.clear();
-	visibleDisplacementIndices.clear();
-	graphics::findVisibleObjects(
-		&visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices,
-		drawLightBlockers
-	);
-
-
-	//Update SSBOs.
-	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
-		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
-	);
-	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
-		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
-	);
-	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
-		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
-	);
-	graphics::updateShaderStorageBufferObject<structs::SpriteGPU>(
-		GLIndex::spriteSSBO, &(graphicsData->spriteData), validSprites
-	);
-	graphics::updateShaderStorageBufferObject<structs::LightGPU>(
-		GLIndex::lightSSBO, &(graphicsData->lightData), validLights
-	);
-	graphics::updateShaderStorageBufferObject<uint>(
-		GLIndex::visibleVisplaneIndicesSSBO, &visibleVisplaneIndices
-	);
-	graphics::updateShaderStorageBufferObject<uint>(
-		GLIndex::visibleWallIndicesSSBO, &visibleWallIndices
-	);
-	utils::GLErrorcheck("Updating SSBOs", true);
-}
-
-
-inline void renderingGeneric(const std::string& shaderName="") {
-	glBindVertexArray(GLIndex::genericVAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-	glBindVertexArray(0);
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-	if (!shaderName.empty()) {
-		utils::GLErrorcheck(shaderName, true);
-	}
-}
 
 
 
@@ -1562,155 +1677,46 @@ void drawHUD(float blendingAlpha, float currentTime) {
 
 
 
-namespace lighting {
-
-static inline GLuint64 createARBTexture(glm::uvec2 resolution, GLuint* textureID) {
-	*textureID = graphics::createGLImage2D(resolution.x, resolution.y);
-	GLuint64 handle = glGetTextureHandleARB(*textureID);
-	glMakeTextureHandleResidentARB(handle);
-	return handle;
-}
-
-
-template<typename T>
-void createSurfaceMaps(
-	T* thisObject, glm::uvec2 resolution,
-	glm::vec3 normalVector, glm::vec3 minPos, glm::vec3 maxPos
-) {
-
-	GLuint frontTextureID, backTextureID;
-	thisObject->lightingHandles.first = createARBTexture(resolution, &frontTextureID); //Front shadowmap.
-	thisObject->lightingHandles.second = createARBTexture(resolution, &backTextureID); //Rear shadowmap.
-	cout << "Created maps: " << frontTextureID << " and " << backTextureID << endl;
-
-	//Raycasting compute shader.
-	const glm::uvec3 SHADOWMAPPING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
-	glUseProgram(GLIndex::precomputeStaticLightingShader);
-
-	glBindImageTexture(0, frontTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	glBindImageTexture(1, backTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-
-	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "shadowMapResolution", glm::ivec2(resolution));	
-	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "objectStart", minPos);	
-	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "objectEnd", maxPos);	
-	uniforms::bindUniformValue(GLIndex::precomputeStaticLightingShader, "surfaceNormal", normalVector);
-
-	glDispatchCompute(
-		(currentRenderResolution.x + SHADOWMAPPING_LOCAL_SIZE.x - 1) / SHADOWMAPPING_LOCAL_SIZE.x,
-		(currentRenderResolution.y + SHADOWMAPPING_LOCAL_SIZE.y - 1) / SHADOWMAPPING_LOCAL_SIZE.y,
-		2 //One dispatch for front, one dispatch for back.
-	);
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	GLErrorcheck("ShadowMapping Precompute Shader", true);
-
-}
-
-
-void createLightMaps() {
-	//Only run once ideally.
-
-	unsigned int index = 0;
-	for (structs::Wall thisWall : graphicsData->wallData) {
-		//Create ARB textures for this wall.
-		glm::vec2 wallDelta = glm::vec2(thisWall.end - thisWall.start);
-		glm::uvec2 mapDimensions = glm::uvec2(glm::vec2(
-			glm::length(wallDelta),
-			abs(thisWall.end.z - thisWall.start.z)
-		) / display::PREMADE_SHADOW_MAPS_TEXEL_SIZE);
-
-		glm::vec3 normalVector = glm::normalize(glm::vec3(-wallDelta.y, wallDelta.x, 0.0f));
-		glm::vec3 minPos = (thisWall.start.z < thisWall.end.z) ? thisWall.start : thisWall.end;
-		glm::vec3 maxPos = (thisWall.start.z > thisWall.end.z) ? thisWall.start : thisWall.end;
-
-		createSurfaceMaps(
-			&thisWall, mapDimensions, normalVector,
-			minPos, maxPos
-		);
-		graphicsData->wallData[index] = thisWall;
-		index++;
-	}
-
-	index = 0;
-	for (structs::Visplane thisPlane : graphicsData->visplaneData) {
-		//Create ARB textures for this visplane.
-		glm::vec2 planeMin = glm::vec2(constants::INF, constants::INF);
-		glm::vec2 planeMax = glm::vec2(-constants::INF, -constants::INF);
-		for (glm::vec2 vert : thisPlane.vertices) {
-			planeMin = glm::min(vert, planeMin);
-			planeMax = glm::max(vert, planeMax);
-		}
-
-		glm::uvec2 mapDimensions = glm::abs(glm::uvec2((planeMax-planeMin) / display::PREMADE_SHADOW_MAPS_TEXEL_SIZE));
-		createSurfaceMaps(
-			&thisPlane, mapDimensions, glm::vec3(0.0f, 0.0f, 1.0f),
-			glm::vec3(planeMin, thisPlane.height),
-			glm::vec3(planeMax, thisPlane.height)
-		);
-		graphicsData->visplaneData[index] = thisPlane;
-		index++;
-	}
-
-	*physicsData = *graphicsData;
-}
-
-
-
-void processLightSources() {
-	//Lighting Shaders
-	if (lightingType == LIGHT_DYNAMIC) {
-
-		graphics::updateSSBOs(true);
-		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-		glUseProgram(GLIndex::dynamicLightingShader);
-
-		glBindTextureUnit(0, GLIndex::framePositionComponent);
-		glBindTextureUnit(1, GLIndex::frameNormalComponent);
-		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		//Uniforms;
-		uniforms::bindCommonUniforms(GLIndex::dynamicLightingShader, 0.0f, 0.0f);
-		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
-		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::dynamicLightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
-
-		//Dispatch 2 extra valid lights (Sun, Headlamp.)
-		glDispatchCompute(
-			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
-			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
-			//maxIndex + 1 : All sunlight calculations. [SUNL]
-			//maxIndex + 2 : All headlamp calculations. [HLMP]
-		);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-		GLErrorcheck("Dynamic Lighting Shader", true);
-
-	
-	} else if (lightingType == LIGHT_SURFACE) {
-
-		glUseProgram(GLIndex::frameStaticLightingShader);
-		glBindTextureUnit(0, GLIndex::framePositionComponent);
-		glBindTextureUnit(1, GLIndex::frameNormalComponent);
-		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		uniforms::bindUniformValue(GLIndex::frameStaticLightingShader, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::frameStaticLightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
-
-		graphics::renderingGeneric("Static Lighting Shader");
-
-
-	} //else lightingType is LIGHT_NONE and so nothing happens here.
-}
-
-}
-
-
-
 namespace frame {
+
+
+std::vector<uint> visibleVisplaneIndices;
+std::vector<uint> visibleWallIndices;
+std::vector<uint> visibleDisplacementIndices;
+void updateSSBOs(bool drawLightBlockers) {
+	visibleVisplaneIndices.clear();
+	visibleWallIndices.clear();
+	visibleDisplacementIndices.clear();
+	graphics::findVisibleObjects(
+		&visibleVisplaneIndices, &visibleWallIndices, &visibleDisplacementIndices,
+		drawLightBlockers
+	);
+
+
+	//Update SSBOs.
+	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
+		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
+	);
+	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
+		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
+	);
+	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
+		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
+	);
+	graphics::updateShaderStorageBufferObject<structs::SpriteGPU>(
+		GLIndex::spriteSSBO, &(graphicsData->spriteData), validSprites
+	);
+	graphics::updateShaderStorageBufferObject<structs::LightGPU>(
+		GLIndex::lightSSBO, &(graphicsData->lightData), validLights
+	);
+	graphics::updateShaderStorageBufferObject<uint>(
+		GLIndex::visibleVisplaneIndicesSSBO, &visibleVisplaneIndices
+	);
+	graphics::updateShaderStorageBufferObject<uint>(
+		GLIndex::visibleWallIndicesSSBO, &visibleWallIndices
+	);
+	utils::GLErrorcheck("Updating SSBOs", true);
+}
 
 
 void drawDisplacements(float blendingAlpha, float currentTime) {
@@ -1720,7 +1726,7 @@ void drawDisplacements(float blendingAlpha, float currentTime) {
 	std::vector<GLuint> indicesData;
 	GLuint currentIndicesCount = 0;
 
-	for (uint displacementIdx : graphics::visibleDisplacementIndices) {
+	for (uint displacementIdx : visibleDisplacementIndices) {
 		structs::Displacement thisDisp = graphicsData->displacementData.at(displacementIdx);
 		glm::vec3 dispNormal = thisDisp.normal;
 		verticesData = {
@@ -1791,6 +1797,19 @@ void drawDisplacements(float blendingAlpha, float currentTime) {
 }
 
 
+inline void renderingGeneric(const std::string& shaderName="") {
+	glBindVertexArray(GLIndex::genericVAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(0);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+	if (!shaderName.empty()) {
+		utils::GLErrorcheck(shaderName, true);
+	}
+}
+
+
+
 void draw(double blendingAlpha, double currentTime) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
@@ -1800,7 +1819,7 @@ void draw(double blendingAlpha, double currentTime) {
 	float viewBob = (utils::configToBool("VIEW_BOB") && !player.onConveyor) ? graphics::viewBob(tickNumber) : 0.0f;
 	player.interpPosition = glm::mix(player.prevPosition, player.position, blendingAlpha);
 	player.cameraPosition = player.interpPosition + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
-	graphics::updateSSBOs(false);
+	updateSSBOs(false);
 
 
 
@@ -1808,9 +1827,10 @@ void draw(double blendingAlpha, double currentTime) {
 	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
 	glUseProgram(GLIndex::raycastShader);
 	uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime);
+	size_t numberOfObjects = numVisibleWalls + numVisibleVisplanes;
 	glDispatchCompute(
 		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
-		(numVisibleWalls + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
+		(numberOfObjects + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
 		1
 	);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -1825,14 +1845,16 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindFramebuffer(GL_FRAMEBUFFER, GLIndex::frameFBO);
 
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
-	glBindTextureUnit(1, GLIndex::skyboxTextureID);
+	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+	glBindTextureUnit(2, GLIndex::skyboxTextureID);
+	glBindTextureUnit(3, GLIndex::portalTextureID);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::envShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	uniforms::bindUniformValue(GLIndex::envShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 	uniforms::bindUniformValue(GLIndex::envShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
 
-	graphics::renderingGeneric("Environment Shader");
+	renderingGeneric("Environment Shader");
 
 	
 	//Displacements in 2 parts;
@@ -1850,7 +1872,7 @@ void draw(double blendingAlpha, double currentTime) {
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
-	graphics::renderingGeneric("Displacements Shaders");
+	renderingGeneric("Displacements Shaders");
 
 
 	//Sprite Shader.
@@ -1863,13 +1885,41 @@ void draw(double blendingAlpha, double currentTime) {
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::spriteShader, blendingAlpha, currentTime);
-	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_MIPMAPPING"));
+	uniforms::bindUniformValue(GLIndex::spriteShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
 
-	graphics::renderingGeneric("Sprite Shader");
+	renderingGeneric("Sprite Shader");
 
 
 
-	lighting::processLightSources();
+	//Lighting Shader
+	if (utils::configToBool("VIEW_LIGHTING")) {
+		updateSSBOs(true);
+		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
+		glUseProgram(GLIndex::lightingShader);
+
+		glBindTextureUnit(0, GLIndex::framePositionComponent);
+		glBindTextureUnit(1, GLIndex::frameNormalComponent);
+		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		//Uniforms;
+		uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+
+		//Dispatch 2 extra valid lights (Sun, Headlamp.)
+		glDispatchCompute(
+			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+			//maxIndex + 1 : All sunlight calculations. [SUNL]
+			//maxIndex + 2 : All headlamp calculations. [HLMP]
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		GLErrorcheck("Lighting Shader", true);
+	}
 
 
 
@@ -1897,20 +1947,21 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
 	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
 	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
+	glBindTextureUnit(4, GLIndex::framePositionComponent);
 	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
 	//Display-Specific
-	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasingLevel", utils::configToInt("VIEW_ANTIALIAS_LEVEL"));
+	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "lightType", static_cast<int>(lightingType));
+	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
 	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
 
-	graphics::renderingGeneric("Display Shader");
+	renderingGeneric("Display Shader");
 
 
 	if (shouldTakeScreenshot) {

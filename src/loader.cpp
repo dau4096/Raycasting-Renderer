@@ -66,6 +66,7 @@ static const std::unordered_map<std::string, int> enumMap = {
 	{"W_DOORSWING", 12},	{"V_TELEPORT", 12},
 	{"W_NODRAW", 13},		{"V_CONVEY", 13},
 	{"W_LIGHTBLOCKER", 14}, {"V_LIGHTBLOCKER", 14},
+	{"W_PORTAL", 15},		{"V_PORTAL", 15},
 };
 
 int assignEnum(const std::string& enumStr) {
@@ -187,7 +188,8 @@ static inline int getTexture(
 
 static std::unordered_map<std::string, std::pair<size_t, size_t>> indexMap;
 float assignExtra(const pugi::xml_node& node, size_t index=0) {
-	if (utils::strToUpper(node.attribute("type").value()) == "V_TELEPORT") {
+	std::string nodeType = utils::strToUpper(node.attribute("type").value());
+	if ((nodeType == "V_TELEPORT") || (nodeType == "W_PORTAL")) {
 		std::string teleflag = node.attribute("extra").as_string();
 		auto it = indexMap.find(teleflag);
 		if (it == indexMap.end()) {
@@ -1106,10 +1108,12 @@ static std::unordered_map<std::string, int> debugMap = {
 	{"UV", 1}, {"TEXTURE_UV", 1},
 	{"NORMALS", 2}, {"SURFACE_NORMALS", 2},
 	{"BRIGHTNESS", 3}, {"LIGHTING", 3},
+	{"EDGE", 4}, {"ANTIALIAS", 4},
+	{"WIREFRAME", 5}, //Pseudo wireframe.
 };
 
 static std::unordered_map<std::string, int> texMipMap = {
-	{"", 0}, {"HIGH", 0},
+	{"", 0}, {"FULL", 0},
 	{"MEDIUM", 1},
 	{"LOW", 2},
 	{"AWFUL", 3},
@@ -1179,6 +1183,7 @@ static inline void setConfigFromStringOptionsMap(
 		std::cout << ("Invalid config value: " + keyString) << std::endl << "Expected one of:";
 		for (const auto& pair : *map) {
 			if (pair.first.empty()) {continue; /* Blank option */}
+			std::cout << pair.first;
 			if constexpr (std::is_same_v<T, glm::ivec2>) {
 				std::cout << " for [" << pair.second.x << " x " << pair.second.y << "]";
 			} else if constexpr (std::is_same_v<T, glm::ivec3>) {
@@ -1189,6 +1194,7 @@ static inline void setConfigFromStringOptionsMap(
 				//Fallback for other types
 				std::cout << " (unprintable value type)";
 			}
+			std::cout << std::endl;
 		}
 
 		auto fallback = map->at(defaultValue);
@@ -1258,6 +1264,8 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("VIEW_TEXTURE_QUALITY", &texMipMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
+
+
 
 
 

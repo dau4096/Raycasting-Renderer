@@ -91,9 +91,12 @@ void physicsLoop() {
 			std::swap(physicsData, graphicsData);
 		}
 
+		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
+		
 		float dt = glfwGetTime() - tickStart;
 		tickrate = floor(1.0f / dt);
-		rollingTPS.push_back(tickrate);
+		if (!shouldTakeScreenshot) {rollingTPS.push_back(tickrate);}
+
 		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {
 			std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;
 		}
@@ -102,7 +105,6 @@ void physicsLoop() {
 		}
 
 
-		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
 		tickNumber++;
 
 
@@ -173,6 +175,7 @@ void handleInputs() {
 	}
 
 	shouldTakeScreenshot = utils::isPressed("META_SCREENSHOT") && !shouldTakeScreenshot && !lastFrameScreenshot;
+	zoomEffect = (utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f;
 
 	if (utils::isPressed("META_RELOAD_STAGE")) {
 		reloadLevel(true);
@@ -191,17 +194,43 @@ void handleInputs() {
 
 
 
+
+
+
+
 	rayAngle = (utils::isPressed("USE_VIEWZOOM")) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
 	rayAngle *= constants::TO_RAD;
 	zoomEffect = ((utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f);
+	bool useVLOOK = utils::configToBool("VIEW_VLOOK");
+
+	//Mouse camera controls;
 	double cursorXDelta = cursorXPos - cursorXPosPrev;
 	double cursorYDelta = cursorYPos - cursorYPosPrev;
 	player.viewAngle += cursorXDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
-	if (utils::configToBool("VIEW_VLOOK")) {
-		double dY = cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
-		player.vLook = glm::clamp(float(player.vLook+dY), -0.125f*constants::PI, 0.125f*constants::PI);
+	if (useVLOOK) {
+		player.vLook += cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
 	}
+
+
+
+	//Keyboard camera controls;
+	float keyboardTurnSpeed = constants::TO_RAD * utils::configToFloat("TURN_SPEED_KEYBOARD") / zoomEffect;
+	if (utils::isPressed("CAMERA_YAW_LEFT")) {
+		player.viewAngle -= keyboardTurnSpeed;
+	}
+	if (utils::isPressed("CAMERA_YAW_RIGHT")) {
+		player.viewAngle += keyboardTurnSpeed;
+	}
+	if (useVLOOK && utils::isPressed("CAMERA_PITCH_UP")) {
+		player.vLook -= keyboardTurnSpeed;
+	}
+	if (useVLOOK && utils::isPressed("CAMERA_PITCH_DOWN")) {
+		player.vLook += keyboardTurnSpeed;
+	}
+
+
+	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
+	player.vLook = glm::clamp(player.vLook, -0.125f*constants::PI, 0.125f*constants::PI);
 }
 
 
@@ -282,7 +311,7 @@ int main() {
 			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
 		}
 		framerate = floor(1.0f / (glfwGetTime() - frameStart));
-		rollingFPS.push_back(framerate);
+		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);}
 		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {
 			std::cout << "Framerate: " << framerate << "Hz" << std::endl;
 		}

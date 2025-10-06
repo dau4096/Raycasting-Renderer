@@ -30,3 +30,7 @@ mingw32-make
 REM Wait for user, then start app.exe.
 PAUSE
 start app.exe
+IF %ERROR_LEVEL% NEQ 0 (
+    ECHO An error occurred; %ERROR_LEVEL% &Exit /b 1
+    PAUSE
+)

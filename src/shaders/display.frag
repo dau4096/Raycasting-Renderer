@@ -9,6 +9,7 @@ layout(binding=0) uniform sampler2D renderedFrameSampler2D;
 layout(binding=1) uniform sampler2D depthMap;
 layout(binding=2) uniform sampler2D interfaceTexture;
 layout(binding=3) uniform sampler2DArray lightMapsArray;
+layout(binding=4) uniform sampler2D positionMap;
 
 layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
 
@@ -25,8 +26,7 @@ uniform vec3 fogColour;
 uniform int debugMode;
 
 //Other
-uniform int antiAliasingLevel;
-uniform bool smoothingEnabled;
+uniform bool antiAliasing;
 uniform int quantisingLevel;
 uniform int lightingType;
 uniform bool screenshotHasHUD;
@@ -51,40 +51,46 @@ vec2 getUV(vec2 pos) {
 }
 
 
-vec4 antiAliasFunc() {
-	const float edgeThreshold = 1.0f;
+const vec2 offsets[8] = {
+	vec2(-1.0f, -1.0f), vec2( 0.0f, -1.0f), vec2( 1.0f, -1.0f),
+	vec2(-1.0f,  0.0f),                     vec2( 1.0f,  0.0f),
+	vec2(-1.0f,  1.0f), vec2( 0.0f,  1.0f), vec2( 1.0f,  1.0f)
+};
+vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
+	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
+	vec2 inverseScreenRes = 1.0f / vec2(screenResolution);
+	
+	int centreIData = int(texture(positionMap, mainUV).w); //Contains object index and type, encoded as bits.
+	vec3 colourSum = centreColour.rgb;
+	bool isEdge = false;
 
-	vec2 baseUV = getUV(gl_FragCoord.xy);
-	vec4 centrePX = texture(renderedFrameSampler2D, baseUV);
-	float centreDepth = centrePX.a;
-
-	float minDepth = centreDepth, maxDepth = centreDepth;
-
-	vec3 colourSum = vec3(0.0f, 0.0f, 0.0f);
-	int n = 0;
-
-	for (int dx=-antiAliasingLevel; dx<=antiAliasingLevel; dx++) {
-		for (int dy=-antiAliasingLevel; dy<=antiAliasingLevel; dy++) {
-			vec2 UV = getUV(gl_FragCoord.xy + vec2(dx, dy));
-			vec4 sampledPX = texture(renderedFrameSampler2D, UV);
-
-			float depth = sampledPX.a;
-			if (depth < 0.0) {continue; /* fragment was UI */}
-
-			minDepth = min(minDepth, depth);
-			maxDepth = max(maxDepth, depth);
-			colourSum += sampledPX.rgb;
-			n++;
+	for (uint offsetIndex=0; offsetIndex<8; offsetIndex++) {
+		vec2 thisUV = mainUV + (offsets[offsetIndex] * inverseScreenRes);
+		int thisIData = int(texture(positionMap, thisUV).w);
+		colourSum += texture(renderedFrameSampler2D, thisUV).rgb;
+		if (abs(thisIData - centreIData) > 0) {
+			//Different object/surface was hit. Apply anti-aliasing.
+			isEdge = true;
 		}
 	}
 
-	if ((maxDepth - minDepth) > edgeThreshold) { //Edge found.
-		vec3 meanColour = colourSum / float(n);
-		return vec4(meanColour.rgb, 1.0f);
-	} else { //No edge found.
-		return centrePX;
-	}
-
+	//Rather unfortunate how large this is.
+	return vec4(
+		mix(
+			mix(
+				centreColour.rgb,
+				vec3(0.0f, 0.0f, 0.0f),
+				int(debugMode == 5)
+			),
+			mix(
+				colourSum / 8.0f,
+				vec3(1.0f, 0.0f, 1.0f),
+				int((debugMode == 4) || (debugMode == 5))
+			),
+			int(isEdge)
+		),
+		1.0f
+	);
 }
 
 
@@ -132,6 +138,13 @@ void main() {
 		} else {
 			resultant = vec4(albedo.rgb, 1.0f);
 		}
+		if (isInvertEffect) {
+			vec3 invert = vec3(1.0f, 1.0f, 1.0f) - resultant.rgb;
+			float flashAlpha = screenTint.a * 2.0f - 1.0f;
+			resultant.rgb = mix(resultant.rgb, mix(screenTint.rgb, invert.rgb, flashAlpha), screenTint.a);
+		} else {
+			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
+		}
 	} else {
 		vec3 brightness = getBrightness(mainUV);
 		fragColour = vec4(brightness, 1.0f);
@@ -155,12 +168,12 @@ void main() {
 		}
 	}
 
-	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not adequate. Works based on luminance.
+	if (quantisingLevel > 1) { //Quantising 1 would be 1 colour. Not allowed. Works based on luminance.
 		resultant = quantisingFunc(mainUV);
 	}
 
-	if (antiAliasingLevel > 0) { //More useful Anti-Aliasing
-		resultant = antiAliasFunc();
+	if (antiAliasing) { //More useful Anti-Aliasing
+		resultant = antiAliasFunc(mainUV, resultant.rgb);
 	}
 
 
@@ -168,22 +181,26 @@ void main() {
 	vec4 interfaceColour = texture(interfaceTexture, mainUV);
 
 	//TextObjects use negative distance as their alpha. General UI uses 0-1 alpha values.
-	bool isTextObject = interfaceColour.a < 0.0f;
+	bool isTextObject = interfaceColour.a == 2.0f;
 	interfaceColour.a = (isTextObject) ? 1.0f : interfaceColour.a;
 
-	// Final fragment output (blend of scene and UI)
+	//Final fragment output (blend of scene and UI)
 	fragColour = vec4(mix(resultant.rgb, interfaceColour.rgb, interfaceColour.a), 1.0f);
 
 	if (shouldTakeScreenshot) {
-		vec4 screenshotColour;
-
-		if (screenshotHasHUD) {
-			//HUD was already added to fragColour, so use that.
-			screenshotColour = fragColour;
-		} else {
-			//Check if the pixel references a TextObject or HUD before choosing between the interface colour or environment colour.
-			screenshotColour = (isTextObject) ? vec4(interfaceColour.rgb, 1.0f) : vec4(resultant.rgb, 1.0f);
-		}
+		//Check if the pixel references a TextObject or HUD before choosing between the interface colour or environment colour.
+		vec4 screenshotColour = vec4(
+			mix(
+				mix(
+					resultant.rgb,
+					interfaceColour.rgb,
+					int(isTextObject)
+				),
+				fragColour.rgb,
+				int(screenshotHasHUD)
+			),
+			1.0f
+		);
 
 		imageStore(frameToScreenshot, framePosition, screenshotColour);
 	}
