@@ -1,15 +1,15 @@
-/* lightingStaticFrame.frag */
-//Per frame, samples maps
+/* lightingStaticFrame.fixed.frag */
+//Per frame, samples maps. Does not use ARB textures.
 #version 460 core
-#extension GL_ARB_bindless_texture : require
-#extension GL_ARB_gpu_shader_int64 : enable
 
 
 layout(binding=0) uniform sampler2D positionMap;
+layout(binding=1) uniform sampler2DArray shadowMaps;
 layout(rgba32f, binding=0) writeonly uniform image2DArray lightMapArray;
 
 
 uniform ivec2 renderResolution;
+
 
 
 struct Visplane {
@@ -19,6 +19,8 @@ struct Visplane {
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
 	vec4 boundingBox;	//Bounding box in 2D.
+	uint type;			//Visplanetype.
+	float extra;		//Extra data.
 	uint lightingHandles[4]; //ARB shadowMap handles.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
@@ -31,7 +33,9 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
-	uint lightingHandles[4]; //ARB shadowMap handles.
+	uint type;			//Walltype.
+	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -39,21 +43,18 @@ layout(std430, binding=1) buffer wallSSBO {
 
 
 
-uint64_t getHandle(uint handles[4], const bool useFront) {
-	if (useFront) {
-		return (uint64_t(handles[0]) << 32) | uint64_t(handles[1]);
-	} else {
-		return (uint64_t(handles[2]) << 32) | uint64_t(handles[3]);
-	}
-}
-
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 
 void main() {
-	vec2 fragPosition = gl_FragCoord.xy;
-	ivec2 framePosition = ivec2(fragPosition);
+	uint screenX = gl_GlobalInvocationID.x;
+	uint screenY = gl_GlobalInvocationID.y;
+	uint lightIndex = gl_GlobalInvocationID.z;
+	if ((screenX >= renderResolution.x) || (screenY >= renderResolution.y) || (lightIndex >= 3)) {return; /* Offscreen or out of range. */}
+	ivec2 framePosition = ivec2(screenX, screenY);
 
-	vec4 data = texture(positionMap, vec2(fragPosition / vec2(renderResolution)));
+
+	vec4 data = texture(positionMap, vec2(framePosition) / vec2(renderResolution));
 	vec3 position3D = data.xyz;
 	int iData = int(data.w);
 	int type = iData & 0x7;
@@ -68,22 +69,20 @@ void main() {
 		}
 		case 0x1: { //Walls
 			Wall thisWall = walls[index];
-			sampler2D shadowMap = sampler2D(getHandle(thisWall.lightingHandles, true));
 			vec3 range = thisWall.end - thisWall.start;
 			vec3 local = position3D - thisWall.start;
 			uv = vec2(
 				dot(local.xy, local.xy) / dot(range.xy, range.xy),
 				local.z / range.z
 			);
-			lightColour = texture(shadowMap, uv.xy).rgba;
+			lightColour = texture(shadowMaps, vec3(uv.xy, thisWall.lightingHandles[0])).rgba;
 			break;
 		}
 		case 0x2: { //Visplanes
 			Visplane thisVisplane = visplanes[index];
-			sampler2D shadowMap = sampler2D(getHandle(thisVisplane.lightingHandles, true));
 			vec2 range = thisVisplane.boundingBox.zw - thisVisplane.boundingBox.xy;
 			uv = (position3D.xy - thisVisplane.boundingBox.xy) / range;
-			lightColour = texture(shadowMap, uv.xy).rgba;
+			lightColour = texture(shadowMaps, vec3(uv.xy, thisVisplane.lightingHandles[0])).rgba;
 			break;
 		}
 		case 0x3: { //Displacements
@@ -96,5 +95,5 @@ void main() {
 		}
 	}
 
-	imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4(vec2(fragPosition / vec2(renderResolution)).xy, 0.0f, 1.0f));
+	imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4(lightColour.rgb, 1.0f));
 }

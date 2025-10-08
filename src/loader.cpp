@@ -1129,8 +1129,8 @@ static std::unordered_map<std::string, float> shadowQualityMap = {
 
 static std::unordered_map<std::string, LightingType> lightTypeMap = {
 	{"", LIGHT_NONE}, {"NONE", LIGHT_NONE},
-	{"SURFACE", LIGHT_SURFACE}, {"LOW", LIGHT_SURFACE},
-	{"DYNAMIC", LIGHT_DYNAMIC}, {"FRAME", LIGHT_DYNAMIC}, {"HIGH", LIGHT_SURFACE}
+	{"OLD", LIGHT_STATIC_FIXED}, {"ARB", LIGHT_STATIC_ARB},
+	{"DYNAMIC", LIGHT_DYNAMIC}
 };
 
 
@@ -1244,6 +1244,22 @@ void loadStage(
 }
 
 
+
+
+void getSupportedExtensions() {
+	GLint numberOfExtensions = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &numberOfExtensions);
+
+	for (int i=0; i<numberOfExtensions; i++) {
+		GLIndex::supportedExtensions.insert((const char*)glGetStringi(GL_EXTENSIONS, i));
+	}
+}
+
+bool OpenGLSupportsARB() {
+	return (GLIndex::supportedExtensions.find("GL_ARB_bindless_texture")) != (GLIndex::supportedExtensions.end());
+}
+
+
 void loadBindings() {
 	const std::string filePath = "userConfig.xml";
 	std::string XMLSrc = utils::readFile(filePath);
@@ -1257,6 +1273,8 @@ void loadBindings() {
 	xml::fetchBindingsFromXML(doc);
 	xml::fetchConfigsFromXML(doc);
 
+	getSupportedExtensions();
+
 
 	//Handle settings that can have multiple string inputs, which map to other values.
 	setConfigFromStringOptionsMap("VIEW_RENDER_RESOLUTION_QUALITY", &resolutionMap, "LOW", &desiredRenderResolution);
@@ -1267,12 +1285,16 @@ void loadBindings() {
 
 
 
-
-
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();
 	} else {
 		utils::hideConsole();
+	}
+
+
+	if ((lightingType == LIGHT_STATIC_ARB) && !OpenGLSupportsARB()) {
+		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
+		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" method.
 	}
 }
 

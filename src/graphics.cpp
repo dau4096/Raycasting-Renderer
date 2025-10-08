@@ -287,9 +287,9 @@ GLFWwindow* initialiseWindow(int width, int height, const char* title) {
 
 
 GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="") {
-	if (vertexShaderName.empty()) {vertexShaderName = "generic";}
-	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\"+ vertexShaderName +".vert");
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src\\shaders\\"+ fragShaderName +".frag");
+	if (vertexShaderName.empty()) {vertexShaderName = "exct/generic";}
+	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ vertexShaderName +".vert");
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ fragShaderName +".frag");
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
@@ -317,7 +317,7 @@ GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderN
 
 
 GLuint createComputeShader(std::string compShaderName) {
-	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src\\shaders\\" + compShaderName + ".comp");
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName + ".comp");
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, computeShader);
@@ -351,6 +351,26 @@ GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return SSBO;
+}
+
+template<typename TGPU, typename TCPU>
+void updateShaderStorageBufferObject(
+		GLuint SSBO, std::vector<TCPU>* dataSetIn, int allocSize, const bool hasIndex
+	) {
+
+	size_t singleItemSize = sizeof(TGPU);
+	size_t size = (allocSize == -1) ? dataSetIn->size() : allocSize;
+	std::vector<TGPU> dataSet;
+
+	for (size_t index=0; index<size; index++) {
+		dataSet.push_back(TGPU(dataSetIn->data() + index, player, index));
+	}
+
+	if (size > 0 && !dataSet.empty()) {
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	}
 }
 
 template<typename TGPU, typename TCPU>
@@ -1432,26 +1452,54 @@ void prepareOpenGL() {
 
 
 	//Raycast compute shader
-	GLIndex::raycastShader = createComputeShader("raycast");
+	GLIndex::raycastShader = createComputeShader("stage/raycast");
 
 	//Environment shader
-	GLIndex::envShader = createShaderProgram("environment");
+	GLIndex::envShader = createShaderProgram("stage/environment");
 
 	//Displacement shaders
-	GLIndex::displacementShader3D = createShaderProgram("displacements3D", "projection");
-	GLIndex::displacementShader2D = createShaderProgram("displacements2D");
+	GLIndex::displacementShader3D = createShaderProgram("displacements/3D", "displacements/projection");
+	GLIndex::displacementShader2D = createShaderProgram("displacements/2D");
 
 	//Sprite Shader
-	GLIndex::spriteShader = createShaderProgram("sprites");
+	GLIndex::spriteShader = createShaderProgram("stage/sprites");
 
 	//Lighting compute Shader
-	GLIndex::lightingShader = createComputeShader("lighting");
+	switch(lightingType) {
+		case LIGHT_STATIC_FIXED: {
+			//Uses fixed-size shadow maps in an array.
+			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.fixed");
+			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.fixed");
+			unsigned int numMaps = validVisplanes + validWalls;
+			GLIndex::lightingMapsArrayID = createGLImage2DArray(
+				display::FIXED_SHADOW_RESOLUTION.x, display::FIXED_SHADOW_RESOLUTION.y,
+				numMaps
+			);
+			break;
+		}
+		case LIGHT_STATIC_ARB: {
+			//Only works if ARB textures are allowed. Otherwise falls back to LIGHT_STATIC_FIXED.
+			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.arb");
+			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.arb");
+			break;
+		}
+		case LIGHT_DYNAMIC: {
+			GLIndex::preLightingShader = -1;
+			GLIndex::frameLightingShader = createComputeShader("lighting/dynamic.frame");
+			break;
+		}
+		default: {
+			GLIndex::preLightingShader = -1;
+			GLIndex::frameLightingShader = -1;
+			break;
+		}
+	}
 
 	//uiShader
-	GLIndex::uiShader = createShaderProgram("interface", "interface");
+	GLIndex::uiShader = createShaderProgram("exct/interface", "exct/interface");
 	
 	//Display Shader
-	GLIndex::displayShader = createShaderProgram("display", "display");
+	GLIndex::displayShader = createShaderProgram("exct/display", "exct/display");
 
 
 	initialiseVAOs();
@@ -1490,11 +1538,78 @@ void prepareOpenGL() {
 
 
 
+}
 
 
 
+
+
+
+
+namespace lighting {
+
+
+void runComputeShader(size_t numberOfObjects) {
+	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
+	glUseProgram(GLIndex::frameLightingShader);
+	uniforms::bindCommonUniforms(GLIndex::frameLightingShader, 0.0f, 0.0f);
+	glDispatchCompute(
+		(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
+		(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
+		(numberOfObjects + LIGHTING_LOCAL_SIZE.z - 1) / LIGHTING_LOCAL_SIZE.z
+	);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("Frame Lighting Compute Shader", true);
+}
+
+
+void fixedResolutionLightmapping(size_t numberOfObjects) {
+	std::vector<glm::ivec2> mapResolutions(numberOfObjects);
+	std::fill(mapResolutions.begin(), mapResolutions.end(), display::FIXED_SHADOW_RESOLUTION);
+	graphics::updateShaderStorageBufferObject(
+		GLIndex::shadowMapResolutionsSSBO,
+		&(mapResolutions[0]), numberOfObjects
+	);
+	runComputeShader(numberOfObjects * 2u); //Front and backface for every object
+}
+
+
+void arbLightmapping(size_t numberOfObjects) {
+
+	runComputeShader(numberOfObjects * 2u); //Front and backface for every object
 
 }
+
+
+void createLightMaps() {
+	//Create lightmaps based on what light mode it is.
+
+	size_t numberOfObjects = validVisplanes + validWalls;
+	GLIndex::shadowMapResolutionsSSBO = graphics::createShaderStorageBufferObject(20, sizeof(glm::ivec2) * numberOfObjects);
+
+	switch(lightingType) {
+		case LIGHT_STATIC_FIXED: {
+			//Static size lightmaps.
+			fixedResolutionLightmapping(numberOfObjects);
+			break;
+		}
+
+		case LIGHT_STATIC_ARB: {
+			//Lightmaps accessed via ARB handles.
+			arbLightmapping(numberOfObjects);
+			break;
+		}
+
+		default: {
+			//Unknown.
+			return;
+		}
+	}
+}
+
+}
+
+
 
 
 
@@ -1695,7 +1810,7 @@ void updateSSBOs(bool drawLightBlockers) {
 
 	//Update SSBOs.
 	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
-		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
+		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes, true
 	);
 	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
 		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
@@ -1892,22 +2007,21 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//Lighting Shader
-	if (utils::configToBool("VIEW_LIGHTING")) {
+	if (GLIndex::frameLightingShader != -1) {
 		updateSSBOs(true);
 		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-		glUseProgram(GLIndex::lightingShader);
+		glUseProgram(GLIndex::frameLightingShader);
 
 		glBindTextureUnit(0, GLIndex::framePositionComponent);
-		glBindTextureUnit(1, GLIndex::frameNormalComponent);
-		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+		glBindTextureUnit(1, GLIndex::lightingMapsArrayID);
 		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		//Uniforms;
-		uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
-		uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+		uniforms::bindCommonUniforms(GLIndex::frameLightingShader, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
 
 		//Dispatch 2 extra valid lights (Sun, Headlamp.)
 		glDispatchCompute(

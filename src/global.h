@@ -80,7 +80,7 @@ inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
 inline glm::ivec2 currentShadowResolution;
-
+inline LightingType lightingType;
 
 //Other
 inline float framerate;
@@ -127,7 +127,7 @@ inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
-inline GLuint spriteShader, lightingShader, uiShader, displayShader; 
+inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, displayShader; 
 
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
@@ -137,6 +137,10 @@ inline GLuint portalTextureID;
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
+inline GLuint shadowMapResolutionsSSBO;
+
+
+inline std::set<std::string> supportedExtensions;
 
 }
 
@@ -360,11 +364,12 @@ struct VisplaneGPU {
 	alignas(16) glm::vec4 boundingBox;
 	alignas(4)  GLuint type;
 	alignas(4)  float extra;
+	alignas(4)  GLuint lightingHandles[4];
 
 	VisplaneGPU()
 		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox(), type(), extra() {}
 
-	VisplaneGPU(Visplane *visplane, Player player)
+	VisplaneGPU(Visplane *visplane, Player player, unsigned int index)
 		: numVertices(visplane->numVertices), height(visplane->height),
 		  textureData1(visplane->textureData1), textureData2(visplane->textureData2),
 		  type(visplane->type), extra(visplane->data) {
@@ -389,6 +394,31 @@ struct VisplaneGPU {
 					min(minPT, glm::vec2(boundingBox)),
 					max(maxPT, glm::vec2(boundingBox.z, boundingBox.w))
 				);
+			}
+
+			switch(lightingType) {
+				case LIGHT_STATIC_FIXED: {
+					lightingHandles[0] = index;
+					lightingHandles[1] = index+1;
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+					break;
+				}
+				case LIGHT_STATIC_ARB: {
+					//Assign lightingHandles to be the 2 32b halves of the ARB handle.
+					lightingHandles[0] = 0u; //High
+					lightingHandles[1] = 0u; //Low
+					lightingHandles[2] = 0u; //High
+					lightingHandles[3] = 0u; //Low
+					break;
+				}
+				default: {
+					lightingHandles[0] = 0u; //Unused.
+					lightingHandles[1] = 0u; //Unused.
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+					break;
+				}
 			}
 		}
 };

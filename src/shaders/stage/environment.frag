@@ -52,6 +52,7 @@ struct Visplane {
 	vec4 boundingBox;	//Bounding box in 2D.
 	uint type;			//Visplanetype.
 	float extra;		//Extra data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -65,6 +66,7 @@ struct Wall {
 	uint textureData2;	//2nd Texture formatting data.
 	uint type;			//Walltype.
 	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];

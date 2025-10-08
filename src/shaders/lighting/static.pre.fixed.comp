@@ -1,0 +1,128 @@
+/* lightingStatic.fixed.comp */
+#version 460 core
+
+layout(rgba32f, binding=0) writeonly uniform image2DArray shadowMaps;
+
+uniform vec3 startPosition;
+uniform vec3 inNormal;
+uniform vec3 endPosition;
+uniform ivec2 mapResolution;
+
+
+uniform int numVisplanes;
+uniform int numWalls;
+
+
+struct Visplane {
+	vec4 vertices[4];	//2D points
+	uint numVertices;	//Number of 2D points
+	float height;		//1D height (Z)
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	vec4 boundingBox;	//Bounding box in 2D.
+	uint type;			//Visplanetype.
+	float extra;		//Extra data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
+};
+layout(std430, binding=0) buffer visplaneSSBO {
+	Visplane visplanes[];
+};
+
+struct Wall {
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Walltype.
+	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
+};
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
+};
+
+
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+
+#define EPSILON 1e-4f	
+
+
+
+vec2 getVertex(Visplane thisVisplane, uint index) {
+	uint actualIndex = index / 2;
+	return (index % 2 == 0) ? thisVisplane.vertices[actualIndex].xy : thisVisplane.vertices[actualIndex].zw;
+}
+
+bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
+	for (uint i=0; i<thisVisplane.numVertices; i++) {
+		vec2 a = getVertex(thisVisplane, i);
+		vec2 b = getVertex(thisVisplane, (i + 1) % thisVisplane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+	}
+	return true;
+}
+
+
+
+
+#define T_NONE 0x0u
+#define T_WALL 0x1u
+#define T_VISPLANE 0x2u
+#define T_DISPLACEMENT 0x3u
+
+void main() {
+	uint invokeX = gl_GlobalInvocationID.x;
+	uint invokeY = gl_GlobalInvocationID.y;
+	uint objectIndex = gl_GlobalInvocationID.z;
+	if ((invokeX >= mapResolution.x) || (invokeY >= mapResolution.y) || (objectIndex >= (numVisplanes + numWalls) * 2u)) {return; /* Offscreen or out of range. */}
+	uint objectType = (objectIndex >= (numVisplanes * 2u)) ? T_WALL : T_VISPLANE;
+
+	ivec3 mapPosition = ivec3(invokeX, invokeY, objectIndex);
+	vec2 mapDecimal = vec2(mapPosition.xy) / vec2(mapResolution);
+	vec3 interpPos;
+
+	Visplane thisVisplane;
+	Wall thisWall;
+
+	switch (objectType) {
+		case T_VISPLANE: {
+			interpPos = vec3(
+				mix(startPosition.xy, endPosition.xy, mapDecimal.xy),
+				startPosition.z
+			);
+			thisVisplane = visplanes[objectIndex / 2];
+			if (!isInsideVP(interpPos.xy, thisVisplane)) {
+				//Not inside actual visplane, exit.
+				imageStore(shadowMaps, mapPosition, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+				return;
+			}
+			break;
+		}
+		case T_WALL: {
+			interpPos = vec3(
+				mix(startPosition.xy, endPosition.xy, mapDecimal.x),
+				mix(startPosition.z, endPosition.z, mapDecimal.y)
+			);
+			thisWall = walls[(objectIndex / 2) - numVisplanes];
+			break;
+		}
+		default: {
+			//Unknown type; reject.
+			return;
+		}
+	}
+	vec3 normal = ((objectIndex % 2u) == 1u) ? inNormal : -inNormal;
+
+
+
+	//Do actual lighting stuff from lightingDynamic.frame.comp
+	vec4 finalLighting;
+	imageStore(shadowMaps, mapPosition, finalLighting.rgba);
+}

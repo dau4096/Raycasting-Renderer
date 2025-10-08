@@ -103,6 +103,7 @@
 <option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
+<option function="VIEW_LIGHTING_TYPE"					value="OLD"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
 <option function="VIEW_LIGHTING" 						value="TRUE"			note="When disabled, no lighting pass is applied. [TRUE/FALSE]" />
 
 
@@ -120,7 +121,7 @@
 
 
 <!-- Post-processing -->
-<option function="VIEW_LUMINANCE_QUANTISATION" 			value="0" 				note="Whether to quantise frame colours via luminance. [LessThan] 2 is none. [INTEGER]"/>
+<option function="VIEW_LUMINANCE_QUANTISATION" 			value="0" 				note="Quantisation from frame colours via luminance. [LessThan] 2 is none. [INTEGER]"/>
 <option function="VIEW_ANTIALIAS" 						value="FALSE" 			note="Applies simple anti-aliasing to the final frame. [TRUE/FALSE]" />
 
 
@@ -128,7 +129,7 @@
 <option function="META_SHOW_FRAMERATE_CONSOLE" 			value="FALSE" 			note="Show graphics framerate in the console. [TRUE/FALSE]" />
 <option function="META_SHOW_FRAMERATE_UI" 				value="TRUE" 			note="Show graphics framerate in the HUD. [TRUE/FALSE]" />
 <option function="META_SHOW_TICKRATE_UI" 				value="FALSE" 			note="Show physics tickrate in the HUD. [TRUE/FALSE]" />
-<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics framerate in console, with theoretical FPS. [TRUE/FALSE]" />
+<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
 <option function="VIEW_VSYNC" 							value="FALSE" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
 
 

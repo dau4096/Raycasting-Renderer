@@ -63,7 +63,7 @@ enum SpriteType {
 };
 
 enum LightingType {
-	LIGHT_NONE, LIGHT_SURFACE, LIGHT_DYNAMIC
+	LIGHT_NONE, LIGHT_STATIC_FIXED, LIGHT_STATIC_ARB, LIGHT_DYNAMIC
 };
 
 enum LogicInput {
@@ -274,7 +274,8 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
-	constexpr float PREMADE_SHADOW_MAPS_TEXEL_SIZE = 0.01f;
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION = glm::ivec2(512, 512);
+	constexpr float ARB_SHADOW_TEXEL_SIZE = 0.01f;
 
 
 	//Texture Standardisation
