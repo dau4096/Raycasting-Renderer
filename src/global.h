@@ -132,7 +132,7 @@ inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, di
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
-inline GLuint portalTextureID;
+inline GLuint portalTextureID, surfaceLightMapsArrayID;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
@@ -398,8 +398,8 @@ struct VisplaneGPU {
 
 			switch(lightingType) {
 				case LIGHT_STATIC_FIXED: {
-					lightingHandles[0] = index;
-					lightingHandles[1] = index+1;
+					lightingHandles[0] = (index * 2);
+					lightingHandles[1] = (index * 2)+1;
 					lightingHandles[2] = 0u; //Unused.
 					lightingHandles[3] = 0u; //Unused.
 					break;
@@ -521,6 +521,7 @@ struct WallGPU {
 	alignas(4) GLuint textureData2;
 	alignas(4) GLuint type;
 	alignas(4) float extra;
+	alignas(4) GLuint lightingHandles[8];
 
 
 	WallGPU()
@@ -528,13 +529,53 @@ struct WallGPU {
 		  textureData1(), textureData2(),
 		  type(), extra() {}
 
-	WallGPU(Wall *wall, Player player)
+	WallGPU(Wall *wall, Player player, unsigned int index)
 		: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
 		  textureData2(wall->textureData2), type(static_cast<GLuint>(wall->type)), extra(wall->data) {
 			if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
 				textureData1 = wall->textureData1s.second;
 			} else {
 				textureData1 = wall->textureData1s.first;
+			}
+
+			switch(lightingType) {
+				case LIGHT_STATIC_FIXED: {
+					lightingHandles[0] = (index+validVisplanes) * 2;
+					lightingHandles[1] = (index+validVisplanes) * 2 + 1;
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+
+					lightingHandles[4] = 0u; //Unused.
+					lightingHandles[5] = 0u; //Unused.
+					lightingHandles[6] = 0u; //Unused.
+					lightingHandles[7] = 0u; //Unused.
+					break;
+				}
+				case LIGHT_STATIC_ARB: {
+					//Assign lightingHandles to be the 2 32b halves of the ARB handle.
+					lightingHandles[0] = 0u; //High
+					lightingHandles[1] = 0u; //Low
+					lightingHandles[2] = 0u; //High
+					lightingHandles[3] = 0u; //Low
+
+					lightingHandles[4] = 0u; //High
+					lightingHandles[5] = 0u; //Low
+					lightingHandles[6] = 0u; //High
+					lightingHandles[7] = 0u; //Low
+					break;
+				}
+				default: {
+					lightingHandles[0] = 0u; //Unused.
+					lightingHandles[1] = 0u; //Unused.
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+
+					lightingHandles[4] = 0u; //Unused.
+					lightingHandles[5] = 0u; //Unused.
+					lightingHandles[6] = 0u; //Unused.
+					lightingHandles[7] = 0u; //Unused.
+					break;
+				}
 			}
 		}
 };

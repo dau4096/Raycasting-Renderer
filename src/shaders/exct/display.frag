@@ -31,7 +31,7 @@ uniform int quantisingLevel;
 uniform int lightingType;
 uniform bool screenshotHasHUD;
 uniform bool shouldTakeScreenshot;
-uniform int numLights;
+uniform uint numLights;
 uniform vec4 screenTint;
 uniform bool isInvertEffect;
 
@@ -108,11 +108,10 @@ vec4 quantisingFunc(vec2 mainUV) {
 
 
 vec3 getBrightness(vec2 UV) {
-	return texture(lightMapsArray, vec3(UV.xy, 0.0f)).rgb;
 	if ((lightingType == 0) || ((debugMode != 0) && (debugMode != 3))) {//Debugging modes and no-lighting type.
 		return vec3(1.0f, 1.0f, 1.0f);
 
-	} else if (lightingType == 1) { //Lighting type is "static" type.
+	} else if ((lightingType == 1) || (lightingType == 2)) { //Lighting type is "static" type.
 		//Only samples layer 0.
 		return texture(lightMapsArray, vec3(UV.xy, 0.0f)).rgb;
 
@@ -145,10 +144,9 @@ void main() {
 		} else {
 			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
 		}
+
 	} else {
 		vec3 brightness = getBrightness(mainUV);
-		fragColour = vec4(brightness, 1.0f);
-		return;
 		if (debugMode == 3) { //Debug lighting.
 			resultant.rgb = brightness / MAX_BRIGHTNESS;
 		} else {

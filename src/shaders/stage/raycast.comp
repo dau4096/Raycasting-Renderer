@@ -2,7 +2,6 @@
 #version 460 core
 
 
-
 struct Visplane {
 	vec4 vertices[4];	//2D points
 	uint numVertices;	//Number of 2D points
@@ -12,6 +11,7 @@ struct Visplane {
 	vec4 boundingBox;	//Bounding box in 2D.
 	uint type;			//Visplanetype.
 	float extra;		//Extra data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -25,6 +25,7 @@ struct Wall {
 	uint textureData2;	//2nd Texture formatting data.
 	uint type;			//Walltype.
 	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -58,10 +59,10 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 
 
-uniform int numWalls;			//Total
-uniform int numVisibleWalls; 	//Onscreen
-uniform int numVisplanes;			//Total
-uniform int numVisibleVisplanes;	//Onscreen
+uniform uint numWalls;			//Total
+uniform uint numVisibleWalls; 	//Onscreen
+uniform uint numVisplanes;			//Total
+uniform uint numVisibleVisplanes;	//Onscreen
 
 //Camera data
 uniform float blendingAlpha;

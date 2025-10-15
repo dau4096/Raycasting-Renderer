@@ -3,6 +3,15 @@
 #include "includes.h"
 #include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
 
+
+
+#define T_NONE 0x0u
+#define T_WALL 0x1u
+#define T_VISPLANE 0x2u
+#define T_DISPLACEMENT 0x3u
+#define T_SPRITE 0x4u
+
+
 enum Event {
 	E_NONE, E_DEAD,
 	E_HURT, E_HEAL,
@@ -63,7 +72,8 @@ enum SpriteType {
 };
 
 enum LightingType {
-	LIGHT_NONE, LIGHT_STATIC_FIXED, LIGHT_STATIC_ARB, LIGHT_DYNAMIC
+	LIGHT_NONE, LIGHT_STATIC_FIXED,
+	LIGHT_STATIC_ARB, LIGHT_DYNAMIC
 };
 
 enum LogicInput {
@@ -274,7 +284,7 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
-	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION = glm::ivec2(512, 512);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION = glm::ivec2(1024, 1024);
 	constexpr float ARB_SHADOW_TEXEL_SIZE = 0.01f;
 
 

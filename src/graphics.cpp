@@ -149,7 +149,7 @@ static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformN
 static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, size_t value) {
 	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
 	if (location >= 0) {
-		glUniform1i(location, value);
+		glUniform1ui(location, value);
 	}
 }
 static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, int value) {
@@ -212,6 +212,7 @@ static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float 
 	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
 	bindUniformValue(shaderProgram, "currentTime", currentTime);
 	bindUniformValue(shaderProgram, "viewCorrection", utils::configToBool("VIEW_CORRECTION"));
+	bindUniformValue(shaderProgram, "lightingType", lightingType);
 
 	//Player Data
 	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
@@ -877,7 +878,7 @@ void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string texture
 }
 
 
-GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
+GLuint createGLImage2DArray(size_t width, size_t height, size_t layers, GLenum filtering=GL_NEAREST) {
 	GLuint arrayID;
 	glGenTextures(1, &arrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, arrayID);
@@ -886,10 +887,10 @@ GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
 		width, height, layers
 	);
 
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, filtering);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, filtering);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
@@ -1470,10 +1471,10 @@ void prepareOpenGL() {
 			//Uses fixed-size shadow maps in an array.
 			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.fixed");
 			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.fixed");
-			unsigned int numMaps = validVisplanes + validWalls;
-			GLIndex::lightingMapsArrayID = createGLImage2DArray(
+			unsigned int numMaps = (validVisplanes + validWalls) * 2u;
+			GLIndex::surfaceLightMapsArrayID = createGLImage2DArray(
 				display::FIXED_SHADOW_RESOLUTION.x, display::FIXED_SHADOW_RESOLUTION.y,
-				numMaps
+				numMaps, GL_LINEAR
 			);
 			break;
 		}
@@ -1549,34 +1550,97 @@ void prepareOpenGL() {
 namespace lighting {
 
 
-void runComputeShader(size_t numberOfObjects) {
-	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-	glUseProgram(GLIndex::frameLightingShader);
-	uniforms::bindCommonUniforms(GLIndex::frameLightingShader, 0.0f, 0.0f);
+void runComputeShader(
+		glm::ivec2 resolution, glm::vec3 normal,
+		glm::vec3 startPosition, glm::vec3 endPosition,
+		size_t objectType, size_t objectIndex
+) {
+	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16u, 16u, 1u);
+	glUseProgram(GLIndex::preLightingShader);
+	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
+	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+
+	uniforms::bindCommonUniforms(GLIndex::preLightingShader, 0.0f, 0.0f);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "startPosition", startPosition);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "inNormal", normal);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "endPosition", endPosition);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "mapResolution", resolution);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "objectType", objectType);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "objectIndex", objectIndex);
+	uniforms::bindUniformValue(GLIndex::displacementShader3D, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
+
+	glBindImageTexture(0, GLIndex::surfaceLightMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
 	glDispatchCompute(
-		(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
-		(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-		(numberOfObjects + LIGHTING_LOCAL_SIZE.z - 1) / LIGHTING_LOCAL_SIZE.z
+		(resolution.x + LIGHTING_LOCAL_SIZE.x - 1u) / LIGHTING_LOCAL_SIZE.x,
+		(resolution.y + LIGHTING_LOCAL_SIZE.y - 1u) / LIGHTING_LOCAL_SIZE.y,
+		2
 	);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	GLErrorcheck("Frame Lighting Compute Shader", true);
+	GLErrorcheck("Pre-Lighting Compute Shader", true);
 }
 
 
 void fixedResolutionLightmapping(size_t numberOfObjects) {
-	std::vector<glm::ivec2> mapResolutions(numberOfObjects);
-	std::fill(mapResolutions.begin(), mapResolutions.end(), display::FIXED_SHADOW_RESOLUTION);
-	graphics::updateShaderStorageBufferObject(
-		GLIndex::shadowMapResolutionsSSBO,
-		&(mapResolutions[0]), numberOfObjects
-	);
-	runComputeShader(numberOfObjects * 2u); //Front and backface for every object
+
+	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
+		
+		structs::Visplane thisVisplane = graphicsData->visplaneData.at(visplaneIndex);
+
+		glm::vec2 minPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maxPoint = -minPoint;
+
+		for (unsigned int i=0; i<thisVisplane.numVertices; i+=2) {
+			glm::vec2 a = thisVisplane.vertices[i];
+			bool hasAnotherVertex = (i+1 < thisVisplane.numVertices);
+			glm::vec2 b = (hasAnotherVertex) ? thisVisplane.vertices[i+1] : glm::vec2(0.0f, 0.0f);
+
+			glm::vec2 minPT = (hasAnotherVertex) ? glm::min(a,b) : a;
+			glm::vec2 maxPT = (hasAnotherVertex) ? glm::max(a,b) : a;
+
+			minPoint = min(minPoint, minPT);
+			maxPoint = max(maxPoint, maxPT);
+		}
+
+		runComputeShader(
+			display::FIXED_SHADOW_RESOLUTION,
+			glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::vec3(minPoint, thisVisplane.height),
+			glm::vec3(maxPoint, thisVisplane.height),
+			T_VISPLANE, visplaneIndex
+		);
+	}
+
+	for (unsigned int wallIndex=0u; wallIndex<validVisplanes; wallIndex++) {
+		
+		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
+
+		glm::vec3 minPoint = min(thisWall.start, thisWall.end);
+		glm::vec3 maxPoint = max(thisWall.start, thisWall.end);
+
+		glm::vec2 wallDirection = glm::normalize(glm::vec2(
+			thisWall.end - thisWall.start
+		));
+		glm::vec3 wallNormal = glm::vec3(
+			-wallDirection.y,
+			 wallDirection.x,
+			 0.0f
+		);
+
+		runComputeShader(
+			display::FIXED_SHADOW_RESOLUTION,
+			wallNormal,
+			minPoint, maxPoint,
+			T_WALL, wallIndex
+		);
+	}
+
 }
 
 
 void arbLightmapping(size_t numberOfObjects) {
 
-	runComputeShader(numberOfObjects * 2u); //Front and backface for every object
+	//runComputeShader(numberOfObjects * 2u); //Front and backface for every object
 
 }
 
@@ -1813,7 +1877,7 @@ void updateSSBOs(bool drawLightBlockers) {
 		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes, true
 	);
 	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
-		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
+		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls, true
 	);
 	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
 		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
@@ -1952,6 +2016,7 @@ void draw(double blendingAlpha, double currentTime) {
 	GLErrorcheck("Raycasting Shader", true);
 
 
+
 	//Environment Shader.
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
@@ -1972,6 +2037,7 @@ void draw(double blendingAlpha, double currentTime) {
 	renderingGeneric("Environment Shader");
 
 	
+
 	//Displacements in 2 parts;
 	//3D portion;
 	frame::drawDisplacements(blendingAlpha, currentTime);
@@ -1988,6 +2054,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
 	renderingGeneric("Displacements Shaders");
+
 
 
 	//Sprite Shader.
@@ -2012,9 +2079,19 @@ void draw(double blendingAlpha, double currentTime) {
 		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 		glUseProgram(GLIndex::frameLightingShader);
 
-		glBindTextureUnit(0, GLIndex::framePositionComponent);
-		glBindTextureUnit(1, GLIndex::lightingMapsArrayID);
-		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		if (lightingType == LIGHT_DYNAMIC) {
+			//Calculates the lighting per-frame; this requires information otherwise unrequired by the sampling shaders.
+			glBindTextureUnit(0, GLIndex::framePositionComponent);
+			glBindTextureUnit(1, GLIndex::frameNormalComponent);
+			glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		} else {
+			glBindTextureUnit(0, GLIndex::framePositionComponent);
+			glBindTextureUnit(1, GLIndex::frameNormalComponent);
+			glBindTextureUnit(2, GLIndex::surfaceLightMapsArrayID);
+			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		}
 
 		//Uniforms;
 		uniforms::bindCommonUniforms(GLIndex::frameLightingShader, blendingAlpha, currentTime);
@@ -2070,7 +2147,6 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
 	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);

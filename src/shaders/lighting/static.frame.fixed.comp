@@ -4,12 +4,13 @@
 
 
 layout(binding=0) uniform sampler2D positionMap;
-layout(binding=1) uniform sampler2DArray shadowMaps;
+layout(binding=1) uniform sampler2D normalMap;
+layout(binding=2) uniform sampler2DArray shadowMaps;
 layout(rgba32f, binding=0) writeonly uniform image2DArray lightMapArray;
 
 
 uniform ivec2 renderResolution;
-
+uniform vec3 playerPosition;
 
 
 struct Visplane {
@@ -46,54 +47,75 @@ layout(std430, binding=1) buffer wallSSBO {
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 
+#define T_NONE 0x0u
+#define T_WALL 0x1u
+#define T_VISPLANE 0x2u
+#define T_DISPLACEMENT 0x3u
+#define T_SPRITE 0x4u
+
 void main() {
 	uint screenX = gl_GlobalInvocationID.x;
 	uint screenY = gl_GlobalInvocationID.y;
 	uint lightIndex = gl_GlobalInvocationID.z;
-	if ((screenX >= renderResolution.x) || (screenY >= renderResolution.y) || (lightIndex >= 3)) {return; /* Offscreen or out of range. */}
+	if ((screenX >= renderResolution.x) || (screenY >= renderResolution.y) || (lightIndex > 0)) {return; /* Offscreen or out of range. */}
 	ivec2 framePosition = ivec2(screenX, screenY);
 
 
 	vec4 data = texture(positionMap, vec2(framePosition) / vec2(renderResolution));
 	vec3 position3D = data.xyz;
 	int iData = int(data.w);
-	int type = iData & 0x7;
+	uint type = uint(iData & 0x7);
 	int index = iData >> 3;
+	vec3 fragNormal = texture(normalMap, vec2(framePosition) / vec2(renderResolution)).xyz;
 
 	vec4 lightColour;
 	vec2 uv;
+	int idx;
 	switch (type) {
-		case 0x0: { //Sky
+		case T_NONE: { //Sky
 			lightColour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 			break;
 		}
-		case 0x1: { //Walls
+		case T_WALL: { //Walls
 			Wall thisWall = walls[index];
-			vec3 range = thisWall.end - thisWall.start;
-			vec3 local = position3D - thisWall.start;
+			vec3 range = (thisWall.end - thisWall.start);
+			vec3 local = position3D - min(thisWall.start, thisWall.end);
+			float UVx;
+			if (abs(range.x) > abs(range.y)) {
+				UVx = (position3D.x - thisWall.start.x) / range.x;
+			} else {
+				UVx = (position3D.y - thisWall.start.y) / range.y;
+			}
 			uv = vec2(
-				dot(local.xy, local.xy) / dot(range.xy, range.xy),
-				local.z / range.z
+				UVx,
+				local.z/range.z
 			);
-			lightColour = texture(shadowMaps, vec3(uv.xy, thisWall.lightingHandles[0])).rgba;
+
+			vec3 fragDir = playerPosition - position3D;
+			vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+			idx = int(dot(wallNormal.xy, (playerPosition-position3D).xy) > 0.0f);
+			lightColour = texture(shadowMaps, vec3(uv.xy, thisWall.lightingHandles[idx])).rgba;
 			break;
 		}
-		case 0x2: { //Visplanes
+		case T_VISPLANE: { //Visplanes
 			Visplane thisVisplane = visplanes[index];
 			vec2 range = thisVisplane.boundingBox.zw - thisVisplane.boundingBox.xy;
 			uv = (position3D.xy - thisVisplane.boundingBox.xy) / range;
-			lightColour = texture(shadowMaps, vec3(uv.xy, thisVisplane.lightingHandles[0])).rgba;
+			idx = int(playerPosition.z > thisVisplane.height);
+			lightColour = texture(shadowMaps, vec3(uv.xy, thisVisplane.lightingHandles[idx])).rgba;
 			break;
 		}
-		case 0x3: { //Displacements
+		case T_DISPLACEMENT: { //Displacements
 			lightColour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 			break;
 		}
-		case 0x4: { //Sprites
+		case T_SPRITE: { //Sprites
 			lightColour = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 			break;
 		}
 	}
 
-	imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4(lightColour.rgb, 1.0f));
+	//imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4(idx, 0.0f, 0.0f, 0.0f));
+	//imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4((fragNormal/2)+.5, 0.0f));
+	imageStore(lightMapArray, ivec3(framePosition.xy, 0), lightColour);
 }
