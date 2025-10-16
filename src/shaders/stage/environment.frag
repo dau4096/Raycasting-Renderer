@@ -369,7 +369,7 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 
 	return fetchUV(
 		UV,
-		inversesqrt(thisIntersect.distanceSQ),
+		1.0f / inversesqrt(thisIntersect.distanceSQ),
 		surfaceNormal,
 		thisIntersect.position,
 		thisIntersect.foundType

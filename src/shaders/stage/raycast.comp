@@ -279,6 +279,19 @@ vec2 getVertex(Visplane plane, uint index) {
 	return (index % 2 == 0) ? plane.vertices[actualIndex].xy : plane.vertices[actualIndex].zw;
 }
 
+bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
+	for (uint i=0; i<thisVisplane.numVertices; i++) {
+		vec2 a = getVertex(thisVisplane, i);
+		vec2 b = getVertex(thisVisplane, (i + 1) % thisVisplane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < EPSILON_ALT) {return false; /* Point is outside the edge */}
+	}
+	return true;
+}
+
 void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D) {
 	uint vpIndex = visibleVisplaneIndices[IDX];
 	uint SSBOIndex = (screenX * numVisplanes) + vpIndex;
@@ -286,26 +299,29 @@ void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D) {
 
 	uint valueToWrite = 0u; //The lowest bit will represent whether a collision was found. The other 31 bits are the index.
 
-	for (uint vIndex=0; vIndex<thisVisplane.numVertices; vIndex++) {
-		vec2 currentVertex = getVertex(thisVisplane, vIndex);
-		vec2 nextVertex = getVertex(thisVisplane, (vIndex + 1) % thisVisplane.numVertices);
+	if (isInsideVP(playerPosition.xy, thisVisplane)) {
+		valueToWrite = (vpIndex << 1) | 0x1u;
+	} else {
+		for (uint vIndex=0; vIndex<thisVisplane.numVertices; vIndex++) {
+			vec2 currentVertex = getVertex(thisVisplane, vIndex);
+			vec2 nextVertex = getVertex(thisVisplane, (vIndex + 1) % thisVisplane.numVertices);
 
-		vec2 edge = nextVertex - currentVertex;
-		vec2 edgeNormal = vec2(-edge.y, edge.x);
+			vec2 edge = nextVertex - currentVertex;
+			vec2 edgeNormal = vec2(-edge.y, edge.x);
 
-		vec2 intersectPoint;
+			vec2 intersectPoint;
 
-		bool success = getLineIntersect(
-			currentVertex, nextVertex, edgeNormal,
-			playerPosition.xy, (playerPosition.xy + rayDelta2D), rayDelta2D,
-			intersectPoint
-		);
-		if (success) {
-			valueToWrite = (vpIndex << 1) | 0x1u;
-			break;
+			bool success = getLineIntersect(
+				currentVertex, nextVertex, edgeNormal,
+				playerPosition.xy, (playerPosition.xy + rayDelta2D), rayDelta2D,
+				intersectPoint
+			);
+			if (success) {
+				valueToWrite = (vpIndex << 1) | 0x1u;
+				break;
+			}
 		}
 	}
-
 	visplaneCheckIndices[SSBOIndex] = valueToWrite;
 }
 
