@@ -225,6 +225,7 @@ void unpackTextureFormattingBits1(
 	uint texIDbits = (inputBits >> 16) & 0xFFF;
 	textureID = (texIDbits == 0xFFF) ? -1 : int(texIDbits);
 }
+
 void unpackTextureFormattingBits2(
 		uint inputBits, out bvec2 isWorldspace,
 		out vec2 invTextureScale, out vec2 textureOffset
@@ -304,9 +305,9 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 	}
 
 	//LODIndex takes depth and slope components to be as unobtrusive as possible.
-	float depthComponent = (MIPMAP_LEVELS * 2.0 / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
+	float depthComponent = (MIPMAP_LEVELS * 2.0f / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
 	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
-	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS);
+	float LODIndex = clamp(depthComponent + slopeComponent, 0.0f, MIPMAP_LEVELS);
 	float lod = ceil(LODIndex);
 
 
@@ -316,7 +317,7 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 	}
 
 	if (MIPMAP_DEBUG) {
-		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0, 1.0);
+		return vec4(lod, fract(LODIndex), 0.0f, 1.0f);
 	}
 
 	vec4 mipColour = textureLod(textureArray, UV, lod);
@@ -354,12 +355,12 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 		}
 
 	} else {
-		return vec4(0.0);
+		return vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 	return fetchUV(
 		UV,
-		inversesqrt(thisIntersect.distanceSQ),
+		1.0f / inversesqrt(thisIntersect.distanceSQ),
 		surfaceNormal,
 		thisIntersect.position,
 		thisIntersect.foundType
