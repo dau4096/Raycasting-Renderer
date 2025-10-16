@@ -191,10 +191,10 @@ vec2 getWallUV(vec3 position3D, Wall thisWall, out int textureID, out bvec4 text
 	vec2 world = vec2(
 		mix(position3D.x, position3D.y, int(abs(thisWall.direction.y) > abs(thisWall.direction.x))),
 		position3D.z
-	);
+	) * invTextureScale;
 	vec2 uv = mix(
-		local,						//Local UV
-		world * invTextureScale,	//World UV
+		local,	//Local UV
+		world,	//World UV
 		useWorldSpace
 	);
 
@@ -555,7 +555,7 @@ void main() {
 
 
 	vec4 mapAlbedo = texture(textureArray, vec3(textureUV.xy, textureID)).rgba;
-	if (mapAlbedo.a < EPSILON) {exit(mapPosition); return;}
+	//if (mapAlbedo.a < EPSILON) {exit(mapPosition); return;}
 
 	vec3 mainNormal = (bool(frontBack)) ? inNormal : -inNormal;
 	vec3 mapNormal = texture(normalMapArray, vec3(textureUV.xy, textureID)).xyz;

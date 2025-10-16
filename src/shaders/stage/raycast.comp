@@ -188,6 +188,7 @@ uint getXUV(vec2 intersectPoint, Wall thisWall) {
 		xUV = xUVFromWallspace(intersectPoint, thisWall);
 	}
 	xUV *= invTextureScale.x;
+	xUV += textureOffset.x;
 
 	xUV = clamp(fract(xUV + textureOffset.x), 0.0f, 1.0f);
 	return uint(xUV * 255.0f);

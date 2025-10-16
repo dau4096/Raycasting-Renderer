@@ -78,8 +78,8 @@ void main() {
 		}
 		case T_WALL: { //Walls
 			Wall thisWall = walls[index];
-			vec3 range = (thisWall.end - thisWall.start);
-			vec3 local = position3D - min(thisWall.start, thisWall.end);
+			vec3 range = thisWall.end - thisWall.start;
+			vec3 local = position3D - thisWall.start;
 			float UVx;
 			if (abs(range.x) > abs(range.y)) {
 				UVx = (position3D.x - thisWall.start.x) / range.x;
@@ -88,7 +88,7 @@ void main() {
 			}
 			uv = vec2(
 				UVx,
-				local.z/range.z
+				fract(local.z/range.z)
 			);
 
 			vec3 fragDir = playerPosition - position3D;

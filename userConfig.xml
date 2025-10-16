@@ -142,7 +142,7 @@
 <!-- - - - - - - - - - - - -->
 <!-- Debug -->
 <option function="META_SHOW_CONSOLE" 					value="TRUE"			note="Show/Hide console window. [TRUE/FALSE]" />
-<option function="META_DEBUG_MODE" 						value="LIGHTING" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
+<option function="META_DEBUG_MODE" 						value="NONE" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
 <option function="META_SHOW_DATA" 						value="FALSE" 			note="Shows player information in the console. [TRUE/FALSE]" />
 
 
