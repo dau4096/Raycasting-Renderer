@@ -1256,7 +1256,11 @@ void getSupportedExtensions() {
 }
 
 bool OpenGLSupportsARB() {
-	return (GLIndex::supportedExtensions.find("GL_ARB_bindless_texture")) != (GLIndex::supportedExtensions.end());
+	//Must support shader uint64_t AND ARB-bindless-textures.
+	return (
+		(GLIndex::supportedExtensions.find("GL_ARB_bindless_texture")) != (GLIndex::supportedExtensions.end()) && 
+		(GLIndex::supportedExtensions.find("GL_ARB_gpu_shader_int64")) != (GLIndex::supportedExtensions.end())
+	);
 }
 
 
@@ -1273,8 +1277,6 @@ void loadBindings() {
 	xml::fetchBindingsFromXML(doc);
 	xml::fetchConfigsFromXML(doc);
 
-	getSupportedExtensions();
-
 
 	//Handle settings that can have multiple string inputs, which map to other values.
 	setConfigFromStringOptionsMap("VIEW_RENDER_RESOLUTION_QUALITY", &resolutionMap, "LOW", &desiredRenderResolution);
@@ -1289,12 +1291,6 @@ void loadBindings() {
 		utils::showConsole();
 	} else {
 		utils::hideConsole();
-	}
-
-
-	if ((lightingType == LIGHT_STATIC_ARB) && !OpenGLSupportsARB()) {
-		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
-		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" method.
 	}
 }
 

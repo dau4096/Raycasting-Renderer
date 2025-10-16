@@ -450,7 +450,7 @@ void exit(ivec3 mapPosition) {
 }
 
 
-vec3 calculateLighting(ivec3 mapPosition, vec3 interpPos, vec3 fragNormal, uint objectIndex) {
+vec3 calculateLighting(vec3 interpPos, vec3 fragNormal, uint objectIndex) {
 	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
 	if ((debugMode > 0) && (debugMode != 3)) { //Debug modes, aside from Lighting.
 		return vec3(1.0f, 1.0f, 1.0f);
@@ -561,7 +561,7 @@ void main() {
 	vec3 mapNormal = texture(normalMapArray, vec3(textureUV.xy, textureID)).xyz;
 	getNormal(mapNormal, mainNormal, objectType);
 
-	vec3 finalLighting = calculateLighting(mapPosition, interpPos, mainNormal, objectType);
+	vec3 finalLighting = calculateLighting(interpPos, mainNormal, objectType);
 
 	imageStore(shadowMaps, mapPosition, vec4(finalLighting.rgb, 2.25f));
 }

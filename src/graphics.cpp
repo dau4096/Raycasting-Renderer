@@ -1553,12 +1553,17 @@ namespace lighting {
 void runComputeShader(
 		glm::ivec2 resolution, glm::vec3 normal,
 		glm::vec3 startPosition, glm::vec3 endPosition,
-		size_t objectType, size_t objectIndex
+		size_t objectType, size_t objectIndex,
+		GLuint mapFront=0, GLuint mapBack=0, bool useMaps=false
 ) {
 	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16u, 16u, 1u);
 	glUseProgram(GLIndex::preLightingShader);
 	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
 	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+	if (useMaps) {
+		glBindImageTexture(0, mapFront, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		glBindImageTexture(1, mapBack,  0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	}
 
 	uniforms::bindCommonUniforms(GLIndex::preLightingShader, 0.0f, 0.0f);
 	uniforms::bindUniformValue(GLIndex::preLightingShader, "startPosition", startPosition);
@@ -1568,8 +1573,6 @@ void runComputeShader(
 	uniforms::bindUniformValue(GLIndex::preLightingShader, "objectType", objectType);
 	uniforms::bindUniformValue(GLIndex::preLightingShader, "objectIndex", objectIndex);
 	uniforms::bindUniformValue(GLIndex::displacementShader3D, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
-
-	glBindImageTexture(0, GLIndex::surfaceLightMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	glDispatchCompute(
 		(resolution.x + LIGHTING_LOCAL_SIZE.x - 1u) / LIGHTING_LOCAL_SIZE.x,
@@ -1640,7 +1643,98 @@ void fixedResolutionLightmapping(size_t numberOfObjects) {
 
 void arbLightmapping(size_t numberOfObjects) {
 
-	//runComputeShader(numberOfObjects * 2u); //Front and backface for every object
+	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
+		
+		structs::Visplane thisVisplane = graphicsData->visplaneData.at(visplaneIndex);
+
+		glm::vec2 minPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maxPoint = -minPoint;
+
+		for (unsigned int i=0; i<thisVisplane.numVertices; i+=2) {
+			glm::vec2 a = thisVisplane.vertices[i];
+			bool hasAnotherVertex = (i+1 < thisVisplane.numVertices);
+			glm::vec2 b = (hasAnotherVertex) ? thisVisplane.vertices[i+1] : glm::vec2(0.0f, 0.0f);
+
+			glm::vec2 minPT = (hasAnotherVertex) ? glm::min(a,b) : a;
+			glm::vec2 maxPT = (hasAnotherVertex) ? glm::max(a,b) : a;
+
+			minPoint = min(minPoint, minPT);
+			maxPoint = max(maxPoint, maxPT);
+		}
+
+		glm::vec2 delta = maxPoint - minPoint;
+		ivec2 mapResolution = ivec2(ceil(
+			delta / display::ARB_SHADOW_TEXEL_SIZE
+		));
+		mapResolution = glm::clamp(mapResolution, glm::ivec2(1, 1), display::ARB_SHADOW_MAX_RESOLUTION); //Some objects may try to allocate absurdly large maps
+																										 //I don't want to allow massive maps; so I set a limit.
+		GLuint shadowMapFront = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+		GLuint shadowMapBack  = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+		//utils::printVec2(vec2(mapResolution));
+
+		runComputeShader(
+			mapResolution,
+			glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::vec3(minPoint, thisVisplane.height),
+			glm::vec3(maxPoint, thisVisplane.height),
+			T_VISPLANE, visplaneIndex,
+			shadowMapFront, shadowMapBack, true //= Use given maps.
+		);
+
+		GLuint64 handleFrontSampler = glGetTextureHandleARB(shadowMapFront);
+		glMakeTextureHandleResidentARB(handleFrontSampler);
+		GLuint64 handleBackSampler = glGetTextureHandleARB(shadowMapBack);
+		glMakeTextureHandleResidentARB(handleBackSampler);
+
+		thisVisplane.writeHandles(handleFrontSampler, handleBackSampler);
+		graphicsData->visplaneData.at(visplaneIndex) = thisVisplane; //Write back to data;
+	}
+
+	for (unsigned int wallIndex=0u; wallIndex<validVisplanes; wallIndex++) {
+		
+		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
+
+		glm::vec3 minPoint = min(thisWall.start, thisWall.end);
+		glm::vec3 maxPoint = max(thisWall.start, thisWall.end);
+
+		glm::vec2 wallDirection = glm::normalize(glm::vec2(
+			thisWall.end - thisWall.start
+		));
+		glm::vec3 wallNormal = glm::vec3(
+			-wallDirection.y,
+			 wallDirection.x,
+			 0.0f
+		);
+
+		glm::vec3 delta = maxPoint - minPoint;
+		ivec2 mapResolution = glm::ivec2(ceil(
+			glm::vec2(
+				(abs(wallDirection.x) > abs(wallDirection.y)) ? delta.x : delta.y,
+				delta.z
+			) / display::ARB_SHADOW_TEXEL_SIZE)
+		);
+		mapResolution = glm::clamp(mapResolution, glm::ivec2(1, 1), display::ARB_SHADOW_MAX_RESOLUTION); //Some objects may try to allocate absurdly large maps
+																										 //I don't want to allow massive maps; so I set a limit.
+		GLuint shadowMapFront = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+		GLuint shadowMapBack  = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+		//utils::printVec2(vec2(mapResolution));
+
+		runComputeShader( //Computes map's lighting.
+			mapResolution,
+			wallNormal,
+			minPoint, maxPoint,
+			T_WALL, wallIndex,
+			shadowMapFront, shadowMapBack, true //= Use given maps.
+		);
+
+		GLuint64 handleFrontSampler = glGetTextureHandleARB(shadowMapFront);
+		glMakeTextureHandleResidentARB(handleFrontSampler);
+		GLuint64 handleBackSampler = glGetTextureHandleARB(shadowMapBack);
+		glMakeTextureHandleResidentARB(handleBackSampler);
+
+		thisWall.writeHandles(handleFrontSampler, handleBackSampler);
+		graphicsData->wallData.at(wallIndex) = thisWall; //Write back to data;
+	}
 
 }
 
@@ -1669,6 +1763,7 @@ void createLightMaps() {
 			return;
 		}
 	}
+	*physicsData = *graphicsData; //Sync data.
 }
 
 }

@@ -115,7 +115,5 @@ void main() {
 		}
 	}
 
-	//imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4(idx, 0.0f, 0.0f, 0.0f));
-	//imageStore(lightMapArray, ivec3(framePosition.xy, 0), vec4((fragNormal/2)+.5, 0.0f));
 	imageStore(lightMapArray, ivec3(framePosition.xy, 0), lightColour);
 }

@@ -260,10 +260,11 @@ struct Visplane {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	GLuint lightingHandles[4];
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
-		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
+		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), lightingHandles() {
 			internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
 			internal = &(internalsData.at(internalsData.size()-1));
 		}
@@ -276,7 +277,7 @@ struct Visplane {
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
 			textureData1(textureData1),
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), lightingHandles() {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -319,7 +320,7 @@ struct Visplane {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), lightingHandles() {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -353,6 +354,19 @@ struct Visplane {
 				ensureACW(vertices, numVertices);
 				std::copy(std::begin(vertices), std::end(vertices), std::begin(originalVertices));
 			}
+
+
+	void writeHandles(GLuint64 handleFront, GLuint64 handleBack) {
+		//Assign lightingHandles to be the 2 32b halves of the 2 ARB handles.
+
+		//Front handle;
+		lightingHandles[0] = GLuint(handleFront >> 32u); //High bits
+		lightingHandles[1] = GLuint(handleFront & 0xFFFFFFFFu); //Low bits
+
+		//Back handle;
+		lightingHandles[2] = GLuint(handleBack >> 32u); //High bits
+		lightingHandles[3] = GLuint(handleBack & 0xFFFFFFFFu); //Low bits
+	}
 };
 
 struct VisplaneGPU {
@@ -405,18 +419,15 @@ struct VisplaneGPU {
 					break;
 				}
 				case LIGHT_STATIC_ARB: {
-					//Assign lightingHandles to be the 2 32b halves of the ARB handle.
-					lightingHandles[0] = 0u; //High
-					lightingHandles[1] = 0u; //Low
-					lightingHandles[2] = 0u; //High
-					lightingHandles[3] = 0u; //Low
+					std::copy(std::begin(visplane->lightingHandles), std::end(visplane->lightingHandles), std::begin(lightingHandles));
 					break;
 				}
 				default: {
-					lightingHandles[0] = 0u; //Unused.
-					lightingHandles[1] = 0u; //Unused.
-					lightingHandles[2] = 0u; //Unused.
-					lightingHandles[3] = 0u; //Unused.
+					//Unused.
+					lightingHandles[0] = 0u;
+					lightingHandles[1] = 0u;
+					lightingHandles[2] = 0u;
+					lightingHandles[3] = 0u;
 					break;
 				}
 			}
@@ -433,12 +444,12 @@ struct Wall {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	GLuint lightingHandles[8];
 
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
 		  end(0.0f, 0.0f, 0.0f), originalEnd(0.0f, 0.0f, 0.0f),
-		  textureData1s(),
-		  type(W_INVALID),
+		  textureData1s(), type(W_INVALID), lightingHandles(),
 		  IOPtr(nullptr), data(0.0f) {
 			if ((type != W_NORMAL) && (type != W_INVALID)) {
 				internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
@@ -457,7 +468,7 @@ struct Wall {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
 			end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
-			type(type), 
+			type(type),  lightingHandles(),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -489,7 +500,7 @@ struct Wall {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
-			type(type), 
+			type(type),  lightingHandles(),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -511,6 +522,32 @@ struct Wall {
 					internal = nullptr;
 				}
 			}
+
+
+	void writeHandles(GLuint64 handleFront, GLuint64 handleBack/*, GLuint64 handleFrontALT, GLuint64 handleBackALT*/) {
+		//Assign lightingHandles to be the 2 32b halves of the 4 ARB handles.
+
+		//Main texture;
+		//Front handle;
+		lightingHandles[0] = GLuint(handleFront >> 32u); //High bits
+		lightingHandles[1] = GLuint(handleFront & 0xFFFFFFFFu); //Low bits
+
+		//Back handle;
+		lightingHandles[2] = GLuint(handleBack >> 32u); //High bits
+		lightingHandles[3] = GLuint(handleBack & 0xFFFFFFFFu); //Low bits
+
+
+		//Alt texture;
+		/*not added yet*
+		//Front handle ALT;
+		lightingHandles[4] = GLuint(handleFrontALT >> 32u); //High bits
+		lightingHandles[5] = GLuint(handleFrontALT & 0xFFFFFFFFu); //Low bits
+
+		//Back handle ALT;
+		lightingHandles[6] = GLuint(handleBackALT >> 32u); //High bits
+		lightingHandles[7] = GLuint(handleBackALT & 0xFFFFFFFFu); //Low bits
+		*/
+	}
 };
 
 struct WallGPU {
@@ -553,15 +590,7 @@ struct WallGPU {
 				}
 				case LIGHT_STATIC_ARB: {
 					//Assign lightingHandles to be the 2 32b halves of the ARB handle.
-					lightingHandles[0] = 0u; //High
-					lightingHandles[1] = 0u; //Low
-					lightingHandles[2] = 0u; //High
-					lightingHandles[3] = 0u; //Low
-
-					lightingHandles[4] = 0u; //High
-					lightingHandles[5] = 0u; //Low
-					lightingHandles[6] = 0u; //High
-					lightingHandles[7] = 0u; //Low
+					std::copy(std::begin(wall->lightingHandles), std::end(wall->lightingHandles), std::begin(lightingHandles));
 					break;
 				}
 				default: {

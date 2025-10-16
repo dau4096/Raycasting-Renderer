@@ -270,6 +270,19 @@ int main() {
 		glfwSwapInterval(1);
 	}
 
+
+
+
+	//Lighting support checks;
+	loader::getSupportedExtensions();
+
+	if ((lightingType == LIGHT_STATIC_ARB) && !loader::OpenGLSupportsARB()) {
+		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
+		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" method.
+	}
+
+
+
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
 	utils::GLErrorcheck("Window Creation", true);
