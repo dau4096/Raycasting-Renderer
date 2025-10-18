@@ -559,9 +559,9 @@ void main() {
 
 	vec3 mainNormal = (bool(frontBack)) ? inNormal : -inNormal;
 	vec3 mapNormal = texture(normalMapArray, vec3(textureUV.xy, textureID)).xyz;
-	getNormal(mapNormal, mainNormal, objectType);
+	//getNormal(mapNormal, mainNormal, objectType);
 
 	vec3 finalLighting = calculateLighting(interpPos, mainNormal, objectType);
 
-	imageStore(shadowMaps, mapPosition, vec4(finalLighting.rgb, 2.25f));
+	imageStore(shadowMaps, mapPosition, vec4((mainNormal.xyz*.5)+.5, 2.25f));
 }

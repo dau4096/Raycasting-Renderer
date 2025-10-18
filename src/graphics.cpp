@@ -1398,6 +1398,7 @@ void prepareOpenGL() {
 	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
 
 	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
@@ -1476,6 +1477,7 @@ void prepareOpenGL() {
 				display::FIXED_SHADOW_RESOLUTION.x, display::FIXED_SHADOW_RESOLUTION.y,
 				numMaps, GL_LINEAR
 			);
+			glObjectLabel(GL_TEXTURE, GLIndex::surfaceLightMapsArrayID, -1, "surfaceLightMapsArrayID");
 			break;
 		}
 		case LIGHT_STATIC_ARB: {
@@ -1525,7 +1527,7 @@ void prepareOpenGL() {
 
 	UIElements = {
 		structs::UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),		//Health image
-		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
+		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),					//Health number
 		structs::UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 		//Energy image
 		structs::UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
 		structs::UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
@@ -1563,6 +1565,8 @@ void runComputeShader(
 	if (useMaps) {
 		glBindImageTexture(0, mapFront, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 		glBindImageTexture(1, mapBack,  0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	} else {
+		glBindImageTexture(0, GLIndex::surfaceLightMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	}
 
 	uniforms::bindCommonUniforms(GLIndex::preLightingShader, 0.0f, 0.0f);
@@ -1584,7 +1588,7 @@ void runComputeShader(
 }
 
 
-void fixedResolutionLightmapping(size_t numberOfObjects) {
+void fixedResolutionLightmapping() {
 
 	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
 		
@@ -1641,7 +1645,7 @@ void fixedResolutionLightmapping(size_t numberOfObjects) {
 }
 
 
-void arbLightmapping(size_t numberOfObjects) {
+void arbLightmapping() {
 
 	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
 		
@@ -1748,13 +1752,13 @@ void createLightMaps() {
 	switch(lightingType) {
 		case LIGHT_STATIC_FIXED: {
 			//Static size lightmaps.
-			fixedResolutionLightmapping(numberOfObjects);
+			fixedResolutionLightmapping();
 			break;
 		}
 
 		case LIGHT_STATIC_ARB: {
 			//Lightmaps accessed via ARB handles.
-			arbLightmapping(numberOfObjects);
+			arbLightmapping();
 			break;
 		}
 

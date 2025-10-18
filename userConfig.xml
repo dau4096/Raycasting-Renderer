@@ -103,7 +103,7 @@
 <option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
-<option function="VIEW_LIGHTING_TYPE"					value="ARB"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
+<option function="VIEW_LIGHTING_TYPE"					value="OLD"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
 <option function="VIEW_LIGHTING" 						value="TRUE"			note="When disabled, no lighting pass is applied. [TRUE/FALSE]" />
 
 
@@ -142,18 +142,18 @@
 <!-- - - - - - - - - - - - -->
 <!-- Debug -->
 <option function="META_SHOW_CONSOLE" 					value="TRUE"			note="Show/Hide console window. [TRUE/FALSE]" />
-<option function="META_DEBUG_MODE" 						value="NONE" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
+<option function="META_DEBUG_MODE" 						value="LIGHTING" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
 <option function="META_SHOW_DATA" 						value="FALSE" 			note="Shows player information in the console. [TRUE/FALSE]" />
 
 
 <!-- Stage-specific -->
-<option function="META_STAGE_NAME" 						value="dev-quake"	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
+<option function="META_STAGE_NAME" 						value="dev-lighting"	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
 <option function="META_DYNAMIC_UPD" 					value="FALSE"			note="Reloads stage every physics tick. [TRUE/FALSE]" />
 <option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" 	value="FALSE"			note="Allows stage to reload textures every tick. [TRUE/FALSE]" />
 
 
 <!-- Misc -->
-<option function="PHYS_NO_COLLIDE" 						value="FALSE" 			note="Player does not respect environmental collisions. [TRUE/FALSE]" />
-<option function="PHYS_FLY" 							value="FALSE"			note="Removes gravity, assigns MOVE_JUMP + MOVE_CROUCH to Up/Down movement. [TRUE/FALSE]" />
+<option function="PHYS_NO_COLLIDE" 						value="TRUE" 			note="Player does not respect environmental collisions. [TRUE/FALSE]" />
+<option function="PHYS_FLY" 							value="TRUE"			note="Removes gravity, assigns MOVE_JUMP + MOVE_CROUCH to Up/Down movement. [TRUE/FALSE]" />
 
 </config>
