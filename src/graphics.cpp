@@ -1,8 +1,8 @@
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
-#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
-#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
+#include <stb_image.h>
+#include <stb_image_write.h>
 using namespace std;
 using namespace utils;
 using namespace glm;
@@ -287,9 +287,9 @@ GLFWwindow* initialiseWindow(int width, int height, const char* title) {
 
 
 GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="") {
-	if (vertexShaderName.empty()) {vertexShaderName = "generic";}
-	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src\\shaders\\"+ vertexShaderName +".vert");
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src\\shaders\\"+ fragShaderName +".frag");
+	if (vertexShaderName.empty()) {vertexShaderName = "generic.vert";}
+	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ vertexShaderName);
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ fragShaderName);
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
@@ -317,7 +317,7 @@ GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderN
 
 
 GLuint createComputeShader(std::string compShaderName) {
-	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src\\shaders\\" + compShaderName + ".comp");
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName);
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, computeShader);
@@ -1432,26 +1432,26 @@ void prepareOpenGL() {
 
 
 	//Raycast compute shader
-	GLIndex::raycastShader = createComputeShader("raycast");
+	GLIndex::raycastShader = createComputeShader("stage/raycast.comp");
 
 	//Environment shader
-	GLIndex::envShader = createShaderProgram("environment");
+	GLIndex::envShader = createShaderProgram("stage/environment.frag");
 
 	//Displacement shaders
-	GLIndex::displacementShader3D = createShaderProgram("displacements3D", "projection");
-	GLIndex::displacementShader2D = createShaderProgram("displacements2D");
+	GLIndex::displacementShader3D = createShaderProgram("displacements/3D.frag", "displacements/projection.vert");
+	GLIndex::displacementShader2D = createShaderProgram("displacements/2D.frag");
 
 	//Sprite Shader
-	GLIndex::spriteShader = createShaderProgram("sprites");
+	GLIndex::spriteShader = createShaderProgram("stage/sprites.frag");
 
 	//Lighting compute Shader
-	GLIndex::lightingShader = createComputeShader("lighting");
+	GLIndex::lightingShader = createComputeShader("stage/lighting.comp");
 
 	//uiShader
-	GLIndex::uiShader = createShaderProgram("interface", "interface");
+	GLIndex::uiShader = createShaderProgram("exct/interface.frag", "exct/interface.vert");
 	
 	//Display Shader
-	GLIndex::displayShader = createShaderProgram("display", "display");
+	GLIndex::displayShader = createShaderProgram("exct/display.frag", "exct/display.vert");
 
 
 	initialiseVAOs();

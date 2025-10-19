@@ -1,7 +1,6 @@
 #pragma once
 
 #include "includes.h"
-#include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
 
 enum Event {
 	E_NONE, E_DEAD,

@@ -2,8 +2,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #pragma execution_character_set("utf-8")
 
-#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
-#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
+#include <stb_image.h>
+#include <stb_image_write.h>
 #include "src/includes.h"
 #include "src/global.h"
 #include "src/loader.h"
@@ -244,7 +244,7 @@ inline void stopPhysics() {
 
 int main() {
 	try { //Catch exceptions
-	SetConsoleOutputCP(65001); //CP_UTF8
+	//SetConsoleOutputCP(65001); //CP_UTF8
 
 	loader::loadBindings();
 	loader::loadStage(
@@ -332,7 +332,7 @@ int main() {
 			utils::showConsole();
 		}
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	} catch (...) {
 		stopPhysics();
@@ -340,7 +340,7 @@ int main() {
 			utils::showConsole();
 		}
 		std::cerr << "An unspecified exception was thrown." << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	}
 }

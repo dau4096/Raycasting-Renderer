@@ -3,7 +3,7 @@
 
 
 //Include Windows.
-#include <Windows.h>
+//#include <Windows.h> //Not anymore
 
 //Include GLEW.
 #include <GL/glew.h>
@@ -22,7 +22,7 @@
 #include <GLFW/glfw3.h>
 
 //Include PugiXML
-#include <pugixml/pugixml.hpp>
+#include <pugixml.hpp>
 
 //Include std subheaders.
 #include <bits/stdc++.h>
