@@ -3,7 +3,11 @@
 
 
 //Include Windows.
-//#include <Windows.h> //Not anymore
+#ifdef _WIN32
+
+#include <Windows.h> //Only for windows systems (obviously). Only needed for console-specific functions, which are minimal.
+
+#endif
 
 //Include GLEW.
 #include <GL/glew.h>

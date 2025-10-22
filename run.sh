@@ -18,6 +18,11 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+#Wait for user
+echo "Press any key to run..."
+read -n1 #Wait for a keypress to continue, like Batch's PAUSE.
+echo
+
 #Run
 cd "$(dirname "$0")"
 ./app
