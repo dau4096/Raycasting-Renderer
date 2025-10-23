@@ -2,22 +2,27 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #pragma execution_character_set("utf-8")
 
+
 #include <stb_image.h>
 #include <stb_image_write.h>
+
 #include "src/includes.h"
+
+#include "src/constants.h"
 #include "src/global.h"
+
+#include "src/utils.h"
+#include "src/console.h"
+
 #include "src/loader.h"
 #include "src/physics.h"
 #include "src/graphics.h"
-#include "src/utils.h"
+
+
 using namespace std;
 using namespace utils;
 using namespace glm;
 
-
-
-
-GLFWwindow* Window;
 
 void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	glViewport(0, 0, width, height);
@@ -25,10 +30,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	glEnable(GL_BLEND);
 
 	currentWindowResolution = glm::ivec2(width, height);
-	currentRenderResolution = glm::ivec2(
-		glm::min(width, desiredRenderResolution.x),
-		glm::min(height, desiredRenderResolution.y)
-	);
+	currentRenderResolution = glm::min(currentWindowResolution, desiredRenderResolution);
 	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 
 	//SSBOs
@@ -51,10 +53,6 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 
 
 
-//Non-synced data.
-std::vector<utils::LogicGate> logicGates;
-
-
 
 double tickStart;
 void physicsLoop() {
@@ -72,10 +70,9 @@ void physicsLoop() {
 
 		//Update logic states.
 		for (int index=0; index<validGates; index++) {
-			LogicGate gate = logicGates[index];
-			if (gate.gateType == G_INVALID) {continue;}
-			gate.evaluateState();
-			logicGates[index] = gate;
+			structs::LogicGate* gate = &(logicGates[index]);
+			if (gate->gateType == G_INVALID) {continue;}
+			gate->evaluateState();
 		}
 		physics::updateSpecials(interactKey);
 		physics::updatePhysicsObjects();
@@ -115,28 +112,20 @@ void physicsLoop() {
 }
 
 
-
-double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
-inline void reloadLevel(const bool resetPlayer=false) {
-	if (resetPlayer) {
-		loader::loadStage(
-			userConfig["META_STAGE_NAME"], &player,
-			physicsData, &logicGates
-		);
-	} else {
-		structs::Player tmpPlayer;
-		loader::loadStage(
-			userConfig["META_STAGE_NAME"], &tmpPlayer,
-			physicsData, &logicGates
-		);
-	}
-
-	graphics::prepareOpenGL();
-	{
-		std::lock_guard<std::mutex> lock(stateSwapMutex);
-		graphicsData = physicsData;
+void consoleLoop() {
+	//Simple loop for console input.
+	while (runConsole) {
+		std::string line;
+		std::cout << "> ";
+		std::getline(std::cin, line);
+		console::exec(line);
 	}
 }
+
+
+
+
+double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
 
 void handleInputs() {
 	glfwPollEvents();
@@ -178,9 +167,9 @@ void handleInputs() {
 	zoomEffect = (utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f;
 
 	if (utils::isPressed("META_RELOAD_STAGE")) {
-		reloadLevel(true);
+		stage::reload(true);
 	} else if (utils::isPressed("META_RELOAD_ENV") || utils::configToBool("META_DYNAMIC_UPD")) {
-		reloadLevel(false);
+		stage::reload(false);
 	}
 
 
@@ -241,10 +230,20 @@ inline void stopPhysics() {
 		physicsThread.join();
 	}
 }
+std::thread consoleThread;
+inline void stopConsole() {
+	runConsole = false;
+	if (consoleThread.joinable()) {
+		consoleThread.join();
+	}
+}
 
 int main() {
 	try { //Catch exceptions
-	//SetConsoleOutputCP(65001); //CP_UTF8
+
+#ifdef __WIN32
+	SetConsoleOutputCP(65001); //CP_UTF8
+#endif
 
 	loader::loadBindings();
 	loader::loadStage(
@@ -282,8 +281,10 @@ int main() {
 
 	//Threads;
 	physicsThread = std::thread(physicsLoop);
-	tickStart = glfwGetTime();
+	consoleThread = std::thread(consoleLoop);
 
+
+	tickStart = glfwGetTime();
 	frameNumber = 0;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
@@ -320,6 +321,7 @@ int main() {
 	glDeleteTextures(1, &GLIndex::textureArrayEnvironment);
 
 	stopPhysics();
+	stopConsole();
 	glfwDestroyWindow(Window);
 	glfwTerminate();
 	return 0;
@@ -328,6 +330,7 @@ int main() {
 	//Catch exceptions.
 	} catch (const std::exception& e) {
 		stopPhysics();
+		stopConsole();
 		if (!utils::isConsoleVisible()) {
 			utils::showConsole();
 		}
@@ -336,6 +339,7 @@ int main() {
 		return -1;
 	} catch (...) {
 		stopPhysics();
+		stopConsole();
 		if (!utils::isConsoleVisible()) {
 			utils::showConsole();
 		}

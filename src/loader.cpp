@@ -27,7 +27,6 @@ static inline glm::vec2 parseVec2(const std::string& str) {
 
 
 
-std::unordered_map<std::string, bool*> flagList;
 size_t flagIndex = 0;
 bool* managePTR(std::string ptrStr) {
 	std::string ptrStrUpper = strToUpper(ptrStr);
@@ -939,11 +938,11 @@ static inline structs::TextObject extractTextObject(
 
 
 bool nullBool;
-static inline utils::LogicGate extractGate(
+static inline structs::LogicGate extractGate(
 		const pugi::xml_node& node
 	) {
 
-	utils::LogicGate gate = utils::LogicGate(
+	structs::LogicGate gate = structs::LogicGate(
 		static_cast<GateType>(getEnum(node, "type", G_PASSTHROUGH)),
 		getPTR(node, "outFlag", &(constants::C_FALSE)),
 		getPTR(node, "inAFlag", &(constants::C_FALSE)),
@@ -1190,7 +1189,7 @@ namespace loader {
 void loadStage(
 		const std::string& stageName, structs::Player* player,
 		structs::DataSet* physicsData,
-		std::vector<utils::LogicGate>* logicGates
+		std::vector<structs::LogicGate>* logicGates
 	) {
 	std::string filePath = "stages/" + stageName + ".xml";
 	std::string XMLSrc = utils::readFile(filePath);
@@ -1208,7 +1207,7 @@ void loadStage(
 	physicsData->spriteData	= xml::fetchObjectFromXML<structs::Sprite>(doc, "//objects/sprite", xml::extractSprite, &validSprites);
 	physicsData->lightData = xml::fetchObjectFromXML<structs::Light>(doc, "//objects/light", xml::extractLight, &validLights, &(physicsData->spriteData));
 	physicsData->textObjectData = xml::fetchObjectFromXML<structs::TextObject>(doc, "//objects/textObj", xml::extractTextObject, &validTextObjects);
-	*logicGates	= xml::fetchObjectFromXML<utils::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates);
+	*logicGates	= xml::fetchObjectFromXML<structs::LogicGate>(doc, "//logic/gate", xml::extractGate, &validGates);
 
 
 	//Get macros (shorthands for collection of elementary objects like walls or displacements)

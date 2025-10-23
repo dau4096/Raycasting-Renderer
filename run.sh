@@ -1,5 +1,7 @@
 #!/bin/bash
 
+clear #Clear console.
+
 cd src || exit 1
 
 #Delete all .o files

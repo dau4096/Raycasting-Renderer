@@ -13,7 +13,7 @@ namespace loader {
 	void loadStage(
 		const std::string& stageName, structs::Player* player,
 		structs::DataSet* physicsData,
-		std::vector<utils::LogicGate>* logicGates
+		std::vector<structs::LogicGate>* logicGates
 	);
 
 

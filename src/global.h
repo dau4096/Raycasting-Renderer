@@ -10,6 +10,7 @@ inline std::unordered_map<std::string, std::string> userConfig = {};
 
 
 
+inline std::unordered_map<std::string, bool*> flagList;
 inline std::array<bool, constants::MAX_FLAGS> flags;
 inline std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS> textureNames;
 
@@ -144,7 +145,118 @@ inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSS
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+namespace logicFunctions {
+	static void LGF_AND(bool* A, bool* B, bool* Q, bool* internalState) {*Q = (*A) && (*B);}
+	static void LGF_OR(bool* A, bool* B, bool* Q, bool* internalState) {*Q = (*A) || (*B);}
+	static void LGF_NOT(bool* A, bool* B, bool* Q, bool* internalState) {*Q = !(*A);}
+	static void LGF_XOR(bool* A, bool* B, bool* Q, bool* internalState) {*Q = (*A) != (*B);}
+
+	static void LGF_LATCH(bool* A, bool* B, bool* Q, bool* internalState) { //Swap between 1 and 0 with A and B.
+		if ((*A) && (*B)) {
+			//internalState remains unchanged; both inputs counteract each other's change.
+		} else if (*A) {
+			*internalState = 1;
+		} else if (*B) {
+			*internalState = 0;
+		}
+		*Q = *internalState;
+	}
+
+	static void LGF_PULSE(bool* A, bool* B, bool* Q, bool* internalState) { //If A is 1, return 1 for a single frame.
+		if ((*internalState) && (*A)) {
+			*Q = 1;
+		} else {
+			*Q = 0;
+		}
+		*internalState = *A;
+	}
+
+	static void LGF_TOGGLE(bool* A, bool* B, bool* Q, bool* internalState) { //Toggles between 1 and 0 if A is 1.
+		if (*A) {
+			*internalState = !(*internalState);
+		}
+		*Q = *internalState;
+	}
+
+	static void LGF_PASSTHROUGH(bool* A, bool* B, bool* Q, bool* internalState) {*Q = *A;}
+}
+
+
+
+
+
 namespace structs {
+
+
+class LogicGate {
+	private:
+		std::function<void(bool*, bool*, bool*, bool*)> evalGate;
+		bool* inputA;
+		bool* inputB;
+		bool* output;
+
+		void _assignEvalFunction() {
+			switch (this->gateType) {
+				case G_AND: evalGate = logicFunctions::LGF_AND; break;
+				case G_OR: evalGate = logicFunctions::LGF_OR; break;
+				case G_NOT: evalGate = logicFunctions::LGF_NOT; break;
+				case G_XOR: evalGate = logicFunctions::LGF_XOR; break;
+				case G_LATCH: evalGate = logicFunctions::LGF_LATCH; break;
+				case G_PULSE: evalGate = logicFunctions::LGF_PULSE; break;
+				case G_TOGGLE: evalGate = logicFunctions::LGF_TOGGLE; break;
+				default: evalGate = logicFunctions::LGF_PASSTHROUGH; break;
+			}
+		}
+
+	public:
+		GateType gateType;
+		bool internalState;
+
+		LogicGate() {
+			this->gateType = G_INVALID;
+			this->evalGate = logicFunctions::LGF_PASSTHROUGH;
+
+			this->inputA = nullptr;
+			this->inputB = nullptr;
+			this->output = nullptr;
+
+			this->internalState = 0;
+		}
+
+		LogicGate(GateType gateType, bool* output, bool* inputA, bool* inputB=nullptr) {
+			//Has optional inputB.
+			this->gateType = gateType;
+			_assignEvalFunction();
+
+
+			this->inputA = inputA;
+			this->inputB = inputB;
+			this->output = output;
+
+			this->internalState = 0;
+		}
+
+		void evaluateState() {
+			if (evalGate) {
+				evalGate(this->inputA, this->inputB, this->output, &(this->internalState));
+			}
+		}
+};
+
+
 
 
 struct Player {
@@ -748,12 +860,18 @@ struct UIElement {
 
 
 inline structs::Player player;
+inline GLFWwindow* Window;
 
 
 //Mutexes and datasets
 inline std::mutex stateSwapMutex;
 inline std::atomic<bool> runPhysics = true;
+inline std::mutex execCommandMutex;
+inline std::atomic<bool> runConsole = true;
 //Data must be synced between the graphics and physics threads.
 inline structs::DataSet stateA, stateB;
 inline structs::DataSet* physicsData = &stateA;
 inline structs::DataSet* graphicsData = &stateB;
+
+//Non-synced data.
+inline std::vector<structs::LogicGate> logicGates;
