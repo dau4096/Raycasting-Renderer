@@ -453,6 +453,26 @@ vec2 getVisplaneUV(vec2 position2D, Visplane plane, out int textureID, out bvec4
 
 
 
+vec2 getVertex(Visplane plane, uint index) {
+	uint actualIndex = index / 2;
+	return (index % 2 == 0) ? plane.vertices[actualIndex].xy : plane.vertices[actualIndex].zw;
+}
+
+bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
+	for (uint i=0; i<thisVisplane.numVertices; i++) {
+		vec2 a = getVertex(thisVisplane, i);
+		vec2 b = getVertex(thisVisplane, (i + 1) % thisVisplane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < EPSILON_ALT) {return false; /* Point is outside the edge */}
+	}
+	return true;
+}
+
+
+
 
 
 void main() {
@@ -552,11 +572,13 @@ void main() {
 
 			if (
 				(intersectPoint.x < minBB.x) || (intersectPoint.x > maxBB.x) ||
-				(intersectPoint.y < minBB.y) || (intersectPoint.y > maxBB.y)
+				(intersectPoint.y < minBB.y) || (intersectPoint.y > maxBB.y) ||
+				!isInsideVP(intersectPoint, thisVisplane)
 			) {
 				//Fragray does not hit VP.
 				continue;
 			}
+			
 
 			vec2 d = playerPosition.xy - intersectPoint;
 			thisIntersect.distanceSQ = dot(d,d);
