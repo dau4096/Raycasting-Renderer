@@ -6,7 +6,7 @@
 #include "constants.h"
 #include <vector>
 #include <stdexcept>
-#include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
+#include <glm/glm.hpp>
 
 using namespace std;
 
@@ -52,13 +52,23 @@ namespace logicFunctions {
 namespace utils {
 
 	static inline void hideConsole() {
+	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
+	#endif
 	}
+
 	static inline void showConsole() {
+	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_SHOW);
+	#endif
 	}
+
 	static inline bool isConsoleVisible() {
-		return IsWindowVisible(GetConsoleWindow()) != FALSE;
+	#ifdef _WIN32
+		return IsWindowVisible(GetConsoleWindow());
+	#elif __linux__
+		return true;
+	#endif 
 	}
 
 

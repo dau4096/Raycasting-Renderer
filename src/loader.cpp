@@ -97,7 +97,7 @@ int assignTexture(std::string textureStr) {
 
 
 static inline int getInt(const pugi::xml_node& node, std::string attrName, int defaultValue=0) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return attr.as_int();
 	}
@@ -105,7 +105,7 @@ static inline int getInt(const pugi::xml_node& node, std::string attrName, int d
 }
 
 static inline float getFloat(const pugi::xml_node& node, std::string attrName, float defaultValue=0.0f) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return attr.as_float();
 	}
@@ -113,7 +113,7 @@ static inline float getFloat(const pugi::xml_node& node, std::string attrName, f
 }
 
 static inline std::string getString(const pugi::xml_node& node, std::string attrName, std::string defaultValue="") {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return attr.as_string();
 	}
@@ -121,7 +121,7 @@ static inline std::string getString(const pugi::xml_node& node, std::string attr
 }
 
 static inline bool getBool(const pugi::xml_node& node, std::string attrName, bool defaultValue=false) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		std::string attrValue = utils::strToUpper(attr.as_string());
 		if (attrValue == "TRUE" || attrValue == "T") {
@@ -134,7 +134,7 @@ static inline bool getBool(const pugi::xml_node& node, std::string attrName, boo
 }
 
 static inline glm::vec2 getVec2(const pugi::xml_node& node, std::string attrName, glm::vec2 defaultValue=glm::vec2(0.0f, 0.0f)) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return parseVec2(attr.as_string());
 	}
@@ -142,7 +142,7 @@ static inline glm::vec2 getVec2(const pugi::xml_node& node, std::string attrName
 }
 
 static inline glm::vec3 getVec3(const pugi::xml_node& node, std::string attrName, glm::vec3 defaultValue=glm::vec3(0.0f, 0.0f, 0.0f)) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return parseVec3(attr.as_string());
 	}
@@ -150,7 +150,7 @@ static inline glm::vec3 getVec3(const pugi::xml_node& node, std::string attrName
 }
 
 static inline int getEnum(const pugi::xml_node& node, std::string attrName, int defaultValue=0) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return assignEnum(utils::strToUpper(attr.as_string()));
 	}
@@ -162,7 +162,7 @@ static inline bool* getPTR(
 		std::string attrName,
 		bool* defaultValue=nullptr
 	) {
-	pugi::xml_attribute attr = node.attribute(attrName);
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
 	if (attr) {
 		return managePTR(attr.as_string());
 	}
@@ -171,19 +171,21 @@ static inline bool* getPTR(
 
 static inline int getTexture(
 		const pugi::xml_node& node,
-		std::string attrName,
-		const char* defaultValue=display::FALLBACK_TEXTURE_PATH
+		const std::string& attrName,
+		const char* defaultValue = display::FALLBACK_TEXTURE_PATH
 	) {
-	pugi::xml_attribute attr = node.attribute(attrName);
-	const char* texname;
+	pugi::xml_attribute attr = node.attribute(attrName.c_str());
+	std::string texname;
+
 	if (attr) {
-		std::string attrValue = attr.as_string();
-		texname = attrValue.c_str();
+		texname = attr.as_string();
 	} else {
 		texname = defaultValue;
 	}
+
 	return assignTexture(texname);
 }
+
 
 
 static std::unordered_map<std::string, std::pair<size_t, size_t>> indexMap;
@@ -1080,9 +1082,11 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 		pugi::xml_node node = nodeList[i].node();
 
 		functionString = strToUpper(node.attribute("function").as_string());
-		valueString = strToUpper(node.attribute("value").as_string());
-		if (!(valueString.empty())) {
-			userConfig[functionString] = valueString;
+		valueString = node.attribute("value").as_string();
+		if (functionString == "META_STAGE_NAME") {
+			userConfig["META_STAGE_NAME"] = valueString;
+		} else if (!(valueString.empty())) {
+			userConfig[functionString] = utils::strToUpper(valueString);
 		} else {
 			raise("Invalid value for: " + functionString);
 		}
@@ -1213,11 +1217,9 @@ void loadStage(
 		std::vector<utils::LogicGate>* logicGates
 	) {
 	std::string filePath = "stages/" + stageName + ".xml";
-	std::string XMLSrc = utils::readFile(filePath);
-
-
 	pugi::xml_document doc;
-	pugi::xml_parse_result parseResult = doc.load_string(XMLSrc.c_str());
+	pugi::xml_parse_result parseResult = doc.load_file(("stages/" + stageName + ".xml").c_str());
+
 	if (!parseResult) {
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}

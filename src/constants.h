@@ -1,7 +1,7 @@
 #pragma once
 
 #include "includes.h"
-#include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
+#include <glm/glm.hpp>
 
 
 

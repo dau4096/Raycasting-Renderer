@@ -166,7 +166,7 @@ bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
 		vec2 toPoint = point2D - a;
 		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
 
-		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+		if (dot(normal, toPoint) < -EPSILON) {return false; /* Point is outside the edge */}
 	}
 	return true;
 }
@@ -187,9 +187,9 @@ vec2 getWallUV(vec3 position3D, Wall thisWall, out int textureID, out bvec4 text
 			(position3D.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y),
 			(position3D.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x),
 			int(abs(thisWall.direction.y) > abs(thisWall.direction.x))
-		) * invTextureScale.x,
-		1.0f - (position3D.z * invTextureScale.y)
-	);
+		),
+		position3D.z
+	) * invTextureScale;
 	vec2 world = vec2(
 		mix(position3D.x, position3D.y, int(abs(thisWall.direction.y) > abs(thisWall.direction.x))),
 		position3D.z
@@ -199,6 +199,7 @@ vec2 getWallUV(vec3 position3D, Wall thisWall, out int textureID, out bvec4 text
 		world,	//World UV
 		useWorldSpace
 	);
+	uv *= vec2(1.0f, -1.0f);
 
 	return uv + textureOffset;
 }
@@ -480,7 +481,8 @@ vec3 calculateLighting(vec3 interpPos, vec3 fragNormal, uint objectIndex) {
 
 			
 			//Shadow Checks
-			bool inShadow = checkLOSLightSpecific(interpPos, thisLight, int(lightIndex), objectType);
+		vec3 offset = fragNormal * 0.02f;
+			bool inShadow = checkLOSGeneral(interpPos + offset, thisLight.position);
 
 			if (!inShadow) {
 				lightColour += thisLight.colour * attenuation * globalLightTint.rgb * globalLightTint.a;
@@ -492,7 +494,7 @@ vec3 calculateLighting(vec3 interpPos, vec3 fragNormal, uint objectIndex) {
 	//Calculate sun;
 	if (dot(sunColour, sunColour) > 0.025f) { //Sun's effect is noticable;
 		float normalDot = getNormalDot(fragNormal, normalize(sunDirection));
-		vec3 offset = fragNormal * 0.01f;
+		vec3 offset = fragNormal * 0.02f;
 		if (normalDot > -0.125f) {
 			bool sunBlocked = checkLOSGeneral(interpPos + offset, interpPos + sunDirection * maxRayDistance);
 			if (!sunBlocked) {
@@ -514,10 +516,10 @@ void main() {
 	uint invokeX = gl_GlobalInvocationID.x;
 	uint invokeY = gl_GlobalInvocationID.y;
 	uint frontBack = gl_GlobalInvocationID.z; //0: Front face 1: Backface
-	if ((invokeX >= mapResolution.x) || (invokeY >= mapResolution.y)) {return; /* Offscreen or out of range. */}
+	if ((invokeX > mapResolution.x) || (invokeY > mapResolution.y)) {return; /* Offscreen or out of range. */}
 	isBackface = bool(frontBack);
 
-	uint mapIndex = ((objectIndex + ((objectType == T_WALL) ? numVisplanes : 0)) * 2u) + frontBack;
+	uint mapIndex = ((objectIndex + ((objectType == T_WALL) ? numVisplanes : 0u)) * 2u) + frontBack;
 	ivec2 mapPosition = ivec2(invokeX, invokeY);
 	vec2 mapDecimal = vec2(invokeX, invokeY) / vec2(mapResolution);
 	vec3 interpPos;

@@ -26,20 +26,20 @@ The player can;
 Walls;
 - Perfectly vertical, 2D lines.
 - Infinitely thin.
-- Has constant height.
-- Textured from 3D position.
+- Has constant tall-ness.
+- Textured from 3D position or locally.
 - Expensive to render.
 
 Visplanes;
 - Perfectly horizontal, rectangular.
 - Infinitely thin.
 - Has constant height.
-- Textured from 3D position
+- Textured from 3D position or locally.
 
 Displacements;
 - 3D triangles.
 - No physics collision.
-- Cheap to render.
+- Cheap(ish) to render.
 - Textured from barycentric UV.
 
 Sprites;
@@ -52,13 +52,11 @@ Lights;
 - Point-sources.
 - Constant colour.
 - Can be dynamically enabled/disabled via flags.
-- Expensive to render.
 
 TextObjects;
 - Sprite-like labels.
 - Can only use up to 64 Alphanumeric characters per TO, plus a few extra symbols: `-.!?,'/:;&[]()^`
 - Always fully lit.
-- Very expensive to render, when numerous.
 
 ___
 ## The GPU-Side
@@ -78,11 +76,11 @@ The world is drawn in a pseudo-3D manner. `X, Y` are in perspective, and `Z` (ve
 ### _displacements3D.frag_
 Rasterises and colours the displacements in 3D space, using `projection.vert` (which uses a similar system to sprite rendering.) This is drawn to a framebuffer including position and normals data.
 
-![**[Image of Displacements before the projection shader]**](images/displacements-preVS.png "[Image of Displacements before the projection shader]")
+![**[Image of Displacements before the projection shader]**](images/displacements-preVS.png)
 
 _Displacements mesh in actual 3D space._
 
-![**[Image of Displacements being warped in the view frustum]**](images/displacements-postVS.png "[Image of Displacements being warped in the view frustum]")
+![**[Image of Displacements being warped in the view frustum]**](images/displacements-postVS.png)
 
 _Displacements after the projection shader, warped inside the view frustum._
 
@@ -90,7 +88,7 @@ _Displacements after the projection shader, warped inside the view frustum._
 ### _displacements2D.frag_
 This interprets the data from the frambuffer used in `displacements3D.frag` and writes it to the current frame texture given that pixel is closer than that already inside the frame. Also writes normals/position data for lighting if applicable.
 
-![**[Image of Displacements overlaid on scene]**](images/displacements.png "[Image of Displacements overlaid on scene]")
+![**[Image of Displacements overlaid on scene]**](images/displacements.png)
 
 _Displacements overlaid on the rest of the environment._
 
@@ -99,32 +97,36 @@ _Displacements overlaid on the rest of the environment._
 This shader simply draws every sprite. They can have transparency, and for lighting purposes are treated as a singular point at their centre with no normal (always facing light source).
 
 
-### _lighting.comp_
-This shader is responsible for the scene's lighting. The aforementioned shaders draw into;
+### _dynamic.frame.comp_
+This shader is responsible for the scene's dynamic lighting. The aforementioned shaders draw into;
 
-![**[Image of renderedFrame]**](images/colourMap.png "[Image of renderedFrame]")
+![**[Image of renderedFrame]**](images/colourMap.png)
 
 _An albedo map (`renderedFrame`)_
 
-![**[Image of positionMap]**](images/positionMap.png "[Image of positionMap]")
+![**[Image of positionMap]**](images/positionMap.png)
 
 _A map of positions (`positionMap`)_
 
-![**[Image of normalMap]**](images/normalMap.png "[Image of normalMap]")
+![**[Image of normalMap]**](images/normalMap.png)
 
 _And a map of normals (`normalMap`)_
 
-![**[Image of lightMap]**](images/lightMap.png "[Image of lightMap]")
+![**[Image of lightMap]**](images/lightMap.png)
 
 _To create the final lightmaps._
 
 Using these three textures, it creates a lower resolution overlay of pixel lighting to be used later. This can contain lighting colours, shading, brightness and so on. The calculations utilise every light in the scene, the player's Headlamp (if enabled) and the sun (given as a direction and colour).
 
-![**[Image of completed frame]**](images/finalFrame.png "[Image of completed frame]")
+![**[Image of completed frame]**](images/finalFrame.png)
 
 _The final result (produced later by `display.frag`) from the above maps._
 
 The lighting map created is the only `GL_LINEAR` sampled `Image2D` in the entire project, as this allows the shadows to have softer edges.
+
+
+### _static.frame.arb.comp_ & _static.frame.fixed.comp_
+These sample previously created shadowmaps. Very performant. See __Lighting Types__ for more info.
 
 
 ### _interface.frag_
@@ -133,6 +135,38 @@ Responsible for the HUD, `interface.frag` works with `interface.vert` to create 
 
 ### _display.frag_
 The only shader to have its own dedicated vertex shader, `display.frag` combines and shows the final frame. Using the albedo map, the lighting map and the UI texture, these are combined to create the final image visible onscreen. The shader also writes to another `Image2D`, as these "post-processing" style effects must appear in screenshots. `display.frag` also applies screen effects such as tinting when the player is hurt.
+
+
+___
+## Lighting Types;
+### Dynamic
+_"DYNAMIC"_
+The method in use for the longest.
+Uses _dynamic.frame.comp_ (see above) to compute lighting per-frame, in screenspace.
+Unsurprisingly the least performant - but can easily handle moving surfaces in any situation.
+
+
+### Variable
+_"ARB"_
+Only allowed if the GPU supports `GL_ARB_bindless_texture`/`GL_ARB_gpu_shader_int64`.
+If it does not, falls back to Fixed (see below) lighting method.
+Before runtime, processes every surface in this stage, and produces a lightmap for each side of it. (e.g. one for the above face, one for the below face of a visplane.)
+Uses variable resolution lightmaps for each surface to ensure lighting density is consistent for every object.
+Example lightmap;
+![Image showing lighting for a surface, with shadows cast from multiple coloured light sources.](images/ARBlightmap.png)
+
+
+### Fixed
+_"OLD"_
+Variable texturing (see above), but utilising a texture array buffer for GPUs which do not support `GL_ARB_bindless_texture`/`GL_ARB_gpu_shader_int64`.
+Every surface is allocated a specific resolution independant of world size; This results in some surfaces getting excessive detail, and others getting minimal detail.
+Computed almost identically to Variable texturing, but without changing resolution.
+
+
+### Fullbright
+_"None"_
+Simply does not compute lighting. All surfaces are fully lit and textured directly.
+Replaces the older "`VIEW_LIGHTING `=> `FALSE`" config option.
 
 ___
 ## The XML stage files
@@ -153,6 +187,7 @@ Visplanes are objects stored under the tag `<environment>` and have the followin
 | `extra` | Attribute | Number | Data used by non-`V_NORMAL` types. See the Types section (Visplane-specific). |
 | `useWorldUVX` | Attribute | Boolean | Whether to texture based on physical X (Horizontal) position or accross the surface. (Currently non-functional, defaults to `TRUE`). |
 | `useWorldUVY` | Attribute | Boolean | Whether to texture based on physical Y (Horizontal) position or accross the surface. (Currently non-functional, defaults to `TRUE`). |
+| `flipUVXY` | Attribute | Boolean | Swaps UV X and Y components during texturing. |
 | `textureScale` | Attribute | 2D vector | Texture scale. higher numbers make the texture larger. |
 | `textureOffset` | Attribute | 2D vector | [0-1] range of texture offset. Is applied after texture scale. |
 | `exitDirection` | Attribute | Number | Only applies when `type` is `V_TELEPORT`. Specifies player view direction in degrees when exiting this VP. `0.0` is +Y. |
@@ -178,6 +213,7 @@ Walls are objects stored under the tag `<environment>` and have the following at
 | `extra` | Attribute | Number | Data used by non-`W_NORMAL` types. See the Types section (Wall-specific). |
 | `useWorldUVX` | Attribute | Boolean | Whether to texture based on physical XY (Horizontal) position or accross the surface. |
 | `useWorldUVY` | Attribute | Boolean | Whether to texture based on physical Z (Vertical) position or accross the surface. |
+| `flipUVXY` | Attribute | Boolean | Swaps UV X and Y components during texturing. |
 | `textureScale` | Attribute | 2D vector | Texture scale. higher numbers make the texture larger. |
 | `textureOffset` | Attribute | 2D vector | [0-1] range of texture offset. Is applied after texture scale. |
 | | | | |
@@ -274,7 +310,7 @@ Logic gates are objects stored under the tag `<logic>` have the following attrib
 | `type` | Attribute | Type | Type of gate. See the Types section (Logic-specific). Currently unused (defaults to `G_PASSTHROUGH`). |
 | `outFlag` | Attribute | Text | Where to store the output. |
 | `inAFlag` | Attribute | Text | Input A's flag. |
-| `inBFlag` | Attribute | Text | Input B's flag. |
+| `inBFlag` | Attribute | Text | Input B's flag. Some gates may not use a second input (e.g. G_NOT, G_PULSE). |
 | | | | |
 
 Example;
@@ -375,6 +411,8 @@ The types that can be used within XML files and their descriptions.
 | Visplane | `V_NODRAW` | Has physical collision but does not render. |
 | Visplane | `V_TELEPORT` | Teleports player to partner `V_TELEPORT` when stepped on. |
 | Visplane | `V_CONVEY` | Moves player in (attribute) `direction`. |
+| Visplane | `V_LIGHTBLOCKER` | Invisible, blocks lighting line-of-sight calculations. |
+| Visplane | `V_PORTAL` | `V_TELEPORT`, but shows sky texture rather than flat surface. |
 | | | |
 | Wall | `W_INVALID` | Used when a wall is not valid. |
 | Wall | `W_NORMAL` | Used for a regular wall. |
@@ -390,13 +428,16 @@ The types that can be used within XML files and their descriptions.
 | Wall | `W_NODRAW` | Has physical collision but does not render. |
 | Wall | `W_DOORZ` | Moves up when interacted with, stays there for 2s, then moves down. |
 | Wall | `W_DOORSWING` | Rotates around its start point when interacted with, stays there for 2s, then returns to initial position. |
+| Wall | `W_LIGHTBLOCKER` | Invisible, blocks lighting line-of-sight calculations. |
+| Wall | `W_PORTAL` | Acts like `V_PORTAL` in wall form-factor. |
 | | | |
 | Displacement | `D_INVALID` | Used when a displacement is not valid. |
 | Displacement | `D_NORMAL` | Used for a regular displacement. |
 | | | |
 | Sprite | `SPR_INVALID` | Used when a sprite is not valid. |
-| Sprite | `SPR_DECO` | Used for a regular sprite. |
-| Sprite | `SPR_LIGHT` | Used to mark a light. Acts like `SPR_DECO`. |
+| Sprite | `SPR_DECO` | Used for a regular decoration sprite. |
+| Sprite | `SPR_PHYSICS` | Sprite affected by physics. Used for Particles. |
+| Sprite | `SPR_LIGHT` | Used to mark a light. Acts like `SPR_DECO`. __[DEPRECATED]__ |
 | | | |
 | LogicGate | `G_INVALID` | Used when a gate is not valid. |
 | LogicGate | `G_PASSTHROUGH` | Sets output to input. |
@@ -419,3 +460,11 @@ The types that can be used within XML files and their descriptions.
 | Cuboid | `C_PASSTHROUGH` | Has no physical collision but still renders. |
 | Cuboid | `C_NODRAW` | Has physical collision but does not render. |
 | | | |
+| LogicGate | `G_PASSTHROUGH` | Simply passes along a signal, unchanged. |
+| LogicGate | `G_AND` | Logical `AND` of the 2 inputs. |
+| LogicGate | `G_OR` | Logical `OR` of the 2 inputs. |
+| LogicGate | `G_NOT` | Inverts input A. Ignores input B. |
+| LogicGate | `G_XOR` | Logical `EXCLUSIVE-OR` of the 2 inputs. Can be used as `!=`. |
+| LogicGate | `G_LATCH` | Input A enables, Input B disables. |
+| LogicGate | `G_PULSE` | Enables for 1 frame whenever input A turns on. Ignores input B. |
+| LogicGate | `G_TOGGLE` | Input A toggles state between `TRUE` & `FALSE`. If held, changes every frame. |

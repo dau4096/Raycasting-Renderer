@@ -2,8 +2,12 @@
 #define INCLUDES_H
 
 
+#ifdef __WIN32
+
 //Include Windows.
 #include <Windows.h>
+
+#endif
 
 //Include GLEW.
 #include <GL/glew.h>
@@ -22,7 +26,7 @@
 #include <GLFW/glfw3.h>
 
 //Include PugiXML
-#include <pugixml/pugixml.hpp>
+#include <pugixml.hpp>
 
 //Include std subheaders.
 #include <bits/stdc++.h>

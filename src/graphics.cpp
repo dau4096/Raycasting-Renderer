@@ -1,8 +1,8 @@
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
-#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
-#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
+#include "stb_image.h"
+#include "stb_image_write.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
@@ -668,7 +668,7 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 
 	if (!textureData) {
 		//Try in folder beside stage XML with same name.
-		texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+		texturePath = "stages/" + stageData.name + ".assets/" + textureName + ".png";
 		textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -764,7 +764,7 @@ GLuint createTexture2DArray(
 
 		std::string reportedTextureName = textureName;
 		//Try in folder beside stage XML with same name.
-		std::string texturePath = "stages/assets-" + stageData.name + "/" + textureName + extension;
+		std::string texturePath = "stages/" + stageData.name + ".assets/" + textureName + ".png";
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -781,7 +781,7 @@ GLuint createTexture2DArray(
 			);
 
 			if (!textureData) {
-				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + extension) << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + extension) << "]. Reverting to fallback." << std::endl;
+				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + extension) << "] or [" << ("stages/" + stageData.name + ".assets/" + textureName + extension) << "]. Reverting to fallback." << std::endl;
 				//Use fallback texture.
 				textureData = fallbackTextureData;
 				width = fallbackTextureWidth;
@@ -835,7 +835,7 @@ void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string texture
 
 	if (!textureData) {
 		//Try in folder beside stage XML with same name.
-		texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+		texturePath = "stages/" + stageData.name + ".assets/" + textureName + ".png";
 		textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -843,7 +843,7 @@ void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string texture
 		);
 
 		if (!textureData) {
-			std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
+			std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/" + stageData.name + ".assets/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
 			textureData = stbi_load(
 				display::FALLBACK_TEXTURE_PATH,
 				&width, &height,
@@ -1618,7 +1618,7 @@ void fixedResolutionLightmapping() {
 		);
 	}
 
-	for (unsigned int wallIndex=0u; wallIndex<validVisplanes; wallIndex++) {
+	for (unsigned int wallIndex=0u; wallIndex<validWalls; wallIndex++) {
 		
 		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
 
@@ -1674,7 +1674,6 @@ void arbLightmapping() {
 																										 //I don't want to allow massive maps; so I set a limit.
 		GLuint shadowMapFront = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
 		GLuint shadowMapBack  = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
-		//utils::printVec2(vec2(mapResolution));
 
 		runComputeShader(
 			mapResolution,
@@ -1694,7 +1693,7 @@ void arbLightmapping() {
 		graphicsData->visplaneData.at(visplaneIndex) = thisVisplane; //Write back to data;
 	}
 
-	for (unsigned int wallIndex=0u; wallIndex<validVisplanes; wallIndex++) {
+	for (unsigned int wallIndex=0u; wallIndex<validWalls; wallIndex++) {
 		
 		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
 
@@ -1721,7 +1720,6 @@ void arbLightmapping() {
 																										 //I don't want to allow massive maps; so I set a limit.
 		GLuint shadowMapFront = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
 		GLuint shadowMapBack  = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
-		//utils::printVec2(vec2(mapResolution));
 
 		runComputeShader( //Computes map's lighting.
 			mapResolution,

@@ -26,10 +26,10 @@
 *.lib
 
 # Compiled programs
-*.app
+app
 *.exe
 *.ini
-*.bat
 
 # Other
 notes.md
+stb_image*.h

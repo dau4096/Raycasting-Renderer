@@ -164,7 +164,7 @@ bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
 		vec2 toPoint = point2D - a;
 		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
 
-		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+		if (dot(normal, toPoint) < -EPSILON) {return false; /* Point is outside the edge */}
 	}
 	return true;
 }
@@ -185,9 +185,9 @@ vec2 getWallUV(vec3 position3D, Wall thisWall, out int textureID, out bvec4 text
 			(position3D.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y),
 			(position3D.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x),
 			int(abs(thisWall.direction.y) > abs(thisWall.direction.x))
-		) * invTextureScale.x,
-		1.0f - (position3D.z * invTextureScale.y)
-	);
+		),
+		position3D.z
+	) * invTextureScale;
 	vec2 world = vec2(
 		mix(position3D.x, position3D.y, int(abs(thisWall.direction.y) > abs(thisWall.direction.x))),
 		position3D.z
@@ -197,6 +197,7 @@ vec2 getWallUV(vec3 position3D, Wall thisWall, out int textureID, out bvec4 text
 		world,	//World UV
 		useWorldSpace
 	);
+	uv *= vec2(1.0f, -1.0f);
 
 	return uv + textureOffset;
 }
@@ -555,13 +556,12 @@ void main() {
 
 
 	vec4 mapAlbedo = texture(textureArray, vec3(textureUV.xy, textureID)).rgba;
-	//if (mapAlbedo.a < EPSILON) {exit(mapPosition); return;}
 
 	vec3 mainNormal = (bool(frontBack)) ? inNormal : -inNormal;
 	vec3 mapNormal = texture(normalMapArray, vec3(textureUV.xy, textureID)).xyz;
-	//getNormal(mapNormal, mainNormal, objectType);
+	getNormal(mapNormal, mainNormal, objectType);
 
 	vec3 finalLighting = calculateLighting(interpPos, mainNormal, objectType);
 
-	imageStore(shadowMaps, mapPosition, vec4((mainNormal.xyz*.5)+.5, 2.25f));
+	imageStore(shadowMaps, mapPosition, vec4(finalLighting, 2.25f));
 }

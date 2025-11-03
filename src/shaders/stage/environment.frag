@@ -430,7 +430,11 @@ float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 t
 	float yUVWorld = 1.0f - fragZ * invTextureScale.y;
 	float yUVLocal = 1.0f - (a * invTextureScale.y);
 
-	float yUV = mix(yUVLocal, yUVWorld, float(useWorldSpace.y));
+	float yUV = mix(
+		1.0f - (a * invTextureScale.y),   //Local
+		1.0f - fragZ * invTextureScale.y, //World
+		float(useWorldSpace.y)
+	);
 
 	return yUV + textureOffset.y;
 }
@@ -461,6 +465,25 @@ vec2 getVisplaneUV(vec2 position2D, Visplane plane, out int textureID, out bvec4
 }
 
 
+
+
+vec2 getVertex(Visplane thisVisplane, uint index) {
+	uint actualIndex = index / 2;
+	return (index % 2 == 0) ? thisVisplane.vertices[actualIndex].xy : thisVisplane.vertices[actualIndex].zw;
+}
+
+bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
+	for (uint i=0; i<thisVisplane.numVertices; i++) {
+		vec2 a = getVertex(thisVisplane, i);
+		vec2 b = getVertex(thisVisplane, (i + 1) % thisVisplane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < EPSILON) {return false; /* Point is outside the edge */}
+	}
+	return true;
+}
 
 
 
@@ -561,7 +584,8 @@ void main() {
 
 			if (
 				(intersectPoint.x < minBB.x) || (intersectPoint.x > maxBB.x) ||
-				(intersectPoint.y < minBB.y) || (intersectPoint.y > maxBB.y)
+				(intersectPoint.y < minBB.y) || (intersectPoint.y > maxBB.y) ||
+				!isInsideVP(intersectPoint, thisVisplane)
 			) {
 				//Fragray does not hit VP.
 				continue;
