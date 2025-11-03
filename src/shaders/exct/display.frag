@@ -111,9 +111,9 @@ vec3 getBrightness(vec2 UV) {
 	if ((lightingType == 0) || ((debugMode != 0) && (debugMode != 3))) {//Debugging modes and no-lighting type.
 		return vec3(1.0f, 1.0f, 1.0f);
 
-	} else if ((lightingType == 1) || (lightingType == 2)) { //Lighting type is "static" type.
-		//Only samples layer 0.
-		return texture(lightMapsArray, vec3(UV.xy, 0.0f)).rgb;
+	} else if ((lightingType == 1) || (lightingType == 2)) { //Lighting type is a "static" type.
+		//Only samples layer 0 & 1. (Map values, Headlamp.)
+		return texture(lightMapsArray, vec3(UV.xy, 0.0f)).rgb+texture(lightMapsArray, vec3(UV.xy, 1.0f)).rgb;
 
 	} else { //Lighting type is "dynamic" type.
 		vec3 lightingSum = vec3(0.0f, 0.0f, 0.0f);

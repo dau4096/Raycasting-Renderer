@@ -144,6 +144,7 @@ _"DYNAMIC"_
 The method in use for the longest.
 Uses _dynamic.frame.comp_ (see above) to compute lighting per-frame, in screenspace.
 Unsurprisingly the least performant - but can easily handle moving surfaces in any situation.
+This is the only lighting type that allows for specular highlights.
 
 
 ### Variable
