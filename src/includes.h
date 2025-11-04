@@ -5,7 +5,11 @@
 #ifdef __WIN32
 
 //Include Windows.
-#include <Windows.h>
+#ifdef _WIN32
+
+#include <Windows.h> //Only for windows systems (obviously). Only needed for console-specific functions, which are minimal.
+
+#endif
 
 #endif
 

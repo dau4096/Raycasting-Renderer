@@ -6,7 +6,6 @@
 #include "constants.h"
 #include <vector>
 #include <stdexcept>
-#include <glm/glm.hpp>
 
 using namespace std;
 
@@ -48,9 +47,9 @@ namespace logicFunctions {
 }
 
 
+
 //Utility functions
 namespace utils {
-
 	static inline void hideConsole() {
 	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_HIDE);

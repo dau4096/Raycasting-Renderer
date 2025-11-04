@@ -1,8 +1,8 @@
 #include "includes.h"
 #include "global.h"
 #include "utils.h"
-#include "stb_image.h"
-#include "stb_image_write.h"
+#include <stb_image.h>
+#include <stb_image_write.h>
 using namespace std;
 using namespace utils;
 using namespace glm;

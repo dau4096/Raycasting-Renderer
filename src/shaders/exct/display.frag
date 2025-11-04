@@ -144,7 +144,7 @@ void main() {
 		} else {
 			resultant.rgb = mix(resultant.rgb, screenTint.rgb, screenTint.a);
 		}
-
+    
 	} else {
 		vec3 brightness = getBrightness(mainUV);
 		if (debugMode == 3) { //Debug lighting.

@@ -364,7 +364,7 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 		}
 
 	} else {
-		return vec4(0.0);
+		return vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 	return fetchUV(

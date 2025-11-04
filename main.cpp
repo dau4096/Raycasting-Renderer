@@ -2,8 +2,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #pragma execution_character_set("utf-8")
 
-#include "stb_image.h"
-#include "stb_image_write.h"
+#include <stb_image.h>
+#include <stb_image_write.h>
 #include "src/includes.h"
 #include "src/global.h"
 #include "src/loader.h"
