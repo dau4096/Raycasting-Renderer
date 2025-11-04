@@ -146,7 +146,7 @@
 
 
 <!-- Stage-specific -->
-<option function="META_STAGE_NAME" 						value="dev-lighting"	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
+<option function="META_STAGE_NAME" 						value="dev-quake" 	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
 <option function="META_DYNAMIC_UPD" 					value="FALSE"			note="Reloads stage every physics tick. [TRUE/FALSE]" />
 <option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" 	value="FALSE"			note="Allows stage to reload textures every tick. [TRUE/FALSE]" />
 
