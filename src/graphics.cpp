@@ -149,7 +149,7 @@ static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformN
 static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, size_t value) {
 	GLuint location = glGetUniformLocation(shaderProgram, uniformName);
 	if (location >= 0) {
-		glUniform1i(location, value);
+		glUniform1ui(location, value);
 	}
 }
 static inline void bindUniformValue(GLuint shaderProgram, const GLchar* uniformName, int value) {
@@ -212,6 +212,7 @@ static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float 
 	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
 	bindUniformValue(shaderProgram, "currentTime", currentTime);
 	bindUniformValue(shaderProgram, "viewCorrection", utils::configToBool("VIEW_CORRECTION"));
+	bindUniformValue(shaderProgram, "lightingType", lightingType);
 
 	//Player Data
 	bindUniformValue(shaderProgram, "playerPosition", player.cameraPosition);
@@ -287,9 +288,9 @@ GLFWwindow* initialiseWindow(int width, int height, const char* title) {
 
 
 GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="") {
-	if (vertexShaderName.empty()) {vertexShaderName = "generic.vert";}
-	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ vertexShaderName);
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ fragShaderName);
+	if (vertexShaderName.empty()) {vertexShaderName = "exct/generic";}
+	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ vertexShaderName +".vert");
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ fragShaderName +".frag");
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
@@ -317,7 +318,7 @@ GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderN
 
 
 GLuint createComputeShader(std::string compShaderName) {
-	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName);
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName + ".comp");
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, computeShader);
@@ -351,6 +352,26 @@ GLuint createShaderStorageBufferObject(int binding, size_t bufferSize=0, GLuint 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return SSBO;
+}
+
+template<typename TGPU, typename TCPU>
+void updateShaderStorageBufferObject(
+		GLuint SSBO, std::vector<TCPU>* dataSetIn, int allocSize, const bool hasIndex
+	) {
+
+	size_t singleItemSize = sizeof(TGPU);
+	size_t size = (allocSize == -1) ? dataSetIn->size() : allocSize;
+	std::vector<TGPU> dataSet;
+
+	for (size_t index=0; index<size; index++) {
+		dataSet.push_back(TGPU(dataSetIn->data() + index, player, index));
+	}
+
+	if (size > 0 && !dataSet.empty()) {
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, singleItemSize * size, dataSet.data());
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	}
 }
 
 template<typename TGPU, typename TCPU>
@@ -647,7 +668,7 @@ GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="tex
 
 	if (!textureData) {
 		//Try in folder beside stage XML with same name.
-		texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+		texturePath = "stages/" + stageData.name + ".assets/" + textureName + ".png";
 		textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -743,7 +764,7 @@ GLuint createTexture2DArray(
 
 		std::string reportedTextureName = textureName;
 		//Try in folder beside stage XML with same name.
-		std::string texturePath = "stages/assets-" + stageData.name + "/" + textureName + extension;
+		std::string texturePath = "stages/" + stageData.name + ".assets/" + textureName + ".png";
 		unsigned char* textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -760,7 +781,7 @@ GLuint createTexture2DArray(
 			);
 
 			if (!textureData) {
-				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + extension) << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + extension) << "]. Reverting to fallback." << std::endl;
+				std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + extension) << "] or [" << ("stages/" + stageData.name + ".assets/" + textureName + extension) << "]. Reverting to fallback." << std::endl;
 				//Use fallback texture.
 				textureData = fallbackTextureData;
 				width = fallbackTextureWidth;
@@ -814,7 +835,7 @@ void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string texture
 
 	if (!textureData) {
 		//Try in folder beside stage XML with same name.
-		texturePath = "stages/assets-" + stageData.name + "/" + textureName + ".png";
+		texturePath = "stages/" + stageData.name + ".assets/" + textureName + ".png";
 		textureData = stbi_load(
 			texturePath.c_str(),
 			&width, &height,
@@ -822,7 +843,7 @@ void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string texture
 		);
 
 		if (!textureData) {
-			std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/assets-" + stageData.name + "/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
+			std::cout << "Could not find: [" << ("src/" + subFolder + "/" + textureName + ".png") << "] or [" << ("stages/" + stageData.name + ".assets/" + textureName + ".png") << "]. Reverting to fallback." << std::endl;
 			textureData = stbi_load(
 				display::FALLBACK_TEXTURE_PATH,
 				&width, &height,
@@ -857,7 +878,7 @@ void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string texture
 }
 
 
-GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
+GLuint createGLImage2DArray(size_t width, size_t height, size_t layers, GLenum filtering=GL_NEAREST) {
 	GLuint arrayID;
 	glGenTextures(1, &arrayID);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, arrayID);
@@ -866,10 +887,10 @@ GLuint createGLImage2DArray(size_t width, size_t height, size_t layers) {
 		width, height, layers
 	);
 
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, filtering);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, filtering);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
@@ -1377,6 +1398,7 @@ void prepareOpenGL() {
 	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
 
 	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
@@ -1432,26 +1454,55 @@ void prepareOpenGL() {
 
 
 	//Raycast compute shader
-	GLIndex::raycastShader = createComputeShader("stage/raycast.comp");
+	GLIndex::raycastShader = createComputeShader("stage/raycast");
 
 	//Environment shader
-	GLIndex::envShader = createShaderProgram("stage/environment.frag");
+	GLIndex::envShader = createShaderProgram("stage/environment");
 
 	//Displacement shaders
-	GLIndex::displacementShader3D = createShaderProgram("displacements/3D.frag", "displacements/projection.vert");
-	GLIndex::displacementShader2D = createShaderProgram("displacements/2D.frag");
+	GLIndex::displacementShader3D = createShaderProgram("displacements/3D", "displacements/projection");
+	GLIndex::displacementShader2D = createShaderProgram("displacements/2D");
 
 	//Sprite Shader
-	GLIndex::spriteShader = createShaderProgram("stage/sprites.frag");
+	GLIndex::spriteShader = createShaderProgram("stage/sprites");
 
 	//Lighting compute Shader
-	GLIndex::lightingShader = createComputeShader("stage/lighting.comp");
+	switch(lightingType) {
+		case LIGHT_STATIC_FIXED: {
+			//Uses fixed-size shadow maps in an array.
+			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.fixed");
+			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.fixed");
+			unsigned int numMaps = (validVisplanes + validWalls) * 2u;
+			GLIndex::surfaceLightMapsArrayID = createGLImage2DArray(
+				display::FIXED_SHADOW_RESOLUTION.x, display::FIXED_SHADOW_RESOLUTION.y,
+				numMaps, GL_LINEAR
+			);
+			glObjectLabel(GL_TEXTURE, GLIndex::surfaceLightMapsArrayID, -1, "surfaceLightMapsArrayID");
+			break;
+		}
+		case LIGHT_STATIC_ARB: {
+			//Only works if ARB textures are allowed. Otherwise falls back to LIGHT_STATIC_FIXED.
+			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.arb");
+			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.arb");
+			break;
+		}
+		case LIGHT_DYNAMIC: {
+			GLIndex::preLightingShader = -1;
+			GLIndex::frameLightingShader = createComputeShader("lighting/dynamic.frame");
+			break;
+		}
+		default: {
+			GLIndex::preLightingShader = -1;
+			GLIndex::frameLightingShader = -1;
+			break;
+		}
+	}
 
 	//uiShader
-	GLIndex::uiShader = createShaderProgram("exct/interface.frag", "exct/interface.vert");
+	GLIndex::uiShader = createShaderProgram("exct/interface", "exct/interface");
 	
 	//Display Shader
-	GLIndex::displayShader = createShaderProgram("exct/display.frag", "exct/display.vert");
+	GLIndex::displayShader = createShaderProgram("exct/display", "exct/display");
 
 
 	initialiseVAOs();
@@ -1476,7 +1527,7 @@ void prepareOpenGL() {
 
 	UIElements = {
 		structs::UIElement(glm::vec2(-16, -72), glm::vec2(192, 192), static_cast<GLuint>(0)),		//Health image
-		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),				//Health number
+		structs::UIElement(glm::vec2(32, 32), glm::vec2(40, 40), &(player.health)),					//Health number
 		structs::UIElement(glm::vec2(780, -72), glm::vec2(192, 192), static_cast<GLuint>(1)), 		//Energy image
 		structs::UIElement(glm::vec2(840, 32), glm::vec2(40, 40), &(player.energy)),				//Energy number
 		structs::UIElement(glm::vec2(0, 508), glm::vec2(32, 32), &avgframerate, &shouldShowFPS),	//FPS number
@@ -1490,11 +1541,236 @@ void prepareOpenGL() {
 
 
 
+}
 
 
 
+
+
+
+
+namespace lighting {
+
+
+void runComputeShader(
+		glm::ivec2 resolution, glm::vec3 normal,
+		glm::vec3 startPosition, glm::vec3 endPosition,
+		size_t objectType, size_t objectIndex,
+		GLuint mapFront=0, GLuint mapBack=0, bool useMaps=false
+) {
+	const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16u, 16u, 1u);
+	glUseProgram(GLIndex::preLightingShader);
+	glBindTextureUnit(0, GLIndex::textureArrayEnvironment);
+	glBindTextureUnit(1, GLIndex::normalArrayEnvironment);
+	if (useMaps) {
+		glBindImageTexture(0, mapFront, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		glBindImageTexture(1, mapBack,  0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	} else {
+		glBindImageTexture(0, GLIndex::surfaceLightMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	}
+
+	uniforms::bindCommonUniforms(GLIndex::preLightingShader, 0.0f, 0.0f);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "startPosition", startPosition);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "inNormal", normal);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "endPosition", endPosition);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "mapResolution", resolution);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "objectType", objectType);
+	uniforms::bindUniformValue(GLIndex::preLightingShader, "objectIndex", objectIndex);
+	uniforms::bindUniformValue(GLIndex::displacementShader3D, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY"));
+
+	glDispatchCompute(
+		(resolution.x + LIGHTING_LOCAL_SIZE.x - 1u) / LIGHTING_LOCAL_SIZE.x,
+		(resolution.y + LIGHTING_LOCAL_SIZE.y - 1u) / LIGHTING_LOCAL_SIZE.y,
+		2
+	);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("Pre-Lighting Compute Shader", true);
+}
+
+
+void fixedResolutionLightmapping() {
+
+	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
+		
+		structs::Visplane thisVisplane = graphicsData->visplaneData.at(visplaneIndex);
+
+		glm::vec2 minPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maxPoint = -minPoint;
+
+		for (unsigned int i=0; i<thisVisplane.numVertices; i+=2) {
+			glm::vec2 a = thisVisplane.vertices[i];
+			bool hasAnotherVertex = (i+1 < thisVisplane.numVertices);
+			glm::vec2 b = (hasAnotherVertex) ? thisVisplane.vertices[i+1] : glm::vec2(0.0f, 0.0f);
+
+			glm::vec2 minPT = (hasAnotherVertex) ? glm::min(a,b) : a;
+			glm::vec2 maxPT = (hasAnotherVertex) ? glm::max(a,b) : a;
+
+			minPoint = min(minPoint, minPT);
+			maxPoint = max(maxPoint, maxPT);
+		}
+
+		runComputeShader(
+			display::FIXED_SHADOW_RESOLUTION,
+			glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::vec3(minPoint, thisVisplane.height),
+			glm::vec3(maxPoint, thisVisplane.height),
+			T_VISPLANE, visplaneIndex
+		);
+	}
+
+	for (unsigned int wallIndex=0u; wallIndex<validWalls; wallIndex++) {
+		
+		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
+
+		glm::vec3 minPoint = min(thisWall.start, thisWall.end);
+		glm::vec3 maxPoint = max(thisWall.start, thisWall.end);
+
+		glm::vec2 wallDirection = glm::normalize(glm::vec2(
+			thisWall.end - thisWall.start
+		));
+		glm::vec3 wallNormal = glm::vec3(
+			-wallDirection.y,
+			 wallDirection.x,
+			 0.0f
+		);
+
+		runComputeShader(
+			display::FIXED_SHADOW_RESOLUTION,
+			wallNormal,
+			minPoint, maxPoint,
+			T_WALL, wallIndex
+		);
+	}
 
 }
+
+
+void arbLightmapping() {
+
+	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
+		
+		structs::Visplane thisVisplane = graphicsData->visplaneData.at(visplaneIndex);
+
+		glm::vec2 minPoint = glm::vec2(constants::INF, constants::INF);
+		glm::vec2 maxPoint = -minPoint;
+
+		for (unsigned int i=0; i<thisVisplane.numVertices; i+=2) {
+			glm::vec2 a = thisVisplane.vertices[i];
+			bool hasAnotherVertex = (i+1 < thisVisplane.numVertices);
+			glm::vec2 b = (hasAnotherVertex) ? thisVisplane.vertices[i+1] : glm::vec2(0.0f, 0.0f);
+
+			glm::vec2 minPT = (hasAnotherVertex) ? glm::min(a,b) : a;
+			glm::vec2 maxPT = (hasAnotherVertex) ? glm::max(a,b) : a;
+
+			minPoint = min(minPoint, minPT);
+			maxPoint = max(maxPoint, maxPT);
+		}
+
+		glm::vec2 delta = maxPoint - minPoint;
+		ivec2 mapResolution = ivec2(ceil(
+			delta / display::ARB_SHADOW_TEXEL_SIZE
+		));
+		mapResolution = glm::clamp(mapResolution, glm::ivec2(1, 1), display::ARB_SHADOW_MAX_RESOLUTION); //Some objects may try to allocate absurdly large maps
+																										 //I don't want to allow massive maps; so I set a limit.
+		GLuint shadowMapFront = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+		GLuint shadowMapBack  = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+
+		runComputeShader(
+			mapResolution,
+			glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::vec3(minPoint, thisVisplane.height),
+			glm::vec3(maxPoint, thisVisplane.height),
+			T_VISPLANE, visplaneIndex,
+			shadowMapFront, shadowMapBack, true //= Use given maps.
+		);
+
+		GLuint64 handleFrontSampler = glGetTextureHandleARB(shadowMapFront);
+		glMakeTextureHandleResidentARB(handleFrontSampler);
+		GLuint64 handleBackSampler = glGetTextureHandleARB(shadowMapBack);
+		glMakeTextureHandleResidentARB(handleBackSampler);
+
+		thisVisplane.writeHandles(handleFrontSampler, handleBackSampler);
+		graphicsData->visplaneData.at(visplaneIndex) = thisVisplane; //Write back to data;
+	}
+
+	for (unsigned int wallIndex=0u; wallIndex<validWalls; wallIndex++) {
+		
+		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
+
+		glm::vec3 minPoint = min(thisWall.start, thisWall.end);
+		glm::vec3 maxPoint = max(thisWall.start, thisWall.end);
+
+		glm::vec2 wallDirection = glm::normalize(glm::vec2(
+			thisWall.end - thisWall.start
+		));
+		glm::vec3 wallNormal = glm::vec3(
+			-wallDirection.y,
+			 wallDirection.x,
+			 0.0f
+		);
+
+		glm::vec3 delta = maxPoint - minPoint;
+		ivec2 mapResolution = glm::ivec2(ceil(
+			glm::vec2(
+				(abs(wallDirection.x) > abs(wallDirection.y)) ? delta.x : delta.y,
+				delta.z
+			) / display::ARB_SHADOW_TEXEL_SIZE)
+		);
+		mapResolution = glm::clamp(mapResolution, glm::ivec2(1, 1), display::ARB_SHADOW_MAX_RESOLUTION); //Some objects may try to allocate absurdly large maps
+																										 //I don't want to allow massive maps; so I set a limit.
+		GLuint shadowMapFront = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+		GLuint shadowMapBack  = graphics::createGLImage2D(mapResolution.x, mapResolution.y, GL_RGBA32F, GL_LINEAR, GL_REPEAT);
+
+		runComputeShader( //Computes map's lighting.
+			mapResolution,
+			wallNormal,
+			minPoint, maxPoint,
+			T_WALL, wallIndex,
+			shadowMapFront, shadowMapBack, true //= Use given maps.
+		);
+
+		GLuint64 handleFrontSampler = glGetTextureHandleARB(shadowMapFront);
+		glMakeTextureHandleResidentARB(handleFrontSampler);
+		GLuint64 handleBackSampler = glGetTextureHandleARB(shadowMapBack);
+		glMakeTextureHandleResidentARB(handleBackSampler);
+
+		thisWall.writeHandles(handleFrontSampler, handleBackSampler);
+		graphicsData->wallData.at(wallIndex) = thisWall; //Write back to data;
+	}
+
+}
+
+
+void createLightMaps() {
+	//Create lightmaps based on what light mode it is.
+
+	size_t numberOfObjects = validVisplanes + validWalls;
+	GLIndex::shadowMapResolutionsSSBO = graphics::createShaderStorageBufferObject(20, sizeof(glm::ivec2) * numberOfObjects);
+
+	switch(lightingType) {
+		case LIGHT_STATIC_FIXED: {
+			//Static size lightmaps.
+			fixedResolutionLightmapping();
+			break;
+		}
+
+		case LIGHT_STATIC_ARB: {
+			//Lightmaps accessed via ARB handles.
+			arbLightmapping();
+			break;
+		}
+
+		default: {
+			//Unknown.
+			return;
+		}
+	}
+	*physicsData = *graphicsData; //Sync data.
+}
+
+}
+
+
 
 
 
@@ -1695,10 +1971,10 @@ void updateSSBOs(bool drawLightBlockers) {
 
 	//Update SSBOs.
 	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
-		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes
+		GLIndex::allVisplanesSSBO, &(graphicsData->visplaneData), validVisplanes, true
 	);
 	graphics::updateShaderStorageBufferObject<structs::WallGPU>(
-		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls
+		GLIndex::allWallsSSBO, &(graphicsData->wallData), validWalls, true
 	);
 	graphics::updateShaderStorageBufferObject<structs::DisplacementGPU>(
 		GLIndex::displacementSSBO, &(graphicsData->displacementData), validDisplacements
@@ -1837,6 +2113,7 @@ void draw(double blendingAlpha, double currentTime) {
 	GLErrorcheck("Raycasting Shader", true);
 
 
+
 	//Environment Shader.
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
@@ -1857,6 +2134,7 @@ void draw(double blendingAlpha, double currentTime) {
 	renderingGeneric("Environment Shader");
 
 	
+
 	//Displacements in 2 parts;
 	//3D portion;
 	frame::drawDisplacements(blendingAlpha, currentTime);
@@ -1873,6 +2151,7 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindCommonUniforms(GLIndex::displacementShader2D, blendingAlpha, currentTime);
 
 	renderingGeneric("Displacements Shaders");
+
 
 
 	//Sprite Shader.
@@ -1892,30 +2171,42 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//Lighting Shader
-	if (utils::configToBool("VIEW_LIGHTING")) {
+	if (GLIndex::frameLightingShader != -1) { //If some lighting method was selected;
 		updateSSBOs(true);
 		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
-		glUseProgram(GLIndex::lightingShader);
+		glUseProgram(GLIndex::frameLightingShader);
 
-		glBindTextureUnit(0, GLIndex::framePositionComponent);
-		glBindTextureUnit(1, GLIndex::frameNormalComponent);
-		glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		unsigned int dispatchZ;
+		if (lightingType == LIGHT_DYNAMIC) {
+			//Calculates the lighting per-frame; this requires information otherwise unrequired by the sampling shaders.
+			glBindTextureUnit(0, GLIndex::framePositionComponent);
+			glBindTextureUnit(1, GLIndex::frameNormalComponent);
+			glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
+			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			dispatchZ = 2u;
+
+		} else {
+			glBindTextureUnit(0, GLIndex::framePositionComponent);
+			glBindTextureUnit(1, GLIndex::frameNormalComponent);
+			glBindTextureUnit(2, GLIndex::surfaceLightMapsArrayID);
+			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			dispatchZ = (validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z; //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+			//maxIndex + 1 : All sunlight calculations. [SUNL]
+			//maxIndex + 2 : All headlamp calculations. [HLMP]
+		}
 
 		//Uniforms;
-		uniforms::bindCommonUniforms(GLIndex::lightingShader, blendingAlpha, currentTime);
-		uniforms::bindUniformValue(GLIndex::lightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
-		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampEnabled", headLampEnabled);
-		uniforms::bindUniformValue(GLIndex::lightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
+		uniforms::bindCommonUniforms(GLIndex::frameLightingShader, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "allowTransparency", utils::configToBool("VIEW_ALLOW_TRANSPARENCY") && utils::configToBool("VIEW_ALLOW_TRANSPARENT_SHADOWS"));
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "useMipMapping", utils::configToBool("VIEW_USE_MIPMAPPING"));
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "headLampEnabled", headLampEnabled);
+		uniforms::bindUniformValue(GLIndex::frameLightingShader, "headLampIntensity", 7.5f + (lightFlickerRNG / 1024.0f)); //lightFlickerRNG is 0-255. This creates range of roughly [7.5 - 7.75.]
 
 		//Dispatch 2 extra valid lights (Sun, Headlamp.)
 		glDispatchCompute(
 			(currentRenderResolution.x + LIGHTING_LOCAL_SIZE.x - 1) / LIGHTING_LOCAL_SIZE.x,
 			(currentRenderResolution.y + LIGHTING_LOCAL_SIZE.y - 1) / LIGHTING_LOCAL_SIZE.y,
-			(validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z //Dispatches an extra 2 pseudo-lights which are handled in the shader;
-			//maxIndex + 1 : All sunlight calculations. [SUNL]
-			//maxIndex + 2 : All headlamp calculations. [HLMP]
+			dispatchZ
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 		GLErrorcheck("Lighting Shader", true);
@@ -1956,7 +2247,6 @@ void draw(double blendingAlpha, double currentTime) {
 	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "useLighting", utils::configToBool("VIEW_LIGHTING"));
 	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
 	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
 	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);

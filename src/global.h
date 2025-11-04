@@ -80,7 +80,7 @@ inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
 inline glm::ivec2 currentShadowResolution;
-
+inline LightingType lightingType;
 
 //Other
 inline float framerate;
@@ -127,16 +127,20 @@ inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
-inline GLuint spriteShader, lightingShader, uiShader, displayShader; 
+inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, displayShader; 
 
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
-inline GLuint portalTextureID;
+inline GLuint portalTextureID, surfaceLightMapsArrayID;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
+inline GLuint shadowMapResolutionsSSBO;
+
+
+inline std::set<std::string> supportedExtensions;
 
 }
 
@@ -256,10 +260,11 @@ struct Visplane {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	GLuint lightingHandles[4];
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
-		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f) {
+		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), lightingHandles() {
 			internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
 			internal = &(internalsData.at(internalsData.size()-1));
 		}
@@ -272,7 +277,7 @@ struct Visplane {
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
 			textureData1(textureData1),
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), lightingHandles() {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -315,7 +320,7 @@ struct Visplane {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
-			type(type),	IOPtr(IOPtr), data(data) {
+			type(type),	IOPtr(IOPtr), data(data), lightingHandles() {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
 				);
@@ -349,6 +354,19 @@ struct Visplane {
 				ensureACW(vertices, numVertices);
 				std::copy(std::begin(vertices), std::end(vertices), std::begin(originalVertices));
 			}
+
+
+	void writeHandles(GLuint64 handleFront, GLuint64 handleBack) {
+		//Assign lightingHandles to be the 2 32b halves of the 2 ARB handles.
+
+		//Front handle;
+		lightingHandles[0] = GLuint(handleFront >> 32u); //High bits
+		lightingHandles[1] = GLuint(handleFront & 0xFFFFFFFFu); //Low bits
+
+		//Back handle;
+		lightingHandles[2] = GLuint(handleBack >> 32u); //High bits
+		lightingHandles[3] = GLuint(handleBack & 0xFFFFFFFFu); //Low bits
+	}
 };
 
 struct VisplaneGPU {
@@ -360,11 +378,12 @@ struct VisplaneGPU {
 	alignas(16) glm::vec4 boundingBox;
 	alignas(4)  GLuint type;
 	alignas(4)  float extra;
+	alignas(4)  GLuint lightingHandles[4];
 
 	VisplaneGPU()
 		: vertices(), height(0.0f), numVertices(0), textureData1(0), textureData2(), boundingBox(), type(), extra() {}
 
-	VisplaneGPU(Visplane *visplane, Player player)
+	VisplaneGPU(Visplane *visplane, Player player, unsigned int index)
 		: numVertices(visplane->numVertices), height(visplane->height),
 		  textureData1(visplane->textureData1), textureData2(visplane->textureData2),
 		  type(visplane->type), extra(visplane->data) {
@@ -390,6 +409,28 @@ struct VisplaneGPU {
 					max(maxPT, glm::vec2(boundingBox.z, boundingBox.w))
 				);
 			}
+
+			switch(lightingType) {
+				case LIGHT_STATIC_FIXED: {
+					lightingHandles[0] = (index * 2);
+					lightingHandles[1] = (index * 2)+1;
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+					break;
+				}
+				case LIGHT_STATIC_ARB: {
+					std::copy(std::begin(visplane->lightingHandles), std::end(visplane->lightingHandles), std::begin(lightingHandles));
+					break;
+				}
+				default: {
+					//Unused.
+					lightingHandles[0] = 0u;
+					lightingHandles[1] = 0u;
+					lightingHandles[2] = 0u;
+					lightingHandles[3] = 0u;
+					break;
+				}
+			}
 		}
 };
 
@@ -403,12 +444,12 @@ struct Wall {
 	bool* IOPtr;
 	float data;
 	std::pair<float, float>* internal;
+	GLuint lightingHandles[8];
 
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
 		  end(0.0f, 0.0f, 0.0f), originalEnd(0.0f, 0.0f, 0.0f),
-		  textureData1s(),
-		  type(W_INVALID),
+		  textureData1s(), type(W_INVALID), lightingHandles(),
 		  IOPtr(nullptr), data(0.0f) {
 			if ((type != W_NORMAL) && (type != W_INVALID)) {
 				internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
@@ -427,7 +468,7 @@ struct Wall {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
 			end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
-			type(type), 
+			type(type),  lightingHandles(),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -459,7 +500,7 @@ struct Wall {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
-			type(type), 
+			type(type),  lightingHandles(),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -481,6 +522,32 @@ struct Wall {
 					internal = nullptr;
 				}
 			}
+
+
+	void writeHandles(GLuint64 handleFront, GLuint64 handleBack/*, GLuint64 handleFrontALT, GLuint64 handleBackALT*/) {
+		//Assign lightingHandles to be the 2 32b halves of the 4 ARB handles.
+
+		//Main texture;
+		//Front handle;
+		lightingHandles[0] = GLuint(handleFront >> 32u); //High bits
+		lightingHandles[1] = GLuint(handleFront & 0xFFFFFFFFu); //Low bits
+
+		//Back handle;
+		lightingHandles[2] = GLuint(handleBack >> 32u); //High bits
+		lightingHandles[3] = GLuint(handleBack & 0xFFFFFFFFu); //Low bits
+
+
+		//Alt texture;
+		/*not added yet*
+		//Front handle ALT;
+		lightingHandles[4] = GLuint(handleFrontALT >> 32u); //High bits
+		lightingHandles[5] = GLuint(handleFrontALT & 0xFFFFFFFFu); //Low bits
+
+		//Back handle ALT;
+		lightingHandles[6] = GLuint(handleBackALT >> 32u); //High bits
+		lightingHandles[7] = GLuint(handleBackALT & 0xFFFFFFFFu); //Low bits
+		*/
+	}
 };
 
 struct WallGPU {
@@ -491,6 +558,7 @@ struct WallGPU {
 	alignas(4) GLuint textureData2;
 	alignas(4) GLuint type;
 	alignas(4) float extra;
+	alignas(4) GLuint lightingHandles[8];
 
 
 	WallGPU()
@@ -498,13 +566,45 @@ struct WallGPU {
 		  textureData1(), textureData2(),
 		  type(), extra() {}
 
-	WallGPU(Wall *wall, Player player)
+	WallGPU(Wall *wall, Player player, unsigned int index)
 		: start(wall->start), end(wall->end), direction(glm::normalize(glm::vec2(wall->end - wall->start))),
 		  textureData2(wall->textureData2), type(static_cast<GLuint>(wall->type)), extra(wall->data) {
 			if ((wall->type == W_SWITCH) && (wall->internal->first > 0.0f)) {
 				textureData1 = wall->textureData1s.second;
 			} else {
 				textureData1 = wall->textureData1s.first;
+			}
+
+			switch(lightingType) {
+				case LIGHT_STATIC_FIXED: {
+					lightingHandles[0] = (index+validVisplanes) * 2;
+					lightingHandles[1] = (index+validVisplanes) * 2 + 1;
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+
+					lightingHandles[4] = 0u; //Unused.
+					lightingHandles[5] = 0u; //Unused.
+					lightingHandles[6] = 0u; //Unused.
+					lightingHandles[7] = 0u; //Unused.
+					break;
+				}
+				case LIGHT_STATIC_ARB: {
+					//Assign lightingHandles to be the 2 32b halves of the ARB handle.
+					std::copy(std::begin(wall->lightingHandles), std::end(wall->lightingHandles), std::begin(lightingHandles));
+					break;
+				}
+				default: {
+					lightingHandles[0] = 0u; //Unused.
+					lightingHandles[1] = 0u; //Unused.
+					lightingHandles[2] = 0u; //Unused.
+					lightingHandles[3] = 0u; //Unused.
+
+					lightingHandles[4] = 0u; //Unused.
+					lightingHandles[5] = 0u; //Unused.
+					lightingHandles[6] = 0u; //Unused.
+					lightingHandles[7] = 0u; //Unused.
+					break;
+				}
 			}
 		}
 };

@@ -171,19 +171,21 @@ static inline bool* getPTR(
 
 static inline int getTexture(
 		const pugi::xml_node& node,
-		std::string attrName,
-		const char* defaultValue=display::FALLBACK_TEXTURE_PATH
+		const std::string& attrName,
+		const char* defaultValue = display::FALLBACK_TEXTURE_PATH
 	) {
 	pugi::xml_attribute attr = node.attribute(attrName.c_str());
-	const char* texname;
+	std::string texname;
+
 	if (attr) {
-		std::string attrValue = attr.as_string();
-		texname = attrValue.c_str();
+		texname = attr.as_string();
 	} else {
 		texname = defaultValue;
 	}
+
 	return assignTexture(texname);
 }
+
 
 
 static std::unordered_map<std::string, std::pair<size_t, size_t>> indexMap;
@@ -774,6 +776,13 @@ static inline structs::Visplane extractVisplane(
 	if (vertexNode) { //Has explicit vertices.
 		std::vector<glm::vec2> vertsVec = getVertsV2(vertexNode, 8);
 		if (vertsVec.size() < 3) {raise("Visplanes must have at least 3 vertices.");}
+
+		glm::vec2 minimum, maximum;
+		for (glm::vec2 pt : vertsVec) {
+			minimum = glm::min(minimum, pt);
+			maximum = glm::max(maximum, pt);
+		}
+
 		visplane = structs::Visplane(
 			vertsVec,
 			getFloat(node, "height", 0.0f),
@@ -789,9 +798,13 @@ static inline structs::Visplane extractVisplane(
 		);
 
 	} else { //Old method for compatability. 
+		glm::vec2 start = getVec2(node, "start", glm::vec2(0.0f, 0.0f));
+		glm::vec2 end = getVec2(node, "end", glm::vec2(0.0f, 0.0f));
+		glm::vec2 minimum = glm::min(start, end);
+		glm::vec2 maximum = glm::max(start, end);
+
 		visplane = structs::Visplane(
-			getVec2(node, "start", glm::vec2(0.0f, 0.0f)),
-			getVec2(node, "end", glm::vec2(0.0f, 0.0f)),
+			start, end,
 			getFloat(node, "height", 0.0f),
 			textureID, type,
 			getPTR(node, "flag", &(constants::C_FALSE)),
@@ -819,9 +832,15 @@ static inline structs::Wall extractWall(
 		const pugi::xml_node& node
 	) {
 
+	glm::vec3 start = getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 end = getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f));
+	glm::vec3 minimum3D = glm::min(start, end);
+	glm::vec2 minimum2D = glm::vec2(minimum3D.x, minimum3D.z);
+	glm::vec3 maximum3D = glm::max(start, end);
+	glm::vec2 maximum2D = glm::vec2(maximum3D.x, maximum3D.z);
+
 	structs::Wall wall = structs::Wall(
-		getVec3(node, "start", glm::vec3(0.0f, 0.0f, 0.0f)),
-		getVec3(node, "end", glm::vec3(0.0f, 0.0f, 0.0f)),
+		start, end,
 		getTexture(node, "texture", initial::FALLBACK_TEXTURE_NAME),
 		static_cast<WallType>(getEnum(node, "type", W_NORMAL)),
 		getPTR(node, "flag", &(constants::C_FALSE)),
@@ -1064,11 +1083,10 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 
 		functionString = strToUpper(node.attribute("function").as_string());
 		valueString = node.attribute("value").as_string();
-		if (functionString != "META_STAGE_NAME") {
-			valueString = strToUpper(valueString);
-		}
-		if (!(valueString.empty())) {
-			userConfig[functionString] = valueString;
+		if (functionString == "META_STAGE_NAME") {
+			userConfig["META_STAGE_NAME"] = valueString;
+		} else if (!(valueString.empty())) {
+			userConfig[functionString] = utils::strToUpper(valueString);
 		} else {
 			raise("Invalid value for: " + functionString);
 		}
@@ -1111,6 +1129,12 @@ static std::unordered_map<std::string, float> shadowQualityMap = {
 	{"HALF", 0.5f}, {"1/2", 0.5f}, {"", 0.5f},
 	{"QUARTER", 0.25f}, {"1/4", 0.25f},
 	{"EIGHTH", 0.125f}, {"1/8", 0.125f}
+};
+
+static std::unordered_map<std::string, LightingType> lightTypeMap = {
+	{"", LIGHT_NONE}, {"NONE", LIGHT_NONE},
+	{"OLD", LIGHT_STATIC_FIXED}, {"ARB", LIGHT_STATIC_ARB},
+	{"DYNAMIC", LIGHT_DYNAMIC}
 };
 
 
@@ -1171,7 +1195,7 @@ static inline void setConfigFromStringOptionsMap(
 			} else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_arithmetic_v<T>) {
 				std::cout << " for " << pair.second;
 			} else {
-				// Fallback for other types
+				//Fallback for other types
 				std::cout << " (unprintable value type)";
 			}
 			std::cout << std::endl;
@@ -1193,11 +1217,9 @@ void loadStage(
 		std::vector<utils::LogicGate>* logicGates
 	) {
 	std::string filePath = "stages/" + stageName + ".xml";
-	std::string XMLSrc = utils::readFile(filePath);
-
-
 	pugi::xml_document doc;
-	pugi::xml_parse_result parseResult = doc.load_string(XMLSrc.c_str());
+	pugi::xml_parse_result parseResult = doc.load_file(("stages/" + stageName + ".xml").c_str());
+
 	if (!parseResult) {
 		throw std::runtime_error("Failed to parse XML: " + std::string(parseResult.description()));
 	}
@@ -1224,6 +1246,26 @@ void loadStage(
 }
 
 
+
+
+void getSupportedExtensions() {
+	GLint numberOfExtensions = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &numberOfExtensions);
+
+	for (int i=0; i<numberOfExtensions; i++) {
+		GLIndex::supportedExtensions.insert((const char*)glGetStringi(GL_EXTENSIONS, i));
+	}
+}
+
+bool OpenGLSupportsARB() {
+	//Must support shader uint64_t AND ARB-bindless-textures.
+	return (
+		(GLIndex::supportedExtensions.find("GL_ARB_bindless_texture")) != (GLIndex::supportedExtensions.end()) && 
+		(GLIndex::supportedExtensions.find("GL_ARB_gpu_shader_int64")) != (GLIndex::supportedExtensions.end())
+	);
+}
+
+
 void loadBindings() {
 	const std::string filePath = "userConfig.xml";
 	std::string XMLSrc = utils::readFile(filePath);
@@ -1243,6 +1285,7 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("META_DEBUG_MODE", &debugMap, "NONE");
 	setConfigFromStringOptionsMap("VIEW_TEXTURE_QUALITY", &texMipMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
+	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
 
 
 

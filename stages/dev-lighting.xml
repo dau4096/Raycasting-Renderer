@@ -74,7 +74,7 @@
         <uv uv0="0.0 0.0" uv1="1.0 0.0" uv2="0.0 1.0" />
     </displacement>
     -->
-    <wall start="-7.25 12.5 1.0" end="-5.25 12.5 2.0" texture="fakeDisplacement" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+    <wall start="-7.25 12.5 1.0" end="-5.25 12.5 2.0" texture="fakeDisplacement" useWorldUVX="FALSE" useWorldUVY="FALSE" /> <!-- Breaks because texture has capital chars in name?? -->
 
 
     <!-- Multiple shadows via 1 surface -->

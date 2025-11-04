@@ -2,10 +2,14 @@
 #define INCLUDES_H
 
 
+#ifdef __WIN32
+
 //Include Windows.
 #ifdef _WIN32
 
 #include <Windows.h> //Only for windows systems (obviously). Only needed for console-specific functions, which are minimal.
+
+#endif
 
 #endif
 
@@ -39,6 +43,7 @@
 #include <ctime>
 #include <vector>
 #include <array>
+#include <set>
 #include <unordered_map>
 #include <functional>
 #include <algorithm>

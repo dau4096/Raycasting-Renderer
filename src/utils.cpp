@@ -9,13 +9,12 @@ namespace utils {
 
 
 std::string readFile(const std::string& filePath) {
-	std::ifstream fileStream(filePath);
+	std::ifstream fileStream(filePath, std::ios::binary);
 	if (!fileStream.is_open()) {
-		std::cerr << "Error: Could not open file: " << std::string(filePath) << std::endl;
-		return "";
+		throw std::runtime_error("Error: Could not open file: " + filePath);
 	}
 
-	std::stringstream buffer;
+	std::ostringstream buffer;
 	buffer << fileStream.rdbuf();
 	return buffer.str();
 }

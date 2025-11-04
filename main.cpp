@@ -244,7 +244,10 @@ inline void stopPhysics() {
 
 int main() {
 	try { //Catch exceptions
-	//SetConsoleOutputCP(65001); //CP_UTF8
+
+#ifdef __WIN32
+	SetConsoleOutputCP(65001); //CP_UTF8
+#endif
 
 	loader::loadBindings();
 	loader::loadStage(
@@ -270,6 +273,19 @@ int main() {
 		glfwSwapInterval(1);
 	}
 
+
+
+
+	//Lighting support checks;
+	loader::getSupportedExtensions();
+
+	if ((lightingType == LIGHT_STATIC_ARB) && !loader::OpenGLSupportsARB()) {
+		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
+		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" method.
+	}
+
+
+
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
 	utils::GLErrorcheck("Window Creation", true);
@@ -278,6 +294,11 @@ int main() {
 	*graphicsData = *physicsData;
 	frame::updateSSBOs(true);
 	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
+
+
+
+	//Create lightmaps if required
+	if ((lightingType == LIGHT_STATIC_FIXED) || (lightingType == LIGHT_STATIC_ARB)) {lighting::createLightMaps();}
 
 
 	//Threads;

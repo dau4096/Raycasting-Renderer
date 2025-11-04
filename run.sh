@@ -2,34 +2,56 @@
 
 cd src || exit 1
 
-#Delete all .o files
-find . -name '*.o' -delete
+if [ $# -gt 0 ]; then
+    echo "Recompiling specified files: $*"
+    for arg in "$@"; do
+        target="${arg}.o"
+        if [ -f "$target" ]; then
+            echo "Deleting $target"
+            rm -f "$target"
+        else
+            #Try in src/
+            found_files=$(find . -type f -name "$target")
+            if [ -n "$found_files" ]; then
+                echo "$found_files" | while read -r f; do
+                    echo "Deleting $f"
+                    rm -f "$f"
+                done
+            else
+                echo "Warning: $target not found in src/"
+            fi
+        fi
+    done
+else
+    echo "No arguments given — doing full rebuild..."
+    find . -name '*.o' -delete
+fi
 
-#Go back to root directory and delete main.o
+#Always remove main.o
 cd .. || exit 1
 rm -f main.o
 
-#Compile
+#gcc make
 make
 
-#Check success
+#Success?
 if [[ $? -ne 0 ]]; then
     echo "Build failed."
     exit 1
 fi
 
-#Wait for user
+
+
 echo "Press any key to run..."
-read -n1 #Wait for a keypress to continue, like Batch's PAUSE.
+read -n1 #read 1 keypress
 echo
 
 #Run
 cd "$(dirname "$0")"
 ./app
 
-#Check success
+#Error?
 if [[ $? -ne 0 ]]; then
     echo "An error occurred during execution. Exit code: $?"
     exit 1
 fi
-
