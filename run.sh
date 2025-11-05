@@ -1,9 +1,10 @@
 #!/bin/bash
 
+clear
 cd src || exit 1
 
 if [ $# -gt 0 ]; then
-    echo "Recompiling specified files: $*"
+    echo "Recompiling files: $*"
     for arg in "$@"; do
         target="${arg}.o"
         if [ -f "$target" ]; then
@@ -18,12 +19,12 @@ if [ $# -gt 0 ]; then
                     rm -f "$f"
                 done
             else
-                echo "Warning: $target not found in src/"
+                echo "ERR: $target not found in src/..."
             fi
         fi
     done
 else
-    echo "No arguments given — doing full rebuild..."
+    echo "Recompiling all files"
     find . -name '*.o' -delete
 fi
 
@@ -52,6 +53,6 @@ cd "$(dirname "$0")"
 
 #Error?
 if [[ $? -ne 0 ]]; then
-    echo "An error occurred during execution. Exit code: $?"
+    echo "ERR: Exit code: $?"
     exit 1
 fi
