@@ -152,24 +152,6 @@ bool popStack(out IntersectionData data) {
 	return false;
 }
 
-
-
-
-//Ray Struct.
-struct Ray {
-	dvec2 position, end;
-	dvec2 direction;
-};
-
-Ray createRay(dvec2 position, dvec2 direction, double maxDist=maxRayDistance) {
-	Ray ray;
-	ray.position = position;
-	ray.direction = direction;
-	ray.end = ray.position + (ray.direction.xy * maxDist);
-	return ray;
-};
-
-
 vec2 fragPosition;
 vec4 fragColour;
 float zoomEffect;
@@ -219,14 +201,14 @@ void unpackTextureFormattingBits1(
 		0000 1111 1111 1111 0000 0000 0000 0000
 	*/
 	textureFlags = bvec4(
-		bool(inputBits & 0x80000000),
-		bool(inputBits & 0x40000000),
-		bool(inputBits & 0x20000000),
-		bool(inputBits & 0x10000000)
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u),
+		bool(inputBits & 0x20000000u),
+		bool(inputBits & 0x10000000u)
 	);
 
-	uint texIDbits = (inputBits >> 16) & 0xFFF;
-	textureID = (texIDbits == 0xFFF) ? -1 : int(texIDbits);
+	uint texIDbits = (inputBits >> 16u) & 0xFFFu;
+	textureID = (texIDbits == 0xFFFu) ? -1 : int(texIDbits);
 }
 void unpackTextureFormattingBits2(
 		uint inputBits, out bvec2 isWorldspace,
@@ -250,18 +232,18 @@ void unpackTextureFormattingBits2(
 	*/
 
 	isWorldspace = bvec2(
-		bool(inputBits & 0x80000000),
-		bool(inputBits & 0x40000000)
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u)
 	);
 
 	invTextureScale = 16.0f / vec2(
-		float((inputBits >> 22) & 0xFF),
-		float((inputBits >> 14) & 0xFF)
+		float((inputBits >> 22) & 0xFFu),
+		float((inputBits >> 14) & 0xFFu)
 	);
 
 	textureOffset = vec2(
-		float((inputBits >> 7) & 0x7F),
-		float((inputBits >> 0) & 0x7F)
+		float((inputBits >> 7) & 0x7Fu),
+		float((inputBits >> 0) & 0x7Fu)
 	) / 128.0f;
 }
 
@@ -394,7 +376,7 @@ float cross2D(vec2 a, vec2 b) {
 
 
 //Walls
-float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 textureFlags) {
+float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 textureFlags, vec2 fragPosition) {
 	float wallLowZ = thisWall.start.z, wallTopZ = thisWall.end.z;
 
 	//1st formatting data;
@@ -415,10 +397,10 @@ float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 t
 
 	//The ideal offset is -0x7FFF (-32,767), but they have slight offsets to account for floating-point inconsistencies later. (+/- 1px.)
 	float lowOffset = (playerPosition.z < thisWall.start.z) ? 0.0f : -1.0f;
-	float screenYLow = float(int((projections >> 16) & 0xFFFF) - 0x7FFF) + lowOffset;
+	float screenYLow = float(int((projections >> 16) & 0xFFFFu) - 0x7FFF) + lowOffset;
 
 	float topOffset = ((playerPosition.z > thisWall.end.z) ? 0.0f : 1.0f);
-	float screenYTop = float(int(projections & 0xFFFF) - 0x7FFF) + topOffset;
+	float screenYTop = float(int(projections & 0xFFFFu) - 0x7FFF) + topOffset;
 
 	if (fragPosition.y >= screenYTop || fragPosition.y <= screenYLow) {
 		return INF;
@@ -530,14 +512,14 @@ void main() {
 		float wallDistanceSQ = intersect.distanceSQ;
 		if (wallDistanceSQ <= MIN_WALL_DIST * MIN_WALL_DIST) {continue; /* No intersect found, i.e. distance is impossible. */}
 
-		uint wallIndex = (intersect.wallIndexAndXUV >> 8);
-		float xUV = (intersect.wallIndexAndXUV & 0xFF) / 255.0f;
+		uint wallIndex = (intersect.wallIndexAndXUV >> 8u);
+		float xUV = (intersect.wallIndexAndXUV & 0xFFu) / 255.0f;
 		Wall thisWall = walls[wallIndex];
 		
 
 		int textureID;
 		bvec4 textureFlags;
-		float yUV = getWallYUV(thisWall, intersect.projections, textureID, textureFlags); //Check if inside wall (Valid UV)
+		float yUV = getWallYUV(thisWall, intersect.projections, textureID, textureFlags, fragPosition); //Check if inside wall (Valid UV)
 		if (yUV == INF) {continue; /* Above/Below wall */}
 
 		thisIntersect.distanceSQ = wallDistanceSQ;
@@ -569,7 +551,7 @@ void main() {
 			int higherProj = int(VPintersectData.y >> 16u) - 0x7FFF;
 			int lowerProj = int(VPintersectData.y & 0xFFFFu) - 0x7FFF;
 
-			if (((visplaneValue & 0x1) == 0u) || (fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
+			if (((visplaneValue & 0x1u) == 0u) || (fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
 			Visplane thisVisplane = visplanes[visplaneValue >> 1];
 
 			if (
@@ -607,7 +589,7 @@ void main() {
 			bvec4 textureFlags;
 			vec2 uv = getVisplaneUV(intersectPoint, thisVisplane, textureID, textureFlags);
 			thisIntersect.UV = vec3(
-				mix(uv.xy, uv.xy, textureFlags.x),
+				mix(uv.xy, uv.xy, int(textureFlags.x)),
 				textureID
 			);
 

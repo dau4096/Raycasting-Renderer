@@ -130,14 +130,14 @@ void unpackTextureFormattingBits1(
 		0000 1111 1111 1111 0000 0000 0000 0000
 	*/
 	textureFlags = bvec4(
-		bool(inputBits & 0x80000000),
-		bool(inputBits & 0x40000000),
-		bool(inputBits & 0x20000000),
-		bool(inputBits & 0x10000000)
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u),
+		bool(inputBits & 0x20000000u),
+		bool(inputBits & 0x10000000u)
 	);
 
-	uint texIDbits = (inputBits >> 16) & 0xFFF;
-	textureID = (texIDbits == 0xFFF) ? -1 : int(texIDbits);
+	uint texIDbits = (inputBits >> 16u) & 0xFFFu;
+	textureID = (texIDbits == 0xFFFu) ? -1 : int(texIDbits);
 }
 void unpackTextureFormattingBits2(
 		uint inputBits, out bvec2 isWorldspace,
@@ -161,18 +161,18 @@ void unpackTextureFormattingBits2(
 	*/
 
 	isWorldspace = bvec2(
-		bool(inputBits & 0x80000000),
-		bool(inputBits & 0x40000000)
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u)
 	);
 
 	invTextureScale = 16.0f / vec2(
-		float((inputBits >> 22) & 0xFF),
-		float((inputBits >> 14) & 0xFF)
+		float((inputBits >> 22u) & 0xFFu),
+		float((inputBits >> 14u) & 0xFFu)
 	);
 
 	textureOffset = vec2(
-		float((inputBits >> 7) & 0x7F),
-		float((inputBits >> 0) & 0x7F)
+		float((inputBits >> 7u) & 0x7Fu),
+		float((inputBits >> 0u) & 0x7Fu)
 	) / 128.0f;
 }
 
@@ -400,7 +400,7 @@ bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement
 	return false;
 }
 
-bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=T_NONE) {
+bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex, int foundType) {
 	vec3 LOSDelta = pointB - pointA;
 
 	//Iterate through all the walls. (2D)
@@ -430,16 +430,16 @@ bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=T
 	return false;
 }
 
-bool checkLOSLightSpecific(vec3 origin, Light thisLight, int foundIndex=-1, int foundType=T_NONE) {
-	uint lightLOSDataStartIndex = thisLight.LOSSSBOdata >> 16;		//Former 4 bytes.
-	uint lightLOSDataEntryCount = thisLight.LOSSSBOdata & 0xFFFF;	//Latter 4 bytes.
+bool checkLOSLightSpecific(vec3 origin, Light thisLight, int foundIndex, int foundType) {
+	uint lightLOSDataStartIndex = thisLight.LOSSSBOdata >> 16u;		//Former 4 bytes.
+	uint lightLOSDataEntryCount = thisLight.LOSSSBOdata & 0xFFFFu;	//Latter 4 bytes.
 	if (lightLOSDataEntryCount < 1) {return false; /* Cannot possibly hit anything because it has nothing to hit. */}
 	vec3 LOSDelta = thisLight.position - origin;
 
 	for (uint entryIndex=lightLOSDataStartIndex; entryIndex<lightLOSDataStartIndex+lightLOSDataEntryCount; entryIndex++) {
 		uint thisObjectData = losData[entryIndex];
-		uint thisObjectIndex = thisObjectData >> 3; //Former 29 bits.
-		uint thisObjectType = thisObjectData & 0x7; //Latter 3 bits.
+		uint thisObjectIndex = thisObjectData >> 3u; //Former 29 bits.
+		uint thisObjectType = thisObjectData & 0x7u; //Latter 3 bits.
 
 		switch(thisObjectType) {
 			case T_WALL: { //Walls
@@ -537,7 +537,7 @@ void main() {
 		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
 		if (normalDot > -0.125f) {
-			bool sunBlocked = checkLOSGeneral(origin + offset, origin + sunDirection * maxRayDistance);
+			bool sunBlocked = checkLOSGeneral(origin + offset, origin + sunDirection * maxRayDistance, -1, T_NONE);
 			if (!sunBlocked) {
 				float sunNormalDot = normalDot * 0.5f + 0.5f;
 				lightColour = sunColour.rgb * sunNormalDot * globalLightTint.rgb * globalLightTint.a;
