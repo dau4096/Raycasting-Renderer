@@ -594,11 +594,11 @@ void findVisibleObjects(
 
 
 void saveScreenshot(GLuint frameTextureID) {
-    std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
+	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 
-    glBindTexture(GL_TEXTURE_2D, frameTextureID);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, frameTextureID);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	stbi_flip_vertically_on_write(true);
 
@@ -1129,155 +1129,155 @@ void initialiseVAOs() {
 
 //No depth texture
 GLuint createAlbedoFBO(glm::uvec2 resolution, GLuint& colourTexture) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour
-    glGenTextures(1, &colourTexture);
-    glBindTexture(GL_TEXTURE_2D, colourTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour
+	glGenTextures(1, &colourTexture);
+	glBindTexture(GL_TEXTURE_2D, colourTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);
+	GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 //2 colour attachments
 GLuint createDualAlbedoFBO(glm::uvec2 resolution, GLuint& colourTextureA, GLuint& colourTextureB) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour 1
-    glGenTextures(1, &colourTextureA);
-    glBindTexture(GL_TEXTURE_2D, colourTextureA);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour 1
+	glGenTextures(1, &colourTextureA);
+	glBindTexture(GL_TEXTURE_2D, colourTextureA);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Colour 2
-    glGenTextures(1, &colourTextureB);
-    glBindTexture(GL_TEXTURE_2D, colourTextureB);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour 2
+	glGenTextures(1, &colourTextureB);
+	glBindTexture(GL_TEXTURE_2D, colourTextureB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, drawBuffers);
+	GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	glDrawBuffers(2, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 //With depth texture
 GLuint createAlbedoDepthFBO(glm::uvec2 resolution, GLuint& colourTexture, GLuint& depthTexture) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour
-    glGenTextures(1, &colourTexture);
-    glBindTexture(GL_TEXTURE_2D, colourTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour
+	glGenTextures(1, &colourTexture);
+	glBindTexture(GL_TEXTURE_2D, colourTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Depth
-    glGenTextures(1, &depthTexture);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+	//Depth
+	glGenTextures(1, &depthTexture);
+	glBindTexture(GL_TEXTURE_2D, depthTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
 
-    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);
+	GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO [W/ depth] incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO [W/ depth] incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 GLuint allDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
 GLuint createEnvironmentFBO(glm::uvec2 resolution) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Albedo
-    glGenTextures(1, &GLIndex::frameAlbedoComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Albedo
+	glGenTextures(1, &GLIndex::frameAlbedoComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Position component
-    glGenTextures(1, &GLIndex::framePositionComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Position component
+	glGenTextures(1, &GLIndex::framePositionComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Normal component
-    glGenTextures(1, &GLIndex::frameNormalComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Normal component
+	glGenTextures(1, &GLIndex::frameNormalComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Depth
-    glGenTextures(1, &GLIndex::frameDepthComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Depth
+	glGenTextures(1, &GLIndex::frameDepthComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glDrawBuffers(3, allDrawBuffers);
+	glDrawBuffers(3, allDrawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Environment FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Environment FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 
@@ -1955,6 +1955,42 @@ void drawHUD(float blendingAlpha, float currentTime) {
 
 
 
+namespace ANSI256 { //256 colour mode - Used for META_CONSOLE_RENDER.
+
+//Colour cubes.
+const std::array<unsigned int, 6> cubeLevels = {
+	0u, 95u, 135u, 175u, 215u, 255u
+};
+
+
+uint8_t quantizeChannel(uint8_t channelV) {
+    if (channelV < 48u) {return 0u;}
+    if (channelV < 114u) {return 1u;}
+    return (channelV - 35u) / 40u;
+}
+
+
+uint8_t rgbToXterm256(uint8_t R, uint8_t G, uint8_t B) {
+    if ((R == G) && (G == B)) { //Greyscale
+        if (R < 8u) {return 16u;}
+        if (R > 248u) {return 231u;}
+        return 232u + (R - 8u) / 10u;
+    }
+
+    uint8_t Rquant = quantizeChannel(R);
+    uint8_t Gquant = quantizeChannel(G);
+    uint8_t Bquant = quantizeChannel(B);
+
+    return 16u + 36u * Rquant + 6u * Gquant + Bquant;
+}
+
+
+
+
+}
+
+
+
 namespace frame {
 
 
@@ -2087,6 +2123,50 @@ inline void renderingGeneric(const std::string& shaderName="") {
 }
 
 
+void drawFrameToConsole() {
+	//Draw to console using 256-colour mode;
+	std::vector<unsigned char> RGBdata(currentRenderResolution.x * currentRenderResolution.y * 3u);
+
+	glBindTexture(GL_TEXTURE_2D, GLIndex::finishedFrame);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, RGBdata.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	std::cout << "\x1b[H\x1b[2J\x1b[3J\x1b[?7l"; //Reset screen, disable wraparound.
+	unsigned int renderWidth  = currentRenderResolution.x;
+	unsigned int renderHeight = currentRenderResolution.y;
+
+	for (unsigned int y=(currentConsoleResolution.y/2); y>0u; y--) {
+	    unsigned int topSRC = y * 2u;
+	    unsigned int lowSRC = topSRC + 1u;
+
+	    for (unsigned int x=0u; x<currentConsoleResolution.x; x++) {
+	    	unsigned int topPixel = (topSRC * renderWidth + x) * 3u;
+	        unsigned int lowPixel = (lowSRC * renderWidth + x) * 3u;
+
+	        uint8_t top = ANSI256::rgbToXterm256(
+	            RGBdata[topPixel + 0u],
+	            RGBdata[topPixel + 1u],
+	            RGBdata[topPixel + 2u]
+	        );
+	        uint8_t low = ANSI256::rgbToXterm256(
+	            RGBdata[lowPixel + 0u],
+	            RGBdata[lowPixel + 1u],
+	            RGBdata[lowPixel + 2u]
+	        );
+
+	        std::cout << "\x1b[38;5;" << top << "m" << "\x1b[48;5;" << low << "m" << "▀";
+	    }
+	    std::cout << '\n';
+	}
+	std::cout << "\x1b[?7h\x1b[0m"; //Re-enable wraparound, revert to normal formatting.
+	std::cout.flush();
+
+	//DEBUG
+	std::cout << currentConsoleResolution.x << " " << currentConsoleResolution.y << std::endl;
+	std::cout << currentRenderResolution.x << " " << currentRenderResolution.y << std::endl;
+}
+
+
 
 void draw(double blendingAlpha, double currentTime) {
 	//Update resolution
@@ -2215,7 +2295,6 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//UI Shader.
-	/*
 	if (utils::configToBool("VIEW_SHOW_HUD")) {
 		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 
@@ -2223,8 +2302,7 @@ void draw(double blendingAlpha, double currentTime) {
 		avgtickrate = utils::getAverage(rollingTPS);
 
 		ui::drawHUD(blendingAlpha, currentTime);
-	}
-	*/		
+	}	
 
 
 
@@ -2237,9 +2315,8 @@ void draw(double blendingAlpha, double currentTime) {
 
 	glBindTextureUnit(0, GLIndex::frameAlbedoComponent);
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
-	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
-	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
-	glBindTextureUnit(4, GLIndex::framePositionComponent);
+	glBindTextureUnit(2, GLIndex::lightingMapsArrayID);
+	glBindTextureUnit(3, GLIndex::framePositionComponent);
 	glBindImageTexture(0, GLIndex::finishedFrame, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
@@ -2261,13 +2338,18 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 
-	//Display Shader
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-	glUseProgram(GLIndex::displayShader);
-	glDrawBuffer(DEFAULT_FRAMEBUFFER);
-	glBindTextureUnit(0, GLIndex::finishedFrame);
-	//glBindTextureUnit(1, GLIndex::finishedInterface);
-	renderingGeneric("Display Shader");
+	if (utils::configToBool("META_CONSOLE_RENDER")) {
+		//Draw to console using 256-colour mode;
+		drawFrameToConsole();
+	}  {
+		//Display Shader
+		glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+		glUseProgram(GLIndex::displayShader);
+		glDrawBuffer(DEFAULT_FRAMEBUFFER);
+		glBindTextureUnit(0, GLIndex::finishedFrame);
+		glBindTextureUnit(1, GLIndex::interfaceAlbedoComponent);
+		renderingGeneric("Display Shader");
+	}
 
 
 

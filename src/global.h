@@ -120,7 +120,7 @@ inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, d
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
 inline GLuint lightingMapsArrayID;
-inline GLuint finishedInterface, finishedFrame;
+inline GLuint finishedFrame;
 
 //Framebuffers
 inline GLuint frameFBO, frameAlbedoComponent, framePositionComponent, frameNormalComponent, frameDepthComponent; //Previously: renderedFrameID

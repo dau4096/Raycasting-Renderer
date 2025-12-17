@@ -35,6 +35,7 @@
 #include <pugixml.hpp>
 
 //Include std subheaders.
+#include <clocale>
 #include <bits/stdc++.h>
 #include <iostream>
 #include <iomanip>

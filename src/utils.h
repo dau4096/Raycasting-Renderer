@@ -85,6 +85,10 @@ namespace utils {
 	#endif
 	}
 
+	inline glm::ivec2 getConsoleResolution() {
+		return getConsoleSizeChars() * glm::ivec2(1, 2);
+	}
+
 
 
 
