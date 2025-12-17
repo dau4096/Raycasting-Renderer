@@ -33,7 +33,7 @@ struct StageData {
 	float playerStartHealth, playerStartEnergy;
 
 
-	StageData()
+	StageData() //Defaults
 		: name("<NONE>"), filePath(""),
 		  skyboxTextureName("fallback-skybox"), fogColour(0.4157f, 0.6039f, 0.7098f),
 		  sunDirection(0.0f, 0.0f, 1.0f), sunColour(1.0f, 1.0f, 1.0f),
@@ -76,6 +76,7 @@ inline size_t currentTextureIndex = 0;
 
 
 
+inline glm::ivec2 currentConsoleResolution;
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;

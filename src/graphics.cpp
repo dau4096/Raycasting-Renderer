@@ -2176,7 +2176,7 @@ void draw(double blendingAlpha, double currentTime) {
 		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 		glUseProgram(GLIndex::frameLightingShader);
 
-		unsigned int dispatchZ = (validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z; //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+		unsigned int dispatchZ = 2;
 		//maxIndex + 1 : All sunlight calculations. [SUNL]
 		//maxIndex + 2 : All headlamp calculations. [HLMP]
 		if (lightingType == LIGHT_DYNAMIC) {
@@ -2184,14 +2184,14 @@ void draw(double blendingAlpha, double currentTime) {
 			glBindTextureUnit(0, GLIndex::framePositionComponent);
 			glBindTextureUnit(1, GLIndex::frameNormalComponent);
 			glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			dispatchZ = (validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z; //Dispatches an extra 2 pseudo-lights which are handled in the shader
 
 		} else {
 			glBindTextureUnit(0, GLIndex::framePositionComponent);
 			glBindTextureUnit(1, GLIndex::frameNormalComponent);
 			glBindTextureUnit(2, GLIndex::surfaceLightMapsArrayID);
-			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 		}
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		//Uniforms;
 		uniforms::bindCommonUniforms(GLIndex::frameLightingShader, blendingAlpha, currentTime);

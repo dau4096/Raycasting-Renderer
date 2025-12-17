@@ -15,7 +15,11 @@ using namespace utils;
 using namespace glm;
 
 
-
+//framebufferSizeCallback but for the terminal render mode instead.
+void handleWinChange(int sig) {
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleSizeChars();
+}
 
 GLFWwindow* Window;
 
@@ -45,6 +49,10 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
 
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+
+
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleSizeChars();
 }
 
 
@@ -257,6 +265,7 @@ int main() {
 	player.state = E_RESPAWN;
 
 	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
+	currentConsoleResolution = utils::getConsoleSizeChars();
 	currentRenderResolution = glm::ivec2(
 		glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
 		glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
@@ -266,6 +275,7 @@ int main() {
 
 	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
+	signal(SIGWINCH, handleWinChange);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
 	bool vsync = utils::configToBool("VIEW_VSYNC");

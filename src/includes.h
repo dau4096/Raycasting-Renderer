@@ -2,16 +2,18 @@
 #define INCLUDES_H
 
 
-#ifdef __WIN32
-
-//Include Windows.
+//OS Specific
 #ifdef _WIN32
-
+//Include Windows.
 #include <Windows.h> //Only for windows systems (obviously). Only needed for console-specific functions, which are minimal.
-
+#elif defined(__linux__)
+//Include Linux things.
+#include <unistd.h>		//Both required for the console output mode.
+#include <sys/ioctl.h>  // ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
 #endif
 
-#endif
+
+
 
 //Include GLEW.
 #include <GL/glew.h>
@@ -48,5 +50,6 @@
 #include <functional>
 #include <algorithm>
 #include <filesystem>
+#include <signal.h>
 
 #endif
