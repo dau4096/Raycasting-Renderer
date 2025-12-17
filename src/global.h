@@ -120,7 +120,7 @@ inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, d
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
 inline GLuint lightingMapsArrayID;
-inline GLuint screenshotImage2D;
+inline GLuint finishedInterface, finishedFrame;
 
 //Framebuffers
 inline GLuint frameFBO, frameAlbedoComponent, framePositionComponent, frameNormalComponent, frameDepthComponent; //Previously: renderedFrameID
@@ -128,7 +128,7 @@ inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
 inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
-inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, displayShader; 
+inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, postProcessingShader, displayShader; 
 
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;

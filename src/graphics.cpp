@@ -287,10 +287,9 @@ GLFWwindow* initialiseWindow(int width, int height, const char* title) {
 
 
 
-GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="") {
-	if (vertexShaderName.empty()) {vertexShaderName = "exct/generic";}
-	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ vertexShaderName +".vert");
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ fragShaderName +".frag");
+GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="exct/screenspace.vert") {
+	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, ("src/shaders/" + vertexShaderName));
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, ("src/shaders/" + fragShaderName));
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
@@ -318,7 +317,7 @@ GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderN
 
 
 GLuint createComputeShader(std::string compShaderName) {
-	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName + ".comp");
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName);
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, computeShader);
@@ -1377,8 +1376,8 @@ void prepareOpenGL() {
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
-	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	glObjectLabel(GL_TEXTURE, GLIndex::screenshotImage2D, -1, "screenshotImage2D");
+	GLIndex::finishedFrame = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::finishedFrame, -1, "finishedFrame");
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
@@ -1454,17 +1453,17 @@ void prepareOpenGL() {
 
 
 	//Raycast compute shader
-	GLIndex::raycastShader = createComputeShader("stage/raycast");
+	GLIndex::raycastShader = createComputeShader("stage/raycast.comp");
 
 	//Environment shader
-	GLIndex::envShader = createShaderProgram("stage/environment");
+	GLIndex::envShader = createShaderProgram("stage/environment.frag");
 
 	//Displacement shaders
-	GLIndex::displacementShader3D = createShaderProgram("displacements/3D", "displacements/projection");
-	GLIndex::displacementShader2D = createShaderProgram("displacements/2D");
+	GLIndex::displacementShader3D = createShaderProgram("displacements/3D.frag", "displacements/projection.vert");
+	GLIndex::displacementShader2D = createShaderProgram("displacements/2D.frag");
 
 	//Sprite Shader
-	GLIndex::spriteShader = createShaderProgram("stage/sprites");
+	GLIndex::spriteShader = createShaderProgram("stage/sprites.frag");
 
 	//Lighting compute Shader
 	switch(lightingType) {
@@ -1499,10 +1498,12 @@ void prepareOpenGL() {
 	}
 
 	//uiShader
-	GLIndex::uiShader = createShaderProgram("exct/interface", "exct/interface");
-	
+	GLIndex::uiShader = createShaderProgram("exct/interface.frag", "exct/interface.vert");
+	//Post-Processing Shader
+	GLIndex::postProcessingShader = createComputeShader("exct/postProcessing.comp");
 	//Display Shader
-	GLIndex::displayShader = createShaderProgram("exct/display", "exct/display");
+	GLIndex::displayShader = createShaderProgram("exct/display.frag");
+
 
 
 	initialiseVAOs();
@@ -1936,6 +1937,7 @@ void drawHUD(float blendingAlpha, float currentTime) {
 	glBindTextureUnit(1, GLIndex::textureArrayNumeric);
 	glBindTextureUnit(2, GLIndex::frameDepthComponent);
 
+
 	uniforms::bindCommonUniforms(GLIndex::uiShader, blendingAlpha, currentTime);
 	GLint pvmMatrixLocation = glGetUniformLocation(GLIndex::uiShader, "pvmMatrix");
 	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(graphics::uiMatrix));
@@ -2213,6 +2215,7 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//UI Shader.
+	/*
 	if (utils::configToBool("VIEW_SHOW_HUD")) {
 		glViewport(0, 0, display::UI_RESOLUTION.x, display::UI_RESOLUTION.y);
 
@@ -2220,40 +2223,56 @@ void draw(double blendingAlpha, double currentTime) {
 		avgtickrate = utils::getAverage(rollingTPS);
 
 		ui::drawHUD(blendingAlpha, currentTime);
-	}		
+	}
+	*/		
 
 
 
-	//Display Shader (Post-processing included).
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-	glUseProgram(GLIndex::displayShader);
+	//Post-Processing Shader.
+	glUseProgram(GLIndex::postProcessingShader);
+	const glm::uvec3 POST_PROCESSING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 
 	//Return to default FBO
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDrawBuffer(DEFAULT_FRAMEBUFFER);
 
 	glBindTextureUnit(0, GLIndex::frameAlbedoComponent);
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
 	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
 	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
 	glBindTextureUnit(4, GLIndex::framePositionComponent);
-	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, GLIndex::finishedFrame, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
-	//Display-Specific
-	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
-	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
-	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
+	uniforms::bindCommonUniforms(GLIndex::postProcessingShader, blendingAlpha, currentTime);
+	//Post-Processing-Specific
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "screenTint", screenTint);
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "isInvertEffect", isInvertEffect);
 
+
+	glDispatchCompute(
+		(currentRenderResolution.x + POST_PROCESSING_LOCAL_SIZE.x - 1) / POST_PROCESSING_LOCAL_SIZE.x,
+		(currentRenderResolution.y + POST_PROCESSING_LOCAL_SIZE.y - 1) / POST_PROCESSING_LOCAL_SIZE.y,
+		1
+	);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("Post-Processing Shader", true);
+
+
+
+	//Display Shader
+	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+	glUseProgram(GLIndex::displayShader);
+	glDrawBuffer(DEFAULT_FRAMEBUFFER);
+	glBindTextureUnit(0, GLIndex::finishedFrame);
+	//glBindTextureUnit(1, GLIndex::finishedInterface);
 	renderingGeneric("Display Shader");
 
 
+
 	if (shouldTakeScreenshot) {
-		graphics::saveScreenshot(GLIndex::screenshotImage2D);
+		graphics::saveScreenshot(GLIndex::finishedFrame);
 	}
 }
 

@@ -19,6 +19,11 @@ using namespace glm;
 void handleWinChange(int sig) {
 	//The console may have changed size.
 	currentConsoleResolution = utils::getConsoleSizeChars();
+	if (utils::configToBool("META_CONSOLE_RENDER")) {
+		currentRenderResolution = currentConsoleResolution;
+		currentWindowResolution = currentConsoleResolution;
+		desiredRenderResolution = currentConsoleResolution;
+	}
 }
 
 GLFWwindow* Window;
@@ -42,7 +47,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
-	GLIndex::screenshotImage2D = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
 	//Framebuffers
 	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
