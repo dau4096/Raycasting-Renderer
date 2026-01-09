@@ -1972,9 +1972,9 @@ uint8_t quantizeChannel(uint8_t channelV) {
 
 uint8_t rgbToXterm256(uint8_t R, uint8_t G, uint8_t B) {
     if ((R == G) && (G == B)) { //Greyscale
-        if (R < 8u) {return 16u;}
-        if (R > 248u) {return 231u;}
-        return 232u + (R - 8u) / 10u;
+    	uint8_t greyIndex = (R - 8 + 5) / 10;
+		greyIndex = glm::clamp(greyIndex, uint8_t(0), uint8_t(23));
+		return 232u + greyIndex;
     }
 
     uint8_t Rquant = quantizeChannel(R);
@@ -2123,47 +2123,86 @@ inline void renderingGeneric(const std::string& shaderName="") {
 }
 
 
+
+inline void appendNumber(std::string &s, uint8_t n) {
+    // fast 0-255 to string
+    if (n >= 100) { s += '0' + n / 100; n %= 100; s += '0' + n / 10; n %= 10; s += '0' + n; }
+    else if (n >= 10) { s += '0' + n / 10; n %= 10; s += '0' + n; }
+    else { s += '0' + n; }
+}
+
 void drawFrameToConsole() {
-	//Draw to console using 256-colour mode;
-	std::vector<unsigned char> RGBdata(currentRenderResolution.x * currentRenderResolution.y * 3u);
+    unsigned int renderWidth  = currentRenderResolution.x;
+    unsigned int renderHeight = currentRenderResolution.y;
 
-	glBindTexture(GL_TEXTURE_2D, GLIndex::finishedFrame);
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, RGBdata.data());
-	glBindTexture(GL_TEXTURE_2D, 0);
+    //Read framedata
+    std::vector<uint8_t> RGBdata(renderWidth * renderHeight * 3u);
+    glBindTexture(GL_TEXTURE_2D, GLIndex::finishedFrame);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, RGBdata.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-	std::cout << "\x1b[H\x1b[2J\x1b[3J\x1b[?7l"; //Reset screen, disable wraparound.
-	unsigned int renderWidth  = currentRenderResolution.x;
-	unsigned int renderHeight = currentRenderResolution.y;
+    //Move cursor to top-left and disable wraparound.
+    std::string term256;
+    term256.reserve((currentConsoleResolution.x * currentConsoleResolution.y * 12u)); //Estimate.
+    term256 += "\x1b[H\x1b[2J\x1b[3J\x1b[?7l";
 
-	for (unsigned int y=(currentConsoleResolution.y/2); y>0u; y--) {
-	    unsigned int topSRC = y * 2u;
-	    unsigned int lowSRC = topSRC + 1u;
+    int lastFG = -1, lastBG = -1;
 
-	    for (unsigned int x=0u; x<currentConsoleResolution.x; x++) {
-	    	unsigned int topPixel = (topSRC * renderWidth + x) * 3u;
-	        unsigned int lowPixel = (lowSRC * renderWidth + x) * 3u;
+    unsigned int consoleHeight = currentConsoleResolution.y / 2u;
+    unsigned int consoleWidth = currentConsoleResolution.x;
 
-	        uint8_t top = ANSI256::rgbToXterm256(
-	            RGBdata[topPixel + 0u],
-	            RGBdata[topPixel + 1u],
-	            RGBdata[topPixel + 2u]
-	        );
-	        uint8_t low = ANSI256::rgbToXterm256(
-	            RGBdata[lowPixel + 0u],
-	            RGBdata[lowPixel + 1u],
-	            RGBdata[lowPixel + 2u]
-	        );
+    for (unsigned int y=consoleHeight; y>0u; y--) {
+        unsigned int topBase = (y * 2u) * renderWidth * 3u;
+        unsigned int lowBase = topBase + renderWidth * 3u;
 
-	        std::cout << "\x1b[38;5;" << top << "m" << "\x1b[48;5;" << low << "m" << "▀";
-	    }
-	    std::cout << '\n';
-	}
-	std::cout << "\x1b[?7h\x1b[0m"; //Re-enable wraparound, revert to normal formatting.
-	std::cout.flush();
+        for (unsigned int x=0u; x<consoleWidth; x++) {
+            unsigned int topPixel = topBase + x * 3u;
+            unsigned int lowPixel = lowBase + x * 3u;
 
-	//DEBUG
-	std::cout << currentConsoleResolution.x << " " << currentConsoleResolution.y << std::endl;
-	std::cout << currentRenderResolution.x << " " << currentRenderResolution.y << std::endl;
+            uint8_t top = ANSI256::rgbToXterm256(
+                RGBdata[topPixel + 0u], RGBdata[topPixel + 1u], RGBdata[topPixel + 2u]
+            );
+            uint8_t low = ANSI256::rgbToXterm256(
+                RGBdata[lowPixel + 0u], RGBdata[lowPixel + 1u], RGBdata[lowPixel + 2u]
+            );
+
+            //Only cout SGR if colour changed
+            if (top != lastBG) { //Background, upper PX.
+                term256 += "\x1b[48;5;";
+                appendNumber(term256, top);
+                term256 += "m";
+                lastBG = top;
+            }
+            if (low != lastFG) { //Foreground, lower PX.
+                term256 += "\x1b[38;5;";
+                appendNumber(term256, low);
+                term256 += "m";
+                lastFG = low;
+            }
+
+            term256 += "▀"; //UTF half-block char.
+        }
+
+        term256 += '\n';
+        lastFG = lastBG = -1; //Reset after each line
+    }
+
+    //Reset formatting, output.
+    term256 += "\x1b[?7h\x1b[0m";
+    fwrite(term256.data(), 1, term256.size(), stdout);
+    fflush(stdout);
+
+    //UI;
+    std::string hSTR = std::to_string(player.health);
+    std::string eSTR = std::to_string(player.health);
+    std::cout << "FPS: " << std::setw(4) << framerate << "Hz" << "\nHEALTH: " << std::setw(3) << hSTR << "    ENERGY: " <<std::setw(3) << eSTR;
+    if (utils::configToBool("META_SHOW_DATA")) {
+    	std::cout << "        POS: (" << std::setw(8) << player.position.x << ", " << std::setw(8) << player.position.y << ", " << std::setw(8) << player.position.z << ")";
+    	std::cout << "    ANG: ("<< std::setw(8) << player.viewAngle << ", "<< std::setw(8) << player.viewPitch << ", "<< std::setw(8) << player.viewRoll << ")";
+    	std::cout << "    VEL: (" << std::setw(8) << player.velocity.x << ", " << std::setw(8) << player.velocity.y << ", " << std::setw(8) << player.velocity.z << ")";
+    }
+    std::cout << std::endl;
 }
 
 

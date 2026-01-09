@@ -103,7 +103,7 @@
 <option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
-<option function="VIEW_LIGHTING_TYPE"					value="NONE"			note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
+<option function="VIEW_LIGHTING_TYPE"					value="DYNAMIC"			note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
 
 
 
@@ -142,7 +142,7 @@
 <!-- Debug -->
 <option function="META_SHOW_CONSOLE" 					value="TRUE"			note="Show/Hide console window. [TRUE/FALSE]" />
 <option function="META_DEBUG_MODE" 						value="NONE" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
-<option function="META_SHOW_DATA" 						value="FALSE" 			note="Shows player information in the console. [TRUE/FALSE]" />
+<option function="META_SHOW_DATA" 						value="TRUE" 			note="Shows player information in the console. [TRUE/FALSE]" />
 
 
 <!-- Stage-specific -->
