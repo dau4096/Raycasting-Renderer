@@ -91,7 +91,7 @@
 
 
 <!-- Rendering specific -->
-<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="MEDIUM"			note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/DS/LOW/MEDIUM/HIGH/AMAZING]" />
+<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="CRT"			note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/CRT/DS/LOW/MEDIUM/HIGH/AMAZING]" />
 <option function="VIEW_TEXTURE_QUALITY" 				value="FULL"			note="Changes default texture Mip Level [TERRIBLE/AWFUL/LOW/MEDIUM/FULL]" />
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
 <option function="VIEW_MAX_RAY_DIST" 					value="127.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />

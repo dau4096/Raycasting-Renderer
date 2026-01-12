@@ -249,6 +249,7 @@ int main() {
 	SetConsoleOutputCP(65001); //CP_UTF8
 #endif
 
+	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
@@ -256,7 +257,6 @@ int main() {
 	);
 	player.state = E_RESPAWN;
 
-	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	currentRenderResolution = glm::ivec2(
 		glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
 		glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
@@ -264,7 +264,7 @@ int main() {
 	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 
 
-	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
+	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU-with-CRT");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
