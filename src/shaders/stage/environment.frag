@@ -91,7 +91,7 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 	WallIntersect wallIntersects[]; //2D Raycast results;
 };
 layout(std430, binding=8) buffer visplaneCheckSSBO {
-	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
+	uint visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 };
 
 
@@ -544,14 +544,8 @@ void main() {
 			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
 			uint actualIDX = visibleVisplaneIndices[idx];
 			uint SSBOIndex = visplaneStartIndex + actualIDX;
-
-			uvec2 VPintersectData = visplaneCheckIndices[SSBOIndex];
-			uint visplaneValue = VPintersectData.x;
-
-			int higherProj = int(VPintersectData.y >> 16u) - 0x7FFF;
-			int lowerProj = int(VPintersectData.y & 0xFFFFu) - 0x7FFF;
-
-			if (((visplaneValue & 0x1u) == 0u) || (fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
+			uint visplaneValue = visplaneCheckIndices[SSBOIndex];
+			if ((visplaneValue & 0x1) == 0u) {continue; /* No intersect. */}
 			Visplane thisVisplane = visplanes[visplaneValue >> 1];
 
 			if (
