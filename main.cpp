@@ -254,7 +254,7 @@ int main() {
 		userConfig["META_STAGE_NAME"], &player,
 		physicsData, &logicGates
 	);
-	player.state = E_RESPAWN;
+	player.state = E_RESPAWN; //Player initial state, uses the screenspace effect associated with E_RESPAWN.
 
 	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	currentRenderResolution = glm::ivec2(
@@ -266,12 +266,11 @@ int main() {
 
 	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
+	glfwSetJoystickCallback(nullptr); //Stop it from trying to callback for joystick.
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
-	bool vsync = utils::configToBool("VIEW_VSYNC");
-	if (vsync) {
-		glfwSwapInterval(1);
-	}
+	bool vsync = utils::configToBool("SCREEN_VSYNC");
+	glfwSwapInterval((vsync) ? 1 : 0);
 
 
 
@@ -292,8 +291,8 @@ int main() {
 
 	graphics::prepareOpenGL();
 	*graphicsData = *physicsData;
-	frame::updateSSBOs(true);
-	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
+	frame::updateSSBOs(true); //Include W_NODRAW/V_NODRAW objects.
+	double maxFrameTime = 1.0d / static_cast<double>(utils::configToFloat("SCREEN_MAX_FREQ"));
 
 
 
@@ -305,33 +304,48 @@ int main() {
 	physicsThread = std::thread(physicsLoop);
 	tickStart = glfwGetTime();
 
-	frameNumber = 0;
+	//Timer queries;
+	GLuint timerQuery;
+	GLuint64 GPUnanosecs; //Nanoseconds
+	glGenQueries(1, &timerQuery);
+
+	frameNumber = 0u;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
-		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY;
+		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY; //Manages smooth motion when graphics freq > physics tickrate.
 
+		//Handle inputs.
 		handleInputs();
 		if (utils::isPressed("META_EXIT")) {break; /* Quit Immediately */}
 
 
+		//Draw this frame
+		glBeginQuery(GL_TIME_ELAPSED, timerQuery);
 		graphics::handleTextureLoadQueue();
 		frame::draw(blendingAlpha, frameStart);
-		glfwSwapBuffers(Window);
+		glEndQuery(GL_TIME_ELAPSED);
 		glFinish();
 
+
+		//Calculate dt and report back if needed.
 		float dt = glfwGetTime() - frameStart;
 		if (utils::configToBool("META_SHOW_DT_CONSOLE")) {
-			std::cout << "Frame #" << frameNumber << " took " << std::setprecision(2) << (dt * 1e3f) << "ms / Hypothetical framerate: " << static_cast<int>(1.0f / dt) << endl;
+			glGetQueryObjectui64v(timerQuery, GL_QUERY_RESULT, &GPUnanosecs);
+			double ms = GPUnanosecs / 1e6;
+			std::cout << "Frame #" << frameNumber << " took " << std::setprecision(2) << ms << "ms / Hypothetical framerate: " << static_cast<int>(1000.0d/ms) << endl;
 		}
-		if (!vsync) {
-			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
-		}
-		framerate = floor(1.0f / (glfwGetTime() - frameStart));
-		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);}
-		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {
-			std::cout << "Framerate: " << framerate << "Hz" << std::endl;
-		}
+		//Wait for the correct freq.
+		if (!vsync) {while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}}
+		glfwSwapBuffers(Window); //Swap to show the new frame, at the correct time.
 
+
+		framerate = floor(1.0f / (glfwGetTime() - frameStart));
+		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);} //Screenshots (obviously) cause a lag-spike. Don't "poison" the rolling values with it.
+		//Show framerate (One after the mandatory wait-period of the frame.)
+		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {std::cout << "Framerate: " << framerate << "Hz" << std::endl;}
+
+
+		//End-of-frame management.
 		cursorXPosPrev = cursorXPos;
 		cursorYPosPrev = cursorYPos;
 		frameNumber++;
