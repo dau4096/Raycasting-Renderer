@@ -23,7 +23,7 @@ void handleWinChange(int sig) {
 		currentRenderResolution = currentConsoleResolution;
 		currentWindowResolution = currentConsoleResolution;
 		desiredRenderResolution = currentConsoleResolution;
-		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+		if (lightingType == LIGHT_DYNAMIC) {currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));}
 
 		//SSBOs
 		GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
@@ -54,7 +54,9 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 		glm::min(width, desiredRenderResolution.x),
 		glm::min(height, desiredRenderResolution.y)
 	);
-	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	if (lightingType == LIGHT_DYNAMIC) {
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	}
 
 	//SSBOs
 	GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
@@ -62,8 +64,8 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	);
 
 	//Image2Ds
-	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 
 	//Framebuffers
 	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
@@ -291,10 +293,8 @@ int main() {
 	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
 		currentConsoleResolution = utils::getConsoleResolution();
 
-		currentRenderResolution = currentConsoleResolution;
-		currentWindowResolution = currentConsoleResolution;
-		desiredRenderResolution = currentConsoleResolution;
-		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));		
+		currentRenderResolution = currentConsoleResolution; currentWindowResolution = currentConsoleResolution; desiredRenderResolution = currentConsoleResolution;
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 	} else {
 		currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 		currentConsoleResolution = utils::getConsoleSizeChars();
@@ -323,7 +323,7 @@ int main() {
 
 	if ((lightingType == LIGHT_STATIC_ARB) && !loader::OpenGLSupportsARB()) {
 		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
-		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" method.
+		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" fixed size method.
 	}
 
 

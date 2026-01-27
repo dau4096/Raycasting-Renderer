@@ -444,13 +444,13 @@ void updateShaderStorageBufferObject(
 
 
 inline GLuint encodeIndex(structs::Wall thisWall, GLuint index) {
-	return (index << 3) | 0x1;
+	return (index << 3) | T_WALL;
 }
 inline GLuint encodeIndex(structs::Visplane thisVisplane, GLuint index) {
-	return (index << 3) | 0x2;
+	return (index << 3) | T_VISPLANE;
 }
 inline GLuint encodeIndex(structs::Displacement thisDisplacement, GLuint index) {
-	return (index << 3) | 0x3;
+	return (index << 3) | T_DISPLACEMENT;
 }
 
 void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* visibleObjects) {
@@ -506,6 +506,7 @@ void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* v
 		}
 	}
 
+	*graphicsData = *physicsData;
 
 	return; //Implement later.
 	for (unsigned int displacementIndex=0; displacementIndex<physicsData->displacementData.size(); displacementIndex++) {
@@ -1006,7 +1007,7 @@ float viewBob(float tick) {
 int tickCounter = 0, duration = 0;
 glm::vec3 screenTintRGB = glm::vec3(0.0f, 0.0f, 0.0f);
 std::unordered_map<Event, int> stateMap = {
-	{E_NONE, 0},
+	{E_NONE, 0}, //Event mapped to number of seconds to draw for (managed by phys thread.)
 	{E_HURT, 3 * constants::PHYSICS_FREQUENCY},
 	{E_HEAL, 1 * constants::PHYSICS_FREQUENCY},
 	{E_ENERGY, 1 * constants::PHYSICS_FREQUENCY},
@@ -1374,6 +1375,30 @@ GLuint createAtomicCounter(unsigned int binding) {
 }
 
 
+void createFixedSizeShadowMaps(glm::ivec2 res=display::FIXED_SHADOW_RESOLUTION_INITIAL) {
+    currentShadowResolution = res; //Set current shadow resolution.
+	while (glGetError() != GL_NO_ERROR) {} //Clear all previous OpenGL errors.
+	unsigned int numMaps = (validVisplanes + validWalls) * 2u;
+	GLIndex::surfaceLightMapsArrayID = createGLImage2DArray(
+		res.x, res.y,
+		numMaps, GL_LINEAR
+	);
+	glObjectLabel(GL_TEXTURE, GLIndex::surfaceLightMapsArrayID, -1, "surfaceLightMapsArrayID");
+
+	GLenum err = glGetError();
+	if (err == GL_OUT_OF_MEMORY) {
+	    //Not enough memory - try again with smaller resolution.
+	    glDeleteTextures(1, &GLIndex::surfaceLightMapsArrayID);
+	    glm::ivec2 halfRes = res / 2;
+	    if ((halfRes.x < display::FIXED_SHADOW_RESOLUTION_MINIMUM.x) || (halfRes.y < display::FIXED_SHADOW_RESOLUTION_MINIMUM.y)) {
+	    	lightingType = LIGHT_NONE;
+			GLIndex::preLightingShader = -1; GLIndex::frameLightingShader = -1; //Remove shaders. Un-needed.
+	    	return; //Failed to create shadowmaps, just disable lighting altogether.
+	    }
+	    createFixedSizeShadowMaps(halfRes);
+	}
+}
+
 
 glm::mat4 uiMatrix;
 std::vector<structs::UIElement> UIElements;
@@ -1411,6 +1436,9 @@ void prepareOpenGL() {
 
 	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
+	//Not entirely certain why this is here - GPU-with-Portals was never merged into GPU.
+	//GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
+	//glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
@@ -1484,12 +1512,7 @@ void prepareOpenGL() {
 			//Uses fixed-size shadow maps in an array.
 			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.fixed.comp");
 			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.fixed.comp");
-			unsigned int numMaps = (validVisplanes + validWalls) * 2u;
-			GLIndex::surfaceLightMapsArrayID = createGLImage2DArray(
-				display::FIXED_SHADOW_RESOLUTION.x, display::FIXED_SHADOW_RESOLUTION.y,
-				numMaps, GL_LINEAR
-			);
-			glObjectLabel(GL_TEXTURE, GLIndex::surfaceLightMapsArrayID, -1, "surfaceLightMapsArrayID");
+			createFixedSizeShadowMaps();
 			break;
 		}
 		case LIGHT_STATIC_ARB: {
@@ -1499,7 +1522,7 @@ void prepareOpenGL() {
 			break;
 		}
 		case LIGHT_DYNAMIC: {
-			GLIndex::preLightingShader = -1;
+			GLIndex::preLightingShader = -1; //No need to do pre-pass if the lighting is dynamic.
 			GLIndex::frameLightingShader = createComputeShader("lighting/dynamic.frame.comp");
 			break;
 		}
@@ -1624,7 +1647,7 @@ void fixedResolutionLightmapping() {
 		}
 
 		runComputeShader(
-			display::FIXED_SHADOW_RESOLUTION,
+			currentShadowResolution,
 			glm::vec3(0.0f, 0.0f, 1.0f),
 			glm::vec3(minPoint, thisVisplane.height),
 			glm::vec3(maxPoint, thisVisplane.height),
@@ -1649,7 +1672,7 @@ void fixedResolutionLightmapping() {
 		);
 
 		runComputeShader(
-			display::FIXED_SHADOW_RESOLUTION,
+			currentShadowResolution,
 			wallNormal,
 			minPoint, maxPoint,
 			T_WALL, wallIndex
@@ -1757,9 +1780,14 @@ void arbLightmapping() {
 
 void createLightMaps() {
 	//Create lightmaps based on what light mode it is.
+	//Generates ALL lightmaps.
+	if (GLIndex::shadowMapResolutionsSSBO == -1) {
+		size_t numberOfObjects = validVisplanes + validWalls;
+																//Binding location is 20
+		GLIndex::shadowMapResolutionsSSBO = graphics::createShaderStorageBufferObject(20, sizeof(glm::ivec2) * numberOfObjects);
+	}
+	//Create lightmaps based on what light mode it is.
 
-	size_t numberOfObjects = validVisplanes + validWalls;
-	GLIndex::shadowMapResolutionsSSBO = graphics::createShaderStorageBufferObject(20, sizeof(glm::ivec2) * numberOfObjects);
 
 	switch(lightingType) {
 		case LIGHT_STATIC_FIXED: {
@@ -1775,8 +1803,8 @@ void createLightMaps() {
 		}
 
 		default: {
-			//Unknown.
-			return;
+			//Unknown, doesn't require lightmaps.
+			break;
 		}
 	}
 	*physicsData = *graphicsData; //Sync data.
@@ -1977,24 +2005,24 @@ const std::array<unsigned int, 6> cubeLevels = {
 
 
 uint8_t quantizeChannel(uint8_t channelV) {
-    if (channelV < 48u) {return 0u;}
-    if (channelV < 114u) {return 1u;}
-    return (channelV - 35u) / 40u;
+	if (channelV < 48u) {return 0u;}
+	if (channelV < 114u) {return 1u;}
+	return (channelV - 35u) / 40u;
 }
 
 
 uint8_t rgbToXterm256(uint8_t R, uint8_t G, uint8_t B) {
-    if ((R == G) && (G == B)) { //Greyscale
-    	uint8_t greyIndex = (R - 8 + 5) / 10;
+	if ((R == G) && (G == B)) { //Greyscale
+		uint8_t greyIndex = (R - 8 + 5) / 10;
 		greyIndex = glm::clamp(greyIndex, uint8_t(0), uint8_t(23));
 		return 232u + greyIndex;
-    }
+	}
 
-    uint8_t Rquant = quantizeChannel(R);
-    uint8_t Gquant = quantizeChannel(G);
-    uint8_t Bquant = quantizeChannel(B);
+	uint8_t Rquant = quantizeChannel(R);
+	uint8_t Gquant = quantizeChannel(G);
+	uint8_t Bquant = quantizeChannel(B);
 
-    return 16u + 36u * Rquant + 6u * Gquant + Bquant;
+	return 16u + 36u * Rquant + 6u * Gquant + Bquant;
 }
 
 
@@ -2138,84 +2166,94 @@ inline void renderingGeneric(const std::string& shaderName="") {
 
 
 inline void appendNumber(std::string &s, uint8_t n) {
-    // fast 0-255 to string
-    if (n >= 100) { s += '0' + n / 100; n %= 100; s += '0' + n / 10; n %= 10; s += '0' + n; }
-    else if (n >= 10) { s += '0' + n / 10; n %= 10; s += '0' + n; }
-    else { s += '0' + n; }
+	//Quick 8b to string
+	if (n >= 100) {
+		s += '0' + n / 100;
+		n %= 100;
+		s += '0' + n / 10;
+		n %= 10;
+		s += '0' + n;
+	} else if (n >= 10) {
+		s += '0' + n / 10;
+		n %= 10;
+		s += '0' + n;
+	} else {
+		s += '0' + n;
+	}
 }
 
 void drawFrameToConsole() {
-    unsigned int renderWidth  = currentRenderResolution.x;
-    unsigned int renderHeight = currentRenderResolution.y;
+	unsigned int renderWidth  = currentRenderResolution.x;
+	unsigned int renderHeight = currentRenderResolution.y;
 
-    //Read framedata
-    std::vector<uint8_t> RGBdata(renderWidth * renderHeight * 3u);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::finishedFrame);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, RGBdata.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+	//Read framedata
+	std::vector<uint8_t> RGBdata(renderWidth * renderHeight * 3u);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::finishedFrame);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, RGBdata.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
 
-    //Move cursor to top-left and disable wraparound.
-    std::string term256;
-    term256.reserve((currentConsoleResolution.x * currentConsoleResolution.y * 12u)); //Estimate.
-    term256 += "\x1b[H\x1b[2J\x1b[3J\x1b[?7l";
+	//Move cursor to top-left and disable wraparound.
+	std::string term256;
+	term256.reserve((currentConsoleResolution.x * currentConsoleResolution.y * 12u)); //Estimate.
+	term256 += "\x1b[H\x1b[2J\x1b[3J\x1b[?7l";
 
-    int lastFG = -1, lastBG = -1;
+	int lastFG = -1, lastBG = -1;
 
-    unsigned int consoleHeight = currentConsoleResolution.y / 2u;
-    unsigned int consoleWidth = currentConsoleResolution.x;
+	unsigned int consoleHeight = currentConsoleResolution.y / 2u;
+	unsigned int consoleWidth = currentConsoleResolution.x;
 
-    for (unsigned int y=consoleHeight; y>0u; y--) {
-        unsigned int topBase = (y * 2u) * renderWidth * 3u;
-        unsigned int lowBase = topBase + renderWidth * 3u;
+	for (unsigned int y=consoleHeight; y>0u; y--) {
+		unsigned int topBase = (y * 2u) * renderWidth * 3u;
+		unsigned int lowBase = topBase + renderWidth * 3u;
 
-        for (unsigned int x=0u; x<consoleWidth; x++) {
-            unsigned int topPixel = topBase + x * 3u;
-            unsigned int lowPixel = lowBase + x * 3u;
+		for (unsigned int x=0u; x<consoleWidth; x++) {
+			unsigned int topPixel = topBase + x * 3u;
+			unsigned int lowPixel = lowBase + x * 3u;
 
-            uint8_t top = ANSI256::rgbToXterm256(
-                RGBdata[topPixel + 0u], RGBdata[topPixel + 1u], RGBdata[topPixel + 2u]
-            );
-            uint8_t low = ANSI256::rgbToXterm256(
-                RGBdata[lowPixel + 0u], RGBdata[lowPixel + 1u], RGBdata[lowPixel + 2u]
-            );
+			uint8_t top = ANSI256::rgbToXterm256(
+				RGBdata[topPixel + 0u], RGBdata[topPixel + 1u], RGBdata[topPixel + 2u]
+			);
+			uint8_t low = ANSI256::rgbToXterm256(
+				RGBdata[lowPixel + 0u], RGBdata[lowPixel + 1u], RGBdata[lowPixel + 2u]
+			);
 
-            //Only cout SGR if colour changed
-            if (top != lastBG) { //Background, upper PX.
-                term256 += "\x1b[48;5;";
-                appendNumber(term256, top);
-                term256 += "m";
-                lastBG = top;
-            }
-            if (low != lastFG) { //Foreground, lower PX.
-                term256 += "\x1b[38;5;";
-                appendNumber(term256, low);
-                term256 += "m";
-                lastFG = low;
-            }
+			//Only cout SGR if colour changed
+			if (top != lastBG) { //Background, upper PX.
+				term256 += "\x1b[48;5;";
+				appendNumber(term256, top);
+				term256 += "m";
+				lastBG = top;
+			}
+			if (low != lastFG) { //Foreground, lower PX.
+				term256 += "\x1b[38;5;";
+				appendNumber(term256, low);
+				term256 += "m";
+				lastFG = low;
+			}
 
-            term256 += "▀"; //UTF half-block char.
-        }
+			term256 += "▀"; //UTF half-block char.
+		}
 
-        term256 += '\n';
-        lastFG = lastBG = -1; //Reset after each line
-    }
+		term256 += '\n';
+		lastFG = lastBG = -1; //Reset after each line
+	}
 
-    //Reset formatting, output.
-    term256 += "\x1b[?7h\x1b[0m";
-    fwrite(term256.data(), 1, term256.size(), stdout);
-    fflush(stdout);
+	//Reset formatting, output.
+	term256 += "\x1b[?7h\x1b[0m";
+	fwrite(term256.data(), 1, term256.size(), stdout);
+	fflush(stdout);
 
-    //UI;
-    std::string hSTR = std::to_string(player.health);
-    std::string eSTR = std::to_string(player.health);
-    std::cout << "FPS: " << std::setw(4) << framerate << "Hz" << "\nHEALTH: " << std::setw(3) << hSTR << "    ENERGY: " <<std::setw(3) << eSTR;
-    if (utils::configToBool("META_SHOW_DATA")) {
-    	std::cout << "        POS: (" << std::setw(8) << player.position.x << ", " << std::setw(8) << player.position.y << ", " << std::setw(8) << player.position.z << ")";
-    	std::cout << "    ANG: ("<< std::setw(8) << player.viewAngle << ", "<< std::setw(8) << player.viewPitch << ", "<< std::setw(8) << player.viewRoll << ")";
-    	std::cout << "    VEL: (" << std::setw(8) << player.velocity.x << ", " << std::setw(8) << player.velocity.y << ", " << std::setw(8) << player.velocity.z << ")";
-    }
-    std::cout << std::endl;
+	//UI;
+	std::string hSTR = std::to_string(player.health);
+	std::string eSTR = std::to_string(player.health);
+	std::cout << "FPS: " << std::setw(4) << framerate << "Hz" << "\nHEALTH: " << std::setw(3) << hSTR << "    ENERGY: " <<std::setw(3) << eSTR;
+	if (utils::configToBool("META_SHOW_DATA")) {
+		std::cout << "        POS: (" << std::setw(8) << player.position.x << ", " << std::setw(8) << player.position.y << ", " << std::setw(8) << player.position.z << ")";
+		std::cout << "    ANG: ("<< std::setw(8) << player.viewAngle << ", "<< std::setw(8) << player.viewPitch << ", "<< std::setw(8) << player.viewRoll << ")";
+		std::cout << "    VEL: (" << std::setw(8) << player.velocity.x << ", " << std::setw(8) << player.velocity.y << ", " << std::setw(8) << player.velocity.z << ")";
+	}
+	std::cout << std::endl;
 }
 
 
