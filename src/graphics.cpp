@@ -300,10 +300,9 @@ GLFWwindow* initialiseWindow(int width, int height, const char* title) {
 
 
 
-GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="") {
-	if (vertexShaderName.empty()) {vertexShaderName = "exct/generic";}
-	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, "src/shaders/"+ vertexShaderName +".vert");
-	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, "src/shaders/"+ fragShaderName +".frag");
+GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderName="exct/screenspace.vert") {
+	GLuint vertexShader = compileShader(GL_VERTEX_SHADER, ("src/shaders/" + vertexShaderName));
+	GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, ("src/shaders/" + fragShaderName));
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
@@ -331,7 +330,7 @@ GLuint createShaderProgram(std::string fragShaderName, std::string vertexShaderN
 
 
 GLuint createComputeShader(std::string compShaderName) {
-	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName + ".comp");
+	GLuint computeShader = compileShader(GL_COMPUTE_SHADER, "src/shaders/" + compShaderName);
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, computeShader);
@@ -608,11 +607,11 @@ void findVisibleObjects(
 
 
 void saveScreenshot(GLuint frameTextureID) {
-    std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
+	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
 
-    glBindTexture(GL_TEXTURE_2D, frameTextureID);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, frameTextureID);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	stbi_flip_vertically_on_write(true);
 
@@ -1143,155 +1142,155 @@ void initialiseVAOs() {
 
 //No depth texture
 GLuint createAlbedoFBO(glm::uvec2 resolution, GLuint& colourTexture) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour
-    glGenTextures(1, &colourTexture);
-    glBindTexture(GL_TEXTURE_2D, colourTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour
+	glGenTextures(1, &colourTexture);
+	glBindTexture(GL_TEXTURE_2D, colourTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);
+	GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 //2 colour attachments
 GLuint createDualAlbedoFBO(glm::uvec2 resolution, GLuint& colourTextureA, GLuint& colourTextureB) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour 1
-    glGenTextures(1, &colourTextureA);
-    glBindTexture(GL_TEXTURE_2D, colourTextureA);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour 1
+	glGenTextures(1, &colourTextureA);
+	glBindTexture(GL_TEXTURE_2D, colourTextureA);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTextureA, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Colour 2
-    glGenTextures(1, &colourTextureB);
-    glBindTexture(GL_TEXTURE_2D, colourTextureB);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour 2
+	glGenTextures(1, &colourTextureB);
+	glBindTexture(GL_TEXTURE_2D, colourTextureB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, colourTextureB, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, drawBuffers);
+	GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	glDrawBuffers(2, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 //With depth texture
 GLuint createAlbedoDepthFBO(glm::uvec2 resolution, GLuint& colourTexture, GLuint& depthTexture) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Colour
-    glGenTextures(1, &colourTexture);
-    glBindTexture(GL_TEXTURE_2D, colourTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Colour
+	glGenTextures(1, &colourTexture);
+	glBindTexture(GL_TEXTURE_2D, colourTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTexture, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Depth
-    glGenTextures(1, &depthTexture);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+	//Depth
+	glGenTextures(1, &depthTexture);
+	glBindTexture(GL_TEXTURE_2D, depthTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
 
-    GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers);
+	GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+	glDrawBuffers(1, drawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Colour FBO [W/ depth] incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Colour FBO [W/ depth] incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 GLuint allDrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
 GLuint createEnvironmentFBO(glm::uvec2 resolution) {
-    GLuint FBO;
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    //Albedo
-    glGenTextures(1, &GLIndex::frameAlbedoComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Albedo
+	glGenTextures(1, &GLIndex::frameAlbedoComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameAlbedoComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GLIndex::frameAlbedoComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Position component
-    glGenTextures(1, &GLIndex::framePositionComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Position component
+	glGenTextures(1, &GLIndex::framePositionComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::framePositionComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, GLIndex::framePositionComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Normal component
-    glGenTextures(1, &GLIndex::frameNormalComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Normal component
+	glGenTextures(1, &GLIndex::frameNormalComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameNormalComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, GLIndex::frameNormalComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    //Depth
-    glGenTextures(1, &GLIndex::frameDepthComponent);
-    glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//Depth
+	glGenTextures(1, &GLIndex::frameDepthComponent);
+	glBindTexture(GL_TEXTURE_2D, GLIndex::frameDepthComponent);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, resolution.x, resolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLIndex::frameDepthComponent, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glDrawBuffers(3, allDrawBuffers);
+	glDrawBuffers(3, allDrawBuffers);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        raise("Environment FBO incomplete!");
-    }
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		raise("Environment FBO incomplete!");
+	}
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    return FBO;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return FBO;
 }
 
 
@@ -1390,8 +1389,8 @@ void prepareOpenGL() {
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
-	GLIndex::screenshotImage2D = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	glObjectLabel(GL_TEXTURE, GLIndex::screenshotImage2D, -1, "screenshotImage2D");
+	GLIndex::finishedFrame = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	glObjectLabel(GL_TEXTURE, GLIndex::finishedFrame, -1, "finishedFrame");
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
@@ -1467,17 +1466,17 @@ void prepareOpenGL() {
 
 
 	//Raycast compute shader
-	GLIndex::raycastShader = createComputeShader("stage/raycast");
+	GLIndex::raycastShader = createComputeShader("stage/raycast.comp");
 
 	//Environment shader
-	GLIndex::envShader = createShaderProgram("stage/environment");
+	GLIndex::envShader = createShaderProgram("stage/environment.frag");
 
 	//Displacement shaders
-	GLIndex::displacementShader3D = createShaderProgram("displacements/3D", "displacements/projection");
-	GLIndex::displacementShader2D = createShaderProgram("displacements/2D");
+	GLIndex::displacementShader3D = createShaderProgram("displacements/3D.frag", "displacements/projection.vert");
+	GLIndex::displacementShader2D = createShaderProgram("displacements/2D.frag");
 
 	//Sprite Shader
-	GLIndex::spriteShader = createShaderProgram("stage/sprites");
+	GLIndex::spriteShader = createShaderProgram("stage/sprites.frag");
 
 	//Lighting compute Shader
 	switch(lightingType) {
@@ -1512,10 +1511,12 @@ void prepareOpenGL() {
 	}
 
 	//uiShader
-	GLIndex::uiShader = createShaderProgram("exct/interface", "exct/interface");
-	
+	GLIndex::uiShader = createShaderProgram("exct/interface.frag", "exct/interface.vert");
+	//Post-Processing Shader
+	GLIndex::postProcessingShader = createComputeShader("exct/postProcessing.comp");
 	//Display Shader
-	GLIndex::displayShader = createShaderProgram("exct/display", "exct/display");
+	GLIndex::displayShader = createShaderProgram("exct/display.frag");
+
 
 
 	initialiseVAOs();
@@ -1949,6 +1950,7 @@ void drawHUD(float blendingAlpha, float currentTime) {
 	glBindTextureUnit(1, GLIndex::textureArrayNumeric);
 	glBindTextureUnit(2, GLIndex::frameDepthComponent);
 
+
 	uniforms::bindCommonUniforms(GLIndex::uiShader, blendingAlpha, currentTime);
 	GLint pvmMatrixLocation = glGetUniformLocation(GLIndex::uiShader, "pvmMatrix");
 	glUniformMatrix4fv(pvmMatrixLocation, 1, GL_FALSE, glm::value_ptr(graphics::uiMatrix));
@@ -1961,6 +1963,42 @@ void drawHUD(float blendingAlpha, float currentTime) {
 	utils::GLErrorcheck("Interface 3D", true);
 
 }
+
+}
+
+
+
+namespace ANSI256 { //256 colour mode - Used for META_CONSOLE_RENDER.
+
+//Colour cubes.
+const std::array<unsigned int, 6> cubeLevels = {
+	0u, 95u, 135u, 175u, 215u, 255u
+};
+
+
+uint8_t quantizeChannel(uint8_t channelV) {
+    if (channelV < 48u) {return 0u;}
+    if (channelV < 114u) {return 1u;}
+    return (channelV - 35u) / 40u;
+}
+
+
+uint8_t rgbToXterm256(uint8_t R, uint8_t G, uint8_t B) {
+    if ((R == G) && (G == B)) { //Greyscale
+    	uint8_t greyIndex = (R - 8 + 5) / 10;
+		greyIndex = glm::clamp(greyIndex, uint8_t(0), uint8_t(23));
+		return 232u + greyIndex;
+    }
+
+    uint8_t Rquant = quantizeChannel(R);
+    uint8_t Gquant = quantizeChannel(G);
+    uint8_t Bquant = quantizeChannel(B);
+
+    return 16u + 36u * Rquant + 6u * Gquant + Bquant;
+}
+
+
+
 
 }
 
@@ -2099,6 +2137,89 @@ inline void renderingGeneric(const std::string& shaderName="") {
 
 
 
+inline void appendNumber(std::string &s, uint8_t n) {
+    // fast 0-255 to string
+    if (n >= 100) { s += '0' + n / 100; n %= 100; s += '0' + n / 10; n %= 10; s += '0' + n; }
+    else if (n >= 10) { s += '0' + n / 10; n %= 10; s += '0' + n; }
+    else { s += '0' + n; }
+}
+
+void drawFrameToConsole() {
+    unsigned int renderWidth  = currentRenderResolution.x;
+    unsigned int renderHeight = currentRenderResolution.y;
+
+    //Read framedata
+    std::vector<uint8_t> RGBdata(renderWidth * renderHeight * 3u);
+    glBindTexture(GL_TEXTURE_2D, GLIndex::finishedFrame);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, RGBdata.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    //Move cursor to top-left and disable wraparound.
+    std::string term256;
+    term256.reserve((currentConsoleResolution.x * currentConsoleResolution.y * 12u)); //Estimate.
+    term256 += "\x1b[H\x1b[2J\x1b[3J\x1b[?7l";
+
+    int lastFG = -1, lastBG = -1;
+
+    unsigned int consoleHeight = currentConsoleResolution.y / 2u;
+    unsigned int consoleWidth = currentConsoleResolution.x;
+
+    for (unsigned int y=consoleHeight; y>0u; y--) {
+        unsigned int topBase = (y * 2u) * renderWidth * 3u;
+        unsigned int lowBase = topBase + renderWidth * 3u;
+
+        for (unsigned int x=0u; x<consoleWidth; x++) {
+            unsigned int topPixel = topBase + x * 3u;
+            unsigned int lowPixel = lowBase + x * 3u;
+
+            uint8_t top = ANSI256::rgbToXterm256(
+                RGBdata[topPixel + 0u], RGBdata[topPixel + 1u], RGBdata[topPixel + 2u]
+            );
+            uint8_t low = ANSI256::rgbToXterm256(
+                RGBdata[lowPixel + 0u], RGBdata[lowPixel + 1u], RGBdata[lowPixel + 2u]
+            );
+
+            //Only cout SGR if colour changed
+            if (top != lastBG) { //Background, upper PX.
+                term256 += "\x1b[48;5;";
+                appendNumber(term256, top);
+                term256 += "m";
+                lastBG = top;
+            }
+            if (low != lastFG) { //Foreground, lower PX.
+                term256 += "\x1b[38;5;";
+                appendNumber(term256, low);
+                term256 += "m";
+                lastFG = low;
+            }
+
+            term256 += "▀"; //UTF half-block char.
+        }
+
+        term256 += '\n';
+        lastFG = lastBG = -1; //Reset after each line
+    }
+
+    //Reset formatting, output.
+    term256 += "\x1b[?7h\x1b[0m";
+    fwrite(term256.data(), 1, term256.size(), stdout);
+    fflush(stdout);
+
+    //UI;
+    std::string hSTR = std::to_string(player.health);
+    std::string eSTR = std::to_string(player.health);
+    std::cout << "FPS: " << std::setw(4) << framerate << "Hz" << "\nHEALTH: " << std::setw(3) << hSTR << "    ENERGY: " <<std::setw(3) << eSTR;
+    if (utils::configToBool("META_SHOW_DATA")) {
+    	std::cout << "        POS: (" << std::setw(8) << player.position.x << ", " << std::setw(8) << player.position.y << ", " << std::setw(8) << player.position.z << ")";
+    	std::cout << "    ANG: ("<< std::setw(8) << player.viewAngle << ", "<< std::setw(8) << player.viewPitch << ", "<< std::setw(8) << player.viewRoll << ")";
+    	std::cout << "    VEL: (" << std::setw(8) << player.velocity.x << ", " << std::setw(8) << player.velocity.y << ", " << std::setw(8) << player.velocity.z << ")";
+    }
+    std::cout << std::endl;
+}
+
+
+
 void draw(double blendingAlpha, double currentTime) {
 	//Update resolution
 	glViewport(0, 0, currentRenderResolution.x, currentRenderResolution.y);
@@ -2189,7 +2310,7 @@ void draw(double blendingAlpha, double currentTime) {
 		const glm::uvec3 LIGHTING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 		glUseProgram(GLIndex::frameLightingShader);
 
-		unsigned int dispatchZ = (validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z; //Dispatches an extra 2 pseudo-lights which are handled in the shader;
+		unsigned int dispatchZ = 2;
 		//maxIndex + 1 : All sunlight calculations. [SUNL]
 		//maxIndex + 2 : All headlamp calculations. [HLMP]
 		if (lightingType == LIGHT_DYNAMIC) {
@@ -2197,14 +2318,14 @@ void draw(double blendingAlpha, double currentTime) {
 			glBindTextureUnit(0, GLIndex::framePositionComponent);
 			glBindTextureUnit(1, GLIndex::frameNormalComponent);
 			glBindTextureUnit(2, GLIndex::textureArrayEnvironment);
-			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			dispatchZ = (validLights + LIGHTING_LOCAL_SIZE.z + 1) / LIGHTING_LOCAL_SIZE.z; //Dispatches an extra 2 pseudo-lights which are handled in the shader
 
 		} else {
 			glBindTextureUnit(0, GLIndex::framePositionComponent);
 			glBindTextureUnit(1, GLIndex::frameNormalComponent);
 			glBindTextureUnit(2, GLIndex::surfaceLightMapsArrayID);
-			glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 		}
+		glBindImageTexture(0, GLIndex::lightingMapsArrayID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 		//Uniforms;
 		uniforms::bindCommonUniforms(GLIndex::frameLightingShader, blendingAlpha, currentTime);
@@ -2233,40 +2354,59 @@ void draw(double blendingAlpha, double currentTime) {
 		avgtickrate = utils::getAverage(rollingTPS);
 
 		ui::drawHUD(blendingAlpha, currentTime);
-	}		
+	}	
 
 
 
-	//Display Shader (Post-processing included).
-	glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
-	glUseProgram(GLIndex::displayShader);
+	//Post-Processing Shader.
+	glUseProgram(GLIndex::postProcessingShader);
+	const glm::uvec3 POST_PROCESSING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
 
 	//Return to default FBO
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDrawBuffer(DEFAULT_FRAMEBUFFER);
 
 	glBindTextureUnit(0, GLIndex::frameAlbedoComponent);
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
-	glBindTextureUnit(2, GLIndex::interfaceAlbedoComponent);
-	glBindTextureUnit(3, GLIndex::lightingMapsArrayID);
-	glBindTextureUnit(4, GLIndex::framePositionComponent);
-	glBindImageTexture(0, GLIndex::screenshotImage2D, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindTextureUnit(2, GLIndex::lightingMapsArrayID);
+	glBindTextureUnit(3, GLIndex::framePositionComponent);
+	glBindImageTexture(0, GLIndex::finishedFrame, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
-	uniforms::bindCommonUniforms(GLIndex::displayShader, blendingAlpha, currentTime);
-	//Display-Specific
-	uniforms::bindUniformValue(GLIndex::displayShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "screenshotHasHUD", utils::configToBool("VIEW_INTERFACE_IN_SCREENSHOT"));
-	uniforms::bindUniformValue(GLIndex::displayShader, "shouldTakeScreenshot", shouldTakeScreenshot);
-	uniforms::bindUniformValue(GLIndex::displayShader, "screenTint", screenTint);
-	uniforms::bindUniformValue(GLIndex::displayShader, "isInvertEffect", isInvertEffect);
+	uniforms::bindCommonUniforms(GLIndex::postProcessingShader, blendingAlpha, currentTime);
+	//Post-Processing-Specific
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "antiAliasing", utils::configToBool("VIEW_ANTIALIAS"));
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "quantisingLevel", utils::configToInt("VIEW_LUMINANCE_QUANTISATION"));
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "screenTint", screenTint);
+	uniforms::bindUniformValue(GLIndex::postProcessingShader, "isInvertEffect", isInvertEffect);
 
-	renderingGeneric("Display Shader");
+
+	glDispatchCompute(
+		(currentRenderResolution.x + POST_PROCESSING_LOCAL_SIZE.x - 1) / POST_PROCESSING_LOCAL_SIZE.x,
+		(currentRenderResolution.y + POST_PROCESSING_LOCAL_SIZE.y - 1) / POST_PROCESSING_LOCAL_SIZE.y,
+		1
+	);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	GLErrorcheck("Post-Processing Shader", true);
+
+
+
+	if (utils::configToBool("META_CONSOLE_RENDER")) {
+		//Draw to console using 256-colour mode;
+		drawFrameToConsole();
+	}  {
+		//Display Shader
+		glViewport(0, 0, currentWindowResolution.x, currentWindowResolution.y);
+		glUseProgram(GLIndex::displayShader);
+		glDrawBuffer(DEFAULT_FRAMEBUFFER);
+		glBindTextureUnit(0, GLIndex::finishedFrame);
+		glBindTextureUnit(1, GLIndex::interfaceAlbedoComponent);
+		renderingGeneric("Display Shader");
+	}
+
 
 
 	if (shouldTakeScreenshot) {
-		graphics::saveScreenshot(GLIndex::screenshotImage2D);
+		graphics::saveScreenshot(GLIndex::finishedFrame);
 	}
 }
 

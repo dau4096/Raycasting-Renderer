@@ -146,7 +146,7 @@
 <!-- Debug -->
 <option function="META_SHOW_CONSOLE" 					value="TRUE"			note="Show/Hide console window. [TRUE/FALSE]" />
 <option function="META_DEBUG_MODE" 						value="NONE" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
-<option function="META_SHOW_DATA" 						value="FALSE" 			note="Shows player information in the console. [TRUE/FALSE]" />
+<option function="META_SHOW_DATA" 						value="TRUE" 			note="Shows player information in the console. [TRUE/FALSE]" />
 
 
 <!-- Stage-specific -->
@@ -158,5 +158,6 @@
 <!-- Misc -->
 <option function="PHYS_NO_COLLIDE" 						value="FALSE" 			note="Player does not respect environmental collisions. [TRUE/FALSE]" />
 <option function="PHYS_FLY" 							value="FALSE"			note="Removes gravity, assigns MOVE_JUMP + MOVE_CROUCH to Up/Down movement. [TRUE/FALSE]" />
+<option function="META_CONSOLE_RENDER"					value="TRUE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
 
 </config>

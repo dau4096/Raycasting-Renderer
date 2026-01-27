@@ -1288,7 +1288,6 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
 
 
-
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();
 	} else {

@@ -15,7 +15,32 @@ using namespace utils;
 using namespace glm;
 
 
+//framebufferSizeCallback but for the terminal render mode instead.
+void handleWinChange(int sig) {
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleResolution();
+	if (utils::configToBool("META_CONSOLE_RENDER")) {
+		currentRenderResolution = currentConsoleResolution;
+		currentWindowResolution = currentConsoleResolution;
+		desiredRenderResolution = currentConsoleResolution;
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 
+		//SSBOs
+		GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
+			7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
+		);
+
+		//Image2Ds
+		GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+		GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+
+		//Framebuffers
+		GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
+		GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+
+		verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	}
+}
 
 GLFWwindow* Window;
 
@@ -38,13 +63,17 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
-	GLIndex::screenshotImage2D = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
 	//Framebuffers
 	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
 	GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
 
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+
+
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleResolution();
 }
 
 
@@ -247,6 +276,8 @@ int main() {
 
 #ifdef __WIN32
 	SetConsoleOutputCP(65001); //CP_UTF8
+#else
+	setlocale(LC_ALL, "C.UTF-8");
 #endif
 
 	loader::loadBindings();
@@ -256,16 +287,28 @@ int main() {
 	);
 	player.state = E_RESPAWN; //Player initial state, uses the screenspace effect associated with E_RESPAWN.
 
-	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
-	currentRenderResolution = glm::ivec2(
-		glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
-		glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
-	);
-	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+
+	if (utils::configToBool("META_CONSOLE_RENDER")) {
+		currentConsoleResolution = utils::getConsoleResolution();
+
+		currentRenderResolution = currentConsoleResolution;
+		currentWindowResolution = currentConsoleResolution;
+		desiredRenderResolution = currentConsoleResolution;
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));		
+	} else {
+		currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
+		currentConsoleResolution = utils::getConsoleSizeChars();
+		currentRenderResolution = glm::ivec2(
+			glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
+			glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
+		);
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	}
 
 
 	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
+	signal(SIGWINCH, handleWinChange);
 	glfwSetJoystickCallback(nullptr); //Stop it from trying to callback for joystick.
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
