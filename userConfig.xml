@@ -96,14 +96,13 @@
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
 <option function="VIEW_MAX_RAY_DIST" 					value="127.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
 <option function="VIEW_CORRECTION" 						value="TRUE" 			note="Enables view correction. When disabled, natural fish-eye effect. [TRUE/FALSE]" />
-<option function="VIEW_MAX_FREQ" 						value="75.0" 			note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Hertz]" />
 
 
 <!-- Lighting -->
 <option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
-<option function="VIEW_LIGHTING_TYPE"					value="DYNAMIC"			note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
+<option function="VIEW_LIGHTING_TYPE"					value="ARB"			note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
 
 
 
@@ -128,8 +127,13 @@
 <option function="META_SHOW_FRAMERATE_CONSOLE" 			value="FALSE" 			note="Show graphics framerate in the console. [TRUE/FALSE]" />
 <option function="META_SHOW_FRAMERATE_UI" 				value="TRUE" 			note="Show graphics framerate in the HUD. [TRUE/FALSE]" />
 <option function="META_SHOW_TICKRATE_UI" 				value="FALSE" 			note="Show physics tickrate in the HUD. [TRUE/FALSE]" />
-<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
-<option function="VIEW_VSYNC" 							value="FALSE" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
+<option function="META_SHOW_DT_CONSOLE" 				value="TRUE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
+
+
+<!-- Misc -->
+<option function="SCREEN_MAX_FREQ" 						value="75" 				note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Integer Hertz]" />
+<option function="SCREEN_VSYNC"							value="True" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
+<option function="SCREEN_FULLSCREEN"					value="FALSE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
 
 
 

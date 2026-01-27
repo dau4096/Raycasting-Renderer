@@ -267,8 +267,21 @@ GLFWwindow* initialiseWindow(int width, int height, const char* title) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);  // Set OpenGL minor version
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // Use Core profile
 
+	GLFWmonitor* monitor = nullptr;
+	glm::ivec2 res = glm::ivec2(width, height);
+	if (utils::configToBool("SCREEN_FULLSCREEN")) {
+		monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 
-	GLFWwindow* Window = glfwCreateWindow(width, height, title, NULL, NULL);
+		currentWindowResolution = glm::ivec2(mode->width, mode->height);
+		res = currentWindowResolution;
+		currentRenderResolution = glm::ivec2(
+			glm::min(currentWindowResolution.x, desiredRenderResolution.x),
+			glm::min(currentWindowResolution.y, desiredRenderResolution.y)
+		);
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	}
+	GLFWwindow* Window = glfwCreateWindow(res.x, res.y, title, monitor, nullptr);
 	if (!Window) {
 		glfwTerminate();
 		raise("Failed to create GLFW window");
@@ -980,7 +993,7 @@ GLuint getVAO() {
 
 float viewBob(float tick) {
 	if (player.touchingFloor) {
-		float seconds = tick / utils::configToFloat("VIEW_MAX_FREQ");
+		float seconds = tick / utils::configToFloat("SCREEN_MAX_FREQ");
 		float playerSpeed = length(glm::vec2(player.velocity.x, player.velocity.y));
 		float speedMultiplier = glm::clamp(playerSpeed / playerConfig::MAX_AIR_SPEED_XY, 0.0f, 1.0f);
 		float offset = sin(seconds * 6.0f) * 0.25f * speedMultiplier;
@@ -1446,7 +1459,7 @@ void prepareOpenGL() {
 	glObjectLabel(GL_BUFFER, GLIndex::wallIntersectSSBO, -1, "wallIntersectSSBO");
 
 	GLIndex::visplaneCheckSSBO = createShaderStorageBufferObject(
-		8, sizeof(glm::uvec2) * currentRenderResolution.x * validVisplanes
+		8, sizeof(uint) * currentRenderResolution.x * validVisplanes
 	);
 	glObjectLabel(GL_BUFFER, GLIndex::visplaneCheckSSBO, -1, "visplaneCheckSSBO");
 
