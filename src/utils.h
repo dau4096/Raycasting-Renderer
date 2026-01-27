@@ -242,7 +242,7 @@ namespace utils {
 		if (keyMap.find(keyFunction) != keyMap.end()) {
 			return keyMap.at(keyFunction);
 		} else {
-			std::cout << "[" << keyFunction << "] was not bound to a key." << std::endl;
+			//std::cout << "[" << keyFunction << "] was not bound to a key." << std::endl;
 			return false;
 		}
 	}

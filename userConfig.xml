@@ -37,6 +37,7 @@
 <bind function="META_RELOAD_ENV" 		key="KEY_F4" 				note="Reloads environmental objects in stage." />
 <bind function="META_EXIT" 				key="KEY_ESCAPE" 			note="Close the program." />
 <bind function="META_FREECURSOR" 		key="KEY_1" 				note="Stop controlling camera with mouse and use cursor while held." />
+<bind function="META_RELOAD_LIGHTMAPS"  key="KEY_2"					note="Reloads all lightmaps in the stage. May cause large stutter." />
 
 </keybinds>
 
@@ -94,7 +95,7 @@
 <option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="MEDIUM"			note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/DS/LOW/MEDIUM/HIGH/AMAZING]" />
 <option function="VIEW_TEXTURE_QUALITY" 				value="FULL"			note="Changes default texture Mip Level [TERRIBLE/AWFUL/LOW/MEDIUM/FULL]" />
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
-<option function="VIEW_MAX_RAY_DIST" 					value="127.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
+<option function="VIEW_MAX_RAY_DIST" 					value="255.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
 <option function="VIEW_CORRECTION" 						value="TRUE" 			note="Enables view correction. When disabled, natural fish-eye effect. [TRUE/FALSE]" />
 
 
@@ -115,7 +116,7 @@
 <!-- HUD/UI -->
 <option function="VIEW_INTERFACE_IN_SCREENSHOT" 		value="FALSE" 			note="Screenshots contain the HUD. [TRUE/FALSE]" />
 <option function="VIEW_WIGGLY_TEXTOBJECTS" 				value="FALSE" 			note="Uses odd textObject projection, from a bug during implementation. [TRUE/FALSE]" />
-<option function="VIEW_SHOW_HUD" 						value="TRUE" 			note="Show/Hide the HUD. [TRUE/FALSE]" />
+<option function="VIEW_SHOW_HUD" 						value="FALSE" 			note="Show/Hide the HUD. [TRUE/FALSE]" />
 
 
 <!-- Post-processing -->
@@ -127,13 +128,14 @@
 <option function="META_SHOW_FRAMERATE_CONSOLE" 			value="FALSE" 			note="Show graphics framerate in the console. [TRUE/FALSE]" />
 <option function="META_SHOW_FRAMERATE_UI" 				value="TRUE" 			note="Show graphics framerate in the HUD. [TRUE/FALSE]" />
 <option function="META_SHOW_TICKRATE_UI" 				value="FALSE" 			note="Show physics tickrate in the HUD. [TRUE/FALSE]" />
-<option function="META_SHOW_DT_CONSOLE" 				value="TRUE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
+<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
 
 
 <!-- Misc -->
 <option function="SCREEN_MAX_FREQ" 						value="75" 				note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Integer Hertz]" />
 <option function="SCREEN_VSYNC"							value="True" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
 <option function="SCREEN_FULLSCREEN"					value="FALSE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
+<option function="SCREEN_CONSOLE_RENDER"				value="FALSE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
 
 
 
@@ -158,6 +160,5 @@
 <!-- Misc -->
 <option function="PHYS_NO_COLLIDE" 						value="FALSE" 			note="Player does not respect environmental collisions. [TRUE/FALSE]" />
 <option function="PHYS_FLY" 							value="FALSE"			note="Removes gravity, assigns MOVE_JUMP + MOVE_CROUCH to Up/Down movement. [TRUE/FALSE]" />
-<option function="META_CONSOLE_RENDER"					value="TRUE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
 
 </config>

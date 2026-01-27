@@ -19,7 +19,7 @@ using namespace glm;
 void handleWinChange(int sig) {
 	//The console may have changed size.
 	currentConsoleResolution = utils::getConsoleResolution();
-	if (utils::configToBool("META_CONSOLE_RENDER")) {
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
 		currentRenderResolution = currentConsoleResolution;
 		currentWindowResolution = currentConsoleResolution;
 		desiredRenderResolution = currentConsoleResolution;
@@ -288,7 +288,7 @@ int main() {
 	player.state = E_RESPAWN; //Player initial state, uses the screenspace effect associated with E_RESPAWN.
 
 
-	if (utils::configToBool("META_CONSOLE_RENDER")) {
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
 		currentConsoleResolution = utils::getConsoleResolution();
 
 		currentRenderResolution = currentConsoleResolution;

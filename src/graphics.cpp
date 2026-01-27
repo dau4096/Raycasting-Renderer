@@ -1482,8 +1482,8 @@ void prepareOpenGL() {
 	switch(lightingType) {
 		case LIGHT_STATIC_FIXED: {
 			//Uses fixed-size shadow maps in an array.
-			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.fixed");
-			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.fixed");
+			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.fixed.comp");
+			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.fixed.comp");
 			unsigned int numMaps = (validVisplanes + validWalls) * 2u;
 			GLIndex::surfaceLightMapsArrayID = createGLImage2DArray(
 				display::FIXED_SHADOW_RESOLUTION.x, display::FIXED_SHADOW_RESOLUTION.y,
@@ -1494,13 +1494,13 @@ void prepareOpenGL() {
 		}
 		case LIGHT_STATIC_ARB: {
 			//Only works if ARB textures are allowed. Otherwise falls back to LIGHT_STATIC_FIXED.
-			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.arb");
-			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.arb");
+			GLIndex::preLightingShader = createComputeShader("lighting/static.pre.arb.comp");
+			GLIndex::frameLightingShader = createComputeShader("lighting/static.frame.arb.comp");
 			break;
 		}
 		case LIGHT_DYNAMIC: {
 			GLIndex::preLightingShader = -1;
-			GLIndex::frameLightingShader = createComputeShader("lighting/dynamic.frame");
+			GLIndex::frameLightingShader = createComputeShader("lighting/dynamic.frame.comp");
 			break;
 		}
 		default: {
@@ -1968,7 +1968,7 @@ void drawHUD(float blendingAlpha, float currentTime) {
 
 
 
-namespace ANSI256 { //256 colour mode - Used for META_CONSOLE_RENDER.
+namespace ANSI256 { //256 colour mode - Used for SCREEN_CONSOLE_RENDER.
 
 //Colour cubes.
 const std::array<unsigned int, 6> cubeLevels = {
@@ -2390,7 +2390,7 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 
-	if (utils::configToBool("META_CONSOLE_RENDER")) {
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
 		//Draw to console using 256-colour mode;
 		drawFrameToConsole();
 	}  {
@@ -2408,6 +2408,10 @@ void draw(double blendingAlpha, double currentTime) {
 	if (shouldTakeScreenshot) {
 		graphics::saveScreenshot(GLIndex::finishedFrame);
 	}
+
+
+	//Handle meta-lighting reload key.
+	if (utils::isPressed("META_RELOAD_LIGHTMAPS")) {lighting::createLightMaps();}
 }
 
 
