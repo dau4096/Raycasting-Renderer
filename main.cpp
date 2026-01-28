@@ -1,425 +1,404 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#pragma execution_character_set("utf-8")
+
+#include <stb_image.h>
+#include <stb_image_write.h>
 #include "src/includes.h"
+#include "src/global.h"
+#include "src/loader.h"
 #include "src/physics.h"
-#include "src/render.h"
+#include "src/graphics.h"
 #include "src/utils.h"
 using namespace std;
 using namespace utils;
 using namespace glm;
 
 
+//framebufferSizeCallback but for the terminal render mode instead.
+void handleWinChange(int sig) {
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleResolution();
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
+		currentRenderResolution = currentConsoleResolution;
+		currentWindowResolution = currentConsoleResolution;
+		desiredRenderResolution = currentConsoleResolution;
+		if (lightingType == LIGHT_DYNAMIC) {currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));}
 
-const std::array<std::string, 32> textureNames = {
-	"a", "b", "c",
-	"s_t_a_r_e",
-	"tabs=fish",
-	"piloten",
-	"mus2", "osa",
-	"lamp"
-};
+		//SSBOs
+		GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
+			7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
+		);
 
-// Keyboard presses to monitor.
-const std::array<int, 16> monitoredKeys = { //16 should cover necessary keys.
-	GLFW_KEY_W, GLFW_KEY_S,
-	GLFW_KEY_A, GLFW_KEY_D,
-	GLFW_KEY_E, GLFW_KEY_F,
-	GLFW_KEY_SPACE,
-	GLFW_KEY_LEFT_SHIFT, GLFW_KEY_LEFT_CONTROL,
-	GLFW_KEY_1, GLFW_KEY_C,
-	GLFW_KEY_ESCAPE,
-	GLFW_KEY_LEFT, GLFW_KEY_RIGHT
-};
+		//Image2Ds
+		GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+		GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 
+		//Framebuffers
+		GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
+		GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
 
-
-
-GLuint frameTextureID, depthSSBO;
-glm::ivec2 currentScreenRes;
-unordered_map<int, bool> keyMap;
-GLFWgamepadstate joystickInput;
-bool headLampEnabled = false;
-bool hasJoystickActive = false;
-int tick = 0;
-
-
-void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-
-	currentScreenRes = glm::ivec2(width, height);
-
-	depthSSBO = render::createDepthSSBO(display::RENDER_RESOLUTION.x);
-}
-
-void joystickCallback(int joystickID, int event) {
-	if ((event == GLFW_CONNECTED) && glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) {
-		hasJoystickActive = true;
-	} else if (event == GLFW_RELEASE) {
-		hasJoystickActive = false;
+		verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 	}
 }
 
+GLFWwindow* Window;
 
-
-//TEMPORARY DATA SETUP. REPLACE WITH FILE LOADING.
-std::array<int, constants::MAX_FLAGS> flags;
-std::array<utils::Visplane, constants::MAX_VISPLANES> prepVisplanes() {
-	std::array<utils::Visplane, constants::MAX_VISPLANES> visplaneData;
-
-	visplaneData[0] = Visplane(vec2(-10.0f, -14.0f), vec2(10.0f, 10.0f), 0.0f, 2);
-	visplaneData[1] = Visplane(vec2(-8.0f, -8.0f), vec2( 8.0f, -12.0f), 3.0f, 3);
-
-	//Stairs (0.42857u each);
-	visplaneData[2] = Visplane(vec2(6.0f, -7.0f), vec2(8.0f, -8.0f), 3.00000f, 7);
-	visplaneData[3] = Visplane(vec2(6.0f, -6.0f), vec2(8.0f, -7.0f), 2.57143f, 7);
-	visplaneData[4] = Visplane(vec2(6.0f, -5.0f), vec2(8.0f, -6.0f), 2.14286f, 7);
-	visplaneData[5] = Visplane(vec2(6.0f, -4.0f), vec2(8.0f, -5.0f), 1.71429f, 7);
-	visplaneData[6] = Visplane(vec2(6.0f, -3.0f), vec2(8.0f, -4.0f), 1.28572f, 7);
-	visplaneData[7] = Visplane(vec2(6.0f, -2.0f), vec2(8.0f, -3.0f), 0.85715f, 7);
-	visplaneData[8] = Visplane(vec2(6.0f, -1.0f), vec2(8.0f, -2.0f), 0.42858f, 7);
-
-
-	//Trigger;
-	visplaneData[9] = Visplane(vec2(-0.5f, -10.0f), vec2(0.5f, -11.0f), 0.25f, 4, V_TRIGGER, &(flags[3]));
-
-	//Moving surface;
-	visplaneData[10] = Visplane(vec2(-2.0f, -7.0f), vec2(-4.0f, -5.0f), 0.1f, 5, V_MOVEV_SLOW, &(flags[0]), 1.0f);
-	visplaneData[11] = Visplane(vec2(-5.0f, -5.0f), vec2(-3.0f, -3.0f), 0.25f, 4, V_TRIGGER, &(flags[3]));
-
-	return visplaneData;
-}
-
-std::array<utils::Wall, constants::MAX_WALLS> prepWalls() {
-	std::array<utils::Wall, constants::MAX_WALLS> wallData;
-
-	wallData[0] = Wall(glm::vec2(-1.0f, -1.0f), glm::vec2( 1.0f, -1.0f), 0.0f, 3.0f, 4);
-	wallData[1] = Wall(glm::vec2( 1.0f,  1.0f), glm::vec2(-1.0f, -1.0f), 0.0f, 1.0f, 4);
-
-	wallData[2] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2(-8.0f, -8.0f), 0.0f, 3.0f, 2);
-	wallData[3] = Wall(glm::vec2( 8.0f, -8.0f), glm::vec2( 0.5f, -8.0f), 0.0f, 3.0f, 2);
-
-	wallData[4] = Wall(glm::vec2(-8.0f, -8.0f), glm::vec2(-8.0f,  0.0f), 0.0f, 2.0f, 0);
-	wallData[5] = Wall(glm::vec2(-8.0f,  0.0f), glm::vec2(-8.0f,  8.0f), 0.0f, 2.0f, 0);
-
-	wallData[6] = Wall(glm::vec2(-8.0f,  8.0f), glm::vec2( 0.0f,  8.0f), 0.0f, 2.0f, 0);
-	wallData[7] = Wall(glm::vec2( 0.0f,  8.0f), glm::vec2( 8.0f,  8.0f), 0.0f, 2.0f, 0);
-
-	wallData[8] = Wall(glm::vec2( 8.0f, -0.5f), glm::vec2( 8.0f, -8.0f), 0.0f, 2.0f, 0);
-	wallData[9] = Wall(glm::vec2( 8.0f,  8.0f), glm::vec2( 8.0f,  0.5f), 0.0f, 2.0f, 0);
-
-	wallData[10] = Wall(glm::vec2(-8.0f, -8.0f), glm::vec2(-8.0f, -12.0f), 0.0f, 3.0f, 2);
-	wallData[11] = Wall(glm::vec2( 8.0f, -8.0f), glm::vec2( 8.0f, -12.0f), 0.0f, 3.0f, 2);
-
-	wallData[12] = Wall(glm::vec2(-0.5f, -8.0f), glm::vec2( 0.5f, -8.0f),  1.8f, 3.0f, 2);
-
-
-	//Switch;
-	wallData[13] = Wall(glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, -1.0f), 0.0f, 1.0f, 0, W_SWITCH, &(flags[0]));
-
-	//"Door";
-	wallData[14] = Wall(glm::vec2(0.5f, -8.0f), glm::vec2(-0.5f, -8.0f), 0.0f, 1.8f, 1, W_MOVEH_SLOW, &(flags[0]), -1.8f);
-
-	return wallData;
-}
-
-std::array<utils::Sprite, constants::MAX_SPRITES> prepSprites() {
-	std::array<utils::Sprite, constants::MAX_SPRITES> spriteData;
-
-	spriteData[0] = Sprite(glm::vec3( 5.0f,  5.0f, 1.0f), 1.0f, 5);
-	spriteData[1] = Sprite(glm::vec3(-5.0f,  2.5f, 1.0f), 1.0f, 8); //Light Marker
-	spriteData[2] = Sprite(glm::vec3(-5.0f, -10.0f, 1.0f), 1.0f, 8); //Light Marker
-
-	return spriteData;
-}
-
-std::array<utils::Light, constants::MAX_LIGHTS> prepLights() {
-	std::array<utils::Light, constants::MAX_LIGHTS> lightData;
-
-	lightData[0] = Light(glm::vec3(-5.0f,  2.5f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
-	lightData[1] = Light(glm::vec3(-5.0f, -10.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), 15.0f);
-
-	return lightData;
-}
-
-std::array<utils::LogicGate, constants::MAX_GATES> prepLogic() {
-	std::array<utils::LogicGate, constants::MAX_GATES> logicGates;
-
-
-	return logicGates;
-}
-
-
-
-int main() {
-	try { //Catch exceptions
-	Player player = Player(playerConfig::PLAYER_START_POSITION, playerConfig::PLAYER_START_ANGLE);
-	auto visplaneData = prepVisplanes();
-	auto wallData = prepWalls();
-	auto spriteData = prepSprites();
-	auto lightData = prepLights();
-	auto logicGates = prepLogic();
-	
-	logicGates[0] = LogicGate(GateType::G_PASSTHROUGH, &(flags[2]), &(flags[0]), &(flags[1])); //Changes whether light is enabled or not.
-	logicGates[1] = LogicGate(GateType::G_PASSTHROUGH, &(lightData[0].enabled), &(flags[0]));
-	logicGates[2] = LogicGate(GateType::G_PASSTHROUGH, &(spriteData[1].valid), &(flags[0]));
-
-
-	double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
-	currentScreenRes = display::SCREEN_RESOLUTION;
-
-
-	GLFWwindow* Window = render::initializeWindow(currentScreenRes.x, currentScreenRes.y, "Raycasting-Renderer/GPU");
-	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
-	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
+void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
+	glViewport(0, 0, width, height);
+	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 
-	const char* mappings = render::readFile("src/data/exct/gamecontrollerdb.txt").c_str();
-	glfwSetJoystickCallback(joystickCallback);
-	glfwUpdateGamepadMappings(mappings);
-	hasJoystickActive = glfwJoystickIsGamepad(GLFW_JOYSTICK_1);
-
-	cursorXPosPrev = cursorXPos;
-	cursorYPosPrev = cursorYPos;
-	utils::GLErrorcheck("Window Creation", true);
-
-
-
-
-	frameTextureID = render::createTexture(display::RENDER_RESOLUTION.x, display::RENDER_RESOLUTION.y);
-	GLuint textureArray = render::createTextureArray(textureNames);
-
-	render::createConstUBO();
-
-	GLuint visplaneUBO = render::createVisplaneUBO();
-	GLuint wallUBO = render::createWallUBO();
-	GLuint lightSSBO = render::createLightSSBO();
-	GLuint spriteSSBO = render::createSpriteSSBO();
-
-
-	//Environment shader
-	GLuint envShader = render::createShaderProgram("environment", false);
-
-	//Sprite Shader
-	GLuint spriteShader = render::createShaderProgram("sprites", false);
-
-	//uiShader
-	GLuint uiShader = render::createShaderProgram("interface", false);
-
-	//Display Shader
-	GLuint displayShader = render::createShaderProgram("display");
-
-
-
-	glViewport(0, 0, currentScreenRes.x, currentScreenRes.y);
-	glDisable(GL_DEPTH_TEST);
-	GLuint VAO = render::getVAO();
-
-
-	utils::GLErrorcheck("Initialisation", true);
-
-
-
-	// Initialize keyMap for input tracking
-	for (int key : monitoredKeys) {
-		keyMap[key] = false;
+	currentWindowResolution = glm::ivec2(width, height);
+	currentRenderResolution = glm::ivec2(
+		glm::min(width, desiredRenderResolution.x),
+		glm::min(height, desiredRenderResolution.y)
+	);
+	if (lightingType == LIGHT_DYNAMIC) {
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
 	}
-	bool interactKey = false;
-	int lightFlickerRNG;
 
-	while (!glfwWindowShouldClose(Window)) {
-		tick++;
-		double frameStart = glfwGetTime();
-		glfwPollEvents();
-		glfwGetGamepadState(GLFW_JOYSTICK_1, &joystickInput);
+	//SSBOs
+	GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
+		7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
+	);
 
-		// Get inputs for this frame
-		for (int key : monitoredKeys) {
-			int keyState = glfwGetKey(Window, key);
-			if (keyState == GLFW_PRESS) {
-				if (key == GLFW_KEY_F && !keyMap[GLFW_KEY_F]) {
-					headLampEnabled = !headLampEnabled;
-				}
-				interactKey = (key == GLFW_KEY_E) && (!keyMap[GLFW_KEY_E]);
+	//Image2Ds
+	GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 
-				keyMap[key] = true;
+	//Framebuffers
+	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
+	GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+
+	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
 
 
-			} else if (keyState == GLFW_RELEASE) {
-				keyMap[key] = false;
-			}
-		}
-
-
-		if (keyMap[GLFW_KEY_ESCAPE] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_B]) {
-			break; //Quit
-		}
-
-		if (keyMap[GLFW_KEY_1]) {
-			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);			
-		} else {
-			glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
-		}
-
-		if (keyMap[GLFW_KEY_LEFT_CONTROL] || joystickInput.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB]) {
-			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
-		} else {
-			player.height = playerConfig::PLAYER_COLLISION_HEIGHT_STAND;
-		}
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleResolution();
+}
 
 
 
-		float rayAngle = (keyMap[GLFW_KEY_C]) ? display::MAX_RAY_ANGLE/display::ZOOM_MULT : display::MAX_RAY_ANGLE;
 
-		double cursorXDelta = cursorXPos - cursorXPosPrev;
-		player.viewAngle += cursorXDelta * (playerConfig::TURN_SPEED_CURSOR / display::ZOOM_MULT);
-		if (keyMap[GLFW_KEY_LEFT]) {player.viewAngle -= (playerConfig::TURN_SPEED_KEYBOARD / display::ZOOM_MULT);}
-		if (keyMap[GLFW_KEY_RIGHT]) {player.viewAngle += (playerConfig::TURN_SPEED_KEYBOARD / display::ZOOM_MULT);}
-		if (abs(joystickInput.axes[GLFW_GAMEPAD_AXIS_RIGHT_X]) > playerConfig::CONTROLLER_MIN_MOVEMENT) {
-			player.viewAngle += joystickInput.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] * (playerConfig::TURN_SPEED_CONTROLLER / display::ZOOM_MULT);
-		}
-		player.viewAngle = utils::angleClamp(player.viewAngle);
+
+//Non-synced data.
+std::vector<utils::LogicGate> logicGates;
+
+
+
+double tickStart;
+void physicsLoop() {
+	double maxTickTime = 1.0f/constants::PHYSICS_FREQUENCY;
+
+	tickNumber = 0;
+	while (runPhysics) {
+		tickStart = glfwGetTime();
+		player.prevPosition = player.position;
+
+		//1-frame inputs;
+		interactKey = utils::isPressed("USE_INTERACT") && !prevInteract;
+		prevInteract = utils::isPressed("USE_INTERACT");
 
 
 		//Update logic states.
-		for (int index=0; index<constants::MAX_GATES; index++) {
+		for (int index=0; index<validGates; index++) {
 			LogicGate gate = logicGates[index];
 			if (gate.gateType == G_INVALID) {continue;}
 			gate.evaluateState();
 			logicGates[index] = gate;
 		}
-		physics::updateSpecials(&wallData, &visplaneData, &player, interactKey);
+		physics::updateSpecials(interactKey);
+		physics::updatePhysicsObjects();
+		physics::playerMovement();
 
 
-		physics::playerMove(&player, keyMap, joystickInput, hasJoystickActive, &wallData, &spriteData, &visplaneData);
-		float viewBob = (dev::VIEW_BOB_DISABLE > 0) ? 0.0f : render::viewBob(tick, player);
-		player.cameraPosition = player.position + glm::vec3(0.0f, 0.0f, (player.height/3.0f) + viewBob);
+		//Update states;
+		screenTint = graphics::manageScreenTint();
+		player.previousState = player.state;
+		player.state = E_NONE;
+		{
+			std::lock_guard<std::mutex> lock(stateSwapMutex);
+			std::swap(physicsData, graphicsData);
+		}
 
+		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
+		
+		float dt = glfwGetTime() - tickStart;
+		tickrate = floor(1.0f / dt);
+		if (!shouldTakeScreenshot) {rollingTPS.push_back(tickrate);}
 
-		glm::vec4 tintData = render::manageScreenTint(0, player.state);
-
-
-
-
-		//Update Dynamic UBOs.
-		render::updateVisplaneUBO(visplaneUBO, &visplaneData);
-		render::updateWallUBO(wallUBO, &wallData);
-		render::updateSpriteSSBO(spriteSSBO, &spriteData);
-		render::updateLightSSBO(lightSSBO, &lightData);
-		utils::GLErrorcheck("Updating UBOs", true);
-
-
-		if (headLampEnabled) {
-			lightFlickerRNG = utils::RNGc();
+		if constexpr (dev::SHOW_PHYSICS_TICKRATE) {
+			std::cout << "Tickrate: " << tickrate << "Hz" << std::endl;
+		}
+		if constexpr (dev::SHOW_PHYSICS_DT) {
+			std::cout << "Tick #" << tickNumber << " took " << std::setprecision(6) << (dt * 1e6f) << "µs / Hypothetical tickrate: " << static_cast<int>(1.0f / dt) << endl;
 		}
 
 
-		GLint zoomLocation, uvLocation, playerPosLocation, playerAngleLocation, lightLocation, vignetteColourLocation, lightFlickerLocation;
-		//Environment Shader.
-		glUseProgram(envShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-		glBindTextureUnit(0, textureArray);
-
-		playerPosLocation = glGetUniformLocation(envShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(envShader, "playerViewAngle");
-		zoomLocation = glGetUniformLocation(envShader, "zoom");
-		uvLocation = glGetUniformLocation(envShader, "drawUV");
-		lightLocation = glGetUniformLocation(envShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
-		
-		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
-		glUniform1i(uvLocation, dev::DRAW_UV);
-		glUniform1i(lightLocation, headLampEnabled);
-		glUniform1i(lightFlickerLocation, lightFlickerRNG);
-
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("Environment Shader", true);
+		tickNumber++;
 
 
-		//Sprite Shader.
-		glUseProgram(spriteShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-		glBindTextureUnit(0, textureArray);
-
-		playerPosLocation = glGetUniformLocation(spriteShader, "playerPosition");
-		playerAngleLocation = glGetUniformLocation(spriteShader, "playerViewAngle");
-		zoomLocation = glGetUniformLocation(spriteShader, "zoom");
-		uvLocation = glGetUniformLocation(spriteShader, "drawUV");
-		lightLocation = glGetUniformLocation(spriteShader, "headLampEnabled");
-		lightFlickerLocation = glGetUniformLocation(envShader, "headLampFlicker");
-		
-		glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-		glUniform1f(playerAngleLocation, player.viewAngle);
-		glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
-		glUniform1i(uvLocation, dev::DRAW_UV);
-		glUniform1i(lightLocation, headLampEnabled);
-		glUniform1i(lightFlickerLocation, lightFlickerRNG);
-
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		utils::GLErrorcheck("Sprite Shader", true);
-
-		
-		//UI Shader.
-		if (!(dev::NO_INTERFACE > 0)) {
-			glUseProgram(uiShader);
-			glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-
-			glBindTextureUnit(0, textureArray);
-
-			playerPosLocation = glGetUniformLocation(uiShader, "playerPosition");
-			playerAngleLocation = glGetUniformLocation(uiShader, "playerViewAngle");
-			zoomLocation = glGetUniformLocation(uiShader, "zoom");
-			vignetteColourLocation = glGetUniformLocation(uiShader, "screenTint");
-			
-			glUniform3f(playerPosLocation, player.cameraPosition.x, player.cameraPosition.y, player.cameraPosition.z);
-			glUniform1f(playerAngleLocation, player.viewAngle);
-			glUniform1i(zoomLocation, keyMap[GLFW_KEY_C]);
-			glUniform4f(vignetteColourLocation, tintData.x, tintData.y, tintData.z, tintData.w);
-
-			glBindVertexArray(VAO);
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-			glBindVertexArray(0);
-			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-			utils::GLErrorcheck("UI Shader", true);
-		}
-		
+		if (rollingFPS.size() > constants::MAX_ROLLING_VALUE_QUALITY) {rollingFPS.clear();}
+		if (rollingTPS.size() > constants::MAX_ROLLING_VALUE_QUALITY) {rollingTPS.clear();}
+	}
+}
 
 
-		//Display Shader and update screen.
-		glUseProgram(displayShader);
-		glBindImageTexture(0, frameTextureID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
-		GLuint screenResLoc = glGetUniformLocation(displayShader, "screenResolution");
-		glUniform2i(screenResLoc, currentScreenRes.x, currentScreenRes.y);
-
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-		glfwSwapBuffers(Window);
-		utils::GLErrorcheck("Display Shader", true);
-
-		while (glfwGetTime() - frameStart < constants::DT) {}
-		if (dev::SHOW_FREQ > 0) {double totalTime = (glfwGetTime() - frameStart);std::cout << "FPS " << 1/totalTime << endl;}
-
-
-		cursorXPosPrev = cursorXPos;
-		cursorYPosPrev = cursorYPos;
+double cursorXPos, cursorYPos, cursorXPosPrev, cursorYPosPrev;
+inline void reloadLevel(const bool resetPlayer=false) {
+	if (resetPlayer) {
+		loader::loadStage(
+			userConfig["META_STAGE_NAME"], &player,
+			physicsData, &logicGates
+		);
+	} else {
+		structs::Player tmpPlayer;
+		loader::loadStage(
+			userConfig["META_STAGE_NAME"], &tmpPlayer,
+			physicsData, &logicGates
+		);
 	}
 
+	graphics::prepareOpenGL();
+	{
+		std::lock_guard<std::mutex> lock(stateSwapMutex);
+		graphicsData = physicsData;
+	}
+}
+
+void handleInputs() {
+	glfwPollEvents();
+
+	bool lastFrameScreenshot = utils::isPressed("META_SCREENSHOT");
+
+	//Get inputs for this frame
+	for (auto &pair : userBindings) {
+		std::string functionName = pair.first;
+		int keyEnum = pair.second;
+		if (keyEnum == -1) {
+			std::cout << functionName << " was not bound to a key!" << std::endl;
+			userBindings[functionName] = -2; //Do not warn user multiple times.
+		}
+		if (keyEnum < 0) {continue;}
+
+		int keyState = glfwGetKey(Window, keyEnum);
+		if (keyState == GLFW_PRESS) {
+			if (functionName == "USE_HEADLAMP" && !utils::isPressed("USE_HEADLAMP")) {
+				headLampEnabled = !headLampEnabled;
+			}
+			utils::setPressed(functionName, true);
+
+		} else if (keyState == GLFW_RELEASE) {
+			utils::setPressed(functionName, false);
+		}
+	}
+
+
+	//Meta controls
+	if (utils::isPressed("META_FREECURSOR")) {
+		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	} else {
+		glfwSetInputMode(Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
+	}
+
+	shouldTakeScreenshot = utils::isPressed("META_SCREENSHOT") && !shouldTakeScreenshot && !lastFrameScreenshot;
+	zoomEffect = (utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f;
+
+	if (utils::isPressed("META_RELOAD_STAGE")) {
+		reloadLevel(true);
+	} else if (utils::isPressed("META_RELOAD_ENV") || utils::configToBool("META_DYNAMIC_UPD")) {
+		reloadLevel(false);
+	}
+
+
+	//Crouch changes physical height
+	if (utils::isPressed("MOVE_CROUCH")) {
+		player.height = playerConfig::PLAYER_COLLISION_HEIGHT_CROUCH;
+		player.touchingFloor = false;
+	} else {
+		player.height = playerConfig::PLAYER_COLLISION_HEIGHT_STAND;
+	}
+
+
+
+
+
+
+
+	rayAngle = (utils::isPressed("USE_VIEWZOOM")) ? utils::configToFloat("VIEW_FOV")/(display::ZOOM_MULT * 2.0f) : utils::configToFloat("VIEW_FOV")/2.0f;
+	rayAngle *= constants::TO_RAD;
+	zoomEffect = ((utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f);
+	bool useVLOOK = utils::configToBool("VIEW_VLOOK");
+
+	//Mouse camera controls;
+	double cursorXDelta = cursorXPos - cursorXPosPrev;
+	double cursorYDelta = cursorYPos - cursorYPosPrev;
+	player.viewAngle += cursorXDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
+	if (useVLOOK) {
+		player.vLook += cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
+	}
+
+
+
+	//Keyboard camera controls;
+	float keyboardTurnSpeed = constants::TO_RAD * utils::configToFloat("TURN_SPEED_KEYBOARD") / zoomEffect;
+	if (utils::isPressed("CAMERA_YAW_LEFT")) {
+		player.viewAngle -= keyboardTurnSpeed;
+	}
+	if (utils::isPressed("CAMERA_YAW_RIGHT")) {
+		player.viewAngle += keyboardTurnSpeed;
+	}
+	if (useVLOOK && utils::isPressed("CAMERA_PITCH_UP")) {
+		player.vLook -= keyboardTurnSpeed;
+	}
+	if (useVLOOK && utils::isPressed("CAMERA_PITCH_DOWN")) {
+		player.vLook += keyboardTurnSpeed;
+	}
+
+
+	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
+	player.vLook = glm::clamp(player.vLook, -0.125f*constants::PI, 0.125f*constants::PI);
+}
+
+
+std::thread physicsThread;
+inline void stopPhysics() {
+	runPhysics = false;
+	if (physicsThread.joinable()) {
+		physicsThread.join();
+	}
+}
+
+int main() {
+	try { //Catch exceptions
+
+#ifdef __WIN32
+	SetConsoleOutputCP(65001); //CP_UTF8
+#else
+	setlocale(LC_ALL, "C.UTF-8");
+#endif
+
+	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
+	loader::loadBindings();
+	loader::loadStage(
+		userConfig["META_STAGE_NAME"], &player,
+		physicsData, &logicGates
+	);
+	player.state = E_RESPAWN; //Player initial state, uses the screenspace effect associated with E_RESPAWN.
+
+
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
+		currentConsoleResolution = utils::getConsoleResolution();
+
+		currentRenderResolution = currentConsoleResolution; currentWindowResolution = currentConsoleResolution; desiredRenderResolution = currentConsoleResolution;
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	} else {
+		currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
+		currentConsoleResolution = utils::getConsoleSizeChars();
+		currentRenderResolution = glm::ivec2(
+			glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
+			glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
+		);
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	}
+
+
+	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU-with-CRT");
+	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
+	signal(SIGWINCH, handleWinChange);
+	glfwSetJoystickCallback(nullptr); //Stop it from trying to callback for joystick.
+	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
+	glEnable(GL_BLEND);
+	bool vsync = utils::configToBool("SCREEN_VSYNC");
+	glfwSwapInterval((vsync) ? 1 : 0);
+
+
+
+
+	//Lighting support checks;
+	loader::getSupportedExtensions();
+
+	if ((lightingType == LIGHT_STATIC_ARB) && !loader::OpenGLSupportsARB()) {
+		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
+		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" fixed size method.
+	}
+
+
+
+	cursorXPosPrev = cursorXPos;
+	cursorYPosPrev = cursorYPos;
+	utils::GLErrorcheck("Window Creation", true);
+
+	graphics::prepareOpenGL();
+	*graphicsData = *physicsData;
+	frame::updateSSBOs(true); //Include W_NODRAW/V_NODRAW objects.
+	double maxFrameTime = 1.0d / static_cast<double>(utils::configToFloat("SCREEN_MAX_FREQ"));
+
+
+
+	//Create lightmaps if required
+	if ((lightingType == LIGHT_STATIC_FIXED) || (lightingType == LIGHT_STATIC_ARB)) {lighting::createLightMaps();}
+
+
+	//Threads;
+	physicsThread = std::thread(physicsLoop);
+	tickStart = glfwGetTime();
+
+	//Timer queries;
+	GLuint timerQuery;
+	GLuint64 GPUnanosecs; //Nanoseconds
+	glGenQueries(1, &timerQuery);
+
+	frameNumber = 0u;
+	while (!glfwWindowShouldClose(Window)) {
+		double frameStart = glfwGetTime();
+		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY; //Manages smooth motion when graphics freq > physics tickrate.
+
+		//Handle inputs.
+		handleInputs();
+		if (utils::isPressed("META_EXIT")) {break; /* Quit Immediately */}
+
+
+		//Draw this frame
+		glBeginQuery(GL_TIME_ELAPSED, timerQuery);
+		graphics::handleTextureLoadQueue();
+		frame::draw(blendingAlpha, frameStart);
+		glEndQuery(GL_TIME_ELAPSED);
+		glFinish();
+
+
+		//Calculate dt and report back if needed.
+		float dt = glfwGetTime() - frameStart;
+		if (utils::configToBool("META_SHOW_DT_CONSOLE")) {
+			glGetQueryObjectui64v(timerQuery, GL_QUERY_RESULT, &GPUnanosecs);
+			double ms = GPUnanosecs / 1e6;
+			std::cout << "Frame #" << frameNumber << " took " << std::setprecision(2) << ms << "ms / Hypothetical framerate: " << static_cast<int>(1000.0d/ms) << endl;
+		}
+		//Wait for the correct freq.
+		if (!vsync) {while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}}
+		glfwSwapBuffers(Window); //Swap to show the new frame, at the correct time.
+
+
+		framerate = floor(1.0f / (glfwGetTime() - frameStart));
+		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);} //Screenshots (obviously) cause a lag-spike. Don't "poison" the rolling values with it.
+		//Show framerate (One after the mandatory wait-period of the frame.)
+		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {std::cout << "Framerate: " << framerate << "Hz" << std::endl;}
+
+
+		//End-of-frame management.
+		cursorXPosPrev = cursorXPos;
+		cursorYPosPrev = cursorYPos;
+		frameNumber++;
+	}
+
+	//Cleanup OpenGL.
+	glDeleteTextures(1, &GLIndex::textureArrayEnvironment);
+
+	stopPhysics();
 	glfwDestroyWindow(Window);
 	glfwTerminate();
 	return 0;
@@ -427,12 +406,20 @@ int main() {
 
 	//Catch exceptions.
 	} catch (const std::exception& e) {
+		stopPhysics();
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	} catch (...) {
+		stopPhysics();
+		if (!utils::isConsoleVisible()) {
+			utils::showConsole();
+		}
 		std::cerr << "An unspecified exception was thrown." << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	}
 }

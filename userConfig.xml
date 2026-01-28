@@ -1,0 +1,165 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+
+<!-- Keybinds -->
+<!-- See [keys.txt] for valid key enums. -->
+<keybinds>
+
+
+<!-- Movement keys -->
+<bind function="MOVE_FORWARD" 			key="KEY_W" 				note="Move forwards." />
+<bind function="MOVE_BACKWARD" 			key="KEY_S" 				note="Move backwards." />
+<bind function="MOVE_LEFT" 				key="KEY_A" 				note="Strafe left." />
+<bind function="MOVE_RIGHT" 			key="KEY_D" 				note="Strafe right." />
+<bind function="MOVE_JUMP" 				key="KEY_SPACE" 			note="Jump." />
+<bind function="MOVE_CROUCH" 			key="KEY_LEFT_CONTROL" 		note="Crouch, Crawl, etc." />
+<bind function="MOVE_SPRINT" 			key="KEY_LEFT_SHIFT" 		note="Sprint, run." />
+
+
+<!-- Keyboard camera control -->
+<bind function="CAMERA_PITCH_UP" 		key="KEY_UP" 				note="Pitch camera up." />
+<bind function="CAMERA_PITCH_DOWN" 		key="KEY_DOWN" 				note="Pitch camera down." />
+<bind function="CAMERA_YAW_LEFT" 		key="KEY_LEFT" 				note="Yaw camera left." />
+<bind function="CAMERA_YAW_RIGHT" 		key="KEY_RIGHT" 			note="Yaw camera right." />
+
+
+
+<!-- Interaction keys -->
+<bind function="USE_INTERACT" 			key="KEY_E" 				note="Use buttons, doors, etc." />
+<bind function="USE_HEADLAMP" 			key="KEY_F" 				note="Toggle headlamp/torch." />
+<bind function="USE_VIEWZOOM" 			key="KEY_C" 				note="Zoom camera [3x zoom]" />
+
+
+
+<!-- Misc keys -->
+<bind function="META_SCREENSHOT" 		key="KEY_F10" 				note="Take screenshot. Saved to screenshots/[META_STAGE_NAME]/[TIMESTAMP].png" />
+<bind function="META_RELOAD_STAGE" 		key="KEY_F5" 				note="Reloads current stage." />
+<bind function="META_RELOAD_ENV" 		key="KEY_F4" 				note="Reloads environmental objects in stage." />
+<bind function="META_EXIT" 				key="KEY_ESCAPE" 			note="Close the program." />
+<bind function="META_FREECURSOR" 		key="KEY_1" 				note="Stop controlling camera with mouse and use cursor while held." />
+<bind function="META_RELOAD_LIGHTMAPS"  key="KEY_2"					note="Reloads all lightmaps in the stage. May cause large stutter." />
+
+</keybinds>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Configs -->
+<config>
+
+<!-- - - - - - - - -->
+<!-- Mouse Control -->
+<!-- - - - - - - - -->
+<!-- Sensitivity -->
+<option function="TURN_SPEED_KEYBOARD" 					value="1.0"				note="Turn speed when using [ARROWKEY] turning. [NUMBER]" />
+<option function="TURN_SPEED_MOUSE" 					value="0.125" 			note="Turn speed when using [MOUSEINPUT] turning. [NUMBER]" />
+
+
+
+
+
+
+<!-- - - - - - - - - - - - -->
+<!-- Environment rendering -->
+<!-- - - - - - - - - - - - -->
+<!-- View Preference -->
+<option function="VIEW_VLOOK" 							value="TRUE" 			note="Allows vertical aiming. [True/False]" />
+<option function="VIEW_LEAN" 							value="TRUE" 			note="Camera leans when moving laterally. [True/False]" />
+<option function="VIEW_FOV" 							value="70.0" 			note="Camera field of view. [Degrees]" />
+<option function="VIEW_BOB" 							value="TRUE" 			note="View bobbing when in motion [True/False]" />
+
+
+<!-- Rendering specific -->
+<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="LOW"				note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/CRT/DS/LOW/MEDIUM/HIGH/AMAZING]" />
+<option function="VIEW_TEXTURE_QUALITY" 				value="FULL"			note="Changes default texture Mip Level [TERRIBLE/AWFUL/LOW/MEDIUM/FULL]" />
+<option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
+<option function="VIEW_MAX_RAY_DIST" 					value="255.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
+<option function="VIEW_CORRECTION" 						value="TRUE" 			note="Enables view correction. When disabled, natural fish-eye effect. [TRUE/FALSE]" />
+
+
+<!-- Lighting -->
+<option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
+<option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
+<option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
+<option function="VIEW_LIGHTING_TYPE"					value="ARB"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
+<option function="VIEW_ARB_LUXEL_SIZE"					value="0.01" 			note="How big (in world units) each lighting 'luxel' should be when using ARB lighting [FLOAT]" />
+
+
+
+
+
+
+<!-- - - - - - - - - - - - -->
+<!-- Screenspace rendering -->
+<!-- - - - - - - - - - - - -->
+<!-- HUD/UI -->
+<option function="VIEW_INTERFACE_IN_SCREENSHOT" 		value="FALSE" 			note="Screenshots contain the HUD. [TRUE/FALSE]" />
+<option function="VIEW_WIGGLY_TEXTOBJECTS" 				value="FALSE" 			note="Uses odd textObject projection, from a bug during implementation. [TRUE/FALSE]" />
+<option function="VIEW_SHOW_HUD" 						value="TRUE" 			note="Show/Hide the HUD. [TRUE/FALSE]" />
+
+
+<!-- Post-processing -->
+<option function="VIEW_LUMINANCE_QUANTISATION" 			value="0" 				note="Quantisation from frame colours via luminance. [LessThan] 2 is none. [INTEGER]"/>
+<option function="VIEW_ANTIALIAS" 						value="FALSE" 			note="Applies simple anti-aliasing to the final frame. [TRUE/FALSE]" />
+
+
+<!-- Tickrate/Framerate -->
+<option function="META_SHOW_FRAMERATE_CONSOLE" 			value="FALSE" 			note="Show graphics framerate in the console. [TRUE/FALSE]" />
+<option function="META_SHOW_FRAMERATE_UI" 				value="TRUE" 			note="Show graphics framerate in the HUD. [TRUE/FALSE]" />
+<option function="META_SHOW_TICKRATE_UI" 				value="FALSE" 			note="Show physics tickrate in the HUD. [TRUE/FALSE]" />
+<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
+
+
+<!-- Misc -->
+<option function="SCREEN_MAX_FREQ" 						value="75" 				note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Integer Hertz]" />
+<option function="SCREEN_VSYNC"							value="True" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
+<option function="SCREEN_FULLSCREEN"					value="TRUE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
+<option function="SCREEN_CONSOLE_RENDER"				value="FALSE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
+
+
+
+
+
+
+<!-- - - - - - - - - - - - -->
+<!-- Miscellaneous options -->
+<!-- - - - - - - - - - - - -->
+<!-- Debug -->
+<option function="META_SHOW_CONSOLE" 					value="TRUE"			note="Show/Hide console window. [TRUE/FALSE]" />
+<option function="META_DEBUG_MODE" 						value="NONE" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
+<option function="META_SHOW_DATA" 						value="TRUE" 			note="Shows player information in the console. [TRUE/FALSE]" />
+
+
+<!-- Stage-specific -->
+<option function="META_STAGE_NAME" 						value="dev-quake" 	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
+<option function="META_DYNAMIC_UPD" 					value="FALSE"			note="Reloads stage every physics tick. [TRUE/FALSE]" />
+<option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" 	value="FALSE"			note="Allows stage to reload textures every tick. [TRUE/FALSE]" />
+
+
+<!-- Misc -->
+<option function="PHYS_NO_COLLIDE" 						value="FALSE" 			note="Player does not respect environmental collisions. [TRUE/FALSE]" />
+<option function="PHYS_FLY" 							value="FALSE"			note="Removes gravity, assigns MOVE_JUMP + MOVE_CROUCH to Up/Down movement. [TRUE/FALSE]" />
+
+</config>

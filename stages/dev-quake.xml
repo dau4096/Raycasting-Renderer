@@ -1,0 +1,172 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="default-skybox" fogColour="0.4157 0.6039 0.7098" />
+    <sun sunDirection="-0.5 0.5 1.0" sunColour="1.0 1.0 0.925" sunIntensity="2.25" />
+    <physics gravity="0.486" killPlaneZ="-16.0" />
+    <player startPoint="-3.5 -3.5 1.0" startAngle="0.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+
+<!-- Environmental Objects -->
+<environment>
+    <!-- Floors -->
+    <visplane start="10.0 10.0" end="-10.0 -14.0" height="0.0" texture="planks" textureScale="1.5 1.5" />
+    <visplane start="-8.0 -8.0" end="8.0 -12.0" height="3.0" texture="planks2" textureScale="1.5 1.5" />
+    <visplane start="10.0 10.0" end="-10.0 20.0" height="0.0" texture="planks" textureScale="1.5 1.5" />
+    <visplane start="10.0 20.0" end="-10.0 256.0" height="0.0" texture="planks2" textureScale="1.5 1.5" />
+
+
+    <!-- Central triangle -->
+    <wall start="-1.0 -1.0 0.0" end="1.0 -1.0 3.0" texture="brick2" textureScale="2.0 2.0" />
+    <wall start="1.0 1.0 0.0" end="-1.0 -1.0 1.0" texture="brick2" textureScale="2.0 2.0" />
+
+    <!-- -Y wall -->
+    <wall start="-0.5 -8.0 0.0" end="-1.5 -8.0 3.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start="-1.5 -8.0 1.0" end="-2.5 -8.0 3.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start="-2.5 -8.0 0.0" end="-8.0 -8.0 3.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start=" 8.0 -8.0 0.0" end="0.5 -8.0 3.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start="-0.5 -8.0 1.8" end="0.5 -8.0 3.0" texture="brick" textureScale="2.0 2.0" />
+
+    <!-- +Y wall -->
+    <wall start="-8.0 8.0 0.0" end="8.0 8.0 2.0" texture="brick" textureScale="2.0 2.0" />
+
+    <!-- -X wall -->
+    <wall start="-8.0 -8.0 0.0" end="-8.0 8.0 2.0" texture="brick" textureScale="2.0 2.0" />
+
+    <!-- +X wall -->
+    <wall start="8.0 -0.5 0.0" end="8.0 -8.0 2.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start="8.0 8.0 0.0" end="8.0 0.5 2.0" texture="brick" textureScale="2.0 2.0" />
+
+    <!-- Back room walls -->
+    <wall start="-8.0 -8.0 0.0" end="-8.0 -12.0 3.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start="8.0 -8.0 0.0" end="8.0 -12.0 3.0" texture="brick" textureScale="2.0 2.0" />
+    <wall start="-6.0 -8.0 0.0" end="-6.0 -12.0 3.0" texture="metal2" textureScale="2.0 2.0" />
+
+    <!-- Door -->
+    <wall start="0.5 -8.0 0.0" end="-0.5 -8.0 1.8" texture="door" type="W_DOORSWING" extra="2.356" textureScale="2.0 2.0" textureOffset="0.0 0.5" useWorldUVY="FALSE" useWorldUVX="FALSE" />
+
+
+
+    <!-- Lift Control -->
+    <wall start="6.0 -8.0 0.0" end="6.0 -6.0 5.0" texture="quake" altTexture="quake2" type="W_SWITCH" flag="liftControl" extra="0.0" textureScale="2.0 2.0" textureScrolling="0.0 -1.0" />
+
+    <!-- Lift "body" -->
+    <visplane start="6.0 -8.0" end="4.0 -6.0" height="0.025" texture="metal" type="V_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="2.0 2.0" />
+    <wall start="4.0 -8.0 0.0" end="4.0 -6.0 1.0" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="2.0 2.0" useWorldUVY="FALSE" />
+    <wall start="5.99 -8.0 0.0" end="5.99 -6.0 1.0" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="2.0 2.0" useWorldUVY="FALSE" />
+
+    <wall start="5.99 -6.0 0.0" end="5.5 -6.0 1.0" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="1.0 2.0" useWorldUVY="FALSE" />
+    <wall start="4.5 -6.0 0.0" end="4.0 -6.0 1.0" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="1.0 2.0" useWorldUVY="FALSE" />
+    <wall start="5.99 -7.99 0.0" end="5.5 -7.99 1.0" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="1.0 2.0" useWorldUVY="FALSE" />
+    <wall start="4.5 -7.99 0.0" end="4.0 -7.99 1.0" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="1.0 2.0" useWorldUVY="FALSE" />
+
+    <wall start="5.5 -6.0 0.0" end="4.0 -6.0 0.025" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="2.0 2.0" useWorldUVY="FALSE" />
+    <wall start="5.5 -7.99 0.0" end="4.0 -7.99 0.025" texture="metal2" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" textureScale="2.0 2.0" useWorldUVY="FALSE" />
+
+    <!-- Lift "pole" -->
+    <wall start="5.1 -7.1 -2.975" end="4.9 -7.1 0.025" texture="metal" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" useWorldUVY="FALSE" />
+    <wall start="5.1 -6.9 -2.975" end="4.9 -6.9 0.025" texture="metal" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" useWorldUVY="FALSE" />
+    <wall start="5.1 -7.1 -2.975" end="5.1 -6.9 0.025" texture="metal" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" useWorldUVY="FALSE" />
+    <wall start="4.9 -7.1 -2.975" end="4.9 -6.9 0.025" texture="metal" type="W_MOVEZ_SLOW" flag="liftControl" extra="2.975" useWorldUVY="FALSE" />
+
+
+
+    <!-- Raised Platform -->
+    <wall start="-1.0 11.0 2.0" end=" 1.0 11.0 3.0" texture="metal2" textureScale="4.0 6.0" textureOffset="0.25 0.5" />
+    <wall start="-1.0 11.0 0.0" end="-0.375 11.0 2.0" texture="metal2" textureScale="4.0 6.0" textureOffset="0.25 0.5" />
+    <wall start=" 1.0 11.0 0.0" end=" 0.375 11.0 2.0" texture="metal2" textureScale="4.0 6.0" textureOffset="0.25 0.5" />
+    <wall start="-1.0 13.0 0.0" end=" 1.0 13.0 3.0" texture="metal2" textureScale="4.0 6.0" textureOffset="0.25 0.5" />
+    <wall start="-1.0 11.0 0.0" end="-1.0 13.0 3.0" texture="metal2" textureScale="4.0 6.0" textureOffset="0.25 0.5" />
+    <wall start=" 1.0 11.0 0.0" end=" 1.0 13.0 3.0" texture="metal2" textureScale="4.0 6.0" textureOffset="0.25 0.5" />
+    <visplane start="-1.0 11.0" end="1.0 13.0" height="3.0" texture="metal2" textureScale="4.0 4.0" textureOffset="0.25 0.25" />
+    <wall start="-0.375 11.0 0.0" end="0.375 11.0 2.0" texture="metal2" useWorldUVX="FALSE" textureScale="2.0 4.0" type="W_DOORSWING" extra="2.0" />
+
+
+    <!-- Growing stairs switch -->
+    <wall start="1.0 1.0 0.0" end="1.0 -1.0 2.0" texture="quake" altTexture="quake2" type="W_SWITCH" flag="stairsFlag" textureScale="2.0 2.0" textureOffset="0.5 0.0" />
+
+
+    <!-- Testing "Macros" -->
+    <cuboid start="-1.0 11.0 6.0" end="1.0 13.0 7.0" bottomTexture="metal2" sideTexture="metal" topTexture="metal2" />
+    <stairs start="6.0 -8.0 3.0" end="8.0 -1.0 0.0" static="FALSE" flag="notStairsFlag" hasEndWall="FALSE" sideTexture="concrete2" stepsTexture="concrete" textureScale="2.0 2.0 2.0" />
+
+
+    <!-- Small, fast lift -->
+    <visplane start="1.25 11.5" end="2.25 12.5" height="0.01" type="V_MOVEZ_FAST" flag="cuboidLift" extra="6.99" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+    <wall start="1.25 11.5 0.0" end="2.25 12.5 9.0" type="W_TRIGGER" flag="cuboidLiftA" texture="nodraw" />
+    <wall start="2.25 11.5 0.0" end="1.25 12.5 9.0" type="W_TRIGGER" flag="cuboidLiftB" texture="nodraw" />
+
+
+    <!-- V_TELEPORT and other vPlane specials testing -->
+    <visplane start="-8.0 13.0" end="-7.0 14.0" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="90.0" />
+    <visplane start="6.5 -9.5" end="7.5 -10.5" height="0.125" type="V_TELEPORT" extra="RoomAndBack" texture="quake2" exitDirection="-90.0" useWorldUVX="FALSE" useWorldUVY="FALSE" />
+
+    <!-- Circle conveyor -->
+    <visplane start="-0.5 14.0" end="0.5 15.0" direction="1.0 0.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-0.5 16.0" end="0.5 17.0" direction="-1.0 0.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-1.5 15.0" end="-0.5 16.0" direction="0.0 -1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="1.5 15.0" end="0.5 16.0" direction="0.0 1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="0.5 14.0" end="1.5 15.0" direction="0.25 1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-0.5 14.0" end="-1.5 15.0" direction="1.0 -0.25" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="0.5 16.0" end="1.5 17.0" direction="-1.0 0.25" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <visplane start="-0.5 16.0" end="-1.5 17.0" direction="-0.25 -1.0" height="0.01" extra="1.0" type="V_CONVEY" useWorldUVX="FALSE" useWorldUVY="FALSE" texture="brick2" />
+    <cuboid start="-0.5 15.0 0.0" end="0.5 16.0 0.5" height="0.01" useWorldUVX="FALSE" useWorldUVY="FALSE" hasBottom="FALSE" topTexture="metal" sideTexture="brick2" />
+
+
+    <!-- Teleport to the end of the long open area -->
+    <visplane start="8.0 13.0" end="7.0 14.0" height="0.125" type="V_TELEPORT" extra="ToEndOfOpenArea" texture="quake2" exitDirection="0.0" />
+    <visplane start="-0.5 254.0" end="0.5 255.0" height="0.125" type="V_TELEPORT" extra="ToEndOfOpenArea" texture="quake2" exitDirection="180.0" textureOffset="0.5 0.0" />
+
+    <!-- Conveyor there and back -->
+    <visplane start="9.0 17.0" end="10.0 250.0" height="0.125" type="V_CONVEY" extra="8.0" direction="0.0 1.0" texture="brick2" />
+    <visplane start="-9.0 17.0" end="-10.0 250.0" height="0.125" type="V_CONVEY" extra="8.0" direction="0.0 -1.0" texture="brick2" />
+    <wall start="9.0 251.0 0.0" end="10.0 251.0 1.0" texture="brick3" />
+    <wall start="-9.0 16.0 0.0" end="-10.0 16.0 1.0" texture="brick3" />
+
+
+    <!-- Portal testing -->
+    <wall start="-0.5 7.5 0.0" end="0.5 7.5 2.0" type="W_PORTAL" flag="portalTest" />
+    <wall start="-0.5 -11.5 3.0" end="0.5 -11.5 5.0" type="W_PORTAL" flag="portalTest" />
+    <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="90.0" />
+    <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="-90.0" />
+
+</environment>
+
+
+<!-- Objects -->
+<objects>
+    <sprite position="5.0 5.0 1.0" width="2.0" height="2.0" texture="piloten" collision="true" />
+
+    <!-- Lights and their markers -->
+    <light position="-5.0 2.5 1.0" colour="1.0 1.0 1.0" intensity="7.5" inputPTR="always" hasMarker="TRUE" />
+    <light position="-5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="12.5" inputPTR="always" hasMarker="TRUE" />
+    <light position=" 5.0 -10.0 1.0" colour="1.0 1.0 1.0" intensity="12.5" inputPTR="always" hasMarker="TRUE" />
+
+
+    <!-- Various labels -->
+    <textObj text="Door: f1" position="0.0 -7.5 2.0" scale="100.0" />
+    <textObj text="Empty open space for movement." position="0.0 25.0 2.5" scale="200.0" />
+    <textObj text="liftControl ^" position="5.0 -7.0 1.5" scale="50.0" />
+    <textObj text="liftControl V" position="5.0 -7.0 4.5" scale="50.0" />
+
+    <textObj text="You aren't supposed to be here!" position="0.0 0.0 -2.0" scale="200.0" />
+    <sprite position="0.0 0.0 -3.0" width="1.0" height="1.0" texture="traa" />
+
+    <textObj text="Hiya :]" position="0.0 0.0 4.0" scale="200.0" />
+    <textObj text="Project by dau4096 on github." position="0.0 0.0 3.75" scale="100.0" />
+    <textObj text="https://github.com/dau4096/Raycasting-Renderer" position="0.0 0.0 3.5" scale="100.0" />
+    <textObj text="Light brighter than sun." position="-5.0 2.5 2.0" scale="100.0" />
+    <textObj text="Light illuminating a room." position="-5.0 -10.0 2.0" scale="100.0" />
+</objects>
+
+
+<!-- Logic Gates -->
+<logic>
+
+    <gate type="G_NOT" inAFlag="stairsFlag" outFlag="notStairsFlag" />
+
+    <gate type="G_OR" inAFlag="cuboidLiftA" inBFlag="cuboidLiftB" outFlag="cuboidLift" />
+
+</logic>

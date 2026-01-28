@@ -1,13 +1,22 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#pragma once
 
 #include "includes.h"
-#include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
+#include <glm/glm.hpp>
+
+
+
+#define T_NONE 0x0u
+#define T_WALL 0x1u
+#define T_VISPLANE 0x2u
+#define T_DISPLACEMENT 0x3u
+#define T_SPRITE 0x4u
+
 
 enum Event {
 	E_NONE, E_DEAD,
 	E_HURT, E_HEAL,
-	E_NEW_IH, E_ENERGY
+	E_NEW_IH, E_ENERGY,
+	E_TELEPORT, E_RESPAWN
 };
 
 enum ItemFloor {
@@ -20,24 +29,51 @@ enum ItemHeld {
 	IH_NONE
 };
 
-enum SpriteType {
-	SPR_INVALID,
-	SPR_DECO,
-	SPR_LIGHT
+enum VisplaneType {
+	V_INVALID, V_NORMAL,
+	V_TRIGGER,
+	V_MOVEX_FAST, V_MOVEX_SLOW,
+	V_MOVEY_FAST, V_MOVEY_SLOW,
+	V_MOVEZ_FAST, V_MOVEZ_SLOW,
+	V_HURT, V_PASSTHROUGH,
+	V_NODRAW, V_TELEPORT,
+	V_CONVEY, V_LIGHTBLOCKER,
+	V_PORTAL
 };
 
 enum WallType {
 	W_INVALID, W_NORMAL,
-	W_TRIGGER, W_SWITCH,
-	W_MOVEV_SLOW, W_MOVEV_FAST,
-	W_MOVEH_SLOW, W_MOVEH_FAST,
+	W_TRIGGER,
+	W_MOVED_FAST, W_MOVED_SLOW,
+	W_MOVEN_FAST, W_MOVEN_SLOW,
+	W_MOVEZ_FAST, W_MOVEZ_SLOW,
+	W_SWITCH, W_PASSTHROUGH,
+	W_DOORZ, W_DOORSWING,
+	W_NODRAW, W_LIGHTBLOCKER,
+	W_PORTAL
 };
 
-enum VisplaneType {
-	V_INVALID, V_NORMAL,
-	V_TRIGGER,
-	V_MOVEV_SLOW, V_MOVEV_FAST,
-	V_HURT
+enum CuboidType {
+	C_INVALID, C_NORMAL,
+	C_MOVEX_FAST, C_MOVEX_SLOW,
+	C_MOVEY_FAST, C_MOVEY_SLOW,
+	C_MOVEZ_FAST, C_MOVEZ_SLOW,
+	C_PASSTHROUGH, C_NODRAW
+};
+
+enum DisplacementType {
+	D_INVALID, D_NORMAL
+};
+
+enum SpriteType {
+	SPR_INVALID,
+	SPR_DECO, SPR_LIGHT,
+	SPR_PHYSICS, SPR_PARTICLE
+};
+
+enum LightingType {
+	LIGHT_NONE, LIGHT_STATIC_FIXED,
+	LIGHT_STATIC_ARB, LIGHT_DYNAMIC
 };
 
 enum LogicInput {
@@ -52,44 +88,177 @@ enum LogicInput {
 
 
 enum GateType {
+	G_INVALID,		// N/A
+	G_PASSTHROUGH,	// =
 	G_AND,			// &
 	G_OR, 			// |
 	G_NOT,			// ~
 	G_XOR,			// ^
 	G_LATCH,		// 2 inputs, turns on with input A and off with input B.
 	G_PULSE,		// 1 input, turns on for 1 frame of the input, then off after.
-	G_TOGGLE,		// 1 input, turns on and off with that input.
-	G_PASSTHROUGH,	// =
-	G_INVALID		// N/A
+	G_TOGGLE		// 1 input, turns on and off with that input.
+};
+
+
+enum ParticleType {
+	P_NONE,
+	P_DUST,
+	P_ENERGY,
+	P_HURT,
+	P_EXPLODE,
+	P_DUST_NOFALL
 };
 
 
 
+inline const std::unordered_map<std::string, int> keyNameToGLFW = {
+	//Main Keys
+    {"KEY_SPACE", GLFW_KEY_SPACE},
+    {"KEY_APOSTROPHE", GLFW_KEY_APOSTROPHE},
+    {"KEY_COMMA", GLFW_KEY_COMMA},
+    {"KEY_MINUS", GLFW_KEY_MINUS},
+    {"KEY_PERIOD", GLFW_KEY_PERIOD},
+    {"KEY_SLASH", GLFW_KEY_SLASH},
+    {"KEY_0", GLFW_KEY_0},
+    {"KEY_1", GLFW_KEY_1},
+    {"KEY_2", GLFW_KEY_2},
+    {"KEY_3", GLFW_KEY_3},
+    {"KEY_4", GLFW_KEY_4},
+    {"KEY_5", GLFW_KEY_5},
+    {"KEY_6", GLFW_KEY_6},
+    {"KEY_7", GLFW_KEY_7},
+    {"KEY_8", GLFW_KEY_8},
+    {"KEY_9", GLFW_KEY_9},
+    {"KEY_SEMICOLON", GLFW_KEY_SEMICOLON},
+    {"KEY_EQUAL", GLFW_KEY_EQUAL},
+    {"KEY_A", GLFW_KEY_A},
+    {"KEY_B", GLFW_KEY_B},
+    {"KEY_C", GLFW_KEY_C},
+    {"KEY_D", GLFW_KEY_D},
+    {"KEY_E", GLFW_KEY_E},
+    {"KEY_F", GLFW_KEY_F},
+    {"KEY_G", GLFW_KEY_G},
+    {"KEY_H", GLFW_KEY_H},
+    {"KEY_I", GLFW_KEY_I},
+    {"KEY_J", GLFW_KEY_J},
+    {"KEY_K", GLFW_KEY_K},
+    {"KEY_L", GLFW_KEY_L},
+    {"KEY_M", GLFW_KEY_M},
+    {"KEY_N", GLFW_KEY_N},
+    {"KEY_O", GLFW_KEY_O},
+    {"KEY_P", GLFW_KEY_P},
+    {"KEY_Q", GLFW_KEY_Q},
+    {"KEY_R", GLFW_KEY_R},
+    {"KEY_S", GLFW_KEY_S},
+    {"KEY_T", GLFW_KEY_T},
+    {"KEY_U", GLFW_KEY_U},
+    {"KEY_V", GLFW_KEY_V},
+    {"KEY_W", GLFW_KEY_W},
+    {"KEY_X", GLFW_KEY_X},
+    {"KEY_Y", GLFW_KEY_Y},
+    {"KEY_Z", GLFW_KEY_Z},
+    {"KEY_LEFT_BRACKET", GLFW_KEY_LEFT_BRACKET},
+    {"KEY_BACKSLASH", GLFW_KEY_BACKSLASH},
+    {"KEY_RIGHT_BRACKET", GLFW_KEY_RIGHT_BRACKET},
+    {"KEY_GRAVE_ACCENT", GLFW_KEY_GRAVE_ACCENT},
+    {"KEY_WORLD_1", GLFW_KEY_WORLD_1},
+    {"KEY_WORLD_2", GLFW_KEY_WORLD_2},
+
+
+    //Functional Keys
+    {"KEY_ESCAPE", GLFW_KEY_ESCAPE},
+    {"KEY_ENTER", GLFW_KEY_ENTER},
+    {"KEY_TAB", GLFW_KEY_TAB},
+    {"KEY_BACKSPACE", GLFW_KEY_BACKSPACE},
+    {"KEY_INSERT", GLFW_KEY_INSERT},
+    {"KEY_DELETE", GLFW_KEY_DELETE},
+    {"KEY_RIGHT", GLFW_KEY_RIGHT},
+    {"KEY_LEFT", GLFW_KEY_LEFT},
+    {"KEY_DOWN", GLFW_KEY_DOWN},
+    {"KEY_UP", GLFW_KEY_UP},
+    {"KEY_PAGE_UP", GLFW_KEY_PAGE_UP},
+    {"KEY_PAGE_DOWN", GLFW_KEY_PAGE_DOWN},
+    {"KEY_HOME", GLFW_KEY_HOME},
+    {"KEY_END", GLFW_KEY_END},
+    {"KEY_CAPS_LOCK", GLFW_KEY_CAPS_LOCK},
+    {"KEY_SCROLL_LOCK", GLFW_KEY_SCROLL_LOCK},
+    {"KEY_NUM_LOCK", GLFW_KEY_NUM_LOCK},
+    {"KEY_PRINT_SCREEN", GLFW_KEY_PRINT_SCREEN},
+    {"KEY_PAUSE", GLFW_KEY_PAUSE},
+    {"KEY_F1", GLFW_KEY_F1},
+    {"KEY_F2", GLFW_KEY_F2},
+    {"KEY_F3", GLFW_KEY_F3},
+    {"KEY_F4", GLFW_KEY_F4},
+    {"KEY_F5", GLFW_KEY_F5},
+    {"KEY_F6", GLFW_KEY_F6},
+    {"KEY_F7", GLFW_KEY_F7},
+    {"KEY_F8", GLFW_KEY_F8},
+    {"KEY_F9", GLFW_KEY_F9},
+    {"KEY_F10", GLFW_KEY_F10},
+    {"KEY_F11", GLFW_KEY_F11},
+    {"KEY_F12", GLFW_KEY_F12},
+
+
+    //Keypad Keys
+    {"KEY_KP_0", GLFW_KEY_KP_0},
+    {"KEY_KP_1", GLFW_KEY_KP_1},
+    {"KEY_KP_2", GLFW_KEY_KP_2},
+    {"KEY_KP_3", GLFW_KEY_KP_3},
+    {"KEY_KP_4", GLFW_KEY_KP_4},
+    {"KEY_KP_5", GLFW_KEY_KP_5},
+    {"KEY_KP_6", GLFW_KEY_KP_6},
+    {"KEY_KP_7", GLFW_KEY_KP_7},
+    {"KEY_KP_8", GLFW_KEY_KP_8},
+    {"KEY_KP_9", GLFW_KEY_KP_9},
+    {"KEY_KP_DECIMAL", GLFW_KEY_KP_DECIMAL},
+    {"KEY_KP_DIVIDE", GLFW_KEY_KP_DIVIDE},
+    {"KEY_KP_MULTIPLY", GLFW_KEY_KP_MULTIPLY},
+    {"KEY_KP_SUBTRACT", GLFW_KEY_KP_SUBTRACT},
+    {"KEY_KP_ADD", GLFW_KEY_KP_ADD},
+    {"KEY_KP_ENTER", GLFW_KEY_KP_ENTER},
+    {"KEY_KP_EQUAL", GLFW_KEY_KP_EQUAL},
+
+
+    //Modifier Keys
+    {"KEY_LEFT_SHIFT", GLFW_KEY_LEFT_SHIFT},
+    {"KEY_LEFT_CONTROL", GLFW_KEY_LEFT_CONTROL},
+    {"KEY_LEFT_ALT", GLFW_KEY_LEFT_ALT},
+    {"KEY_LEFT_SUPER", GLFW_KEY_LEFT_SUPER},
+    {"KEY_RIGHT_SHIFT", GLFW_KEY_RIGHT_SHIFT},
+    {"KEY_RIGHT_CONTROL", GLFW_KEY_RIGHT_CONTROL},
+    {"KEY_RIGHT_ALT", GLFW_KEY_RIGHT_ALT},
+    {"KEY_RIGHT_SUPER", GLFW_KEY_RIGHT_SUPER},
+    {"KEY_MENU", GLFW_KEY_MENU}
+};
+
+
+
+
 namespace constants {
+	static bool C_TRUE = true;
+	static bool C_FALSE = false;
+
+
 	//Mathematical Constants
-	constexpr float PI = 3.14159265358979f;
-	constexpr float EXP = 2.71828182845905f;
+	constexpr float PI = 3.141592f;
+	constexpr float PI2 = PI * 2.0f;
+	constexpr float EXP = 2.718281f;
+	constexpr float INF = std::numeric_limits<float>::infinity();
 
-	constexpr float TO_RAD = 0.01745329251994f;
-	constexpr float TO_DEG = 57.2957795130824f;
+	constexpr float TO_RAD = 0.017453f;
+	constexpr float TO_DEG = 57.29577f;
 
-
-	//Texture Standardisation
-	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
-	constexpr int TEXTURE_ARRAY_MAX_LAYERS = 32;
-
-
-	//Physics/Rendering Frequency/dt
-	constexpr int HZ = 45;
-	constexpr double DT = 1.0d/HZ;
 
 
 	//Sim Constants
-	constexpr float GRAVITY_ACCEL = 2.5e-4f;
+	constexpr float PHYSICS_FREQUENCY = 60.0f;
+	constexpr float GRAVITY_ACCEL = 0.486f;
 	constexpr float FLOOR_FRICT_COEFF = 0.75f;
+	constexpr float FLOOR_FRICT_SLIDE_COEFF = 0.975f;
 	constexpr float AIR_FRICT_COEFF = 0.975f;
-	constexpr float KILL_PLANE_HEIGHT = -16.0f;
+	constexpr float AIR_FRICT_SLIDE_COEFF = 0.9975f;
 	constexpr float MAX_STEP_HEIGHT = 0.42857f;
+	constexpr float DOOR_OPEN_TIME_TICKS = 2.0f * PHYSICS_FREQUENCY;
 
 
 	//Invalid returns for vectors and floats.
@@ -100,54 +269,88 @@ namespace constants {
 
 
 	//Maximum quantities of each type.
-	constexpr int MAX_VISPLANES = 64;
-	constexpr int MAX_WALLS = 256;
-	constexpr int MAX_SPRITES = 32;
-	constexpr int MAX_LIGHTS = 64;
-	constexpr int MAX_GATES = 32;
-	constexpr int MAX_FLAGS = 128;
+	constexpr size_t MAX_FLAGS = 256;
+	constexpr size_t MAX_VERTEX_BYTES = 16384;
+	constexpr size_t MAX_INDEX_BYTES = 16384;
+	constexpr size_t MAX_ROLLING_VALUE_QUALITY = 64;
+	constexpr size_t MAX_SPRITE_PARTICLES = 2048;
 
+	constexpr float PARTICLE_LIFETIME_FRAMES = 2.0f * PHYSICS_FREQUENCY;
 	constexpr float SPECIAL_MOVE_SPEED_SLOW = 0.025;
 	constexpr float SPECIAL_MOVE_SPEED_FAST = 0.075;
 }
 
 namespace display {
 	//Resolutions
-	constexpr glm::ivec2 SCREEN_RESOLUTION = glm::ivec2(640, 400);
-	constexpr glm::ivec2 RENDER_RESOLUTION = glm::ivec2(480, 270);
+	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_INITIAL = glm::ivec2(1024, 1024);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_MINIMUM = glm::ivec2(128, 128); //Don't get any smaller than this.
+	constexpr float ARB_SHADOW_TEXEL_SIZE = 0.01f;
+	constexpr glm::ivec2 ARB_SHADOW_MAX_RESOLUTION = glm::ivec2(4096, 4096);
+
+
+	//Texture Standardisation
+	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
+	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
+	constexpr glm::ivec2 CRT_BEZEL_RESOLUTION = glm::ivec2(640, 480);
+	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
+	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback.png";
+	constexpr const char* FALLBACK_NORMAL_PATH = "src/textures-env/fallback.normal.png";
+	constexpr const char* FALLBACK_SKYBOX_PATH = "src/textures-env/fallback-skybox.png";
 
 
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
-	constexpr float FOV = 70.0f;
-	constexpr float MAX_RAY_ANGLE = FOV / 2.0f;
-	constexpr float MAX_RAY_DIST = 64.0f;
+	constexpr size_t MAX_TEXTOBJECT_CHARACTERS = 64;
+	constexpr float SHADOWMAP_SCALING = 0.01f;
+}
+
+namespace initial {
+	//Textures
+	constexpr const char* FALLBACK_TEXTURE_NAME = "fallback";
+	constexpr const char* FALLBACK_SKYBOX_NAME = "fallback-skybox";
+	constexpr glm::vec2 TEXTURE_SCALE = glm::vec2(1.0f, 1.0f);
+	constexpr glm::vec3 TEXTURE_OFFSET = glm::vec3(0.0f, 0.0f, 0.0f);
+
+
+	//Sun
+	constexpr glm::vec3 SUN_DIRECTION = glm::vec3(0.0f, 0.0f, 1.0f);
+	constexpr float SUN_INTENSITY = 1.75f;
+	constexpr glm::vec3 SUN_COLOUR = glm::vec3(1.0f, 1.0f, 1.0f);
+
+
+	//Physics
+	constexpr float GRAVITY_ACCEL = 0.486f;
+	constexpr float KILL_PLANE_Z = -16.0f;
+
+
+	//Player
+	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(0.0f, 0.0f, 0.0f);
+	constexpr float PLAYER_START_VANGLE = 0.0f;
 }
 
 namespace playerConfig {
-	//Preference Speeds
-	constexpr float TURN_SPEED_KEYBOARD = 5.0f;
-	constexpr float TURN_SPEED_CURSOR = 0.25f;
-	constexpr float TURN_SPEED_CONTROLLER = 10.0f;
-	constexpr float CONTROLLER_MIN_MOVEMENT = 0.05f;
-
-	constexpr float MOVE_SPEED_BASE = 0.05f;
+	//Physics speed values
+	constexpr float MOVE_SPEED_BASE = 0.0375f;
 	constexpr float MOVE_SPEED_CROUCH_MULT = 0.5f;
 	constexpr float MOVE_SPEED_RUN_MULT = 2.0f;
+	constexpr float MOVE_SPEED_SLIDE_ADD = 0.5f;
+	constexpr float SLIDE_THRESHOLD = MOVE_SPEED_BASE * 1.125f;
 	constexpr float JUMP_INIT_SPEED = 0.25f;
-	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.0f;
+	constexpr float MAX_AIR_SPEED_XY = MOVE_SPEED_BASE * MOVE_SPEED_RUN_MULT * 2.5f;
+	constexpr int MAX_JUMPS = 2; //Double jumps allowed.
 
 
 	//Physics Collision Values
-	constexpr float PLAYER_COLLISION_RADIUS = 0.125f;
+	constexpr float PLAYER_COLLISION_RADIUS = 0.25f;
 	constexpr float PLAYER_COLLISION_HEIGHT_STAND = 1.75f;
-	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 1.0f;
+	constexpr float PLAYER_COLLISION_HEIGHT_CROUCH = 0.875f;
 	constexpr float PLAYER_INTERACT_RAY_DIST = 2.0f;
 
 
 	//Player Initial Values
-	constexpr glm::vec3 PLAYER_START_POSITION = glm::vec3(-2.5f, -2.5f, 1.0f);
-	constexpr float PLAYER_START_ANGLE = -45.0f;
+	constexpr float LATERAL_VIEW_LEAN = 2.5f * constants::TO_RAD;
 	constexpr int PLAYER_MAX_HEALTH = 128;
 	constexpr int PLAYER_MAX_ENERGY = 64;
 
@@ -159,11 +362,7 @@ namespace playerConfig {
 
 namespace dev {
 	//Assorted DEV/DEBUG constants
-	constexpr int DRAW_UV = 0;
-	constexpr int NO_COLLIDE = 0;
-	constexpr int SHOW_FREQ = 0;
-	constexpr int NO_INTERFACE = 0;
-	constexpr int VIEW_BOB_DISABLE = 0;
+	constexpr bool SHOW_PHYSICS_TICKRATE = false;
+	constexpr bool SHOW_PHYSICS_DT = false;
+	constexpr bool PAUSE_ON_OPENGL_ERROR = true;
 }
-
-#endif // CONSTANTS_H

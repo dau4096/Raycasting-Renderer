@@ -1,0 +1,10 @@
+# Images
+*.png
+*.jpg
+*.bmp
+*.gif
+
+*.zip
+*.rar
+*.rdc
+*.ngfx-cppcap

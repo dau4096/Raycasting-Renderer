@@ -1,0 +1,1273 @@
+
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="default-skybox" />
+    <sun sunDirection="0.5 0.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="1.75" />
+    <physics gravity="0.486" killPlaneZ="-16.0" />
+    <player startPoint="0.0 0.5 1.0" startAngle="180.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+<environment>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="19.428507 -65.714066" v1="18.285654 -65.714066" v2="18.285654 -65.142639" v3="19.428507 -65.142639" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="19.428507 -65.714066" v1="18.285654 -65.714066" v2="18.285654 -65.142639" v3="19.428507 -65.142639" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -52.571255" v1="12.571387 -55.428391" v2="14.857094 -52.571255" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -52.571255" v1="12.571387 -55.428391" v2="14.857094 -52.571255" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -52.571255" v1="14.857094 -52.571255" v2="17.285658 -51.428402" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -52.571255" v1="14.857094 -52.571255" v2="17.285658 -51.428402" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="17.285658 -51.428402" v1="14.857094 -52.571255" v2="16.571375 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="17.285658 -51.428402" v1="14.857094 -52.571255" v2="16.571375 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="17.285658 -51.428402" v1="16.571375 -54.856964" v2="21.142788 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="17.285658 -51.428402" v1="16.571375 -54.856964" v2="21.142788 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="17.285658 -51.428402" v1="21.142788 -54.856964" v2="21.714214 -51.428402" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="17.285658 -51.428402" v1="21.142788 -54.856964" v2="21.714214 -51.428402" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.714214 -51.428402" v1="21.142788 -54.856964" v2="21.714214 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="21.714214 -51.428402" v1="21.142788 -54.856964" v2="21.714214 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.714214 -51.428402" v1="21.714214 -54.856964" v2="23.999922 -51.428402" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="21.714214 -51.428402" v1="21.714214 -54.856964" v2="23.999922 -51.428402" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -51.428402" v1="21.714214 -54.856964" v2="23.999922 -55.428391" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="23.999922 -51.428402" v1="21.714214 -54.856964" v2="23.999922 -55.428391" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -63.428364" v1="23.999922 -62.856937" v2="22.857067 -63.428364" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="23.999922 -63.428364" v1="23.999922 -62.856937" v2="22.857067 -63.428364" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -63.428364" v1="22.857067 -63.428364" v2="20.571362 -65.142639" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="23.999922 -63.428364" v1="22.857067 -63.428364" v2="20.571362 -65.142639" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="20.571362 -65.142639" v1="22.857067 -63.428364" v2="21.142788 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="20.571362 -65.142639" v1="22.857067 -63.428364" v2="21.142788 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="20.571362 -65.142639" v1="21.142788 -60.571228" v2="19.428507 -65.142639" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="20.571362 -65.142639" v1="21.142788 -60.571228" v2="19.428507 -65.142639" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="19.428507 -65.142639" v1="21.142788 -60.571228" v2="16.571375 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="19.428507 -65.142639" v1="21.142788 -60.571228" v2="16.571375 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="19.428507 -65.142639" v1="16.571375 -60.571228" v2="18.285654 -65.142639" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="19.428507 -65.142639" v1="16.571375 -60.571228" v2="18.285654 -65.142639" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="18.285654 -65.142639" v1="16.571375 -60.571228" v2="17.142801 -65.142639" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="18.285654 -65.142639" v1="16.571375 -60.571228" v2="17.142801 -65.142639" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="17.142801 -65.142639" v1="16.571375 -60.571228" v2="14.857094 -63.428364" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="17.142801 -65.142639" v1="16.571375 -60.571228" v2="14.857094 -63.428364" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="17.142801 -65.142639" v1="14.857094 -63.428364" v2="12.571387 -63.428364" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="17.142801 -65.142639" v1="14.857094 -63.428364" v2="12.571387 -63.428364" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -63.428364" v1="14.857094 -63.428364" v2="12.571387 -59.999802" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -63.428364" v1="14.857094 -63.428364" v2="12.571387 -59.999802" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -59.999802" v1="14.857094 -63.428364" v2="15.999948 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -59.999802" v1="14.857094 -63.428364" v2="15.999948 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -59.999802" v1="15.999948 -60.571228" v2="15.999948 -59.999802" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -59.999802" v1="15.999948 -60.571228" v2="15.999948 -59.999802" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -59.999802" v1="15.999948 -59.999802" v2="12.571387 -55.428391" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -59.999802" v1="15.999948 -59.999802" v2="12.571387 -55.428391" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -55.428391" v1="15.999948 -59.999802" v2="15.999948 -55.428391" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -55.428391" v1="15.999948 -59.999802" v2="15.999948 -55.428391" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -55.428391" v1="15.999948 -55.428391" v2="15.999948 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -55.428391" v1="15.999948 -55.428391" v2="15.999948 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="12.571387 -55.428391" v1="15.999948 -54.856964" v2="14.857094 -52.571255" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="12.571387 -55.428391" v1="15.999948 -54.856964" v2="14.857094 -52.571255" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="14.857094 -52.571255" v1="15.999948 -54.856964" v2="16.571375 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="14.857094 -52.571255" v1="15.999948 -54.856964" v2="16.571375 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -54.856964" v1="15.999948 -54.856964" v2="15.999948 -55.428391" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -54.856964" v1="15.999948 -54.856964" v2="15.999948 -55.428391" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -54.856964" v1="15.999948 -55.428391" v2="16.571375 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -54.856964" v1="15.999948 -55.428391" v2="16.571375 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -54.856964" v1="16.571375 -60.571228" v2="21.142788 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -54.856964" v1="16.571375 -60.571228" v2="21.142788 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -54.856964" v1="21.142788 -60.571228" v2="21.142788 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -54.856964" v1="21.142788 -60.571228" v2="21.142788 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.142788 -54.856964" v1="21.142788 -60.571228" v2="21.714214 -54.856964" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="21.142788 -54.856964" v1="21.142788 -60.571228" v2="21.714214 -54.856964" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.714214 -54.856964" v1="21.142788 -60.571228" v2="21.714214 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="21.714214 -54.856964" v1="21.142788 -60.571228" v2="21.714214 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.714214 -54.856964" v1="21.714214 -60.571228" v2="23.999922 -59.999802" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="21.714214 -54.856964" v1="21.714214 -60.571228" v2="23.999922 -59.999802" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.714214 -54.856964" v1="23.999922 -59.999802" v2="23.999922 -55.428391" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="21.714214 -54.856964" v1="23.999922 -59.999802" v2="23.999922 -55.428391" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -59.999802" v1="21.714214 -60.571228" v2="23.999922 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="23.999922 -59.999802" v1="21.714214 -60.571228" v2="23.999922 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -60.571228" v1="21.714214 -60.571228" v2="23.999922 -62.856937" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="23.999922 -60.571228" v1="21.714214 -60.571228" v2="23.999922 -62.856937" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -62.856937" v1="21.714214 -60.571228" v2="22.857067 -63.428364" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="23.999922 -62.856937" v1="21.714214 -60.571228" v2="22.857067 -63.428364" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="22.857067 -63.428364" v1="21.714214 -60.571228" v2="21.142788 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="22.857067 -63.428364" v1="21.714214 -60.571228" v2="21.142788 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -60.571228" v1="15.999948 -55.428391" v2="15.999948 -59.999802" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -60.571228" v1="15.999948 -55.428391" v2="15.999948 -59.999802" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -60.571228" v1="15.999948 -59.999802" v2="15.999948 -60.571228" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -60.571228" v1="15.999948 -59.999802" v2="15.999948 -60.571228" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="16.571375 -60.571228" v1="15.999948 -60.571228" v2="14.857094 -63.428364" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="16.571375 -60.571228" v1="15.999948 -60.571228" v2="14.857094 -63.428364" /> </visplane>
+    <visplane height="-0.142857" texture="FLAT14"> <vertices v0="16.571375 -60.571228" v1="16.571375 -59.999802" v2="21.142788 -59.999802" v3="21.142788 -60.571228" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="16.571375 -60.571228" v1="16.571375 -59.999802" v2="21.142788 -59.999802" v3="21.142788 -60.571228" /> </visplane>
+    <visplane height="-0.142857" texture="FLAT14"> <vertices v0="16.571375 -59.999802" v1="15.999948 -59.999802" v2="15.999948 -55.428391" v3="16.571375 -55.428391" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="16.571375 -59.999802" v1="15.999948 -59.999802" v2="15.999948 -55.428391" v3="16.571375 -55.428391" /> </visplane>
+    <visplane height="-0.142857" texture="FLAT14"> <vertices v0="16.571375 -55.428391" v1="16.571375 -54.856964" v2="21.142788 -54.856964" v3="21.142788 -55.428391" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="16.571375 -55.428391" v1="16.571375 -54.856964" v2="21.142788 -54.856964" v3="21.142788 -55.428391" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="16.571375 -55.428391" v1="16.571375 -59.999802" v2="21.142788 -59.999802" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="16.571375 -55.428391" v1="16.571375 -59.999802" v2="21.142788 -59.999802" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="16.571375 -55.428391" v1="21.142788 -59.999802" v2="21.142788 -55.428391" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="16.571375 -55.428391" v1="21.142788 -59.999802" v2="21.142788 -55.428391" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="16.571375 -55.428391" v1="21.142788 -55.428391" v2="21.714214 -54.856964" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="16.571375 -55.428391" v1="21.142788 -55.428391" v2="21.714214 -54.856964" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.714214 -54.856964" v1="21.142788 -55.428391" v2="21.714214 -55.428391" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.714214 -54.856964" v1="21.142788 -55.428391" v2="21.714214 -55.428391" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.714214 -54.856964" v1="21.714214 -55.428391" v2="23.999922 -55.428391" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.714214 -54.856964" v1="21.714214 -55.428391" v2="23.999922 -55.428391" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="23.999922 -55.428391" v1="21.714214 -55.428391" v2="23.999922 -57.14267" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="23.999922 -55.428391" v1="21.714214 -55.428391" v2="23.999922 -57.14267" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="23.999922 -59.999802" v1="23.999922 -58.285522" v2="21.714214 -59.999802" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="23.999922 -59.999802" v1="23.999922 -58.285522" v2="21.714214 -59.999802" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="23.999922 -59.999802" v1="21.714214 -59.999802" v2="21.714214 -60.571228" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="23.999922 -59.999802" v1="21.714214 -59.999802" v2="21.714214 -60.571228" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.714214 -60.571228" v1="21.714214 -59.999802" v2="21.142788 -59.999802" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.714214 -60.571228" v1="21.714214 -59.999802" v2="21.142788 -59.999802" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.714214 -60.571228" v1="21.142788 -59.999802" v2="16.571375 -59.999802" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.714214 -60.571228" v1="21.142788 -59.999802" v2="16.571375 -59.999802" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.142788 -59.999802" v1="21.714214 -59.999802" v2="21.142788 -55.428391" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.142788 -59.999802" v1="21.714214 -59.999802" v2="21.142788 -55.428391" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.142788 -55.428391" v1="21.714214 -59.999802" v2="21.714214 -55.428391" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.142788 -55.428391" v1="21.714214 -59.999802" v2="21.714214 -55.428391" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.714214 -55.428391" v1="21.714214 -59.999802" v2="23.999922 -58.285522" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.714214 -55.428391" v1="21.714214 -59.999802" v2="23.999922 -58.285522" /> </visplane>
+    <visplane height="-0.285713" texture="FLAT14"> <vertices v0="21.714214 -55.428391" v1="23.999922 -58.285522" v2="23.999922 -57.14267" /> </visplane>
+    <visplane height="3.571417" texture="CEIL3_5"> <vertices v0="21.714214 -55.428391" v1="23.999922 -58.285522" v2="23.999922 -57.14267" /> </visplane>
+    <visplane height="0.142857" texture="FLAT5_5"> <vertices v0="23.999922 -59.999802" v1="23.999922 -58.285522" v2="24.571348 -58.285522" v3="24.571348 -59.999802" /> </visplane>
+    <visplane height="3.42856" texture="FLAT5_5"> <vertices v0="23.999922 -59.999802" v1="23.999922 -58.285522" v2="24.571348 -58.285522" v3="24.571348 -59.999802" /> </visplane>
+    <visplane height="0.142857" texture="FLAT5_5"> <vertices v0="23.999922 -57.14267" v1="23.999922 -55.428391" v2="24.571348 -55.428391" v3="24.571348 -57.14267" /> </visplane>
+    <visplane height="3.42856" texture="FLAT5_5"> <vertices v0="23.999922 -57.14267" v1="23.999922 -55.428391" v2="24.571348 -55.428391" v3="24.571348 -57.14267" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="24.571348 -52.571255" v1="24.571348 -55.428391" v2="26.285627 -51.428402" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="24.571348 -52.571255" v1="24.571348 -55.428391" v2="26.285627 -51.428402" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="26.285627 -51.428402" v1="24.571348 -55.428391" v2="29.714188 -51.428402" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="26.285627 -51.428402" v1="24.571348 -55.428391" v2="29.714188 -51.428402" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="29.714188 -51.428402" v1="24.571348 -55.428391" v2="24.571348 -57.14267" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="29.714188 -51.428402" v1="24.571348 -55.428391" v2="24.571348 -57.14267" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="29.714188 -51.428402" v1="24.571348 -57.14267" v2="24.571348 -58.285522" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="29.714188 -51.428402" v1="24.571348 -57.14267" v2="24.571348 -58.285522" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="29.714188 -51.428402" v1="24.571348 -58.285522" v2="34.285603 -52.142685" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="29.714188 -51.428402" v1="24.571348 -58.285522" v2="34.285603 -52.142685" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="29.714188 -51.428402" v1="34.285603 -52.142685" v2="33.14275 -51.428402" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="29.714188 -51.428402" v1="34.285603 -52.142685" v2="33.14275 -51.428402" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="33.14275 -51.428402" v1="34.285603 -52.142685" v2="38.857014 -52.142685" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="33.14275 -51.428402" v1="34.285603 -52.142685" v2="38.857014 -52.142685" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="33.14275 -51.428402" v1="38.857014 -52.142685" v2="39.999866 -52.142685" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="33.14275 -51.428402" v1="38.857014 -52.142685" v2="39.999866 -52.142685" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -52.142685" v1="38.857014 -52.142685" v2="40.571297 -53.714108" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="39.999866 -52.142685" v1="38.857014 -52.142685" v2="40.571297 -53.714108" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -52.142685" v1="40.571297 -53.714108" v2="43.428429 -55.571247" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="39.999866 -52.142685" v1="40.571297 -53.714108" v2="43.428429 -55.571247" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -52.142685" v1="43.428429 -55.571247" v2="48.856983 -55.571247" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="39.999866 -52.142685" v1="43.428429 -55.571247" v2="48.856983 -55.571247" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="48.856983 -55.571247" v1="43.428429 -55.571247" v2="48.856983 -59.999802" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="48.856983 -55.571247" v1="43.428429 -55.571247" v2="48.856983 -59.999802" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="48.856983 -65.142639" v1="48.856983 -59.999802" v2="39.999866 -65.142639" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="48.856983 -65.142639" v1="48.856983 -59.999802" v2="39.999866 -65.142639" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -65.142639" v1="48.856983 -59.999802" v2="43.428429 -55.571247" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="39.999866 -65.142639" v1="48.856983 -59.999802" v2="43.428429 -55.571247" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -65.142639" v1="43.428429 -55.571247" v2="40.571297 -53.714108" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="39.999866 -65.142639" v1="43.428429 -55.571247" v2="40.571297 -53.714108" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -65.142639" v1="40.571297 -53.714108" v2="35.428455 -65.142639" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="39.999866 -65.142639" v1="40.571297 -53.714108" v2="35.428455 -65.142639" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="35.428455 -65.142639" v1="40.571297 -53.714108" v2="34.285603 -52.142685" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="35.428455 -65.142639" v1="40.571297 -53.714108" v2="34.285603 -52.142685" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="35.428455 -65.142639" v1="34.285603 -52.142685" v2="24.571348 -58.285522" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="35.428455 -65.142639" v1="34.285603 -52.142685" v2="24.571348 -58.285522" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -58.285522" v2="24.571348 -59.999802" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -58.285522" v2="24.571348 -59.999802" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -59.999802" v2="24.571348 -60.571228" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -59.999802" v2="24.571348 -60.571228" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -60.571228" v2="24.571348 -62.856937" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -60.571228" v2="24.571348 -62.856937" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -62.856937" v2="24.571348 -65.142639" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="35.428455 -65.142639" v1="24.571348 -62.856937" v2="24.571348 -65.142639" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="34.285603 -52.142685" v1="40.571297 -53.714108" v2="38.857014 -52.142685" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="34.285603 -52.142685" v1="40.571297 -53.714108" v2="38.857014 -52.142685" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="29.857044 -55.428391" v1="27.142767 -56.571243" v2="27.571339 -60.428371" v3="31.857038 -61.571224" v4="36.857021 -60.856941" v5="37.999874 -58.428379" v6="36.428452 -56.142673" v7="33.857033 -55.428391" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="29.857044 -55.428391" v1="27.142767 -56.571243" v2="27.571339 -60.428371" v3="31.857038 -61.571224" v4="36.857021 -60.856941" v5="37.999874 -58.428379" v6="36.428452 -56.142673" v7="33.857033 -55.428391" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="27.285624 -65.714066" v1="24.571348 -65.142639" v2="35.428455 -65.142639" v3="35.428455 -67.428352" v4="29.857044 -66.856926" /> </visplane>
+    <visplane height="0.42857" texture="F_SKY1"> <vertices v0="27.285624 -65.714066" v1="24.571348 -65.142639" v2="35.428455 -65.142639" v3="35.428455 -67.428352" v4="29.857044 -66.856926" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="9.142827 -55.999817" v1="8.857114 -56.428387" v2="9.142827 -56.428387" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="9.142827 -55.999817" v1="8.857114 -56.428387" v2="9.142827 -56.428387" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="9.142827 -55.999817" v1="9.142827 -56.428387" v2="12.142817 -55.428391" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="9.142827 -55.999817" v1="9.142827 -56.428387" v2="12.142817 -55.428391" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="12.142817 -55.428391" v1="9.142827 -56.428387" v2="12.142817 -59.999802" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="12.142817 -55.428391" v1="9.142827 -56.428387" v2="12.142817 -59.999802" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="12.142817 -55.428391" v1="12.142817 -59.999802" v2="12.571387 -59.999802" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="12.142817 -55.428391" v1="12.142817 -59.999802" v2="12.571387 -59.999802" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="12.142817 -55.428391" v1="12.571387 -59.999802" v2="12.571387 -55.428391" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="12.142817 -55.428391" v1="12.571387 -59.999802" v2="12.571387 -55.428391" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="12.142817 -59.999802" v1="9.142827 -56.428387" v2="9.142827 -58.999805" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="12.142817 -59.999802" v1="9.142827 -56.428387" v2="9.142827 -58.999805" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="12.142817 -59.999802" v1="9.142827 -58.999805" v2="9.142827 -59.428375" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="12.142817 -59.999802" v1="9.142827 -58.999805" v2="9.142827 -59.428375" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="9.142827 -59.428375" v1="9.142827 -58.999805" v2="8.857114 -58.999805" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="9.142827 -59.428375" v1="9.142827 -58.999805" v2="8.857114 -58.999805" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="8.857114 -58.999805" v1="9.142827 -58.999805" v2="8.857114 -56.428387" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="8.857114 -58.999805" v1="9.142827 -58.999805" v2="8.857114 -56.428387" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="8.857114 -56.428387" v1="9.142827 -58.999805" v2="9.142827 -56.428387" /> </visplane>
+    <visplane height="2.14285" texture="CEIL3_5"> <vertices v0="8.857114 -56.428387" v1="9.142827 -58.999805" v2="9.142827 -56.428387" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="1.142853 -54.856964" v1="1.142853 -60.571228" v2="2.285707 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="1.142853 -54.856964" v1="1.142853 -60.571228" v2="2.285707 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="1.142853 -54.856964" v1="2.285707 -58.285522" v2="2.285707 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="1.142853 -54.856964" v1="2.285707 -58.285522" v2="2.285707 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="1.142853 -54.856964" v1="2.285707 -57.14267" v2="2.857133 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="1.142853 -54.856964" v1="2.285707 -57.14267" v2="2.857133 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="1.142853 -54.856964" v1="2.857133 -57.14267" v2="2.285707 -53.714108" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="1.142853 -54.856964" v1="2.857133 -57.14267" v2="2.285707 -53.714108" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -53.714108" v1="2.857133 -57.14267" v2="3.42856 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -53.714108" v1="2.857133 -57.14267" v2="3.42856 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -53.714108" v1="3.42856 -57.14267" v2="3.999987 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -53.714108" v1="3.42856 -57.14267" v2="3.999987 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -53.714108" v1="3.999987 -57.14267" v2="4.571414 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -53.714108" v1="3.999987 -57.14267" v2="4.571414 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -53.714108" v1="4.571414 -57.14267" v2="5.14284 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -53.714108" v1="4.571414 -57.14267" v2="5.14284 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -53.714108" v1="5.14284 -57.14267" v2="7.999974 -53.714108" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -53.714108" v1="5.14284 -57.14267" v2="7.999974 -53.714108" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="7.999974 -53.714108" v1="5.14284 -57.14267" v2="5.714267 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="7.999974 -53.714108" v1="5.14284 -57.14267" v2="5.714267 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="7.999974 -53.714108" v1="5.714267 -57.14267" v2="8.857114 -55.999817" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="7.999974 -53.714108" v1="5.714267 -57.14267" v2="8.857114 -55.999817" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="8.857114 -55.999817" v1="5.714267 -57.14267" v2="8.857114 -56.428387" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="8.857114 -55.999817" v1="5.714267 -57.14267" v2="8.857114 -56.428387" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="7.999974 -61.714081" v1="8.857114 -59.428375" v2="5.714267 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="7.999974 -61.714081" v1="8.857114 -59.428375" v2="5.714267 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="7.999974 -61.714081" v1="5.714267 -58.285522" v2="5.14284 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="7.999974 -61.714081" v1="5.714267 -58.285522" v2="5.14284 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="7.999974 -61.714081" v1="5.14284 -58.285522" v2="2.285707 -61.714081" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="7.999974 -61.714081" v1="5.14284 -58.285522" v2="2.285707 -61.714081" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -61.714081" v1="5.14284 -58.285522" v2="4.571414 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -61.714081" v1="5.14284 -58.285522" v2="4.571414 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -61.714081" v1="4.571414 -58.285522" v2="3.999987 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -61.714081" v1="4.571414 -58.285522" v2="3.999987 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -61.714081" v1="3.999987 -58.285522" v2="3.42856 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -61.714081" v1="3.999987 -58.285522" v2="3.42856 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -61.714081" v1="3.42856 -58.285522" v2="2.857133 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -61.714081" v1="3.42856 -58.285522" v2="2.857133 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -61.714081" v1="2.857133 -58.285522" v2="1.142853 -60.571228" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -61.714081" v1="2.857133 -58.285522" v2="1.142853 -60.571228" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="1.142853 -60.571228" v1="2.857133 -58.285522" v2="2.285707 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="1.142853 -60.571228" v1="2.857133 -58.285522" v2="2.285707 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -58.285522" v1="2.857133 -58.285522" v2="2.285707 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -58.285522" v1="2.857133 -58.285522" v2="2.285707 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.285707 -57.14267" v1="2.857133 -58.285522" v2="2.857133 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.285707 -57.14267" v1="2.857133 -58.285522" v2="2.857133 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="2.857133 -57.14267" v1="2.857133 -58.285522" v2="3.42856 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.857133 -57.14267" v1="2.857133 -58.285522" v2="3.42856 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="3.42856 -57.14267" v1="2.857133 -58.285522" v2="3.42856 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.42856 -57.14267" v1="2.857133 -58.285522" v2="3.42856 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="3.42856 -57.14267" v1="3.42856 -58.285522" v2="3.999987 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.42856 -57.14267" v1="3.42856 -58.285522" v2="3.999987 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="3.42856 -57.14267" v1="3.999987 -58.285522" v2="3.999987 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.42856 -57.14267" v1="3.999987 -58.285522" v2="3.999987 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="3.999987 -57.14267" v1="3.999987 -58.285522" v2="4.571414 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.999987 -57.14267" v1="3.999987 -58.285522" v2="4.571414 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="3.999987 -57.14267" v1="4.571414 -58.285522" v2="4.571414 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.999987 -57.14267" v1="4.571414 -58.285522" v2="4.571414 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="4.571414 -57.14267" v1="4.571414 -58.285522" v2="5.14284 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="4.571414 -57.14267" v1="4.571414 -58.285522" v2="5.14284 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="5.14284 -57.14267" v1="4.571414 -58.285522" v2="5.14284 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.14284 -57.14267" v1="4.571414 -58.285522" v2="5.14284 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="5.14284 -57.14267" v1="5.14284 -58.285522" v2="5.714267 -58.285522" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.14284 -57.14267" v1="5.14284 -58.285522" v2="5.714267 -58.285522" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="5.14284 -57.14267" v1="5.714267 -58.285522" v2="5.714267 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.14284 -57.14267" v1="5.714267 -58.285522" v2="5.714267 -57.14267" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="5.714267 -57.14267" v1="5.714267 -58.285522" v2="8.857114 -58.999805" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.714267 -57.14267" v1="5.714267 -58.285522" v2="8.857114 -58.999805" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="5.714267 -57.14267" v1="8.857114 -58.999805" v2="8.857114 -56.428387" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.714267 -57.14267" v1="8.857114 -58.999805" v2="8.857114 -56.428387" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="8.857114 -58.999805" v1="5.714267 -58.285522" v2="8.857114 -59.428375" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="8.857114 -58.999805" v1="5.714267 -58.285522" v2="8.857114 -59.428375" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="4.571414 -55.999817" v1="5.714267 -55.999817" v2="5.714267 -54.856964" v3="4.571414 -54.856964" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="4.571414 -55.999817" v1="5.714267 -55.999817" v2="5.714267 -54.856964" v3="4.571414 -54.856964" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="4.571414 -60.571228" v1="5.714267 -60.571228" v2="5.714267 -59.428375" v3="4.571414 -59.428375" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="4.571414 -60.571228" v1="5.714267 -60.571228" v2="5.714267 -59.428375" v3="4.571414 -59.428375" /> </visplane>
+    <visplane height="1.571423" texture="FLOOR4_8"> <vertices v0="2.857133 -58.285522" v1="2.285707 -58.285522" v2="2.285707 -57.14267" v3="2.857133 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="2.857133 -58.285522" v1="2.285707 -58.285522" v2="2.285707 -57.14267" v3="2.857133 -57.14267" /> </visplane>
+    <visplane height="1.28571" texture="FLOOR4_8"> <vertices v0="3.42856 -58.285522" v1="2.857133 -58.285522" v2="2.857133 -57.14267" v3="3.42856 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.42856 -58.285522" v1="2.857133 -58.285522" v2="2.857133 -57.14267" v3="3.42856 -57.14267" /> </visplane>
+    <visplane height="0.999997" texture="FLOOR4_8"> <vertices v0="3.999987 -58.285522" v1="3.42856 -58.285522" v2="3.42856 -57.14267" v3="3.999987 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="3.999987 -58.285522" v1="3.42856 -58.285522" v2="3.42856 -57.14267" v3="3.999987 -57.14267" /> </visplane>
+    <visplane height="0.714283" texture="FLOOR4_8"> <vertices v0="4.571414 -58.285522" v1="3.999987 -58.285522" v2="3.999987 -57.14267" v3="4.571414 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="4.571414 -58.285522" v1="3.999987 -58.285522" v2="3.999987 -57.14267" v3="4.571414 -57.14267" /> </visplane>
+    <visplane height="0.42857" texture="FLOOR4_8"> <vertices v0="5.14284 -58.285522" v1="4.571414 -58.285522" v2="4.571414 -57.14267" v3="5.14284 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.14284 -58.285522" v1="4.571414 -58.285522" v2="4.571414 -57.14267" v3="5.14284 -57.14267" /> </visplane>
+    <visplane height="0.142857" texture="FLOOR4_8"> <vertices v0="5.714267 -58.285522" v1="5.14284 -58.285522" v2="5.14284 -57.14267" v3="5.714267 -57.14267" /> </visplane>
+    <visplane height="3.999987" texture="FLOOR7_2"> <vertices v0="5.714267 -58.285522" v1="5.14284 -58.285522" v2="5.14284 -57.14267" v3="5.714267 -57.14267" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="2.285707 -57.14267" v1="2.285707 -58.285522" v2="1.142853 -60.571228" v3="0.85714 -60.571228" v4="-1.142853 -59.428375" v5="-1.142853 -55.999817" v6="0.85714 -54.856964" v7="1.142853 -54.856964" /> </visplane>
+    <visplane height="3.42856" texture="FLOOR7_2"> <vertices v0="2.285707 -57.14267" v1="2.285707 -58.285522" v2="1.142853 -60.571228" v3="0.85714 -60.571228" v4="-1.142853 -59.428375" v5="-1.142853 -55.999817" v6="0.85714 -54.856964" v7="1.142853 -54.856964" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-5.714267 -56.571243" v1="-5.714267 -58.856949" v2="-4.571414 -59.428375" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-5.714267 -56.571243" v1="-5.714267 -58.856949" v2="-4.571414 -59.428375" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-5.714267 -56.571243" v1="-4.571414 -59.428375" v2="-4.571414 -55.999817" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-5.714267 -56.571243" v1="-4.571414 -59.428375" v2="-4.571414 -55.999817" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-4.571414 -55.999817" v1="-4.571414 -59.428375" v2="-2.285707 -59.428375" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-4.571414 -55.999817" v1="-4.571414 -59.428375" v2="-2.285707 -59.428375" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-4.571414 -55.999817" v1="-2.285707 -59.428375" v2="-2.285707 -55.999817" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-4.571414 -55.999817" v1="-2.285707 -59.428375" v2="-2.285707 -55.999817" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-2.285707 -55.999817" v1="-2.285707 -59.428375" v2="-1.571423 -59.428375" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-2.285707 -55.999817" v1="-2.285707 -59.428375" v2="-1.571423 -59.428375" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-2.285707 -55.999817" v1="-1.571423 -59.428375" v2="-1.571423 -55.999817" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-2.285707 -55.999817" v1="-1.571423 -59.428375" v2="-1.571423 -55.999817" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-1.571423 -55.999817" v1="-1.571423 -59.428375" v2="-1.142853 -59.428375" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-1.571423 -55.999817" v1="-1.571423 -59.428375" v2="-1.142853 -59.428375" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-1.571423 -55.999817" v1="-1.142853 -59.428375" v2="-1.142853 -55.999817" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-1.571423 -55.999817" v1="-1.142853 -59.428375" v2="-1.142853 -55.999817" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="-4.2857 -58.285522" v1="-3.714273 -58.285522" v2="-3.42856 -57.999809" v3="-3.42856 -57.428383" v4="-3.714273 -57.14267" v5="-4.2857 -57.14267" v6="-4.571414 -57.428383" v7="-4.571414 -57.999809" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-4.2857 -58.285522" v1="-3.714273 -58.285522" v2="-3.42856 -57.999809" v3="-3.42856 -57.428383" v4="-3.714273 -57.14267" v5="-4.2857 -57.14267" v6="-4.571414 -57.428383" v7="-4.571414 -57.999809" /> </visplane>
+    <visplane height="2.428563" texture="FLAT20"> <vertices v0="-2.285707 -55.714104" v1="-2.285707 -55.999817" v2="-4.571414 -55.999817" v3="-4.571414 -55.714104" /> </visplane>
+    <visplane height="4.2857" texture="FLAT20"> <vertices v0="-2.285707 -55.714104" v1="-2.285707 -55.999817" v2="-4.571414 -55.999817" v3="-4.571414 -55.714104" /> </visplane>
+    <visplane height="2.428563" texture="FLAT20"> <vertices v0="-4.571414 -59.714088" v1="-4.571414 -59.428375" v2="-2.285707 -59.428375" v3="-2.285707 -59.714088" /> </visplane>
+    <visplane height="4.2857" texture="FLAT20"> <vertices v0="-4.571414 -59.714088" v1="-4.571414 -59.428375" v2="-2.285707 -59.428375" v3="-2.285707 -59.714088" /> </visplane>
+    <visplane height="2.428563" texture="FLAT20"> <vertices v0="-5.714267 -58.856949" v1="-5.99998 -58.856949" v2="-5.99998 -56.571243" v3="-5.714267 -56.571243" /> </visplane>
+    <visplane height="4.2857" texture="FLAT20"> <vertices v0="-5.714267 -58.856949" v1="-5.99998 -58.856949" v2="-5.99998 -56.571243" v3="-5.714267 -56.571243" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-11.428534 -52.571255" v1="-11.428534 -62.856937" v2="-5.99998 -56.571243" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-11.428534 -52.571255" v1="-11.428534 -62.856937" v2="-5.99998 -56.571243" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-11.428534 -52.571255" v1="-5.99998 -56.571243" v2="-5.99998 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-11.428534 -52.571255" v1="-5.99998 -56.571243" v2="-5.99998 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-11.428534 -52.571255" v1="-5.99998 -55.714104" v2="1.142853 -50.285549" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-11.428534 -52.571255" v1="-5.99998 -55.714104" v2="1.142853 -50.285549" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -50.285549" v1="-5.99998 -55.714104" v2="-4.571414 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -50.285549" v1="-5.99998 -55.714104" v2="-4.571414 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -50.285549" v1="-4.571414 -55.714104" v2="-2.285707 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -50.285549" v1="-4.571414 -55.714104" v2="-2.285707 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -50.285549" v1="-2.285707 -55.714104" v2="1.142853 -52.571255" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -50.285549" v1="-2.285707 -55.714104" v2="1.142853 -52.571255" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -65.142639" v1="1.142853 -62.856937" v2="-2.285707 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -65.142639" v1="1.142853 -62.856937" v2="-2.285707 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -65.142639" v1="-2.285707 -59.714088" v2="-4.571414 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -65.142639" v1="-2.285707 -59.714088" v2="-4.571414 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -65.142639" v1="-4.571414 -59.714088" v2="-5.99998 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -65.142639" v1="-4.571414 -59.714088" v2="-5.99998 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -65.142639" v1="-5.99998 -59.714088" v2="-11.428534 -62.856937" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -65.142639" v1="-5.99998 -59.714088" v2="-11.428534 -62.856937" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-11.428534 -62.856937" v1="-5.99998 -59.714088" v2="-5.99998 -58.856949" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-11.428534 -62.856937" v1="-5.99998 -59.714088" v2="-5.99998 -58.856949" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-11.428534 -62.856937" v1="-5.99998 -58.856949" v2="-5.99998 -56.571243" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-11.428534 -62.856937" v1="-5.99998 -58.856949" v2="-5.99998 -56.571243" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-5.99998 -56.571243" v1="-5.99998 -58.856949" v2="-4.571414 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-5.99998 -56.571243" v1="-5.99998 -58.856949" v2="-4.571414 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-5.99998 -56.571243" v1="-4.571414 -55.714104" v2="-5.99998 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-5.99998 -56.571243" v1="-4.571414 -55.714104" v2="-5.99998 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-4.571414 -55.714104" v1="-5.99998 -58.856949" v2="-4.571414 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-4.571414 -55.714104" v1="-5.99998 -58.856949" v2="-4.571414 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-4.571414 -55.714104" v1="-4.571414 -59.714088" v2="-2.285707 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-4.571414 -55.714104" v1="-4.571414 -59.714088" v2="-2.285707 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-4.571414 -55.714104" v1="-2.285707 -59.714088" v2="-2.285707 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-4.571414 -55.714104" v1="-2.285707 -59.714088" v2="-2.285707 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-2.285707 -55.714104" v1="-2.285707 -59.714088" v2="-1.71428 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-2.285707 -55.714104" v1="-2.285707 -59.714088" v2="-1.71428 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-2.285707 -55.714104" v1="-1.71428 -59.714088" v2="-1.71428 -55.714104" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-2.285707 -55.714104" v1="-1.71428 -59.714088" v2="-1.71428 -55.714104" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-2.285707 -55.714104" v1="-1.71428 -55.714104" v2="1.142853 -52.571255" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-2.285707 -55.714104" v1="-1.71428 -55.714104" v2="1.142853 -52.571255" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -52.571255" v1="-1.71428 -55.714104" v2="-1.71428 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -52.571255" v1="-1.71428 -55.714104" v2="-1.71428 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -52.571255" v1="-1.71428 -59.714088" v2="1.142853 -62.856937" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -52.571255" v1="-1.71428 -59.714088" v2="1.142853 -62.856937" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -62.856937" v1="-1.71428 -59.714088" v2="-2.285707 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="1.142853 -62.856937" v1="-1.71428 -59.714088" v2="-2.285707 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="-4.571414 -59.714088" v1="-5.99998 -58.856949" v2="-5.99998 -59.714088" /> </visplane>
+    <visplane height="4.71427" texture="F_SKY1"> <vertices v0="-4.571414 -59.714088" v1="-5.99998 -58.856949" v2="-5.99998 -59.714088" /> </visplane>
+    <visplane height="0.0" texture="FLOOR7_1"> <vertices v0="1.142853 -65.142639" v1="-11.428534 -65.142639" v2="-13.714241 -62.856937" v3="-13.714241 -52.571255" v4="-11.428534 -50.285549" v5="1.142853 -50.285549" v6="-11.428534 -52.571255" v7="-11.428534 -62.856937" /> </visplane>
+    <visplane height="2.285707" texture="F_SKY1"> <vertices v0="1.142853 -65.142639" v1="-11.428534 -65.142639" v2="-13.714241 -62.856937" v3="-13.714241 -52.571255" v4="-11.428534 -50.285549" v5="1.142853 -50.285549" v6="-11.428534 -52.571255" v7="-11.428534 -62.856937" /> </visplane>
+    <visplane height="0.714283" texture="STEP2"> <vertices v0="5.714267 -55.999817" v1="4.571414 -55.999817" v2="4.571414 -54.856964" v3="5.714267 -54.856964" /> </visplane>
+    <visplane height="3.285703" texture="TLITE6_1"> <vertices v0="5.714267 -55.999817" v1="4.571414 -55.999817" v2="4.571414 -54.856964" v3="5.714267 -54.856964" /> </visplane>
+    <visplane height="0.714283" texture="STEP2"> <vertices v0="5.714267 -60.571228" v1="4.571414 -60.571228" v2="4.571414 -59.428375" v3="5.714267 -59.428375" /> </visplane>
+    <visplane height="3.285703" texture="TLITE6_1"> <vertices v0="5.714267 -60.571228" v1="4.571414 -60.571228" v2="4.571414 -59.428375" v3="5.714267 -59.428375" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="21.714214 -51.428402" v1="22.285641 -45.142708" v2="26.285627 -43.428429" v3="26.285627 -45.714134" v4="24.714205 -46.285561" v5="23.999922 -51.428402" /> </visplane>
+    <visplane height="2.57142" texture="CEIL3_5"> <vertices v0="21.714214 -51.428402" v1="22.285641 -45.142708" v2="26.285627 -43.428429" v3="26.285627 -45.714134" v4="24.714205 -46.285561" v5="23.999922 -51.428402" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="26.285627 -45.714134" v1="26.285627 -43.428429" v2="27.428482 -43.428429" v3="27.428482 -45.714134" /> </visplane>
+    <visplane height="1.571423" texture="TLITE6_4"> <vertices v0="26.285627 -45.714134" v1="26.285627 -43.428429" v2="27.428482 -43.428429" v3="27.428482 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="27.428482 -45.714134" v1="27.428482 -43.428429" v2="27.714195 -43.428429" v3="27.714195 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLAT20"> <vertices v0="27.428482 -45.714134" v1="27.428482 -43.428429" v2="27.714195 -43.428429" v3="27.714195 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="27.714195 -45.714134" v1="27.714195 -43.428429" v2="29.714188 -43.428429" v3="29.714188 -45.714134" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="27.714195 -45.714134" v1="27.714195 -43.428429" v2="29.714188 -43.428429" v3="29.714188 -45.714134" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="48.856983 -65.142639" v1="44.428425 -66.856926" v2="39.999866 -67.428352" v3="39.999866 -65.142639" /> </visplane>
+    <visplane height="0.42857" texture="F_SKY1"> <vertices v0="48.856983 -65.142639" v1="44.428425 -66.856926" v2="39.999866 -67.428352" v3="39.999866 -65.142639" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="34.285603 -52.142685" v1="33.14275 -51.428402" v2="29.714188 -51.428402" v3="29.714188 -50.285549" v4="38.857014 -50.285549" v5="38.857014 -52.142685" /> </visplane>
+    <visplane height="0.0" texture="CEIL5_1"> <vertices v0="34.285603 -52.142685" v1="33.14275 -51.428402" v2="29.714188 -51.428402" v3="29.714188 -50.285549" v4="38.857014 -50.285549" v5="38.857014 -52.142685" /> </visplane>
+    <visplane height="-1.428567" texture="NUKAGE3"> <vertices v0="27.142767 -56.571243" v1="29.857044 -55.428391" v2="33.857033 -55.428391" v3="36.428452 -56.142673" v4="37.999874 -58.428379" v5="36.857021 -60.856941" v6="31.857038 -61.571224" v7="27.571339 -60.428371" /> </visplane>
+    <visplane height="3.85713" texture="F_SKY1"> <vertices v0="27.142767 -56.571243" v1="29.857044 -55.428391" v2="33.857033 -55.428391" v3="36.428452 -56.142673" v4="37.999874 -58.428379" v5="36.857021 -60.856941" v6="31.857038 -61.571224" v7="27.571339 -60.428371" /> </visplane>
+    <visplane height="-0.285713" texture="FLOOR4_8"> <vertices v0="49.142696 -49.714123" v1="46.856987 -49.714123" v2="49.142696 -45.714134" v3="52.571255 -47.428413" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="49.142696 -49.714123" v1="46.856987 -49.714123" v2="49.142696 -45.714134" v3="52.571255 -47.428413" /> </visplane>
+    <visplane height="-0.142857" texture="FLOOR4_8"> <vertices v0="44.999851 -45.714134" v1="49.142696 -45.714134" v2="46.856987 -49.714123" v3="44.999851 -47.999844" v4="44.571281 -47.999844" v5="44.571281 -45.714134" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="44.999851 -45.714134" v1="49.142696 -45.714134" v2="46.856987 -49.714123" v3="44.999851 -47.999844" v4="44.571281 -47.999844" v5="44.571281 -45.714134" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -49.714123" v1="49.142696 -49.999836" v2="51.428402 -51.428402" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -49.714123" v1="49.142696 -49.999836" v2="51.428402 -51.428402" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -49.714123" v1="51.428402 -51.428402" v2="52.571255 -47.428413" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -49.714123" v1="51.428402 -51.428402" v2="52.571255 -47.428413" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -47.428413" v1="51.428402 -51.428402" v2="52.856968 -47.428413" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="52.571255 -47.428413" v1="51.428402 -51.428402" v2="52.856968 -47.428413" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.856968 -47.428413" v1="51.428402 -51.428402" v2="54.428391 -51.428402" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="52.856968 -47.428413" v1="51.428402 -51.428402" v2="54.428391 -51.428402" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.428391 -51.428402" v1="51.428402 -51.428402" v2="51.428402 -51.999828" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="54.428391 -51.428402" v1="51.428402 -51.428402" v2="51.428402 -51.999828" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.428391 -51.428402" v1="51.428402 -51.999828" v2="49.142696 -54.428391" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="54.428391 -51.428402" v1="51.428402 -51.999828" v2="49.142696 -54.428391" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -54.428391" v1="51.428402 -51.999828" v2="49.142696 -51.999828" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -54.428391" v1="51.428402 -51.999828" v2="49.142696 -51.999828" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -51.999828" v1="51.428402 -51.999828" v2="51.428402 -51.428402" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -51.999828" v1="51.428402 -51.999828" v2="51.428402 -51.428402" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -51.999828" v1="51.428402 -51.428402" v2="49.142696 -49.999836" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -51.999828" v1="51.428402 -51.428402" v2="49.142696 -49.999836" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -54.428391" v1="50.285549 -57.714096" v2="53.142681 -54.856964" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -54.428391" v1="50.285549 -57.714096" v2="53.142681 -54.856964" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -54.428391" v1="53.142681 -54.856964" v2="54.428391 -52.571255" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -54.428391" v1="53.142681 -54.856964" v2="54.428391 -52.571255" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="49.142696 -54.428391" v1="54.428391 -52.571255" v2="54.428391 -51.428402" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -54.428391" v1="54.428391 -52.571255" v2="54.428391 -51.428402" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.428391 -51.428402" v1="54.428391 -52.571255" v2="58.999805 -54.285534" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="54.428391 -51.428402" v1="54.428391 -52.571255" v2="58.999805 -54.285534" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="58.999805 -54.285534" v1="54.428391 -52.571255" v2="55.999817 -54.856964" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.999805 -54.285534" v1="54.428391 -52.571255" v2="55.999817 -54.856964" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="58.999805 -54.285534" v1="55.999817 -54.856964" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.999805 -54.285534" v1="55.999817 -54.856964" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="58.999805 -54.285534" v1="58.571236 -59.285519" v2="58.285522 -64.571213" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.999805 -54.285534" v1="58.571236 -59.285519" v2="58.285522 -64.571213" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="58.285522 -64.571213" v1="58.571236 -59.285519" v2="55.428391 -63.428364" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.285522 -64.571213" v1="58.571236 -59.285519" v2="55.428391 -63.428364" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="58.285522 -64.571213" v1="55.428391 -63.428364" v2="54.856964 -65.142639" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.285522 -64.571213" v1="55.428391 -63.428364" v2="54.856964 -65.142639" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.856964 -65.142639" v1="55.428391 -63.428364" v2="52.571255 -63.142651" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="54.856964 -65.142639" v1="55.428391 -63.428364" v2="52.571255 -63.142651" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -63.142651" v1="55.428391 -63.428364" v2="55.571247 -59.999802" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="52.571255 -63.142651" v1="55.428391 -63.428364" v2="55.571247 -59.999802" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -63.142651" v1="55.571247 -59.999802" v2="53.285538 -57.14267" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="52.571255 -63.142651" v1="55.571247 -59.999802" v2="53.285538 -57.14267" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -63.142651" v1="53.285538 -57.14267" v2="50.285549 -57.714096" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="52.571255 -63.142651" v1="53.285538 -57.14267" v2="50.285549 -57.714096" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.285549 -57.714096" v1="53.285538 -57.14267" v2="53.142681 -54.856964" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="50.285549 -57.714096" v1="53.285538 -57.14267" v2="53.142681 -54.856964" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.142681 -54.856964" v1="53.285538 -57.14267" v2="55.999817 -54.856964" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="53.142681 -54.856964" v1="53.285538 -57.14267" v2="55.999817 -54.856964" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.142681 -54.856964" v1="55.999817 -54.856964" v2="54.428391 -52.571255" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="53.142681 -54.856964" v1="55.999817 -54.856964" v2="54.428391 -52.571255" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="55.999817 -54.856964" v1="53.285538 -57.14267" v2="55.571247 -59.999802" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="55.999817 -54.856964" v1="53.285538 -57.14267" v2="55.571247 -59.999802" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="55.999817 -54.856964" v1="55.571247 -59.999802" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="55.999817 -54.856964" v1="55.571247 -59.999802" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="58.571236 -59.285519" v1="55.571247 -59.999802" v2="55.428391 -63.428364" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.571236 -59.285519" v1="55.571247 -59.999802" v2="55.428391 -63.428364" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="49.142696 -63.99979" v1="49.142696 -59.999802" v2="52.571255 -63.142651" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="49.142696 -63.99979" v1="49.142696 -59.999802" v2="52.571255 -63.142651" /> </visplane>
+    <visplane height="0.0" texture="FLAT20"> <vertices v0="49.142696 -59.999802" v1="48.856983 -59.999802" v2="48.856983 -55.571247" v3="49.142696 -55.571247" /> </visplane>
+    <visplane height="2.428563" texture="FLAT20"> <vertices v0="49.142696 -59.999802" v1="48.856983 -59.999802" v2="48.856983 -55.571247" v3="49.142696 -55.571247" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="53.285538 -57.14267" v1="55.428391 -63.428364" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="53.285538 -57.14267" v1="55.428391 -63.428364" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="53.285538 -57.14267" v1="58.571236 -59.285519" v2="55.999817 -54.856964" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="53.285538 -57.14267" v1="58.571236 -59.285519" v2="55.999817 -54.856964" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="55.999817 -54.856964" v1="58.571236 -59.285519" v2="58.999805 -54.285534" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="55.999817 -54.856964" v1="58.571236 -59.285519" v2="58.999805 -54.285534" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="58.999805 -54.285534" v1="58.571236 -59.285519" v2="60.714085 -56.28553" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.999805 -54.285534" v1="58.571236 -59.285519" v2="60.714085 -56.28553" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="60.714085 -56.28553" v1="58.571236 -59.285519" v2="60.856941 -61.285511" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="60.714085 -56.28553" v1="58.571236 -59.285519" v2="60.856941 -61.285511" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="60.714085 -56.28553" v1="60.856941 -61.285511" v2="61.999794 -61.285511" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="60.714085 -56.28553" v1="60.856941 -61.285511" v2="61.999794 -61.285511" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="61.999794 -61.285511" v1="60.856941 -61.285511" v2="59.856945 -63.714077" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="61.999794 -61.285511" v1="60.856941 -61.285511" v2="59.856945 -63.714077" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="59.856945 -63.714077" v1="60.856941 -61.285511" v2="59.142662 -62.428368" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="59.856945 -63.714077" v1="60.856941 -61.285511" v2="59.142662 -62.428368" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="59.856945 -63.714077" v1="59.142662 -62.428368" v2="58.285522 -64.571213" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="59.856945 -63.714077" v1="59.142662 -62.428368" v2="58.285522 -64.571213" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="58.285522 -64.571213" v1="59.142662 -62.428368" v2="55.428391 -63.428364" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.285522 -64.571213" v1="59.142662 -62.428368" v2="55.428391 -63.428364" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="55.428391 -63.428364" v1="59.142662 -62.428368" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="55.428391 -63.428364" v1="59.142662 -62.428368" v2="58.571236 -59.285519" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="58.571236 -59.285519" v1="59.142662 -62.428368" v2="60.856941 -61.285511" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="58.571236 -59.285519" v1="59.142662 -62.428368" v2="60.856941 -61.285511" /> </visplane>
+    <visplane height="-0.85714" texture="NUKAGE3"> <vertices v0="55.571247 -59.999802" v1="52.571255 -63.142651" v2="49.142696 -59.999802" v3="49.142696 -55.571247" v4="49.142696 -54.428391" v5="53.142681 -54.856964" v6="50.285549 -57.714096" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="55.571247 -59.999802" v1="52.571255 -63.142651" v2="49.142696 -59.999802" v3="49.142696 -55.571247" v4="49.142696 -54.428391" v5="53.142681 -54.856964" v6="50.285549 -57.714096" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -65.142639" v1="49.142696 -63.99979" v2="52.571255 -63.142651" v3="54.856964 -65.142639" v4="54.856964 -71.428337" v5="52.571255 -71.428337" v6="52.571255 -69.714058" v7="52.571255 -67.428352" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="52.571255 -65.142639" v1="49.142696 -63.99979" v2="52.571255 -63.142651" v3="54.856964 -65.142639" v4="54.856964 -71.428337" v5="52.571255 -71.428337" v6="52.571255 -69.714058" v7="52.571255 -67.428352" /> </visplane>
+    <visplane height="1.71428" texture="FLOOR4_8"> <vertices v0="60.856941 -61.285511" v1="61.999794 -61.285511" v2="61.571224 -62.856937" v3="59.856945 -63.714077" v4="59.142662 -62.428368" /> </visplane>
+    <visplane height="3.142847" texture="CEIL3_5"> <vertices v0="60.856941 -61.285511" v1="61.999794 -61.285511" v2="61.571224 -62.856937" v3="59.856945 -63.714077" v4="59.142662 -62.428368" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="39.999866 -67.428352" v1="39.42844 -65.714066" v2="38.857014 -65.714066" v3="36.571308 -65.714066" v4="35.999882 -65.714066" v5="35.428455 -67.428352" v6="35.428455 -65.142639" v7="39.999866 -65.142639" /> </visplane>
+    <visplane height="1.142853" texture="F_SKY1"> <vertices v0="39.999866 -67.428352" v1="39.42844 -65.714066" v2="38.857014 -65.714066" v3="36.571308 -65.714066" v4="35.999882 -65.714066" v5="35.428455 -67.428352" v6="35.428455 -65.142639" v7="39.999866 -65.142639" /> </visplane>
+    <visplane height="-1.28571" texture="FLOOR5_1"> <vertices v0="38.857014 -67.428352" v1="38.857014 -67.999779" v2="36.571308 -67.999779" v3="36.571308 -67.428352" /> </visplane>
+    <visplane height="0.285713" texture="CEIL5_2"> <vertices v0="38.857014 -67.428352" v1="38.857014 -67.999779" v2="36.571308 -67.999779" v3="36.571308 -67.428352" /> </visplane>
+    <visplane height="-1.571423" texture="FLOOR5_1"> <vertices v0="38.857014 -67.999779" v1="38.857014 -68.571205" v2="36.571308 -68.571205" v3="36.571308 -67.999779" /> </visplane>
+    <visplane height="0.285713" texture="CEIL5_2"> <vertices v0="38.857014 -67.999779" v1="38.857014 -68.571205" v2="36.571308 -68.571205" v3="36.571308 -67.999779" /> </visplane>
+    <visplane height="-1.857137" texture="FLOOR5_1"> <vertices v0="36.571308 -69.142632" v1="36.571308 -68.571205" v2="38.857014 -68.571205" v3="38.857014 -69.142632" /> </visplane>
+    <visplane height="0.285713" texture="CEIL5_2"> <vertices v0="36.571308 -69.142632" v1="36.571308 -68.571205" v2="38.857014 -68.571205" v3="38.857014 -69.142632" /> </visplane>
+    <visplane height="-2.14285" texture="FLOOR5_1"> <vertices v0="36.571308 -69.714058" v1="36.571308 -69.142632" v2="38.857014 -69.142632" v3="38.857014 -69.714058" /> </visplane>
+    <visplane height="0.285713" texture="CEIL5_2"> <vertices v0="36.571308 -69.714058" v1="36.571308 -69.142632" v2="38.857014 -69.142632" v3="38.857014 -69.714058" /> </visplane>
+    <visplane height="-2.428563" texture="FLOOR5_1"> <vertices v0="39.999866 -73.142616" v1="37.714161 -71.999763" v2="36.571308 -69.999771" v3="36.571308 -69.714058" v4="38.857014 -69.714058" v5="38.857014 -69.999771" v6="39.999866 -70.856911" /> </visplane>
+    <visplane height="-0.714283" texture="CEIL5_2"> <vertices v0="39.999866 -73.142616" v1="37.714161 -71.999763" v2="36.571308 -69.999771" v3="36.571308 -69.714058" v4="38.857014 -69.714058" v5="38.857014 -69.999771" v6="39.999866 -70.856911" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR7_1"> <vertices v0="36.571308 -65.714066" v1="38.857014 -65.714066" v2="38.857014 -66.142639" v3="38.857014 -67.428352" v4="36.571308 -67.428352" v5="36.571308 -66.142639" /> </visplane>
+    <visplane height="0.285713" texture="CEIL5_2"> <vertices v0="36.571308 -65.714066" v1="38.857014 -65.714066" v2="38.857014 -66.142639" v3="38.857014 -67.428352" v4="36.571308 -67.428352" v5="36.571308 -66.142639" /> </visplane>
+    <visplane height="-2.428563" texture="FLOOR5_1"> <vertices v0="39.999866 -73.142616" v1="39.999866 -70.856911" v2="40.42844 -70.856911" v3="41.857006 -70.856911" v4="42.285576 -70.856911" v5="42.285576 -73.142616" v6="41.857006 -73.142616" v7="40.42844 -73.142616" /> </visplane>
+    <visplane height="-0.42857" texture="TLITE6_6"> <vertices v0="39.999866 -73.142616" v1="39.999866 -70.856911" v2="40.42844 -70.856911" v3="41.857006 -70.856911" v4="42.285576 -70.856911" v5="42.285576 -73.142616" v6="41.857006 -73.142616" v7="40.42844 -73.142616" /> </visplane>
+    <visplane height="-2.428563" texture="FLOOR5_1"> <vertices v0="42.285576 -73.142616" v1="42.285576 -70.856911" v2="46.71413 -67.714066" v3="46.999844 -67.714066" v4="47.999844 -69.999771" v5="47.71413 -69.999771" /> </visplane>
+    <visplane height="-0.714283" texture="CEIL5_2"> <vertices v0="42.285576 -73.142616" v1="42.285576 -70.856911" v2="46.71413 -67.714066" v3="46.999844 -67.714066" v4="47.999844 -69.999771" v5="47.71413 -69.999771" /> </visplane>
+    <visplane height="-0.714283" texture="FLOOR5_1"> <vertices v0="51.428402 -67.428352" v1="51.428402 -69.714058" v2="50.856976 -69.714058" v3="50.856976 -67.428352" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="51.428402 -67.428352" v1="51.428402 -69.714058" v2="50.856976 -69.714058" v3="50.856976 -67.428352" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="51.428402 -69.714058" v1="51.428402 -67.428352" v2="51.999828 -67.428352" v3="51.999828 -69.714058" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="51.428402 -69.714058" v1="51.428402 -67.428352" v2="51.999828 -67.428352" v3="51.999828 -69.714058" /> </visplane>
+    <visplane height="-0.999997" texture="FLOOR5_1"> <vertices v0="50.856976 -67.428352" v1="50.856976 -69.714058" v2="50.285549 -69.714058" v3="50.285549 -67.428352" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="50.856976 -67.428352" v1="50.856976 -69.714058" v2="50.285549 -69.714058" v3="50.285549 -67.428352" /> </visplane>
+    <visplane height="-1.28571" texture="FLOOR5_1"> <vertices v0="50.285549 -67.428352" v1="50.285549 -69.714058" v2="49.714123 -69.714058" v3="49.714123 -67.428352" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="50.285549 -67.428352" v1="50.285549 -69.714058" v2="49.714123 -69.714058" v3="49.714123 -67.428352" /> </visplane>
+    <visplane height="-1.571423" texture="FLOOR5_1"> <vertices v0="49.714123 -67.428352" v1="49.714123 -69.714058" v2="49.142696 -69.714058" v3="49.142696 -67.428352" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="49.714123 -67.428352" v1="49.714123 -69.714058" v2="49.142696 -69.714058" v3="49.142696 -67.428352" /> </visplane>
+    <visplane height="-1.857137" texture="FLOOR5_1"> <vertices v0="49.142696 -67.428352" v1="49.142696 -69.714058" v2="48.57127 -69.714058" v3="47.999844 -67.428352" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="49.142696 -67.428352" v1="49.142696 -69.714058" v2="48.57127 -69.714058" v3="47.999844 -67.428352" /> </visplane>
+    <visplane height="-2.14285" texture="FLOOR5_1"> <vertices v0="47.999844 -67.428352" v1="48.57127 -69.714058" v2="47.999844 -69.999771" v3="46.999844 -67.714066" /> </visplane>
+    <visplane height="0.85714" texture="CEIL5_2"> <vertices v0="47.999844 -67.428352" v1="48.57127 -69.714058" v2="47.999844 -69.999771" v3="46.999844 -67.714066" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -69.714058" v1="51.999828 -69.714058" v2="51.999828 -67.428352" v3="52.571255 -67.428352" /> </visplane>
+    <visplane height="-0.42857" texture="FLAT5_5"> <vertices v0="52.571255 -69.714058" v1="51.999828 -69.714058" v2="51.999828 -67.428352" v3="52.571255 -67.428352" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="59.856945 -63.714077" v1="59.428375 -66.856926" v2="59.856945 -64.142647" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="59.856945 -63.714077" v1="59.428375 -66.856926" v2="59.856945 -64.142647" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="59.856945 -63.714077" v1="59.856945 -64.142647" v2="61.571224 -62.856937" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="59.856945 -63.714077" v1="59.856945 -64.142647" v2="61.571224 -62.856937" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="61.571224 -62.856937" v1="59.856945 -64.142647" v2="62.856937 -63.99979" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="61.571224 -62.856937" v1="59.856945 -64.142647" v2="62.856937 -63.99979" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="61.571224 -62.856937" v1="62.856937 -63.99979" v2="61.999794 -62.856937" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="61.571224 -62.856937" v1="62.856937 -63.99979" v2="61.999794 -62.856937" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="62.856937 -63.99979" v1="59.856945 -64.142647" v2="59.999802 -65.142639" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="62.856937 -63.99979" v1="59.856945 -64.142647" v2="59.999802 -65.142639" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="62.856937 -63.99979" v1="59.999802 -65.142639" v2="62.856937 -68.571205" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="62.856937 -63.99979" v1="59.999802 -65.142639" v2="62.856937 -68.571205" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="62.856937 -69.714058" v1="62.856937 -68.571205" v2="59.428375 -70.856911" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="62.856937 -69.714058" v1="62.856937 -68.571205" v2="59.428375 -70.856911" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="59.428375 -70.856911" v1="62.856937 -68.571205" v2="59.428375 -66.856926" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="59.428375 -70.856911" v1="62.856937 -68.571205" v2="59.428375 -66.856926" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="59.428375 -66.856926" v1="62.856937 -68.571205" v2="59.999802 -65.142639" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="59.428375 -66.856926" v1="62.856937 -68.571205" v2="59.999802 -65.142639" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="59.428375 -66.856926" v1="59.999802 -65.142639" v2="59.856945 -64.142647" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR6_2"> <vertices v0="59.428375 -66.856926" v1="59.999802 -65.142639" v2="59.856945 -64.142647" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="47.999844 -73.714043" v1="47.999844 -81.142593" v2="50.999832 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="47.999844 -73.714043" v1="47.999844 -81.142593" v2="50.999832 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="47.999844 -73.714043" v1="50.999832 -77.714027" v2="50.999832 -74.285469" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="47.999844 -73.714043" v1="50.999832 -77.714027" v2="50.999832 -74.285469" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="47.999844 -73.714043" v1="50.999832 -74.285469" v2="50.285549 -73.714043" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="47.999844 -73.714043" v1="50.999832 -74.285469" v2="50.285549 -73.714043" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.285549 -73.714043" v1="50.999832 -74.285469" v2="56.428387 -74.285469" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="50.285549 -73.714043" v1="50.999832 -74.285469" v2="56.428387 -74.285469" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.285549 -73.714043" v1="56.428387 -74.285469" v2="57.14267 -73.714043" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="50.285549 -73.714043" v1="56.428387 -74.285469" v2="57.14267 -73.714043" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="57.14267 -73.714043" v1="56.428387 -74.285469" v2="59.428375 -73.714043" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="57.14267 -73.714043" v1="56.428387 -74.285469" v2="59.428375 -73.714043" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="59.428375 -73.714043" v1="56.428387 -74.285469" v2="56.428387 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="59.428375 -73.714043" v1="56.428387 -74.285469" v2="56.428387 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="59.428375 -73.714043" v1="56.428387 -77.714027" v2="59.428375 -81.142593" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="59.428375 -73.714043" v1="56.428387 -77.714027" v2="59.428375 -81.142593" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="59.428375 -81.142593" v1="56.428387 -77.714027" v2="56.428387 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="59.428375 -81.142593" v1="56.428387 -77.714027" v2="56.428387 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="59.428375 -81.142593" v1="56.428387 -78.285454" v2="54.856964 -81.142593" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="59.428375 -81.142593" v1="56.428387 -78.285454" v2="54.856964 -81.142593" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.856964 -81.142593" v1="56.428387 -78.285454" v2="55.428391 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="54.856964 -81.142593" v1="56.428387 -78.285454" v2="55.428391 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.856964 -81.142593" v1="55.428391 -78.285454" v2="51.999828 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="54.856964 -81.142593" v1="55.428391 -78.285454" v2="51.999828 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.856964 -81.142593" v1="51.999828 -78.285454" v2="52.571255 -81.142593" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="54.856964 -81.142593" v1="51.999828 -78.285454" v2="52.571255 -81.142593" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -81.142593" v1="51.999828 -78.285454" v2="50.999832 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="52.571255 -81.142593" v1="51.999828 -78.285454" v2="50.999832 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -81.142593" v1="50.999832 -78.285454" v2="47.999844 -81.142593" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="52.571255 -81.142593" v1="50.999832 -78.285454" v2="47.999844 -81.142593" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="47.999844 -81.142593" v1="50.999832 -78.285454" v2="50.999832 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="47.999844 -81.142593" v1="50.999832 -78.285454" v2="50.999832 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.999832 -77.714027" v1="50.999832 -78.285454" v2="51.999828 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="50.999832 -77.714027" v1="50.999832 -78.285454" v2="51.999828 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.999832 -77.714027" v1="51.999828 -78.285454" v2="51.999828 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="50.999832 -77.714027" v1="51.999828 -78.285454" v2="51.999828 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.999832 -77.714027" v1="51.999828 -77.714027" v2="50.999832 -74.285469" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="50.999832 -77.714027" v1="51.999828 -77.714027" v2="50.999832 -74.285469" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="50.999832 -74.285469" v1="51.999828 -77.714027" v2="56.428387 -74.285469" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="50.999832 -74.285469" v1="51.999828 -77.714027" v2="56.428387 -74.285469" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="56.428387 -74.285469" v1="51.999828 -77.714027" v2="55.428391 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="56.428387 -74.285469" v1="51.999828 -77.714027" v2="55.428391 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="56.428387 -74.285469" v1="55.428391 -77.714027" v2="56.428387 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="56.428387 -74.285469" v1="55.428391 -77.714027" v2="56.428387 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="56.428387 -77.714027" v1="55.428391 -77.714027" v2="56.428387 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="56.428387 -77.714027" v1="55.428391 -77.714027" v2="56.428387 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="56.428387 -78.285454" v1="55.428391 -77.714027" v2="55.428391 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="56.428387 -78.285454" v1="55.428391 -77.714027" v2="55.428391 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="55.428391 -78.285454" v1="55.428391 -77.714027" v2="51.999828 -77.714027" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="55.428391 -78.285454" v1="55.428391 -77.714027" v2="51.999828 -77.714027" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="55.428391 -78.285454" v1="51.999828 -77.714027" v2="51.999828 -78.285454" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="55.428391 -78.285454" v1="51.999828 -77.714027" v2="51.999828 -78.285454" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="51.999828 -74.285469" v1="51.999828 -73.714043" v2="52.571255 -71.999763" v3="54.856964 -71.999763" v4="55.428391 -73.714043" v5="55.428391 -74.285469" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="51.999828 -74.285469" v1="51.999828 -73.714043" v2="52.571255 -71.999763" v3="54.856964 -71.999763" v4="55.428391 -73.714043" v5="55.428391 -74.285469" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.856964 -81.142593" v1="54.856964 -82.285446" v2="54.285534 -82.285446" v3="53.142681 -82.285446" v4="52.571255 -82.285446" v5="52.571255 -81.142593" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="54.856964 -81.142593" v1="54.856964 -82.285446" v2="54.285534 -82.285446" v3="53.142681 -82.285446" v4="52.571255 -82.285446" v5="52.571255 -81.142593" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.999821 -81.999733" v1="53.428394 -81.999733" v2="53.428394 -82.142586" v3="53.999821 -82.142586" /> </visplane>
+    <visplane height="1.28571" texture="CEIL3_5"> <vertices v0="53.999821 -81.999733" v1="53.428394 -81.999733" v2="53.428394 -82.142586" v3="53.999821 -82.142586" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -71.428337" v1="54.856964 -71.428337" v2="54.856964 -71.71405" v3="52.571255 -71.71405" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="52.571255 -71.428337" v1="54.856964 -71.428337" v2="54.856964 -71.71405" v3="52.571255 -71.71405" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.142681 -82.714012" v1="53.142681 -82.285446" v2="54.285534 -82.285446" v3="54.285534 -82.714012" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="53.142681 -82.714012" v1="53.142681 -82.285446" v2="54.285534 -82.285446" v3="54.285534 -82.714012" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.285534 -82.714012" v1="54.285534 -82.999725" v2="53.142681 -82.999725" v3="53.142681 -82.714012" /> </visplane>
+    <visplane height="-0.42857" texture="FLAT20"> <vertices v0="54.285534 -82.714012" v1="54.285534 -82.999725" v2="53.142681 -82.999725" v3="53.142681 -82.714012" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.285534 -82.999725" v1="54.285534 -83.428299" v2="53.142681 -83.428299" v3="53.142681 -82.999725" /> </visplane>
+    <visplane height="0.85714" texture="CEIL3_5"> <vertices v0="54.285534 -82.999725" v1="54.285534 -83.428299" v2="53.142681 -83.428299" v3="53.142681 -82.999725" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="54.285534 -83.428299" v1="55.428391 -83.428299" v2="55.428391 -86.856857" v3="51.999828 -86.856857" v4="51.999828 -85.714005" v5="51.999828 -84.571152" v6="51.999828 -83.428299" v7="53.142681 -83.428299" /> </visplane>
+    <visplane height="1.571423" texture="TLITE6_5"> <vertices v0="54.285534 -83.428299" v1="55.428391 -83.428299" v2="55.428391 -86.856857" v3="51.999828 -86.856857" v4="51.999828 -85.714005" v5="51.999828 -84.571152" v6="51.999828 -83.428299" v7="53.142681 -83.428299" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.999821 -86.428284" v1="53.428394 -86.428284" v2="53.428394 -86.571144" v3="53.999821 -86.571144" /> </visplane>
+    <visplane height="1.571423" texture="TLITE6_5"> <vertices v0="53.999821 -86.428284" v1="53.428394 -86.428284" v2="53.428394 -86.571144" v3="53.999821 -86.571144" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="52.571255 -71.999763" v1="52.571255 -71.71405" v2="54.856964 -71.71405" v3="54.856964 -71.999763" /> </visplane>
+    <visplane height="-0.42857" texture="FLAT20"> <vertices v0="52.571255 -71.999763" v1="52.571255 -71.71405" v2="54.856964 -71.71405" v3="54.856964 -71.999763" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.428394 -81.999733" v1="53.999821 -81.999733" v2="53.999821 -82.142586" v3="53.428394 -82.142586" /> </visplane>
+    <visplane height="0.999997" texture="FLAT23"> <vertices v0="53.428394 -81.999733" v1="53.999821 -81.999733" v2="53.999821 -82.142586" v3="53.428394 -82.142586" /> </visplane>
+    <visplane height="-0.42857" texture="FLOOR5_2"> <vertices v0="53.428394 -86.428284" v1="53.999821 -86.428284" v2="53.999821 -86.571144" v3="53.428394 -86.571144" /> </visplane>
+    <visplane height="1.28571" texture="FLAT23"> <vertices v0="53.428394 -86.428284" v1="53.999821 -86.428284" v2="53.999821 -86.571144" v3="53.428394 -86.571144" /> </visplane>
+    <visplane height="2.285707" texture="FLOOR1_1"> <vertices v0="-3.714273 -58.285522" v1="-4.2857 -58.285522" v2="-4.571414 -57.999809" v3="-4.571414 -57.428383" v4="-4.2857 -57.14267" v5="-3.714273 -57.14267" v6="-3.42856 -57.428383" v7="-3.42856 -57.999809" /> </visplane>
+    <visplane height="4.71427" texture="FLOOR7_2"> <vertices v0="-3.714273 -58.285522" v1="-4.2857 -58.285522" v2="-4.571414 -57.999809" v3="-4.571414 -57.428383" v4="-4.2857 -57.14267" v5="-3.714273 -57.14267" v6="-3.42856 -57.428383" v7="-3.42856 -57.999809" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="28.571335 -36.571308" v1="28.571335 -37.714161" v2="29.714188 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="28.571335 -36.571308" v1="28.571335 -37.714161" v2="29.714188 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="28.571335 -36.571308" v1="29.714188 -37.714161" v2="29.714188 -36.571308" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="28.571335 -36.571308" v1="29.714188 -37.714161" v2="29.714188 -36.571308" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="29.714188 -36.571308" v1="29.714188 -37.714161" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="29.714188 -36.571308" v1="29.714188 -37.714161" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="29.714188 -36.571308" v1="44.571281 -37.714161" v2="44.571281 -36.571308" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="29.714188 -36.571308" v1="44.571281 -37.714161" v2="44.571281 -36.571308" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="44.571281 -36.571308" v1="44.571281 -37.714161" v2="45.714134 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="44.571281 -36.571308" v1="44.571281 -37.714161" v2="45.714134 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="44.571281 -36.571308" v1="45.714134 -37.714161" v2="45.714134 -36.571308" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="44.571281 -36.571308" v1="45.714134 -37.714161" v2="45.714134 -36.571308" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="45.714134 -44.571281" v1="45.714134 -37.714161" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="45.714134 -44.571281" v1="45.714134 -37.714161" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="45.714134 -44.571281" v1="44.571281 -37.714161" v2="44.571281 -44.571281" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="45.714134 -44.571281" v1="44.571281 -37.714161" v2="44.571281 -44.571281" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="44.571281 -44.571281" v1="44.571281 -37.714161" v2="29.714188 -42.285576" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="44.571281 -44.571281" v1="44.571281 -37.714161" v2="29.714188 -42.285576" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="44.571281 -44.571281" v1="29.714188 -42.285576" v2="28.571335 -42.285576" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="44.571281 -44.571281" v1="29.714188 -42.285576" v2="28.571335 -42.285576" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="28.571335 -42.285576" v1="29.714188 -42.285576" v2="28.571335 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="28.571335 -42.285576" v1="29.714188 -42.285576" v2="28.571335 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="28.571335 -37.714161" v1="29.714188 -42.285576" v2="29.714188 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="28.571335 -37.714161" v1="29.714188 -42.285576" v2="29.714188 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="29.714188 -37.714161" v1="29.714188 -42.285576" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="29.714188 -37.714161" v1="29.714188 -42.285576" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="0.571427" texture="FLAT18"> <vertices v0="28.571335 -46.856987" v1="29.714188 -46.856987" v2="29.714188 -49.142696" v3="29.714188 -50.285549" v4="28.571335 -50.285549" v5="28.571335 -49.142696" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="28.571335 -46.856987" v1="29.714188 -46.856987" v2="29.714188 -49.142696" v3="29.714188 -50.285549" v4="28.571335 -50.285549" v5="28.571335 -49.142696" /> </visplane>
+    <visplane height="0.571427" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="38.857014 -50.285549" v2="29.714188 -50.285549" v3="29.714188 -49.142696" /> </visplane>
+    <visplane height="1.571423" texture="CEIL5_1"> <vertices v0="38.857014 -49.142696" v1="38.857014 -50.285549" v2="29.714188 -50.285549" v3="29.714188 -49.142696" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="29.714188 -37.714161" v1="29.714188 -42.285576" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="29.714188 -37.714161" v1="29.714188 -42.285576" v2="44.571281 -37.714161" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="44.571281 -37.714161" v1="29.714188 -42.285576" v2="44.571281 -44.571281" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="44.571281 -37.714161" v1="29.714188 -42.285576" v2="44.571281 -44.571281" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="44.571281 -49.142696" v1="44.571281 -47.999844" v2="39.285583 -49.142696" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="44.571281 -49.142696" v1="44.571281 -47.999844" v2="39.285583 -49.142696" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="39.285583 -49.142696" v1="44.571281 -47.999844" v2="44.571281 -45.714134" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="39.285583 -49.142696" v1="44.571281 -47.999844" v2="44.571281 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="39.285583 -49.142696" v1="44.571281 -45.714134" v2="44.571281 -44.999851" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="39.285583 -49.142696" v1="44.571281 -45.714134" v2="44.571281 -44.999851" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="39.285583 -49.142696" v1="44.571281 -44.999851" v2="44.571281 -44.571281" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="39.285583 -49.142696" v1="44.571281 -44.999851" v2="44.571281 -44.571281" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="39.285583 -49.142696" v1="44.571281 -44.571281" v2="38.857014 -49.142696" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="39.285583 -49.142696" v1="44.571281 -44.571281" v2="38.857014 -49.142696" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="44.571281 -44.571281" v2="29.714188 -42.285576" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="44.571281 -44.571281" v2="29.714188 -42.285576" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="29.714188 -42.285576" v2="29.714188 -42.714146" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="29.714188 -42.285576" v2="29.714188 -42.714146" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="29.714188 -42.714146" v2="29.714188 -43.428429" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="29.714188 -42.714146" v2="29.714188 -43.428429" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="29.714188 -43.428429" v2="29.714188 -45.714134" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="29.714188 -43.428429" v2="29.714188 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="29.714188 -45.714134" v2="29.714188 -46.428417" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="29.714188 -45.714134" v2="29.714188 -46.428417" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="29.714188 -46.428417" v2="29.714188 -46.856987" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="29.714188 -46.428417" v2="29.714188 -46.856987" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="38.857014 -49.142696" v1="29.714188 -46.856987" v2="29.714188 -49.142696" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="38.857014 -49.142696" v1="29.714188 -46.856987" v2="29.714188 -49.142696" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="37.714161 -46.285561" v1="41.714149 -46.285561" v2="41.714149 -40.571297" v3="37.714161 -40.571297" v4="37.714161 -41.142723" v5="38.285587 -41.142723" v6="38.285587 -45.714134" v7="37.714161 -45.714134" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="37.714161 -46.285561" v1="41.714149 -46.285561" v2="41.714149 -40.571297" v3="37.714161 -40.571297" v4="37.714161 -41.142723" v5="38.285587 -41.142723" v6="38.285587 -45.714134" v7="37.714161 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="35.571312 -45.571278" v1="31.857038 -45.571278" v2="31.857038 -46.999844" v3="35.571312 -46.999844" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="35.571312 -45.571278" v1="31.857038 -45.571278" v2="31.857038 -46.999844" v3="35.571312 -46.999844" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="31.857038 -41.28558" v1="35.571312 -41.28558" v2="35.571312 -39.85701" v3="31.857038 -39.85701" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="31.857038 -41.28558" v1="35.571312 -41.28558" v2="35.571312 -39.85701" v3="31.857038 -39.85701" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="35.428455 -41.142723" v1="35.428455 -39.999866" v2="31.999895 -39.999866" v3="31.999895 -41.142723" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="35.428455 -41.142723" v1="35.428455 -39.999866" v2="31.999895 -39.999866" v3="31.999895 -41.142723" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="35.571312 -41.28558" v1="31.857038 -41.28558" v2="31.857038 -39.85701" v3="35.571312 -39.85701" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="35.571312 -41.28558" v1="31.857038 -41.28558" v2="31.857038 -39.85701" v3="35.571312 -39.85701" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="35.428455 -39.999866" v1="35.428455 -41.142723" v2="31.999895 -41.142723" v3="31.999895 -39.999866" /> </visplane>
+    <visplane height="1.71428" texture="TLITE6_5"> <vertices v0="35.428455 -39.999866" v1="35.428455 -41.142723" v2="31.999895 -41.142723" v3="31.999895 -39.999866" /> </visplane>
+    <visplane height="0.142857" texture="FLAT14"> <vertices v0="38.285587 -41.142723" v1="38.857014 -41.142723" v2="38.857014 -45.714134" v3="38.285587 -45.714134" /> </visplane>
+    <visplane height="2.714277" texture="TLITE6_5"> <vertices v0="38.285587 -41.142723" v1="38.857014 -41.142723" v2="38.857014 -45.714134" v3="38.285587 -45.714134" /> </visplane>
+    <visplane height="0.285713" texture="FLAT14"> <vertices v0="38.857014 -41.142723" v1="39.42844 -41.142723" v2="39.42844 -45.714134" v3="38.857014 -45.714134" /> </visplane>
+    <visplane height="2.714277" texture="TLITE6_5"> <vertices v0="38.857014 -41.142723" v1="39.42844 -41.142723" v2="39.42844 -45.714134" v3="38.857014 -45.714134" /> </visplane>
+    <visplane height="0.42857" texture="FLAT14"> <vertices v0="39.42844 -41.142723" v1="41.142723 -41.142723" v2="41.142723 -45.714134" v3="39.42844 -45.714134" /> </visplane>
+    <visplane height="2.714277" texture="TLITE6_5"> <vertices v0="39.42844 -41.142723" v1="41.142723 -41.142723" v2="41.142723 -45.714134" v3="39.42844 -45.714134" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="35.428455 -46.856987" v1="35.428455 -45.714134" v2="31.999895 -45.714134" v3="31.999895 -46.856987" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="35.428455 -46.856987" v1="35.428455 -45.714134" v2="31.999895 -45.714134" v3="31.999895 -46.856987" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="31.857038 -45.571278" v1="35.571312 -45.571278" v2="35.571312 -46.999844" v3="31.857038 -46.999844" /> </visplane>
+    <visplane height="3.999987" texture="CEIL3_5"> <vertices v0="31.857038 -45.571278" v1="35.571312 -45.571278" v2="35.571312 -46.999844" v3="31.857038 -46.999844" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="35.428455 -45.714134" v1="35.428455 -46.856987" v2="31.999895 -46.856987" v3="31.999895 -45.714134" /> </visplane>
+    <visplane height="1.71428" texture="TLITE6_5"> <vertices v0="35.428455 -45.714134" v1="35.428455 -46.856987" v2="31.999895 -46.856987" v3="31.999895 -45.714134" /> </visplane>
+    <visplane height="-0.85714" texture="FLOOR4_8"> <vertices v0="57.14267 -70.856911" v1="57.14267 -66.856926" v2="58.999805 -66.856926" v3="59.428375 -66.856926" v4="59.428375 -70.856911" v5="58.999805 -70.856911" /> </visplane>
+    <visplane height="0.571427" texture="TLITE6_6"> <vertices v0="57.14267 -70.856911" v1="57.14267 -66.856926" v2="58.999805 -66.856926" v3="59.428375 -66.856926" v4="59.428375 -70.856911" v5="58.999805 -70.856911" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="59.999802 -51.428402" v1="58.999805 -54.285534" v2="59.285519 -54.285534" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="59.999802 -51.428402" v1="58.999805 -54.285534" v2="59.285519 -54.285534" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="59.999802 -51.428402" v1="59.285519 -54.285534" v2="61.714081 -54.142677" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="59.999802 -51.428402" v1="59.285519 -54.285534" v2="61.714081 -54.142677" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="59.999802 -51.428402" v1="61.714081 -54.142677" v2="63.99979 -51.428402" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="59.999802 -51.428402" v1="61.714081 -54.142677" v2="63.99979 -51.428402" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="63.99979 -51.428402" v1="61.714081 -54.142677" v2="62.428368 -54.142677" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="63.99979 -51.428402" v1="61.714081 -54.142677" v2="62.428368 -54.142677" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="63.99979 -51.428402" v1="62.428368 -54.142677" v2="65.142639 -58.285522" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="63.99979 -51.428402" v1="62.428368 -54.142677" v2="65.142639 -58.285522" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="63.99979 -51.428402" v1="65.142639 -58.285522" v2="67.999779 -58.285522" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="63.99979 -51.428402" v1="65.142639 -58.285522" v2="67.999779 -58.285522" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="67.999779 -58.285522" v1="65.142639 -58.285522" v2="65.714066 -60.571228" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="67.999779 -58.285522" v1="65.142639 -58.285522" v2="65.714066 -60.571228" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="67.999779 -58.285522" v1="65.714066 -60.571228" v2="65.714066 -63.428364" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="67.999779 -58.285522" v1="65.714066 -60.571228" v2="65.714066 -63.428364" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="67.999779 -58.285522" v1="65.714066 -63.428364" v2="66.856926 -67.999779" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="67.999779 -58.285522" v1="65.714066 -63.428364" v2="66.856926 -67.999779" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -69.714058" v1="66.856926 -67.999779" v2="64.571213 -67.428352" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -69.714058" v1="66.856926 -67.999779" v2="64.571213 -67.428352" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -69.714058" v1="64.571213 -67.428352" v2="63.99979 -68.571205" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -69.714058" v1="64.571213 -67.428352" v2="63.99979 -68.571205" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -69.714058" v1="63.99979 -68.571205" v2="63.99979 -69.714058" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -69.714058" v1="63.99979 -68.571205" v2="63.99979 -69.714058" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="63.99979 -69.714058" v1="63.99979 -68.571205" v2="58.999805 -54.285534" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="63.99979 -69.714058" v1="63.99979 -68.571205" v2="58.999805 -54.285534" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="58.999805 -54.285534" v1="63.99979 -68.571205" v2="63.428364 -63.428364" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="58.999805 -54.285534" v1="63.99979 -68.571205" v2="63.428364 -63.428364" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="58.999805 -54.285534" v1="63.428364 -63.428364" v2="60.714085 -56.28553" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="58.999805 -54.285534" v1="63.428364 -63.428364" v2="60.714085 -56.28553" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="58.999805 -54.285534" v1="60.714085 -56.28553" v2="59.285519 -54.285534" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="58.999805 -54.285534" v1="60.714085 -56.28553" v2="59.285519 -54.285534" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="59.285519 -54.285534" v1="60.714085 -56.28553" v2="61.714081 -54.142677" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="59.285519 -54.285534" v1="60.714085 -56.28553" v2="61.714081 -54.142677" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="61.714081 -54.142677" v1="60.714085 -56.28553" v2="60.999798 -56.28553" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="61.714081 -54.142677" v1="60.714085 -56.28553" v2="60.999798 -56.28553" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="61.714081 -54.142677" v1="60.999798 -56.28553" v2="62.428368 -54.142677" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="61.714081 -54.142677" v1="60.999798 -56.28553" v2="62.428368 -54.142677" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="62.428368 -54.142677" v1="60.999798 -56.28553" v2="65.142639 -58.285522" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="62.428368 -54.142677" v1="60.999798 -56.28553" v2="65.142639 -58.285522" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.142639 -58.285522" v1="60.999798 -56.28553" v2="63.428364 -60.571228" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.142639 -58.285522" v1="60.999798 -56.28553" v2="63.428364 -60.571228" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.142639 -58.285522" v1="63.428364 -60.571228" v2="65.714066 -60.571228" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.142639 -58.285522" v1="63.428364 -60.571228" v2="65.714066 -60.571228" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -60.571228" v1="63.428364 -60.571228" v2="65.714066 -63.428364" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -60.571228" v1="63.428364 -60.571228" v2="65.714066 -63.428364" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -63.428364" v1="63.428364 -60.571228" v2="63.428364 -63.428364" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -63.428364" v1="63.428364 -60.571228" v2="63.428364 -63.428364" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -63.428364" v1="63.428364 -63.428364" v2="64.571213 -67.428352" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -63.428364" v1="63.428364 -63.428364" v2="64.571213 -67.428352" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="65.714066 -63.428364" v1="64.571213 -67.428352" v2="66.856926 -67.999779" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="65.714066 -63.428364" v1="64.571213 -67.428352" v2="66.856926 -67.999779" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="64.571213 -67.428352" v1="63.428364 -63.428364" v2="63.99979 -68.571205" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="64.571213 -67.428352" v1="63.428364 -63.428364" v2="63.99979 -68.571205" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="63.428364 -63.428364" v1="63.428364 -60.571228" v2="60.714085 -56.28553" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="63.428364 -63.428364" v1="63.428364 -60.571228" v2="60.714085 -56.28553" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="60.714085 -56.28553" v1="63.428364 -60.571228" v2="60.999798 -56.28553" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="60.714085 -56.28553" v1="63.428364 -60.571228" v2="60.999798 -56.28553" /> </visplane>
+    <visplane height="1.857137" texture="FLOOR4_8"> <vertices v0="62.856937 -69.714058" v1="62.856937 -68.571205" v2="63.142651 -68.571205" v3="63.99979 -68.571205" v4="63.99979 -69.714058" v5="63.142651 -69.714058" /> </visplane>
+    <visplane height="3.285703" texture="FLOOR6_2"> <vertices v0="62.856937 -69.714058" v1="62.856937 -68.571205" v2="63.142651 -68.571205" v3="63.99979 -68.571205" v4="63.99979 -69.714058" v5="63.142651 -69.714058" /> </visplane>
+    <visplane height="0.0" texture="FLOOR4_8"> <vertices v0="23.999922 -62.856937" v1="23.999922 -60.571228" v2="24.571348 -60.571228" v3="24.571348 -62.856937" /> </visplane>
+    <visplane height="0.0" texture="FLAT20"> <vertices v0="23.999922 -62.856937" v1="23.999922 -60.571228" v2="24.571348 -60.571228" v3="24.571348 -62.856937" /> </visplane>
+    <wall start="19.428507 -65.714066 0.0" end="18.285654 -65.714066 1.28571" texture="DOOR3" />
+    <wall start="18.285654 -65.714066 0.0" end="18.285654 -65.142639 1.28571" texture="LITE3" />
+    <wall start="19.428507 -65.142639 0.0" end="19.428507 -65.714066 1.28571" texture="LITE3" />
+    <wall start="20.571362 -65.142639 0.0" end="19.428507 -65.142639 1.28571" texture="STARTAN3" />
+    <wall start="18.285654 -65.142639 0.0" end="17.142801 -65.142639 1.28571" texture="STARTAN3" />
+    <wall start="22.857067 -63.428364 0.0" end="20.571362 -65.142639 1.28571" texture="STARTAN3" />
+    <wall start="17.142801 -65.142639 0.0" end="14.857094 -63.428364 1.28571" texture="STARTAN3" />
+    <wall start="23.999922 -63.428364 0.0" end="22.857067 -63.428364 1.28571" texture="STARTAN3" />
+    <wall start="14.857094 -63.428364 0.0" end="12.571387 -63.428364 1.28571" texture="STARTAN3" />
+    <wall start="15.999948 -60.571228 0.0" end="16.571375 -60.571228 1.28571" texture="BROWN1" />
+    <wall start="16.571375 -60.571228 -0.142857" end="16.571375 -59.999802 2.14285" texture="BROWN1" />
+    <wall start="16.571375 -59.999802 -0.142857" end="15.999948 -59.999802 2.14285" texture="BROWN1" />
+    <wall start="15.999948 -59.999802 0.0" end="15.999948 -60.571228 1.28571" texture="BROWN1" />
+    <wall start="21.142788 -60.571228 0.0" end="21.714214 -60.571228 1.28571" texture="BROWN1" />
+    <wall start="21.714214 -60.571228 -0.285713" end="21.714214 -59.999802 3.571417" texture="BROWN1" />
+    <wall start="21.714214 -59.999802 -0.285713" end="21.142788 -59.999802 3.571417" texture="BROWN1" />
+    <wall start="21.142788 -59.999802 -0.142857" end="21.142788 -60.571228 2.14285" texture="BROWN1" />
+    <wall start="15.999948 -54.856964 0.0" end="15.999948 -55.428391 1.28571" texture="BROWN1" />
+    <wall start="15.999948 -55.428391 -0.142857" end="16.571375 -55.428391 2.14285" texture="BROWN1" />
+    <wall start="16.571375 -55.428391 -0.142857" end="16.571375 -54.856964 2.14285" texture="BROWN1" />
+    <wall start="16.571375 -54.856964 0.0" end="15.999948 -54.856964 1.28571" texture="BROWN1" />
+    <wall start="21.714214 -54.856964 0.0" end="21.142788 -54.856964 1.28571" texture="BROWN1" />
+    <wall start="21.142788 -54.856964 -0.142857" end="21.142788 -55.428391 2.14285" texture="BROWN1" />
+    <wall start="21.142788 -55.428391 -0.285713" end="21.714214 -55.428391 3.571417" texture="BROWN1" />
+    <wall start="21.714214 -55.428391 -0.285713" end="21.714214 -54.856964 3.571417" texture="BROWN1" />
+    <wall start="23.999922 -58.285522 -0.285713" end="23.999922 -59.999802 0.142857" texture="STARTAN3" />
+    <wall start="23.999922 -58.285522 3.42856" end="23.999922 -59.999802 3.571417" texture="STARTAN3" />
+    <wall start="23.999922 -57.14267 -0.285713" end="23.999922 -58.285522 3.571417" texture="STARTAN3" />
+    <wall start="23.999922 -51.428402 0.0" end="23.999922 -55.428391 1.28571" texture="STARTAN3" />
+    <wall start="23.999922 -55.428391 -0.285713" end="23.999922 -57.14267 0.142857" texture="STARTAN3" />
+    <wall start="23.999922 -55.428391 3.42856" end="23.999922 -57.14267 3.571417" texture="STARTAN3" />
+    <wall start="24.571348 -57.14267 -0.999997" end="24.571348 -55.428391 0.142857" texture="STARTAN3" />
+    <wall start="24.571348 -57.14267 3.42856" end="24.571348 -55.428391 3.85713" texture="STARTAN3" />
+    <wall start="24.571348 -59.999802 -0.999997" end="24.571348 -58.285522 0.142857" texture="STARTAN3" />
+    <wall start="24.571348 -59.999802 3.42856" end="24.571348 -58.285522 3.85713" texture="STARTAN3" />
+    <wall start="23.999922 -58.285522 0.142857" end="24.571348 -58.285522 3.42856" texture="DOORSTOP" />
+    <wall start="24.571348 -59.999802 0.142857" end="23.999922 -59.999802 3.42856" texture="DOORSTOP" />
+    <wall start="24.571348 -57.14267 0.142857" end="23.999922 -57.14267 3.42856" texture="DOORSTOP" />
+    <wall start="23.999922 -55.428391 0.142857" end="24.571348 -55.428391 3.42856" texture="DOORSTOP" />
+    <wall start="24.571348 -58.285522 -0.999997" end="24.571348 -57.14267 3.85713" texture="STARTAN3" />
+    <wall start="24.571348 -55.428391 -0.999997" end="24.571348 -52.571255 3.85713" texture="STARTAN3" />
+    <wall start="21.142788 -60.571228 -0.142857" end="16.571375 -60.571228 0.0" texture="STEP6" />
+    <wall start="21.142788 -60.571228 1.28571" end="16.571375 -60.571228 2.14285" texture="COMPUTE2" />
+    <wall start="23.999922 -59.999802 -0.285713" end="21.714214 -60.571228 0.0" texture="STEP6" />
+    <wall start="23.999922 -59.999802 1.28571" end="21.714214 -60.571228 3.571417" texture="STARTAN3" />
+    <wall start="21.714214 -54.856964 -0.285713" end="23.999922 -55.428391 0.0" texture="STEP6" />
+    <wall start="21.714214 -54.856964 1.28571" end="23.999922 -55.428391 3.571417" texture="STARTAN3" />
+    <wall start="12.571387 -52.571255 0.0" end="14.857094 -52.571255 1.28571" texture="STARTAN3" />
+    <wall start="14.857094 -52.571255 0.0" end="17.285658 -51.428402 1.28571" texture="STARTAN3" />
+    <wall start="17.285658 -51.428402 0.0" end="21.714214 -51.428402 1.28571" texture="STARTAN3" />
+    <wall start="24.571348 -52.571255 -0.999997" end="26.285627 -51.428402 3.85713" texture="STARTAN3" />
+    <wall start="27.285624 -65.714066 -0.999997" end="24.571348 -65.142639 0.42857" texture="BROWN144" />
+    <wall start="29.857044 -66.856926 -0.999997" end="27.285624 -65.714066 0.42857" texture="BROWN144" />
+    <wall start="16.571375 -55.428391 -0.285713" end="21.142788 -55.428391 -0.142857" texture="STEP6" />
+    <wall start="16.571375 -55.428391 2.14285" end="21.142788 -55.428391 3.571417" texture="STARTAN3" />
+    <wall start="21.142788 -59.999802 -0.285713" end="16.571375 -59.999802 -0.142857" texture="STEP6" />
+    <wall start="21.142788 -59.999802 2.14285" end="16.571375 -59.999802 3.571417" texture="STARTAN3" />
+    <wall start="16.571375 -59.999802 -0.285713" end="16.571375 -55.428391 -0.142857" texture="STEP6" />
+    <wall start="16.571375 -59.999802 2.14285" end="16.571375 -55.428391 3.571417" texture="STARTAN3" />
+    <wall start="15.999948 -59.999802 -0.142857" end="15.999948 -55.428391 0.0" texture="STEP6" />
+    <wall start="15.999948 -59.999802 1.28571" end="15.999948 -55.428391 2.14285" texture="COMPUTE2" />
+    <wall start="16.571375 -54.856964 -0.142857" end="21.142788 -54.856964 0.0" texture="STEP6" />
+    <wall start="16.571375 -54.856964 1.28571" end="21.142788 -54.856964 2.14285" texture="COMPUTE2" />
+    <wall start="12.571387 -63.428364 0.0" end="12.571387 -59.999802 1.28571" texture="STARTAN3" />
+    <wall start="12.571387 -55.428391 0.0" end="12.571387 -52.571255 1.28571" texture="STARTAN3" />
+    <wall start="12.571387 -55.428391 -0.142857" end="12.571387 -59.999802 0.0" texture="STEP6" />
+    <wall start="12.571387 -55.428391 1.28571" end="12.571387 -59.999802 2.14285" texture="STARTAN3" />
+    <wall start="9.142827 -59.428375 -0.142857" end="9.142827 -58.999805 2.14285" texture="STARTAN3" />
+    <wall start="9.142827 -56.428387 -0.142857" end="9.142827 -55.999817 2.14285" texture="STARTAN3" />
+    <wall start="9.142827 -55.999817 -0.142857" end="12.142817 -55.428391 2.14285" texture="STARTAN3" />
+    <wall start="12.142817 -55.428391 -0.142857" end="12.571387 -55.428391 2.14285" texture="SUPPORT2" />
+    <wall start="12.571387 -59.999802 -0.142857" end="12.142817 -59.999802 2.14285" texture="SUPPORT2" />
+    <wall start="12.142817 -59.999802 -0.142857" end="9.142827 -59.428375 2.14285" texture="STARTAN3" />
+    <wall start="8.857114 -56.428387 2.14285" end="8.857114 -58.999805 3.999987" texture="STARG3" />
+    <wall start="9.142827 -58.999805 -0.142857" end="8.857114 -58.999805 2.14285" texture="DOORTRAK" />
+    <wall start="8.857114 -56.428387 -0.142857" end="9.142827 -56.428387 2.14285" texture="DOORTRAK" />
+    <wall start="8.857114 -58.999805 -0.142857" end="8.857114 -59.428375 3.999987" texture="STARG3" />
+    <wall start="8.857114 -59.428375 -0.142857" end="7.999974 -61.714081 3.999987" texture="STARG3" />
+    <wall start="7.999974 -61.714081 -0.142857" end="2.285707 -61.714081 3.999987" texture="STARG3" />
+    <wall start="2.285707 -53.714108 -0.142857" end="7.999974 -53.714108 3.999987" texture="STARG3" />
+    <wall start="8.857114 -55.999817 -0.142857" end="8.857114 -56.428387 3.999987" texture="STARG3" />
+    <wall start="7.999974 -53.714108 -0.142857" end="8.857114 -55.999817 3.999987" texture="STARG3" />
+    <wall start="2.285707 -58.285522 -0.142857" end="2.857133 -58.285522 1.571423" texture="SLADWALL" />
+    <wall start="2.857133 -58.285522 -0.142857" end="3.42856 -58.285522 1.28571" texture="SLADWALL" />
+    <wall start="3.42856 -58.285522 -0.142857" end="3.999987 -58.285522 0.999997" texture="SLADWALL" />
+    <wall start="3.999987 -58.285522 -0.142857" end="4.571414 -58.285522 0.714283" texture="SLADWALL" />
+    <wall start="4.571414 -58.285522 -0.142857" end="5.14284 -58.285522 0.42857" texture="SLADWALL" />
+    <wall start="5.14284 -58.285522 -0.142857" end="5.714267 -58.285522 0.142857" texture="SLADWALL" />
+    <wall start="5.714267 -58.285522 -0.142857" end="5.714267 -57.14267 0.142857" texture="STEP6" />
+    <wall start="5.714267 -57.14267 -0.142857" end="5.14284 -57.14267 0.142857" texture="SLADWALL" />
+    <wall start="5.14284 -57.14267 -0.142857" end="4.571414 -57.14267 0.42857" texture="SLADWALL" />
+    <wall start="4.571414 -57.14267 -0.142857" end="3.999987 -57.14267 0.714283" texture="SLADWALL" />
+    <wall start="3.999987 -57.14267 -0.142857" end="3.42856 -57.14267 0.999997" texture="SLADWALL" />
+    <wall start="3.42856 -57.14267 -0.142857" end="2.857133 -57.14267 1.28571" texture="SLADWALL" />
+    <wall start="2.857133 -57.14267 -0.142857" end="2.285707 -57.14267 1.571423" texture="SLADWALL" />
+    <wall start="2.857133 -58.285522 1.28571" end="2.857133 -57.14267 1.571423" texture="STEP6" />
+    <wall start="3.42856 -58.285522 0.999997" end="3.42856 -57.14267 1.28571" texture="STEP6" />
+    <wall start="3.999987 -58.285522 0.714283" end="3.999987 -57.14267 0.999997" texture="STEP6" />
+    <wall start="4.571414 -58.285522 0.42857" end="4.571414 -57.14267 0.714283" texture="STEP6" />
+    <wall start="5.14284 -58.285522 0.142857" end="5.14284 -57.14267 0.42857" texture="STEP6" />
+    <wall start="2.285707 -58.285522 1.571423" end="2.285707 -57.14267 1.857137" texture="STARG3" />
+    <wall start="2.285707 -58.285522 3.42856" end="2.285707 -57.14267 3.999987" texture="STARG3" />
+    <wall start="2.285707 -57.14267 -0.142857" end="1.142853 -54.856964 1.857137" texture="STARG3" />
+    <wall start="2.285707 -57.14267 3.42856" end="1.142853 -54.856964 3.999987" texture="STARG3" />
+    <wall start="1.142853 -54.856964 -0.142857" end="2.285707 -53.714108 3.999987" texture="STARG3" />
+    <wall start="2.285707 -61.714081 -0.142857" end="1.142853 -60.571228 3.999987" texture="STARG3" />
+    <wall start="1.142853 -60.571228 -0.142857" end="2.285707 -58.285522 1.857137" texture="STARG3" />
+    <wall start="1.142853 -60.571228 3.42856" end="2.285707 -58.285522 3.999987" texture="STARG3" />
+    <wall start="1.142853 -60.571228 1.857137" end="0.85714 -60.571228 3.42856" texture="SUPPORT2" />
+    <wall start="0.85714 -60.571228 1.857137" end="-1.142853 -59.428375 3.42856" texture="STARG3" />
+    <wall start="-1.142853 -55.999817 1.857137" end="0.85714 -54.856964 3.42856" texture="STARG3" />
+    <wall start="0.85714 -54.856964 1.857137" end="1.142853 -54.856964 3.42856" texture="SUPPORT2" />
+    <wall start="-4.571414 -59.428375 1.857137" end="-5.714267 -58.856949 4.71427" texture="STARTAN3" />
+    <wall start="-5.714267 -56.571243 1.857137" end="-4.571414 -55.999817 4.71427" texture="STARTAN3" />
+    <wall start="-2.285707 -55.714104 2.428563" end="-2.285707 -55.999817 4.2857" texture="DOORSTOP" />
+    <wall start="-4.571414 -55.999817 2.428563" end="-4.571414 -55.714104 4.2857" texture="DOORSTOP" />
+    <wall start="-4.571414 -59.714088 2.428563" end="-4.571414 -59.428375 4.2857" texture="DOORSTOP" />
+    <wall start="-2.285707 -59.428375 2.428563" end="-2.285707 -59.714088 4.2857" texture="DOORSTOP" />
+    <wall start="-5.714267 -58.856949 2.428563" end="-5.99998 -58.856949 4.2857" texture="DOORSTOP" />
+    <wall start="-5.99998 -56.571243 2.428563" end="-5.714267 -56.571243 4.2857" texture="DOORSTOP" />
+    <wall start="-4.571414 -55.714104 0.0" end="-5.99998 -55.714104 4.71427" texture="STARTAN3" />
+    <wall start="-5.99998 -55.714104 0.0" end="-5.99998 -56.571243 4.71427" texture="STARTAN3" />
+    <wall start="-5.99998 -58.856949 0.0" end="-5.99998 -59.714088 4.71427" texture="STARTAN3" />
+    <wall start="-5.99998 -59.714088 0.0" end="-4.571414 -59.714088 4.71427" texture="STARTAN3" />
+    <wall start="-2.285707 -59.714088 0.0" end="-1.71428 -59.714088 4.71427" texture="STARTAN3" />
+    <wall start="-1.71428 -59.714088 0.0" end="1.142853 -62.856937 4.71427" texture="STARTAN3" />
+    <wall start="-1.71428 -55.714104 0.0" end="-2.285707 -55.714104 4.71427" texture="STARTAN3" />
+    <wall start="1.142853 -52.571255 0.0" end="-1.71428 -55.714104 4.71427" texture="STARTAN3" />
+    <wall start="-1.142853 -55.999817 3.42856" end="-1.142853 -59.428375 4.71427" texture="STARG3" />
+    <wall start="-2.285707 -59.428375 1.857137" end="-4.571414 -59.428375 2.428563" texture="STARTAN3" />
+    <wall start="-2.285707 -59.428375 4.2857" end="-4.571414 -59.428375 4.71427" texture="STARTAN3" />
+    <wall start="-4.571414 -59.714088 0.0" end="-2.285707 -59.714088 2.428563" texture="STARTAN3" />
+    <wall start="-4.571414 -59.714088 4.2857" end="-2.285707 -59.714088 4.71427" texture="STARTAN3" />
+    <wall start="-4.571414 -55.999817 1.857137" end="-2.285707 -55.999817 2.428563" texture="STARTAN3" />
+    <wall start="-4.571414 -55.999817 4.2857" end="-2.285707 -55.999817 4.71427" texture="STARTAN3" />
+    <wall start="-2.285707 -55.714104 0.0" end="-4.571414 -55.714104 2.428563" texture="STARTAN3" />
+    <wall start="-2.285707 -55.714104 4.2857" end="-4.571414 -55.714104 4.71427" texture="STARTAN3" />
+    <wall start="-5.714267 -58.856949 1.857137" end="-5.714267 -56.571243 2.428563" texture="STARTAN3" />
+    <wall start="-5.714267 -58.856949 4.2857" end="-5.714267 -56.571243 4.71427" texture="STARTAN3" />
+    <wall start="-5.99998 -56.571243 0.0" end="-5.99998 -58.856949 2.428563" texture="STARTAN3" />
+    <wall start="-5.99998 -56.571243 4.2857" end="-5.99998 -58.856949 4.71427" texture="STARTAN3" />
+    <wall start="1.142853 -50.285549 0.0" end="1.142853 -52.571255 4.71427" texture="STARTAN3" />
+    <wall start="1.142853 -62.856937 0.0" end="1.142853 -65.142639 4.71427" texture="STARTAN3" />
+    <wall start="1.142853 -65.142639 0.0" end="-11.428534 -65.142639 2.285707" texture="BROWN144" />
+    <wall start="-11.428534 -65.142639 0.0" end="-13.714241 -62.856937 2.285707" texture="BROWN144" />
+    <wall start="-13.714241 -62.856937 0.0" end="-13.714241 -52.571255 2.285707" texture="BROWN144" />
+    <wall start="-13.714241 -52.571255 0.0" end="-11.428534 -50.285549 2.285707" texture="BROWN144" />
+    <wall start="-11.428534 -50.285549 0.0" end="1.142853 -50.285549 2.285707" texture="BROWN144" />
+    <wall start="1.142853 -65.142639 2.285707" end="-11.428534 -62.856937 4.71427" texture="STARG3" />
+    <wall start="-11.428534 -62.856937 2.285707" end="-11.428534 -52.571255 4.71427" texture="STARG3" />
+    <wall start="-11.428534 -52.571255 2.285707" end="1.142853 -50.285549 4.71427" texture="STARG3" />
+    <wall start="-2.285707 -55.999817 1.857137" end="-1.571423 -55.999817 4.71427" texture="STARTAN3" />
+    <wall start="-1.571423 -55.999817 1.857137" end="-1.142853 -55.999817 4.71427" texture="SUPPORT2" />
+    <wall start="-1.142853 -59.428375 1.857137" end="-1.571423 -59.428375 4.71427" texture="SUPPORT2" />
+    <wall start="-1.571423 -59.428375 1.857137" end="-2.285707 -59.428375 4.71427" texture="STARTAN3" />
+    <wall start="4.571414 -55.999817 -0.142857" end="5.714267 -55.999817 0.714283" texture="TEKWALL4" />
+    <wall start="4.571414 -55.999817 3.285703" end="5.714267 -55.999817 3.999987" texture="TEKWALL4" />
+    <wall start="5.714267 -55.999817 -0.142857" end="5.714267 -54.856964 0.714283" texture="TEKWALL4" />
+    <wall start="5.714267 -55.999817 3.285703" end="5.714267 -54.856964 3.999987" texture="TEKWALL4" />
+    <wall start="5.714267 -54.856964 -0.142857" end="4.571414 -54.856964 0.714283" texture="SW1COMP" />
+    <wall start="5.714267 -54.856964 3.285703" end="4.571414 -54.856964 3.999987" texture="TEKWALL4" />
+    <wall start="4.571414 -54.856964 -0.142857" end="4.571414 -55.999817 0.714283" texture="TEKWALL4" />
+    <wall start="4.571414 -54.856964 3.285703" end="4.571414 -55.999817 3.999987" texture="TEKWALL4" />
+    <wall start="4.571414 -60.571228 -0.142857" end="5.714267 -60.571228 0.714283" texture="TEKWALL4" />
+    <wall start="4.571414 -60.571228 3.285703" end="5.714267 -60.571228 3.999987" texture="TEKWALL4" />
+    <wall start="5.714267 -60.571228 -0.142857" end="5.714267 -59.428375 0.714283" texture="TEKWALL4" />
+    <wall start="5.714267 -60.571228 3.285703" end="5.714267 -59.428375 3.999987" texture="TEKWALL4" />
+    <wall start="5.714267 -59.428375 -0.142857" end="4.571414 -59.428375 0.714283" texture="TEKWALL4" />
+    <wall start="5.714267 -59.428375 3.285703" end="4.571414 -59.428375 3.999987" texture="TEKWALL4" />
+    <wall start="4.571414 -59.428375 -0.142857" end="4.571414 -60.571228 0.714283" texture="TEKWALL4" />
+    <wall start="4.571414 -59.428375 3.285703" end="4.571414 -60.571228 3.999987" texture="TEKWALL4" />
+    <wall start="21.714214 -51.428402 0.0" end="22.285641 -45.142708 2.57142" texture="STARTAN3" />
+    <wall start="24.714205 -46.285561 0.0" end="23.999922 -51.428402 2.57142" texture="STARTAN3" />
+    <wall start="26.285627 -45.714134 0.0" end="24.714205 -46.285561 2.57142" texture="STARTAN3" />
+    <wall start="22.285641 -45.142708 0.0" end="26.285627 -43.428429 2.57142" texture="STARTAN3" />
+    <wall start="23.999922 -51.428402 1.28571" end="21.714214 -51.428402 2.57142" texture="STARTAN3" />
+    <wall start="26.285627 -43.428429 1.571423" end="26.285627 -45.714134 2.57142" texture="STARTAN3" />
+    <wall start="27.428482 -43.428429 0.0" end="27.428482 -45.714134 1.571423" texture="BIGDOOR2" />
+    <wall start="27.714195 -45.714134 0.0" end="27.714195 -43.428429 1.28571" texture="BIGDOOR2" />
+    <wall start="27.428482 -45.714134 0.0" end="26.285627 -45.714134 1.571423" texture="STARTAN3" />
+    <wall start="26.285627 -43.428429 0.0" end="27.428482 -43.428429 1.571423" texture="STARTAN3" />
+    <wall start="27.428482 -43.428429 0.0" end="27.714195 -43.428429 0.0" texture="DOORTRAK" />
+    <wall start="27.714195 -45.714134 0.0" end="27.428482 -45.714134 0.0" texture="DOORTRAK" />
+    <wall start="29.714188 -45.714134 0.0" end="27.714195 -45.714134 1.28571" texture="STARGR1" />
+    <wall start="27.714195 -43.428429 0.0" end="29.714188 -43.428429 1.28571" texture="STARGR1" />
+    <wall start="48.856983 -65.142639 -0.999997" end="44.428425 -66.856926 0.42857" texture="BROWN144" />
+    <wall start="44.428425 -66.856926 -0.999997" end="39.999866 -67.428352 0.42857" texture="BROWN144" />
+    <wall start="35.428455 -67.428352 -0.999997" end="29.857044 -66.856926 0.42857" texture="BROWN144" />
+    <wall start="33.14275 -51.428402 -0.999997" end="34.285603 -52.142685 0.0" texture="STARTAN3" />
+    <wall start="33.14275 -51.428402 0.0" end="34.285603 -52.142685 3.85713" texture="STARTAN3" />
+    <wall start="27.142767 -56.571243 -1.428567" end="29.857044 -55.428391 -0.999997" texture="BROWN144" />
+    <wall start="29.857044 -55.428391 -1.428567" end="33.857033 -55.428391 -0.999997" texture="BROWN144" />
+    <wall start="33.857033 -55.428391 -1.428567" end="36.428452 -56.142673 -0.999997" texture="BROWN144" />
+    <wall start="36.428452 -56.142673 -1.428567" end="37.999874 -58.428379 -0.999997" texture="BROWN144" />
+    <wall start="37.999874 -58.428379 -1.428567" end="36.857021 -60.856941 -0.999997" texture="BROWN144" />
+    <wall start="36.857021 -60.856941 -1.428567" end="31.857038 -61.571224 -0.999997" texture="BROWN144" />
+    <wall start="31.857038 -61.571224 -1.428567" end="27.571339 -60.428371 -0.999997" texture="BROWN144" />
+    <wall start="27.571339 -60.428371 -1.428567" end="27.142767 -56.571243 -0.999997" texture="BROWN144" />
+    <wall start="49.142696 -49.714123 -0.285713" end="46.856987 -49.714123 1.28571" texture="BROWN1" />
+    <wall start="44.999851 -45.714134 -0.142857" end="49.142696 -45.714134 1.28571" texture="BROWN1" />
+    <wall start="49.142696 -45.714134 -0.285713" end="52.571255 -47.428413 1.28571" texture="BROWN1" />
+    <wall start="51.428402 -51.999828 -0.42857" end="51.428402 -51.428402 3.142847" texture="BROWNGRN" />
+    <wall start="54.428391 -51.428402 -0.42857" end="54.428391 -52.571255 3.142847" texture="BROWNGRN" />
+    <wall start="49.142696 -54.428391 -0.42857" end="49.142696 -51.999828 3.142847" texture="BROWNGRN" />
+    <wall start="49.142696 -63.99979 -0.85714" end="49.142696 -59.999802 3.142847" texture="BROWNGRN" />
+    <wall start="48.856983 -59.999802 -0.999997" end="48.856983 -65.142639 3.85713" texture="STARTAN3" />
+    <wall start="49.142696 -59.999802 0.0" end="48.856983 -59.999802 2.428563" texture="DOORSTOP" />
+    <wall start="54.428391 -52.571255 -0.42857" end="58.999805 -54.285534 3.142847" texture="BROWNGRN" />
+    <wall start="55.999817 -54.856964 -0.85714" end="58.999805 -54.285534 -0.42857" texture="NUKE24" />
+    <wall start="55.571247 -59.999802 -0.85714" end="52.571255 -63.142651 -0.42857" texture="NUKE24" />
+    <wall start="50.285549 -57.714096 -0.85714" end="55.571247 -59.999802 -0.42857" texture="NUKE24" />
+    <wall start="58.571236 -59.285519 -0.85714" end="53.285538 -57.14267 -0.42857" texture="NUKE24" />
+    <wall start="53.142681 -54.856964 -0.85714" end="50.285549 -57.714096 -0.42857" texture="NUKE24" />
+    <wall start="53.285538 -57.14267 -0.85714" end="55.999817 -54.856964 -0.42857" texture="NUKE24" />
+    <wall start="58.285522 -64.571213 -0.42857" end="54.856964 -65.142639 3.142847" texture="BROWNGRN" />
+    <wall start="52.571255 -65.142639 -0.42857" end="49.142696 -63.99979 3.142847" texture="BROWNGRN" />
+    <wall start="54.856964 -65.142639 -0.42857" end="54.856964 -71.428337 3.142847" texture="BROWNGRN" />
+    <wall start="52.571255 -67.428352 -0.42857" end="52.571255 -65.142639 3.142847" texture="BROWNGRN" />
+    <wall start="49.142696 -49.714123 -0.42857" end="52.571255 -47.428413 -0.285713" texture="BROWN1" />
+    <wall start="49.142696 -49.714123 1.28571" end="52.571255 -47.428413 3.142847" texture="BROWN1" />
+    <wall start="52.571255 -63.142651 -0.85714" end="49.142696 -63.99979 -0.42857" texture="NUKE24" />
+    <wall start="55.428391 -63.428364 -0.85714" end="58.571236 -59.285519 -0.42857" texture="NUKE24" />
+    <wall start="58.285522 -64.571213 -0.85714" end="55.428391 -63.428364 -0.42857" texture="NUKE24" />
+    <wall start="59.856945 -63.714077 -0.85714" end="58.285522 -64.571213 3.142847" texture="BROWNGRN" />
+    <wall start="61.999794 -61.285511 -0.85714" end="60.856941 -61.285511 1.71428" texture="BROWNGRN" />
+    <wall start="60.856941 -61.285511 -0.85714" end="59.142662 -62.428368 1.71428" texture="BROWNGRN" />
+    <wall start="59.142662 -62.428368 -0.85714" end="59.856945 -63.714077 1.71428" texture="BROWNGRN" />
+    <wall start="39.999866 -67.428352 -0.999997" end="39.42844 -65.714066 1.142853" texture="BROWN1" />
+    <wall start="39.42844 -65.714066 -0.999997" end="38.857014 -65.714066 1.142853" texture="BROWN1" />
+    <wall start="35.999882 -65.714066 -0.999997" end="35.428455 -67.428352 1.142853" texture="BROWN1" />
+    <wall start="36.571308 -65.714066 -0.999997" end="35.999882 -65.714066 1.142853" texture="BROWN1" />
+    <wall start="38.857014 -67.428352 -1.28571" end="38.857014 -67.999779 0.285713" texture="BROWN1" />
+    <wall start="38.857014 -67.999779 -1.571423" end="38.857014 -68.571205 0.285713" texture="BROWN1" />
+    <wall start="36.571308 -67.999779 -1.28571" end="36.571308 -67.428352 0.285713" texture="BROWN1" />
+    <wall start="36.571308 -68.571205 -1.571423" end="36.571308 -67.999779 0.285713" texture="BROWN1" />
+    <wall start="36.571308 -69.142632 -1.857137" end="36.571308 -68.571205 0.285713" texture="BROWN1" />
+    <wall start="36.571308 -69.714058 -2.14285" end="36.571308 -69.142632 0.285713" texture="BROWN1" />
+    <wall start="38.857014 -68.571205 -1.857137" end="38.857014 -69.142632 0.285713" texture="BROWN1" />
+    <wall start="38.857014 -69.142632 -2.14285" end="38.857014 -69.714058 0.285713" texture="BROWN1" />
+    <wall start="39.999866 -73.142616 -2.428563" end="37.714161 -71.999763 -0.714283" texture="BROWN1" />
+    <wall start="38.857014 -65.714066 0.285713" end="36.571308 -65.714066 1.142853" texture="BROWN1" />
+    <wall start="36.571308 -67.428352 -1.28571" end="38.857014 -67.428352 -0.999997" texture="BROWN1" />
+    <wall start="36.571308 -67.999779 -1.571423" end="38.857014 -67.999779 -1.28571" texture="BROWN1" />
+    <wall start="36.571308 -68.571205 -1.857137" end="38.857014 -68.571205 -1.571423" texture="BROWN1" />
+    <wall start="36.571308 -69.142632 -2.14285" end="38.857014 -69.142632 -1.857137" texture="BROWN1" />
+    <wall start="36.571308 -69.714058 -2.428563" end="38.857014 -69.714058 -2.14285" texture="BROWN1" />
+    <wall start="36.571308 -69.714058 -0.714283" end="38.857014 -69.714058 0.285713" texture="BROWN1" />
+    <wall start="39.999866 -73.142616 -0.714283" end="39.999866 -70.856911 -0.42857" texture="BROWN1" />
+    <wall start="42.285576 -70.856911 -0.714283" end="42.285576 -73.142616 -0.42857" texture="BROWN1" />
+    <wall start="51.428402 -67.428352 -0.714283" end="51.428402 -69.714058 -0.42857" texture="BROWN1" />
+    <wall start="50.856976 -67.428352 -0.999997" end="50.856976 -69.714058 -0.714283" texture="BROWN1" />
+    <wall start="50.285549 -67.428352 -1.28571" end="50.285549 -69.714058 -0.999997" texture="BROWN1" />
+    <wall start="49.714123 -67.428352 -1.571423" end="49.714123 -69.714058 -1.28571" texture="BROWN1" />
+    <wall start="49.142696 -67.428352 -1.857137" end="49.142696 -69.714058 -1.571423" texture="BROWN1" />
+    <wall start="47.999844 -67.428352 -2.14285" end="48.57127 -69.714058 -1.857137" texture="BROWN1" />
+    <wall start="46.999844 -67.714066 -2.428563" end="47.999844 -69.999771 -2.14285" texture="BROWN1" />
+    <wall start="46.999844 -67.714066 -0.714283" end="47.999844 -69.999771 0.85714" texture="BROWN1" />
+    <wall start="46.999844 -67.714066 -2.14285" end="47.999844 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="48.57127 -69.714058 -2.14285" end="47.999844 -69.999771 0.85714" texture="BROWN1" />
+    <wall start="47.999844 -67.428352 -1.857137" end="49.142696 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="49.142696 -67.428352 -1.571423" end="49.714123 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="49.714123 -67.428352 -1.28571" end="50.285549 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="50.285549 -67.428352 -0.999997" end="50.856976 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="50.856976 -67.428352 -0.714283" end="51.428402 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="51.428402 -69.714058 -0.714283" end="50.856976 -69.714058 0.85714" texture="BROWN1" />
+    <wall start="50.856976 -69.714058 -0.999997" end="50.285549 -69.714058 0.85714" texture="BROWN1" />
+    <wall start="50.285549 -69.714058 -1.28571" end="49.714123 -69.714058 0.85714" texture="BROWN1" />
+    <wall start="49.714123 -69.714058 -1.571423" end="49.142696 -69.714058 0.85714" texture="BROWN1" />
+    <wall start="49.142696 -69.714058 -1.857137" end="48.57127 -69.714058 0.85714" texture="BROWN1" />
+    <wall start="51.428402 -67.428352 -0.42857" end="51.999828 -67.428352 0.85714" texture="BROWN1" />
+    <wall start="51.999828 -69.714058 -0.42857" end="51.428402 -69.714058 0.85714" texture="BROWN1" />
+    <wall start="52.571255 -69.714058 -0.42857" end="51.999828 -69.714058 -0.42857" texture="DOORSTOP" />
+    <wall start="51.999828 -67.428352 -0.42857" end="52.571255 -67.428352 -0.42857" texture="DOORSTOP" />
+    <wall start="52.571255 -69.714058 -0.42857" end="52.571255 -67.428352 3.142847" texture="BROWN96" />
+    <wall start="51.999828 -67.428352 -0.42857" end="51.999828 -69.714058 0.85714" texture="BROWN96" />
+    <wall start="52.571255 -71.428337 -0.42857" end="52.571255 -69.714058 3.142847" texture="BROWNGRN" />
+    <wall start="48.856983 -65.142639 0.42857" end="39.999866 -65.142639 3.85713" texture="STARTAN3" />
+    <wall start="39.999866 -65.142639 1.142853" end="35.428455 -65.142639 3.85713" texture="STARTAN3" />
+    <wall start="35.428455 -65.142639 0.42857" end="24.571348 -65.142639 3.85713" texture="STARTAN3" />
+    <wall start="35.428455 -65.142639 0.42857" end="35.428455 -67.428352 1.142853" texture="STARTAN3" />
+    <wall start="39.999866 -67.428352 0.42857" end="39.999866 -65.142639 1.142853" texture="STARTAN3" />
+    <wall start="47.999844 -69.999771 -2.428563" end="47.71413 -69.999771 -0.714283" texture="SUPPORT2" />
+    <wall start="47.71413 -69.999771 -2.428563" end="42.285576 -73.142616 -0.714283" texture="BROWN1" />
+    <wall start="42.285576 -70.856911 -2.428563" end="46.71413 -67.714066 -0.714283" texture="BROWN1" />
+    <wall start="46.71413 -67.714066 -2.428563" end="46.999844 -67.714066 -0.714283" texture="SUPPORT2" />
+    <wall start="38.857014 -69.714058 -2.428563" end="38.857014 -69.999771 -0.714283" texture="SUPPORT2" />
+    <wall start="38.857014 -69.999771 -2.428563" end="39.999866 -70.856911 -0.714283" texture="BROWN1" />
+    <wall start="37.714161 -71.999763 -2.428563" end="36.571308 -69.999771 -0.714283" texture="BROWN1" />
+    <wall start="36.571308 -69.999771 -2.428563" end="36.571308 -69.714058 -0.714283" texture="SUPPORT2" />
+    <wall start="49.142696 -54.428391 -0.85714" end="53.142681 -54.856964 -0.42857" texture="NUKE24" />
+    <wall start="51.428402 -51.428402 -0.42857" end="49.142696 -49.999836 3.142847" texture="BROWNGRN" />
+    <wall start="49.142696 -49.999836 -0.42857" end="49.142696 -49.714123 3.142847" texture="SUPPORT2" />
+    <wall start="52.571255 -47.428413 -0.42857" end="52.856968 -47.428413 3.142847" texture="SUPPORT2" />
+    <wall start="52.856968 -47.428413 -0.42857" end="54.428391 -51.428402 3.142847" texture="BROWNGRN" />
+    <wall start="60.714085 -56.28553 -0.85714" end="61.999794 -61.285511 3.142847" texture="BROWNGRN" />
+    <wall start="61.999794 -61.285511 1.71428" end="61.571224 -62.856937 3.142847" texture="BROWNGRN" />
+    <wall start="61.571224 -62.856937 -0.85714" end="59.856945 -63.714077 1.71428" texture="BROWNGRN" />
+    <wall start="61.571224 -62.856937 1.857137" end="59.856945 -63.714077 3.142847" texture="BROWNGRN" />
+    <wall start="39.999866 -52.142685 -0.999997" end="40.571297 -53.714108 3.85713" texture="STARTAN3" />
+    <wall start="40.571297 -53.714108 -0.999997" end="43.428429 -55.571247 3.85713" texture="STARTAN3" />
+    <wall start="43.428429 -55.571247 -0.999997" end="48.856983 -55.571247 3.85713" texture="STARTAN3" />
+    <wall start="48.856983 -55.571247 0.0" end="49.142696 -55.571247 2.428563" texture="DOORSTOP" />
+    <wall start="49.142696 -59.999802 -0.85714" end="49.142696 -55.571247 0.0" texture="BROWNGRN" />
+    <wall start="49.142696 -59.999802 2.428563" end="49.142696 -55.571247 3.142847" texture="BROWNGRN" />
+    <wall start="48.856983 -55.571247 -0.999997" end="48.856983 -59.999802 0.0" texture="STARTAN3" />
+    <wall start="48.856983 -55.571247 2.428563" end="48.856983 -59.999802 3.85713" texture="STARTAN3" />
+    <wall start="49.142696 -55.571247 -0.85714" end="49.142696 -54.428391 3.142847" texture="BROWNGRN" />
+    <wall start="57.14267 -73.714043 -0.42857" end="59.428375 -73.714043 0.85714" texture="BROWNGRN" />
+    <wall start="47.999844 -73.714043 -0.42857" end="50.285549 -73.714043 0.85714" texture="BROWNGRN" />
+    <wall start="50.285549 -73.714043 -0.42857" end="50.999832 -74.285469 0.85714" texture="BROWNGRN" />
+    <wall start="51.999828 -74.285469 -0.42857" end="51.999828 -73.714043 0.85714" texture="BROWNGRN" />
+    <wall start="55.428391 -73.714043 -0.42857" end="55.428391 -74.285469 0.85714" texture="BROWNGRN" />
+    <wall start="56.428387 -74.285469 -0.42857" end="57.14267 -73.714043 0.85714" texture="BROWNGRN" />
+    <wall start="55.428391 -77.714027 -0.42857" end="55.428391 -78.285454 0.85714" texture="BROWNGRN" />
+    <wall start="55.428391 -78.285454 -0.42857" end="56.428387 -78.285454 0.85714" texture="BROWNGRN" />
+    <wall start="56.428387 -78.285454 -0.42857" end="56.428387 -77.714027 0.85714" texture="BROWNGRN" />
+    <wall start="50.999832 -77.714027 -0.42857" end="50.999832 -78.285454 0.85714" texture="BROWNGRN" />
+    <wall start="50.999832 -78.285454 -0.42857" end="51.999828 -78.285454 0.85714" texture="BROWNGRN" />
+    <wall start="51.999828 -78.285454 -0.42857" end="51.999828 -77.714027 0.85714" texture="BROWNGRN" />
+    <wall start="50.999832 -74.285469 -0.42857" end="51.571259 -74.285469 1.857137" texture="BROWNGRN" />
+    <wall start="51.571259 -74.285469 -0.42857" end="51.999828 -74.285469 1.857137" texture="BROWNGRN" />
+    <wall start="56.428387 -77.714027 -0.42857" end="55.85696 -77.714027 1.857137" texture="BROWNGRN" />
+    <wall start="55.85696 -77.714027 -0.42857" end="55.428391 -77.714027 1.857137" texture="BROWNGRN" />
+    <wall start="55.428391 -74.285469 -0.42857" end="55.85696 -74.285469 1.857137" texture="BROWNGRN" />
+    <wall start="55.85696 -74.285469 -0.42857" end="56.428387 -74.285469 1.857137" texture="BROWNGRN" />
+    <wall start="51.999828 -77.714027 -0.42857" end="51.571259 -77.714027 1.857137" texture="BROWNGRN" />
+    <wall start="51.571259 -77.714027 -0.42857" end="50.999832 -77.714027 1.857137" texture="BROWNGRN" />
+    <wall start="59.428375 -81.142593 -0.42857" end="54.856964 -81.142593 0.85714" texture="BROWNGRN" />
+    <wall start="52.571255 -81.142593 -0.42857" end="47.999844 -81.142593 0.85714" texture="BROWNGRN" />
+    <wall start="54.856964 -81.142593 -0.42857" end="54.856964 -82.285446 1.28571" texture="LITE3" />
+    <wall start="52.571255 -82.285446 -0.42857" end="52.571255 -81.142593 1.28571" texture="LITE3" />
+    <wall start="51.999828 -74.285469 0.85714" end="55.428391 -74.285469 1.857137" texture="BROWNGRN" />
+    <wall start="55.428391 -77.714027 0.85714" end="51.999828 -77.714027 1.857137" texture="BROWNGRN" />
+    <wall start="54.856964 -71.428337 0.85714" end="52.571255 -71.428337 3.142847" texture="BROWNGRN" />
+    <wall start="47.999844 -81.142593 -0.42857" end="47.999844 -73.714043 0.85714" texture="BROWNGRN" />
+    <wall start="59.428375 -73.714043 -0.42857" end="59.428375 -81.142593 0.85714" texture="BROWNGRN" />
+    <wall start="50.999832 -77.714027 0.85714" end="50.999832 -74.285469 1.857137" texture="BROWNGRN" />
+    <wall start="56.428387 -74.285469 0.85714" end="56.428387 -77.714027 1.857137" texture="BROWNGRN" />
+    <wall start="52.571255 -81.142593 0.85714" end="54.856964 -81.142593 1.28571" texture="BROWNGRN" />
+    <wall start="54.856964 -82.285446 -0.42857" end="54.285534 -82.285446 1.28571" texture="STARTAN1" />
+    <wall start="53.142681 -82.285446 -0.42857" end="52.571255 -82.285446 1.28571" texture="STARTAN1" />
+    <wall start="53.142681 -82.714012 -0.42857" end="53.142681 -82.285446 0.85714" texture="EXITDOOR" />
+    <wall start="54.285534 -82.285446 -0.42857" end="54.285534 -82.714012 0.85714" texture="EXITDOOR" />
+    <wall start="54.285534 -82.714012 -0.42857" end="54.285534 -82.999725 -0.42857" texture="DOORTRAK" />
+    <wall start="54.285534 -82.999725 -0.42857" end="54.285534 -83.428299 0.85714" texture="EXITDOOR" />
+    <wall start="53.142681 -83.428299 -0.42857" end="53.142681 -82.999725 0.85714" texture="EXITDOOR" />
+    <wall start="53.142681 -82.999725 -0.42857" end="53.142681 -82.714012 -0.42857" texture="DOORTRAK" />
+    <wall start="53.142681 -82.999725 -0.42857" end="54.285534 -82.999725 0.85714" texture="EXITDOOR" />
+    <wall start="54.285534 -82.714012 -0.42857" end="53.142681 -82.714012 0.85714" texture="EXITDOOR" />
+    <wall start="54.285534 -83.428299 -0.42857" end="55.428391 -83.428299 1.571423" texture="STARTAN1" />
+    <wall start="51.999828 -83.428299 -0.42857" end="53.142681 -83.428299 1.571423" texture="STARTAN1" />
+    <wall start="55.428391 -83.428299 -0.42857" end="55.428391 -86.856857 1.571423" texture="STARTAN1" />
+    <wall start="51.999828 -86.856857 -0.42857" end="51.999828 -85.714005 1.571423" texture="STARTAN1" />
+    <wall start="51.999828 -85.714005 -0.42857" end="51.999828 -84.571152 1.571423" texture="SW1STRTN" />
+    <wall start="51.999828 -84.571152 -0.42857" end="51.999828 -83.428299 1.571423" texture="STARTAN1" />
+    <wall start="55.428391 -86.856857 -0.42857" end="51.999828 -86.856857 1.571423" texture="STARTAN1" />
+    <wall start="53.142681 -83.428299 0.85714" end="54.285534 -83.428299 1.571423" texture="STARTAN1" />
+    <wall start="52.571255 -71.71405 -0.42857" end="52.571255 -71.428337 0.85714" texture="BROWNGRN" />
+    <wall start="54.856964 -71.428337 -0.42857" end="54.856964 -71.71405 0.85714" texture="BROWNGRN" />
+    <wall start="51.999828 -73.714043 -0.42857" end="52.571255 -71.999763 0.85714" texture="BROWNGRN" />
+    <wall start="52.571255 -71.999763 -0.42857" end="52.571255 -71.71405 -0.42857" texture="DOORTRAK" />
+    <wall start="54.856964 -71.71405 -0.42857" end="54.856964 -71.999763 -0.42857" texture="DOORTRAK" />
+    <wall start="54.856964 -71.999763 -0.42857" end="55.428391 -73.714043 0.85714" texture="BROWNGRN" />
+    <wall start="54.856964 -71.71405 -0.42857" end="52.571255 -71.71405 0.85714" texture="BIGDOOR4" />
+    <wall start="52.571255 -71.999763 -0.42857" end="54.856964 -71.999763 0.85714" texture="BIGDOOR4" />
+    <wall start="53.999821 -81.999733 0.999997" end="53.428394 -81.999733 1.28571" texture="EXITSIGN" />
+    <wall start="53.428394 -82.142586 0.999997" end="53.999821 -82.142586 1.28571" texture="EXITSIGN" />
+    <wall start="53.999821 -82.142586 0.999997" end="53.999821 -81.999733 1.28571" texture="EXITSIGN" />
+    <wall start="53.428394 -81.999733 0.999997" end="53.428394 -82.142586 1.28571" texture="EXITSIGN" />
+    <wall start="54.285534 -82.285446 0.85714" end="53.142681 -82.285446 1.28571" texture="STARTAN1" />
+    <wall start="53.999821 -86.428284 1.28571" end="53.428394 -86.428284 1.571423" texture="EXITSIGN" />
+    <wall start="53.428394 -86.571144 1.28571" end="53.999821 -86.571144 1.571423" texture="EXITSIGN" />
+    <wall start="53.999821 -86.571144 1.28571" end="53.999821 -86.428284 1.571423" texture="EXITSIGN" />
+    <wall start="53.428394 -86.428284 1.28571" end="53.428394 -86.571144 1.571423" texture="EXITSIGN" />
+    <wall start="49.142696 -51.999828 -0.42857" end="51.428402 -51.999828 3.142847" texture="BROWNGRN" />
+    <wall start="-4.2857 -58.285522 1.857137" end="-3.714273 -58.285522 2.285707" texture="TEKWALL1" />
+    <wall start="-3.714273 -58.285522 1.857137" end="-3.42856 -57.999809 2.285707" texture="TEKWALL1" />
+    <wall start="-3.42856 -57.999809 1.857137" end="-3.42856 -57.428383 2.285707" texture="TEKWALL1" />
+    <wall start="-3.42856 -57.428383 1.857137" end="-3.714273 -57.14267 2.285707" texture="TEKWALL1" />
+    <wall start="-3.714273 -57.14267 1.857137" end="-4.2857 -57.14267 2.285707" texture="TEKWALL1" />
+    <wall start="-4.2857 -57.14267 1.857137" end="-4.571414 -57.428383 2.285707" texture="TEKWALL1" />
+    <wall start="-4.571414 -57.428383 1.857137" end="-4.571414 -57.999809 2.285707" texture="TEKWALL1" />
+    <wall start="-4.571414 -57.999809 1.857137" end="-4.2857 -58.285522 2.285707" texture="TEKWALL1" />
+    <wall start="29.714188 -42.285576 0.571427" end="28.571335 -42.285576 1.571423" texture="LITE3" />
+    <wall start="28.571335 -42.285576 0.571427" end="28.571335 -37.714161 1.571423" texture="COMPUTE2" />
+    <wall start="28.571335 -46.856987 0.571427" end="29.714188 -46.856987 1.571423" texture="LITE3" />
+    <wall start="45.714134 -37.714161 0.571427" end="45.714134 -44.571281 1.571423" texture="COMPUTE2" />
+    <wall start="45.714134 -44.571281 0.571427" end="44.571281 -44.571281 1.571423" texture="LITE3" />
+    <wall start="38.857014 -49.142696 0.571427" end="38.857014 -50.285549 1.571423" texture="LITE3" />
+    <wall start="28.571335 -36.571308 0.571427" end="29.714188 -36.571308 1.571423" texture="LITE3" />
+    <wall start="29.714188 -36.571308 0.571427" end="44.571281 -36.571308 1.571423" texture="COMPUTE2" />
+    <wall start="44.571281 -36.571308 0.571427" end="45.714134 -36.571308 1.571423" texture="LITE3" />
+    <wall start="45.714134 -36.571308 0.571427" end="45.714134 -37.714161 1.571423" texture="LITE3" />
+    <wall start="28.571335 -37.714161 0.571427" end="28.571335 -36.571308 1.571423" texture="LITE3" />
+    <wall start="29.714188 -42.285576 0.0" end="29.714188 -37.714161 0.571427" texture="COMPSPAN" />
+    <wall start="29.714188 -42.285576 1.571423" end="29.714188 -37.714161 3.999987" texture="COMPTALL" />
+    <wall start="29.714188 -37.714161 0.0" end="44.571281 -37.714161 0.571427" texture="COMPSPAN" />
+    <wall start="29.714188 -37.714161 1.571423" end="44.571281 -37.714161 3.999987" texture="COMPTALL" />
+    <wall start="44.571281 -37.714161 0.0" end="44.571281 -44.571281 0.571427" texture="COMPSPAN" />
+    <wall start="44.571281 -37.714161 1.571423" end="44.571281 -44.571281 3.999987" texture="COMPTALL" />
+    <wall start="29.714188 -50.285549 0.571427" end="28.571335 -50.285549 1.571423" texture="LITE3" />
+    <wall start="28.571335 -50.285549 0.571427" end="28.571335 -49.142696 1.571423" texture="LITE3" />
+    <wall start="28.571335 -49.142696 0.571427" end="28.571335 -46.856987 1.571423" texture="COMPUTE2" />
+    <wall start="38.857014 -49.142696 0.0" end="29.714188 -49.142696 0.571427" texture="COMPSPAN" />
+    <wall start="38.857014 -49.142696 1.571423" end="29.714188 -49.142696 3.999987" texture="COMPTALL" />
+    <wall start="44.571281 -47.999844 0.0" end="44.571281 -49.142696 3.999987" texture="STARGR1" />
+    <wall start="46.856987 -49.714123 -0.142857" end="44.999851 -47.999844 1.28571" texture="BROWN1" />
+    <wall start="44.571281 -45.714134 -0.142857" end="44.999851 -45.714134 1.28571" texture="SUPPORT2" />
+    <wall start="44.999851 -47.999844 -0.142857" end="44.571281 -47.999844 1.28571" texture="SUPPORT2" />
+    <wall start="29.714188 -45.714134 1.28571" end="29.714188 -43.428429 3.999987" texture="STARGR1" />
+    <wall start="44.571281 -45.714134 -0.142857" end="44.571281 -47.999844 0.0" texture="-" />
+    <wall start="44.571281 -45.714134 1.28571" end="44.571281 -47.999844 3.999987" texture="STARGR1" />
+    <wall start="35.428455 -41.142723 1.71428" end="35.428455 -39.999866 3.999987" texture="PLANET1" />
+    <wall start="35.428455 -39.999866 1.71428" end="31.999895 -39.999866 3.999987" texture="PLANET1" />
+    <wall start="31.999895 -39.999866 1.71428" end="31.999895 -41.142723 3.999987" texture="PLANET1" />
+    <wall start="31.999895 -41.142723 1.71428" end="35.428455 -41.142723 3.999987" texture="PLANET1" />
+    <wall start="29.714188 -46.856987 0.0" end="29.714188 -46.428417 3.999987" texture="SUPPORT2" />
+    <wall start="29.714188 -46.428417 0.0" end="29.714188 -45.714134 3.999987" texture="STARGR1" />
+    <wall start="29.714188 -43.428429 0.0" end="29.714188 -42.714146 3.999987" texture="STARGR1" />
+    <wall start="29.714188 -42.714146 0.0" end="29.714188 -42.285576 3.999987" texture="SUPPORT2" />
+    <wall start="44.571281 -44.571281 0.0" end="44.571281 -44.999851 3.999987" texture="SUPPORT2" />
+    <wall start="44.571281 -44.999851 0.0" end="44.571281 -45.714134 3.999987" texture="STARGR1" />
+    <wall start="44.571281 -49.142696 0.0" end="39.285583 -49.142696 3.999987" texture="STARGR1" />
+    <wall start="39.285583 -49.142696 0.0" end="38.857014 -49.142696 3.999987" texture="SUPPORT2" />
+    <wall start="37.714161 -46.285561 0.0" end="41.714149 -46.285561 3.999987" texture="COMPTILE" />
+    <wall start="41.714149 -46.285561 0.0" end="41.714149 -40.571297 3.999987" texture="COMPTILE" />
+    <wall start="41.714149 -40.571297 0.0" end="37.714161 -40.571297 3.999987" texture="COMPTILE" />
+    <wall start="37.714161 -40.571297 0.0" end="37.714161 -41.142723 3.999987" texture="COMPTILE" />
+    <wall start="37.714161 -41.142723 0.0" end="38.285587 -41.142723 3.999987" texture="SUPPORT2" />
+    <wall start="38.285587 -41.142723 0.142857" end="38.857014 -41.142723 2.714277" texture="COMPTILE" />
+    <wall start="38.857014 -41.142723 0.285713" end="39.42844 -41.142723 2.714277" texture="COMPTILE" />
+    <wall start="39.42844 -41.142723 0.42857" end="41.142723 -41.142723 2.714277" texture="COMPTILE" />
+    <wall start="41.142723 -41.142723 0.42857" end="41.142723 -45.714134 2.714277" texture="COMPTILE" />
+    <wall start="41.142723 -45.714134 0.42857" end="39.42844 -45.714134 2.714277" texture="COMPTILE" />
+    <wall start="39.42844 -45.714134 0.285713" end="38.857014 -45.714134 2.714277" texture="COMPTILE" />
+    <wall start="38.857014 -45.714134 0.142857" end="38.285587 -45.714134 2.714277" texture="COMPTILE" />
+    <wall start="38.285587 -45.714134 0.0" end="37.714161 -45.714134 3.999987" texture="SUPPORT2" />
+    <wall start="37.714161 -45.714134 0.0" end="37.714161 -46.285561 3.999987" texture="COMPTILE" />
+    <wall start="38.285587 -41.142723 0.0" end="38.285587 -45.714134 0.142857" texture="STEP1" />
+    <wall start="38.285587 -41.142723 2.714277" end="38.285587 -45.714134 3.999987" texture="COMPTILE" />
+    <wall start="38.857014 -41.142723 0.142857" end="38.857014 -45.714134 0.285713" texture="STEP1" />
+    <wall start="39.42844 -41.142723 0.285713" end="39.42844 -45.714134 0.42857" texture="STEP1" />
+    <wall start="35.428455 -46.856987 1.71428" end="35.428455 -45.714134 3.999987" texture="PLANET1" />
+    <wall start="35.428455 -45.714134 1.71428" end="31.999895 -45.714134 3.999987" texture="PLANET1" />
+    <wall start="31.999895 -45.714134 1.71428" end="31.999895 -46.856987 3.999987" texture="PLANET1" />
+    <wall start="31.999895 -46.856987 1.71428" end="35.428455 -46.856987 3.999987" texture="PLANET1" />
+    <wall start="46.856987 -49.714123 -0.285713" end="49.142696 -45.714134 -0.142857" texture="BROWN1" />
+    <wall start="62.856937 -69.714058 -0.85714" end="59.428375 -70.856911 1.857137" texture="BROWNGRN" />
+    <wall start="57.14267 -70.856911 -0.85714" end="57.14267 -66.856926 0.571427" texture="BROWNGRN" />
+    <wall start="59.428375 -66.856926 -0.85714" end="59.999802 -65.142639 1.857137" texture="BROWNGRN" />
+    <wall start="59.428375 -70.856911 0.571427" end="59.428375 -66.856926 1.857137" texture="BROWNGRN" />
+    <wall start="61.571224 -62.856937 -0.85714" end="61.999794 -62.856937 1.857137" texture="SUPPORT2" />
+    <wall start="61.999794 -62.856937 -0.85714" end="62.856937 -63.99979 1.857137" texture="BROWNGRN" />
+    <wall start="59.999802 -65.142639 -0.85714" end="59.856945 -64.142647 1.857137" texture="BROWNGRN" />
+    <wall start="59.856945 -64.142647 -0.85714" end="59.856945 -63.714077 1.857137" texture="SUPPORT2" />
+    <wall start="59.428375 -70.856911 -0.85714" end="58.999805 -70.856911 0.571427" texture="SUPPORT2" />
+    <wall start="58.999805 -70.856911 -0.85714" end="57.14267 -70.856911 0.571427" texture="BROWNGRN" />
+    <wall start="57.14267 -66.856926 -0.85714" end="58.999805 -66.856926 0.571427" texture="BROWNGRN" />
+    <wall start="58.999805 -66.856926 -0.85714" end="59.428375 -66.856926 0.571427" texture="SUPPORT2" />
+    <wall start="42.285576 -73.142616 -2.428563" end="41.857006 -73.142616 -0.42857" texture="SUPPORT2" />
+    <wall start="41.857006 -73.142616 -2.428563" end="40.42844 -73.142616 -0.42857" texture="BROWN1" />
+    <wall start="40.42844 -73.142616 -2.428563" end="39.999866 -73.142616 -0.42857" texture="SUPPORT2" />
+    <wall start="39.999866 -70.856911 -2.428563" end="40.42844 -70.856911 -0.42857" texture="SUPPORT2" />
+    <wall start="40.42844 -70.856911 -2.428563" end="41.857006 -70.856911 -0.42857" texture="BROWN1" />
+    <wall start="41.857006 -70.856911 -2.428563" end="42.285576 -70.856911 -0.42857" texture="SUPPORT2" />
+    <wall start="38.857014 -65.714066 -0.999997" end="38.857014 -66.142639 0.285713" texture="SUPPORT2" />
+    <wall start="38.857014 -66.142639 -0.999997" end="38.857014 -67.428352 0.285713" texture="BROWN1" />
+    <wall start="36.571308 -67.428352 -0.999997" end="36.571308 -66.142639 0.285713" texture="BROWN1" />
+    <wall start="36.571308 -66.142639 -0.999997" end="36.571308 -65.714066 0.285713" texture="SUPPORT2" />
+    <wall start="62.856937 -63.99979 -0.85714" end="62.856937 -68.571205 1.857137" texture="BROWNGRN" />
+    <wall start="65.714066 -69.714058 1.857137" end="63.99979 -69.714058 3.285703" texture="BROWNGRN" />
+    <wall start="66.856926 -67.999779 1.857137" end="65.714066 -69.714058 3.285703" texture="BROWNGRN" />
+    <wall start="63.99979 -68.571205 1.857137" end="64.571213 -67.428352 3.285703" texture="BROWNGRN" />
+    <wall start="64.571213 -67.428352 1.857137" end="63.428364 -63.428364 3.285703" texture="BROWNGRN" />
+    <wall start="63.428364 -63.428364 1.857137" end="63.428364 -60.571228 3.285703" texture="BROWNGRN" />
+    <wall start="63.428364 -60.571228 1.857137" end="65.142639 -58.285522 3.285703" texture="BROWNGRN" />
+    <wall start="65.714066 -63.428364 1.857137" end="66.856926 -67.999779 3.285703" texture="BROWNGRN" />
+    <wall start="65.714066 -60.571228 1.857137" end="65.714066 -63.428364 3.285703" texture="BROWNGRN" />
+    <wall start="67.999779 -58.285522 1.857137" end="65.714066 -60.571228 3.285703" texture="BROWNGRN" />
+    <wall start="65.142639 -58.285522 1.857137" end="62.428368 -54.142677 3.285703" texture="BROWNGRN" />
+    <wall start="63.99979 -51.428402 1.857137" end="67.999779 -58.285522 3.285703" texture="BROWNGRN" />
+    <wall start="62.428368 -54.142677 1.857137" end="61.714081 -54.142677 3.285703" texture="BROWNGRN" />
+    <wall start="59.999802 -51.428402 1.857137" end="63.99979 -51.428402 3.285703" texture="BROWNGRN" />
+    <wall start="58.999805 -54.285534 -0.85714" end="60.714085 -56.28553 1.857137" texture="BROWNGRN" />
+    <wall start="58.999805 -54.285534 3.142847" end="60.714085 -56.28553 3.285703" texture="BROWNGRN" />
+    <wall start="62.856937 -68.571205 -0.85714" end="62.856937 -69.714058 1.857137" texture="BROWNGRN" />
+    <wall start="62.856937 -68.571205 1.857137" end="62.856937 -69.714058 3.285703" texture="BROWNGRN" />
+    <wall start="58.999805 -54.285534 1.857137" end="59.285519 -54.285534 3.285703" texture="SUPPORT2" />
+    <wall start="59.285519 -54.285534 1.857137" end="59.999802 -51.428402 3.285703" texture="BROWNGRN" />
+    <wall start="61.714081 -54.142677 1.857137" end="60.999798 -56.28553 3.285703" texture="BROWNGRN" />
+    <wall start="60.999798 -56.28553 1.857137" end="60.714085 -56.28553 3.285703" texture="SUPPORT2" />
+    <wall start="62.856937 -68.571205 1.857137" end="63.142651 -68.571205 3.285703" texture="SUPPORT2" />
+    <wall start="63.142651 -68.571205 1.857137" end="63.99979 -68.571205 3.285703" texture="BROWNGRN" />
+    <wall start="63.99979 -69.714058 1.857137" end="63.142651 -69.714058 3.285703" texture="BROWNGRN" />
+    <wall start="63.142651 -69.714058 1.857137" end="62.856937 -69.714058 3.285703" texture="SUPPORT2" />
+    <wall start="23.999922 -59.999802 0.0" end="23.999922 -60.571228 1.28571" texture="STARTAN3" />
+    <wall start="23.999922 -62.856937 0.0" end="23.999922 -63.428364 1.28571" texture="STARTAN3" />
+    <wall start="23.999922 -60.571228 0.0" end="23.999922 -62.856937 1.28571" texture="STARTAN3" />
+    <wall start="23.999922 -60.571228 0.0" end="24.571348 -60.571228 0.0" texture="DOORSTOP" />
+    <wall start="24.571348 -62.856937 0.0" end="23.999922 -62.856937 0.0" texture="DOORSTOP" />
+    <wall start="24.571348 -65.142639 -0.999997" end="24.571348 -62.856937 3.85713" texture="STARTAN3" />
+    <wall start="24.571348 -60.571228 -0.999997" end="24.571348 -59.999802 3.85713" texture="STARTAN3" />
+    <wall start="24.571348 -62.856937 -0.999997" end="24.571348 -60.571228 0.0" texture="STARTAN3" />
+    <wall start="24.571348 -62.856937 0.0" end="24.571348 -60.571228 3.85713" texture="STARTAN3" />
+    <wall start="38.857014 -50.285549 0.0" end="29.714188 -50.285549 0.571427" texture="COMPUTE3" />
+    <wall start="38.857014 -50.285549 0.0" end="29.714188 -50.285549 1.571423" texture="COMPUTE3" />
+    <wall start="26.285627 -51.428402 -0.999997" end="29.714188 -51.428402 3.85713" texture="STARTAN3" />
+    <wall start="29.714188 -51.428402 -0.999997" end="33.14275 -51.428402 0.0" texture="STARTAN3" />
+    <wall start="29.714188 -51.428402 0.0" end="33.14275 -51.428402 3.85713" texture="STARTAN3" />
+    <wall start="34.285603 -52.142685 -0.999997" end="38.857014 -52.142685 0.0" texture="STARTAN3" />
+    <wall start="34.285603 -52.142685 0.0" end="38.857014 -52.142685 3.85713" texture="STARTAN3" />
+    <wall start="38.857014 -52.142685 -0.999997" end="39.999866 -52.142685 3.85713" texture="STARTAN3" />
+    <wall start="38.857014 -50.285549 0.0" end="38.857014 -52.142685 0.0" texture="DOORSTOP" />
+    <wall start="29.714188 -51.428402 0.0" end="29.714188 -50.285549 0.0" texture="DOORSTOP" />
+    <wall start="29.714188 -49.142696 0.0" end="29.714188 -46.856987 0.571427" texture="COMPSPAN" />
+    <wall start="29.714188 -49.142696 1.571423" end="29.714188 -46.856987 3.999987" texture="COMPTALL" />
+</environment>

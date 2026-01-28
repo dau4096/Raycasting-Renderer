@@ -1,0 +1,34 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!-- Metadata -->
+<meta>
+    <sky skyboxTexture="" />
+    <texture scale="1.0 1.0" offset="0.0 0.0 0.0" />
+    <sun sunDirection="1.0 1.0 1.0" sunColour="1.0 1.0 1.0" sunIntensity="0.0" />
+    <physics gravity="0.486" killPlaneZ="-16.0" />
+    <player startPoint="-2.5 -2.5 1.0" startAngle="90.0" initialHealth="MAX" initialEnergy="MAX" />
+</meta>
+
+
+<!-- Visplanes -->
+<environment>
+	<visplane start="-10.0 -10.0" end="10.0 10.0" height="-1.0" texture="a" />
+
+	<wall start="-1.0 -1.0 -1.0" end="1.0 -1.0 1.0" texture="b" />
+</environment>
+
+
+<!-- Sprites -->
+<objects>
+	<sprite position="0.0 -4.0 0.0" width="1.0" height="2.0" texture="c" type="SPR_DECO" collision="true" />
+
+	<!-- Lights -->
+	<light position="0.0 -2.0 3.0" colour="1.0 0.0 0.0" intensity="5.0" enabled="true" />
+	<sprite position="0.0 -2.0 3.0" width="1.0" height="1.0" texture="lamp" type="SPR_LIGHT" collision="false" />
+</objects>
+
+
+<!-- Logic Gates -->
+<logic>
+	<gate type="G_PASSTHROUGH" inAFlag="0" inBFlag="0" outFlag="1"/>
+</logic>
