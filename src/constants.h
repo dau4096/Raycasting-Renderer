@@ -284,7 +284,8 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
-	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION = glm::ivec2(1024, 1024);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_INITIAL = glm::ivec2(1024, 1024);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_MINIMUM = glm::ivec2(128, 128); //Don't get any smaller than this.
 	constexpr float ARB_SHADOW_TEXEL_SIZE = 0.01f;
 	constexpr glm::ivec2 ARB_SHADOW_MAX_RESOLUTION = glm::ivec2(4096, 4096);
 

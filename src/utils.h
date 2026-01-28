@@ -50,25 +50,50 @@ namespace logicFunctions {
 
 //Utility functions
 namespace utils {
-	static inline void hideConsole() {
+
+	//Console related functions
+	inline void hideConsole() {
 	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
 	#endif
 	}
 
-	static inline void showConsole() {
+	inline void showConsole() {
 	#ifdef _WIN32
 		ShowWindow(GetConsoleWindow(), SW_SHOW);
 	#endif
 	}
 
-	static inline bool isConsoleVisible() {
+	inline bool isConsoleVisible() {
 	#ifdef _WIN32
 		return IsWindowVisible(GetConsoleWindow());
-	#elif __linux__
+	#elif defined(__linux__)
 		return true;
 	#endif 
 	}
+
+
+	#define DEFAULT_CONSOLE_SIZE glm::ivec2(80, 24)
+	inline glm::ivec2 getConsoleSizeChars() {
+	#ifdef _WIN32
+		return DEFAULT_CONSOLE_SIZE; //TODO: Replace later with windows.h method.
+	#elif defined(__linux__)
+		struct winsize ws;
+		if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) { //Get window size in chars.
+			return glm::ivec2(ws.ws_col, ws.ws_row);
+		} else {return DEFAULT_CONSOLE_SIZE; /* Could not get current console size. */}
+	#endif
+	}
+
+	inline glm::ivec2 getConsoleResolution() {
+		return getConsoleSizeChars() * glm::ivec2(1, 2) - glm::ivec2(0, 2);
+	}
+
+
+
+
+
+
 
 
 	static inline void print(std::string str) {
@@ -217,7 +242,7 @@ namespace utils {
 		if (keyMap.find(keyFunction) != keyMap.end()) {
 			return keyMap.at(keyFunction);
 		} else {
-			std::cout << "[" << keyFunction << "] was not bound to a key." << std::endl;
+			//std::cout << "[" << keyFunction << "] was not bound to a key." << std::endl;
 			return false;
 		}
 	}

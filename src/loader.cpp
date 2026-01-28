@@ -1292,7 +1292,6 @@ void loadBindings() {
 		currentWindowResolution = glm::ivec2(640, 480);
 	}
 
-
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();
 	} else {
