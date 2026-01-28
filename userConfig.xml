@@ -92,7 +92,7 @@
 
 
 <!-- Rendering specific -->
-<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="CRT"				note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/CRT/DS/LOW/MEDIUM/HIGH/AMAZING]" />
+<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="LOW"				note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/CRT/DS/LOW/MEDIUM/HIGH/AMAZING]" />
 <option function="VIEW_TEXTURE_QUALITY" 				value="FULL"			note="Changes default texture Mip Level [TERRIBLE/AWFUL/LOW/MEDIUM/FULL]" />
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
 <option function="VIEW_MAX_RAY_DIST" 					value="255.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
@@ -135,7 +135,7 @@
 <!-- Misc -->
 <option function="SCREEN_MAX_FREQ" 						value="75" 				note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Integer Hertz]" />
 <option function="SCREEN_VSYNC"							value="True" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
-<option function="SCREEN_FULLSCREEN"					value="FALSE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
+<option function="SCREEN_FULLSCREEN"					value="TRUE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
 <option function="SCREEN_CONSOLE_RENDER"				value="FALSE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
 
 
