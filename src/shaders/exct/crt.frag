@@ -96,7 +96,7 @@ void main() {
 
 
 	//fragColour = vec4(normalDirection.xyz * 0.5f + 0.5f, 1.0f); return; //Normal map
-	//fragColour = (inScreen) ? vec4(curvedUV.xy, 1.0f, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 1.0f); //UV map
+	//fragColour = (inScreen) ? vec4(curvedUV.xy, 0.0f, 1.0f) : vec4(mainUV.xy, 1.0f, 1.0f); return; //UV map
 
 	if (inScreen) {
 		vec4 frameColour = texture(finishedFrame, curvedUV.xy);
