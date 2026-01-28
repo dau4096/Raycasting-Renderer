@@ -43,7 +43,7 @@ uniform bool isInvertEffect;
 
 
 vec2 getUV(vec2 pos) {
-	return vec2(pos) / vec2(screenResolution);
+	return vec2(pos) / vec2(renderResolution);
 }
 
 
@@ -54,7 +54,7 @@ const vec2 offsets[8] = {
 };
 vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
 	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
-	vec2 inverseScreenRes = 1.0f / vec2(screenResolution);
+	vec2 inverseScreenRes = 1.0f / vec2(renderResolution);
 	
 	int centreIData = int(texture(positionMap, mainUV).w); //Contains object index and type, encoded as bits.
 	vec3 colourSum = centreColour.rgb;

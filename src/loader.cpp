@@ -1099,6 +1099,7 @@ void fetchConfigsFromXML(const pugi::xml_document& doc) {
 static std::unordered_map<std::string, glm::ivec2> resolutionMap = {
 	{"TERRIBLE", glm::ivec2(64, 36)},
 	{"AWFUL", glm::ivec2(256, 144)},
+	{"CRT", glm::ivec2(320, 240)},
 	{"CALCULATOR", glm::ivec2(384, 216)},
 	{"DS", glm::ivec2(400, 240)},
 	{"LOW", glm::ivec2(640, 360)},
@@ -1287,6 +1288,10 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
 
+	if (utils::configToString("VIEW_RENDER_RESOLUTION_QUALITY") == "CRT") {
+		currentWindowResolution = display::CRT_BEZEL_RESOLUTION;
+		useCRTshader = true;
+	}
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
 		utils::showConsole();

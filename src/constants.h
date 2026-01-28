@@ -293,6 +293,7 @@ namespace display {
 	//Texture Standardisation
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
+	constexpr glm::ivec2 CRT_BEZEL_RESOLUTION = glm::ivec2(640, 480);
 	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback.png";
 	constexpr const char* FALLBACK_NORMAL_PATH = "src/textures-env/fallback.normal.png";

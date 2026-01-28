@@ -4,8 +4,8 @@
 in vec2 fragUV;
 out vec4 fragColour;
 
-layout(location=0) uniform sampler2D finishedFrame;
-layout(location=1) uniform sampler2D finishedInterface;
+layout(binding=0) uniform sampler2D finishedFrame;
+layout(binding=1) uniform sampler2D finishedInterface;
 
 void main() {
 

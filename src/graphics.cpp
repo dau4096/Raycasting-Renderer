@@ -1433,12 +1433,13 @@ void prepareOpenGL() {
 		GLIndex::skyboxTextureID = createGLImage2D(display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	}
 	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
-
-	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
-	glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
 	//Not entirely certain why this is here - GPU-with-Portals was never merged into GPU.
 	//GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	//glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
+	if (useCRTshader) {
+		GLIndex::CRTbezelTexture = loadGLTexture2D("crt.albedo", "textures-sym", display::CRT_BEZEL_RESOLUTION.x, display::CRT_BEZEL_RESOLUTION.y);
+		glObjectLabel(GL_TEXTURE, GLIndex::CRTbezelTexture, -1, "CRTbezelTexture");
+	}
 
 	//FBO
 	GLIndex::displacementFBO = createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
@@ -1538,7 +1539,11 @@ void prepareOpenGL() {
 	//Post-Processing Shader
 	GLIndex::postProcessingShader = createComputeShader("exct/postProcessing.comp");
 	//Display Shader
-	GLIndex::displayShader = createShaderProgram("exct/display.frag");
+	if (useCRTshader) { //Use custom CRT shader;
+		GLIndex::displayShader = createShaderProgram("exct/crt.frag");
+	} else { //Just generic display shader.
+		GLIndex::displayShader = createShaderProgram("exct/display.frag");
+	}
 
 
 
@@ -1586,8 +1591,7 @@ void prepareOpenGL() {
 
 
 
-namespace lighting {
-
+namespace lighting {	
 
 void runComputeShader(
 		glm::ivec2 resolution, glm::vec3 normal,
@@ -2438,6 +2442,10 @@ void draw(double blendingAlpha, double currentTime) {
 		glDrawBuffer(DEFAULT_FRAMEBUFFER);
 		glBindTextureUnit(0, GLIndex::finishedFrame);
 		glBindTextureUnit(1, GLIndex::interfaceAlbedoComponent);
+		if (useCRTshader) {
+			glBindTextureUnit(2, GLIndex::CRTbezelTexture);
+			uniforms::bindUniformValue(GLIndex::displayShader, "screenResolution", currentWindowResolution);
+		}
 		renderingGeneric("Display Shader");
 	}
 

@@ -282,6 +282,7 @@ int main() {
 	setlocale(LC_ALL, "C.UTF-8");
 #endif
 
+	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,

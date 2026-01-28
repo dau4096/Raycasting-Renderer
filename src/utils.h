@@ -238,6 +238,14 @@ namespace utils {
 		}
 		return 0.0f;
 	}
+	static inline std::string configToString(const std::string configName) {
+		if (checkIfInUserConfig(configName)) {
+			return userConfig[configName];
+		} else {
+			raise("Unknown config name: " + configName);
+		}
+		return "";
+	}
 	static inline bool isPressed(const std::string keyFunction) {
 		if (keyMap.find(keyFunction) != keyMap.end()) {
 			return keyMap.at(keyFunction);
