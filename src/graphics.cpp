@@ -1705,7 +1705,7 @@ void arbLightmapping() {
 
 		glm::vec2 delta = maxPoint - minPoint;
 		ivec2 mapResolution = ivec2(ceil(
-			delta / display::ARB_SHADOW_TEXEL_SIZE
+			delta / utils::configToFloat("VIEW_ARB_LUXEL_SIZE")
 		));
 		mapResolution = glm::clamp(mapResolution, glm::ivec2(1, 1), display::ARB_SHADOW_MAX_RESOLUTION); //Some objects may try to allocate absurdly large maps
 																										 //I don't want to allow massive maps; so I set a limit.
@@ -1751,7 +1751,7 @@ void arbLightmapping() {
 			glm::vec2(
 				(abs(wallDirection.x) > abs(wallDirection.y)) ? delta.x : delta.y,
 				delta.z
-			) / display::ARB_SHADOW_TEXEL_SIZE)
+			) / utils::configToFloat("VIEW_ARB_LUXEL_SIZE"))
 		);
 		mapResolution = glm::clamp(mapResolution, glm::ivec2(1, 1), display::ARB_SHADOW_MAX_RESOLUTION); //Some objects may try to allocate absurdly large maps
 																										 //I don't want to allow massive maps; so I set a limit.
