@@ -44,6 +44,7 @@
 #include <cstring>
 #include <cmath>
 #include <ctime>
+#include <numeric>
 #include <vector>
 #include <array>
 #include <set>

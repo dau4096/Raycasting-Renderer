@@ -453,7 +453,7 @@ inline GLuint encodeIndex(structs::Displacement thisDisplacement, GLuint index) 
 	return (index << 3) | T_DISPLACEMENT;
 }
 
-void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* visibleObjects) {
+void findObjectsInRangeOfLight(structs::Light& thisLight, unsigned int lightIndex, std::vector<GLuint>* visibleObjects) {
 
 	for (unsigned int wallIndex=0; wallIndex<physicsData->wallData.size(); wallIndex++) {
 		structs::Wall thisWall = physicsData->wallData.at(wallIndex);
@@ -476,6 +476,7 @@ void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* v
 		float maxZ = thisLight.position.z + zOffset;
 		if ((thisWall.start.z <= maxZ) && (thisWall.end.z >= minZ)) {
 			visibleObjects->push_back(encodeIndex(thisWall, wallIndex));
+			physicsData->wallData.at(wallIndex).lightsInRange.insert(lightIndex); //Add to the wall's relevant lights
 		}
 	}
 
@@ -503,6 +504,7 @@ void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* v
 
 		if (visplaneInRange) {
 			visibleObjects->push_back(encodeIndex(thisVisplane, visplaneIndex));
+			physicsData->visplaneData.at(visplaneIndex).lightsInRange.insert(lightIndex); //Add to the visplane's relevant lights
 		}
 	}
 
@@ -524,7 +526,7 @@ void findObjectsInRangeOfLight(structs::Light& thisLight, std::vector<GLuint>* v
 }
 
 void createLightLOSSSBO(unsigned int binding) {
-	std::vector<GLuint> objectSSBOVec;
+	GLIndex::objectSSBOVec.clear();
 	size_t totalSize = 0;
 
 	//If an object could possibly occlude a light, then it is added. Otherwise it is not checked in the shader LOS pass.
@@ -533,21 +535,21 @@ void createLightLOSSSBO(unsigned int binding) {
 		objectsInRange.clear();
 
 		structs::Light thisLight = physicsData->lightData.at(lightIndex);
-		findObjectsInRangeOfLight(thisLight, &objectsInRange);
+		findObjectsInRangeOfLight(thisLight, lightIndex, &objectsInRange);
 		size_t thisSize = objectsInRange.size();
 		//Light stores the start index and number of indices in the dataset.
 		physicsData->lightData.at(lightIndex).LOSSSBOstart = totalSize;
 		physicsData->lightData.at(lightIndex).LOSSSBOcount = thisSize;
 
-		utils::combineVectors(&objectSSBOVec, objectsInRange);
-		totalSize = objectSSBOVec.size();
+		utils::combineVectors(&GLIndex::objectSSBOVec, objectsInRange);
+		totalSize = GLIndex::objectSSBOVec.size();
 	}
 
 	GLIndex::lightLOSSSBO = createShaderStorageBufferObject(
 		binding, sizeof(GLuint) * totalSize
 	);
-	if (!objectSSBOVec.empty()) {
-		updateShaderStorageBufferObject(GLIndex::lightLOSSSBO, objectSSBOVec.data(), objectSSBOVec.size());
+	if (!GLIndex::objectSSBOVec.empty()) {
+		updateShaderStorageBufferObject(GLIndex::lightLOSSSBO, GLIndex::objectSSBOVec.data(), GLIndex::objectSSBOVec.size());
 	}
 }
 
@@ -1434,8 +1436,6 @@ void prepareOpenGL() {
 	}
 	glObjectLabel(GL_TEXTURE, GLIndex::skyboxTextureID, -1, "skyboxTextureID");
 
-	GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
-	glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
 	//Not entirely certain why this is here - GPU-with-Portals was never merged into GPU.
 	//GLIndex::portalTextureID = loadGLTexture2D("portal", "textures-env", display::SKYBOX_RESOLUTION.x, display::SKYBOX_RESOLUTION.y);
 	//glObjectLabel(GL_TEXTURE, GLIndex::portalTextureID, -1, "portalTextureID");
@@ -1625,9 +1625,9 @@ void runComputeShader(
 }
 
 
-void fixedResolutionLightmapping() {
+void fixedResolutionLightmapping(std::vector<unsigned int>& visplanes, std::vector<unsigned int>& walls) {
 
-	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
+	for (unsigned int visplaneIndex : visplanes) {
 		
 		structs::Visplane thisVisplane = graphicsData->visplaneData.at(visplaneIndex);
 
@@ -1655,7 +1655,7 @@ void fixedResolutionLightmapping() {
 		);
 	}
 
-	for (unsigned int wallIndex=0u; wallIndex<validWalls; wallIndex++) {
+	for (unsigned int wallIndex : walls) {
 		
 		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
 
@@ -1682,9 +1682,9 @@ void fixedResolutionLightmapping() {
 }
 
 
-void arbLightmapping() {
+void arbLightmapping(std::vector<unsigned int>& visplanes, std::vector<unsigned int>& walls) {
 
-	for (unsigned int visplaneIndex=0u; visplaneIndex<validVisplanes; visplaneIndex++) {
+	for (unsigned int visplaneIndex : visplanes) {
 		
 		structs::Visplane thisVisplane = graphicsData->visplaneData.at(visplaneIndex);
 
@@ -1730,7 +1730,7 @@ void arbLightmapping() {
 		graphicsData->visplaneData.at(visplaneIndex) = thisVisplane; //Write back to data;
 	}
 
-	for (unsigned int wallIndex=0u; wallIndex<validWalls; wallIndex++) {
+	for (unsigned int wallIndex : walls) {
 		
 		structs::Wall thisWall = graphicsData->wallData.at(wallIndex);
 
@@ -1778,27 +1778,66 @@ void arbLightmapping() {
 }
 
 
-void createLightMaps() {
+void createLightMapsAll() {
 	//Create lightmaps based on what light mode it is.
 	//Generates ALL lightmaps.
+
 	if (GLIndex::shadowMapResolutionsSSBO == -1) {
 		size_t numberOfObjects = validVisplanes + validWalls;
 																//Binding location is 20
 		GLIndex::shadowMapResolutionsSSBO = graphics::createShaderStorageBufferObject(20, sizeof(glm::ivec2) * numberOfObjects);
 	}
-	//Create lightmaps based on what light mode it is.
+
+	//Create vector lists with increasing indices (all VPs & all walls)
+	std::vector<unsigned int> visplanes(validVisplanes);
+	std::iota(std::begin(visplanes), std::end(visplanes), 0);
+	std::vector<unsigned int> walls(validWalls);
+	std::iota(std::begin(walls), std::end(walls), 0);
 
 
 	switch(lightingType) {
 		case LIGHT_STATIC_FIXED: {
 			//Static size lightmaps.
-			fixedResolutionLightmapping();
+			fixedResolutionLightmapping(visplanes, walls);
 			break;
 		}
 
 		case LIGHT_STATIC_ARB: {
 			//Lightmaps accessed via ARB handles.
-			arbLightmapping();
+			arbLightmapping(visplanes, walls);
+			break;
+		}
+
+		default: {
+			//Unknown, doesn't require lightmaps.
+			break;
+		}
+	}
+	*physicsData = *graphicsData; //Sync data.
+}
+
+
+void createLightMapsSubset(std::vector<unsigned int>& visplanes, std::vector<unsigned int>& walls) {
+	//Create lightmaps based on what light mode it is.
+	//Only manages a specific subset of the datasets.
+
+	if (GLIndex::shadowMapResolutionsSSBO == -1) {
+		size_t numberOfObjects = validVisplanes + validWalls;
+																//Binding location is 20
+		GLIndex::shadowMapResolutionsSSBO = graphics::createShaderStorageBufferObject(20, sizeof(glm::ivec2) * numberOfObjects);
+	}
+
+
+	switch(lightingType) {
+		case LIGHT_STATIC_FIXED: {
+			//Static size lightmaps.
+			fixedResolutionLightmapping(visplanes, walls);
+			break;
+		}
+
+		case LIGHT_STATIC_ARB: {
+			//Lightmaps accessed via ARB handles.
+			arbLightmapping(visplanes, walls);
 			break;
 		}
 
@@ -2449,7 +2488,7 @@ void draw(double blendingAlpha, double currentTime) {
 
 
 	//Handle meta-lighting reload key.
-	if (utils::isPressed("META_RELOAD_LIGHTMAPS")) {lighting::createLightMaps();}
+	if (utils::isPressed("META_RELOAD_LIGHTMAPS")) {lighting::createLightMapsAll();}
 }
 
 

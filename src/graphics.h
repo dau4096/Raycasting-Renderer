@@ -75,7 +75,9 @@ namespace graphics {
 
 namespace lighting {
 
-	void createLightMaps();
+	void createLightMapsAll();
+
+	void createLightMapsSubset(std::vector<unsigned int>& visplanes, std::vector<unsigned int>& walls);
 
 }
 

@@ -71,7 +71,44 @@ bool isInsideVP(glm::vec2 point2D, structs::Visplane plane) {
 }
 
 
+void manageLightMaps(std::set<unsigned int>& lightsInRange, float internal, float previousInternal) {
+	if ((lightingType != LIGHT_STATIC_FIXED) && (lightingType != LIGHT_STATIC_ARB)) {return; /* No lightmaps to update. */}
+	//if (abs(internal - previousInternal) < 1e-4f) {return; /* Do not update when not in motion. */}
+	std::cout << internalsData.size() << std::endl;
+	
+	std::set<unsigned int> visplanes = {};
+	std::set<unsigned int> walls = {};
+	for (unsigned int lightIndex : lightsInRange) {
+		std::cout << lightIndex << std::endl;
+		continue;
+		/*
+		structs::Light& light = physicsData->lightData.at(lightIndex);
+		std::vector<GLuint> objectsInRange(
+			GLIndex::objectSSBOVec.begin() + light.LOSSSBOstart,
+			GLIndex::objectSSBOVec.begin() + light.LOSSSBOstart + light.LOSSSBOcount
+		);
+		for (GLuint object : objectsInRange) {
+			unsigned int type = object & 0x7; //First 3 bits
+			unsigned int index = object >> 3;
+			switch(type) {
+				case T_WALL: {
+					walls.insert(index);
+					break;
+				}
+				case T_VISPLANE: {
+					visplanes.insert(index);
+					break;
+				}
+				default: {break;}
+			}
+		}
+		*/
+	}
 
+	//std::vector<unsigned int> visplanesVec(visplanes.begin(), visplanes.end());
+	//std::vector<unsigned int> wallsVec(walls.begin(), walls.end());
+	//lighting::createLightMapsSubset(visplanesVec, wallsVec);
+}
 
 
 bool didHitSwitch(size_t switchIdx) {
@@ -782,6 +819,8 @@ void updateSpecials(bool interactKey) {
 		bool upd = true;
 		if (wall.IOPtr) {enabled = *(wall.IOPtr);}
 		if ((!wall.internal) && (wall.type != W_NORMAL) && (wall.type != W_INVALID)) {wall.type = W_INVALID; continue; /* Invalid. */}
+		float previousInternal = wall.internal->first;
+		std::cout << previousInternal << std::endl;
 
 		switch(wall.type) {
 			case W_TRIGGER: {
@@ -817,31 +856,37 @@ void updateSpecials(bool interactKey) {
 
 			case W_MOVED_FAST: { //Move horizontally (+/- wall direction) quickly.
 				specialMotion::applyWallDirectionalMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
 			case W_MOVED_SLOW: {//Move horizontally (+/- wall direction) slowly.
 				specialMotion::applyWallDirectionalMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
 			case W_MOVEN_FAST: { //Move horizontally (+/- wall direction) quickly.
 				specialMotion::applyWallNormalMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
 			case W_MOVEN_SLOW: {//Move horizontally (+/- wall direction) slowly.
 				specialMotion::applyWallNormalMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
 			case W_MOVEZ_FAST: { //Move vertically, quickly.
 				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
 			case W_MOVEZ_SLOW: { //Move vertically, slowly.
 				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 			
@@ -861,6 +906,7 @@ void updateSpecials(bool interactKey) {
 					playerConfig::PLAYER_COLLISION_RADIUS
 				);
 				specialMotion::applyWallZMovement(&wall, constants::SPECIAL_MOVE_SPEED_FAST, shouldBeOpen || inDoorCheck);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
@@ -875,6 +921,7 @@ void updateSpecials(bool interactKey) {
 				}
 				bool shouldBeOpen = wall.internal->second > 0.0f;
 				specialMotion::applyWallRotation(&wall, constants::SPECIAL_MOVE_SPEED_FAST, shouldBeOpen);
+				manageLightMaps(wall.lightsInRange, wall.internal->first, previousInternal);
 				break;
 			}
 
@@ -901,6 +948,7 @@ void updateSpecials(bool interactKey) {
 		bool abovePlane = player.position.z >= vPlane.height;
 		bool planeTouch = false;
 		if ((!vPlane.internal) && (vPlane.type != V_NORMAL) && (vPlane.type != V_INVALID)) {vPlane.type = V_INVALID; continue; /* Invalid. */}
+		float previousInternal = vPlane.internal->first;
 
 		if (inPlaneXYRange) {
 			float playerFootZ = player.position.z - (player.height/2.0f);
@@ -929,31 +977,37 @@ void updateSpecials(bool interactKey) {
 
 			case V_MOVEX_FAST: { //Move vertically, quickly.
 				specialMotion::applyVisplaneXMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				manageLightMaps(vPlane.lightsInRange, vPlane.internal->first, previousInternal);
 				break;
 			}
 
 			case V_MOVEX_SLOW: { //Move vertically, slowly.
 				specialMotion::applyVisplaneXMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				manageLightMaps(vPlane.lightsInRange, vPlane.internal->first, previousInternal);
 				break;
 			}
 
 			case V_MOVEY_FAST: { //Move vertically, quickly.
 				specialMotion::applyVisplaneYMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				manageLightMaps(vPlane.lightsInRange, vPlane.internal->first, previousInternal);
 				break;
 			}
 
 			case V_MOVEY_SLOW: { //Move vertically, slowly.
 				specialMotion::applyVisplaneYMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				manageLightMaps(vPlane.lightsInRange, vPlane.internal->first, previousInternal);
 				break;
 			}
 
 			case V_MOVEZ_FAST: { //Move vertically, quickly.
 				specialMotion::applyVisplaneZMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_FAST, enabled);
+				manageLightMaps(vPlane.lightsInRange, vPlane.internal->first, previousInternal);
 				break;
 			}
 
 			case V_MOVEZ_SLOW: { //Move vertically, slowly.
 				specialMotion::applyVisplaneZMovement(&vPlane, constants::SPECIAL_MOVE_SPEED_SLOW, enabled);
+				manageLightMaps(vPlane.lightsInRange, vPlane.internal->first, previousInternal);
 				break;
 			}
 

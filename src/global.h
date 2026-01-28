@@ -107,7 +107,7 @@ inline bool isInvertEffect;
 
 
 //Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
-inline std::deque<std::pair<float, float>> internalsData;
+inline std::list<std::pair<float, float>> internalsData;
 
 
 
@@ -138,7 +138,8 @@ inline GLuint portalTextureID, surfaceLightMapsArrayID;
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
-inline GLuint shadowMapResolutionsSSBO;
+inline GLint shadowMapResolutionsSSBO = -1;
+inline std::vector<GLuint> objectSSBOVec;
 
 
 inline std::set<std::string> supportedExtensions;
@@ -262,12 +263,13 @@ struct Visplane {
 	float data;
 	std::pair<float, float>* internal;
 	GLuint lightingHandles[4];
+	std::set<unsigned int> lightsInRange;
 
 	Visplane()
 		: vertices(), originalVertices(), numVertices(0), height(0.0f), originalHeight(0.0f),
-		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), lightingHandles() {
-			internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
-			internal = &(internalsData.at(internalsData.size()-1));
+		  textureData1(0), type(V_INVALID), IOPtr(nullptr), data(0.0f), lightingHandles(), lightsInRange() {
+			internalsData.emplace_back(std::pair<float, float>(0.0f, 0.0f));
+			internal = &internalsData.back();
 		}
 
 	Visplane(
@@ -277,7 +279,7 @@ struct Visplane {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 			float exitDirection=constants::INF
 		) : height(heightZ), originalHeight(heightZ), 
-			textureData1(textureData1),
+			textureData1(textureData1), lightsInRange(),
 			type(type),	IOPtr(IOPtr), data(data), lightingHandles() {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
@@ -288,8 +290,8 @@ struct Visplane {
 				);
 
 				if ((type != V_NORMAL) && (type != V_INVALID)) {
-					internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
-					internal = &(internalsData.at(internalsData.size()-1));
+					internalsData.emplace_back(std::pair<float, float>(0.0f, 0.0f));
+					internal = &internalsData.back();
 				} else {
 					internal = nullptr;
 				}
@@ -320,7 +322,7 @@ struct Visplane {
 			bool isWorldSpaceX=true, bool isWorldSpaceY=true, bool swapUVXY=false,
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f),
 			float exitDirection=constants::INF
-		) : height(heightZ), originalHeight(heightZ), 
+		) : height(heightZ), originalHeight(heightZ), lightsInRange(), 
 			type(type),	IOPtr(IOPtr), data(data), lightingHandles() {
 				textureData1 = combineTextureData1(
 					textureID, swapUVXY
@@ -331,8 +333,8 @@ struct Visplane {
 				);
 
 				if ((type != V_NORMAL) && (type != V_INVALID)) {
-					internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
-					internal = &(internalsData.at(internalsData.size()-1));
+					internalsData.emplace_back(std::pair<float, float>(0.0f, 0.0f));
+					internal = &internalsData.back();
 				} else {
 					internal = nullptr;
 				}
@@ -446,15 +448,16 @@ struct Wall {
 	float data;
 	std::pair<float, float>* internal;
 	GLuint lightingHandles[8];
+	std::set<unsigned int> lightsInRange;
 
 	Wall()
 		: start(0.0f, 0.0f, 0.0f), originalStart(0.0f, 0.0f, 0.0f),
 		  end(0.0f, 0.0f, 0.0f), originalEnd(0.0f, 0.0f, 0.0f),
 		  textureData1s(), type(W_INVALID), lightingHandles(),
-		  IOPtr(nullptr), data(0.0f) {
+		  IOPtr(nullptr), data(0.0f), lightsInRange() {
 			if ((type != W_NORMAL) && (type != W_INVALID)) {
-				internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
-				internal = &(internalsData.at(internalsData.size()-1));
+				internalsData.emplace_back(std::pair<float, float>(0.0f, 0.0f));
+				internal = &internalsData.back();
 			} else {
 				internal = nullptr;
 			}
@@ -469,7 +472,7 @@ struct Wall {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, lowZ)), originalStart(glm::vec3(start.x, start.y, lowZ)),
 			end(glm::vec3(end.x, end.y, topZ)), originalEnd(glm::vec3(end.x, end.y, topZ)),
-			type(type),  lightingHandles(),
+			type(type),  lightingHandles(), lightsInRange(),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -485,8 +488,8 @@ struct Wall {
 				);
 
 				if ((type != W_NORMAL) && (type != W_INVALID)) {
-					internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
-					internal = &(internalsData.at(internalsData.size()-1));
+					internalsData.emplace_back(std::pair<float, float>(0.0f, 0.0f));
+					internal = &internalsData.back();
 				} else {
 					internal = nullptr;
 				}
@@ -501,7 +504,7 @@ struct Wall {
 			glm::vec2 textureScale=glm::vec2(1.0f, 1.0f), glm::vec2 textureOffset=glm::vec2(0.0f, 0.0f)
 		) : start(glm::vec3(start.x, start.y, std::min(start.z, end.z))), end(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
 			originalStart(glm::vec3(start.x, start.y, std::min(start.z, end.z))), originalEnd(glm::vec3(end.x, end.y, std::max(start.z, end.z))),
-			type(type),  lightingHandles(),
+			type(type),  lightingHandles(), lightsInRange(),
 			IOPtr(IOPtr), data(data) {
 				textureData1s.first = combineTextureData1(textureID0, swapUVXY1);
 				if (textureID1 < 0) {
@@ -517,8 +520,8 @@ struct Wall {
 				);
 
 				if ((type != W_NORMAL) && (type != W_INVALID)) {
-					internalsData.push_back(std::pair<float, float>(0.0f, 0.0f));
-					internal = &(internalsData.at(internalsData.size()-1));
+					internalsData.emplace_back(std::pair<float, float>(0.0f, 0.0f));
+					internal = &internalsData.back();
 				} else {
 					internal = nullptr;
 				}

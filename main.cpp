@@ -340,7 +340,7 @@ int main() {
 
 
 	//Create lightmaps if required
-	if ((lightingType == LIGHT_STATIC_FIXED) || (lightingType == LIGHT_STATIC_ARB)) {lighting::createLightMaps();}
+	if ((lightingType == LIGHT_STATIC_FIXED) || (lightingType == LIGHT_STATIC_ARB)) {lighting::createLightMapsAll();}
 
 
 	//Threads;
