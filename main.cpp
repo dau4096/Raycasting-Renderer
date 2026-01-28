@@ -15,6 +15,7 @@ using namespace utils;
 using namespace glm;
 
 
+//// CALLBACKS ////
 //framebufferSizeCallback but for the terminal render mode instead.
 void handleWinChange(int sig) {
 	//The console may have changed size.
@@ -77,8 +78,7 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	//The console may have changed size.
 	currentConsoleResolution = utils::getConsoleResolution();
 }
-
-
+//// CALLBACKS ////
 
 
 
@@ -120,6 +120,14 @@ void physicsLoop() {
 		{
 			std::lock_guard<std::mutex> lock(stateSwapMutex);
 			std::swap(physicsData, graphicsData);
+		}
+
+		if (utils::configToBool("META_SHOW_DATA")) {
+			std::cout << "#" << std::to_string(tickNumber) << ":" << std::endl;
+			std::cout << "  FPS: " << std::setw(4) << framerate << "Hz" << "    HEALTH: " << std::setw(3) << std::to_string(player.health) << "    ENERGY: " <<std::setw(3) << std::to_string(player.health) << std::endl;
+			std::cout << "  POS: (" << std::setw(8) << player.position.x << ", " << std::setw(8) << player.position.y << ", " << std::setw(8) << player.position.z << ")" << std::endl;
+			std::cout << "  ANG: ("<< std::setw(8) << player.viewAngle << ", "<< std::setw(8) << player.viewPitch << ", "<< std::setw(8) << player.viewRoll << ")" << std::endl;
+			std::cout << "  VEL: (" << std::setw(8) << player.velocity.x << ", " << std::setw(8) << player.velocity.y << ", " << std::setw(8) << player.velocity.z << ")\n" << std::endl;
 		}
 
 		while (glfwGetTime() - tickStart < maxTickTime) {std::this_thread::yield();}
@@ -234,6 +242,7 @@ void handleInputs() {
 	zoomEffect = ((utils::isPressed("USE_VIEWZOOM")) ? display::ZOOM_MULT : 1.0f);
 	bool useVLOOK = utils::configToBool("VIEW_VLOOK");
 
+	//// CAMERA INPUT ////
 	//Mouse camera controls;
 	double cursorXDelta = cursorXPos - cursorXPosPrev;
 	double cursorYDelta = cursorYPos - cursorYPosPrev;
@@ -241,8 +250,6 @@ void handleInputs() {
 	if (useVLOOK) {
 		player.vLook += cursorYDelta * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_MOUSE") / zoomEffect);
 	}
-
-
 
 	//Keyboard camera controls;
 	float keyboardTurnSpeed = constants::TO_RAD * utils::configToFloat("TURN_SPEED_KEYBOARD") / zoomEffect;
@@ -258,6 +265,21 @@ void handleInputs() {
 	if (useVLOOK && utils::isPressed("CAMERA_PITCH_DOWN")) {
 		player.vLook += keyboardTurnSpeed;
 	}
+
+
+	//Gamepad camera controls;
+	glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepadState);
+	if (glfwJoystickPresent(GLFW_JOYSTICK_1)) {
+		std::cout << "Gamepad connected: " << glfwGetJoystickName(GLFW_JOYSTICK_1) << std::endl; //Why does it detect an LED controller??
+		glm::vec2 gamepadDelta = utils::applyDeadzone(glm::vec2(
+			gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X], gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]
+		)); //Use right axis input.
+		player.viewAngle += gamepadDelta.x * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_GAMEPAD") / zoomEffect);
+		if (useVLOOK) {
+			player.vLook += gamepadDelta.y * constants::TO_RAD * (utils::configToFloat("TURN_SPEED_GAMEPAD") / zoomEffect);
+		}
+	}
+	//// CAMERA INPUT ////
 
 
 	player.viewAngle = fmodf(player.viewAngle + constants::PI*3.0f, constants::PI2) - constants::PI;
@@ -310,7 +332,7 @@ int main() {
 	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU-with-CRT");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
 	signal(SIGWINCH, handleWinChange);
-	glfwSetJoystickCallback(nullptr); //Stop it from trying to callback for joystick.
+	glfwSetJoystickCallback(nullptr); //No callback.
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
 	bool vsync = utils::configToBool("SCREEN_VSYNC");

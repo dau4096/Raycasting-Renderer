@@ -94,8 +94,6 @@ namespace utils {
 
 
 
-
-
 	static inline void print(std::string str) {
 		if (isConsoleVisible()) {
 			std::cout << str << std::endl;
@@ -259,6 +257,14 @@ namespace utils {
 			keyMap.at(keyFunction) = state;
 		}
 	}
+
+
+	static inline glm::vec2 applyDeadzone(glm::vec2 value, float deadzone=configToFloat("TURN_DEADZONE_GAMEPAD")) {
+		return glm::normalize(glm::vec2(
+			(std::abs(value.x) < deadzone) ? 0.0f : value.x,
+			(std::abs(value.y) < deadzone) ? 0.0f : value.y
+		));
+	};
 
 
 	static inline bool logicToBool(int A) {return (A > 0);}

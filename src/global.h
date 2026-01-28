@@ -7,7 +7,7 @@ using namespace std;
 inline std::unordered_map<std::string, int> userBindings = {};
 inline std::unordered_map<std::string, bool> keyMap = {};
 inline std::unordered_map<std::string, std::string> userConfig = {};
-
+inline GLFWgamepadstate gamepadState;
 
 
 inline std::array<bool, constants::MAX_FLAGS> flags;

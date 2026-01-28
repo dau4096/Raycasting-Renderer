@@ -437,6 +437,25 @@ void playerMovement() {
 	// Determine the movement vector based on key presses
 	if (!player.sliding) {
 		float reduction = 1.0f;
+		glm::vec2 gamepadDelta = glm::vec2(0.0f, 0.0f);
+		if (glfwJoystickPresent(GLFW_JOYSTICK_1)) {
+			//Get gamepad input.
+			gamepadDelta = utils::applyDeadzone(glm::vec2(
+				gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X], gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]
+			)); //Use left axis input.
+
+			if (abs(gamepadDelta.y) > utils::configToFloat("TURN_DEADZONE_GAMEPAD")) {
+				//Forward/Backward//
+				newX += playerSpeed * sin(player.viewAngle) * gamepadDelta.y;
+				newY += playerSpeed * cos(player.viewAngle) * gamepadDelta.y;
+			}
+			if (abs(gamepadDelta.x) > utils::configToFloat("TURN_DEADZONE_GAMEPAD")) {
+				//Left/Right//
+				newX += playerSpeed * cos(player.viewAngle) * gamepadDelta.x;
+				newY += playerSpeed * -sin(player.viewAngle) * gamepadDelta.x;
+			}
+		}
+
 		if (utils::isPressed("MOVE_FORWARD")) {
 			if (!player.touchingFloor) {reduction *= 0.5f;}
 			newX += playerSpeed * sin(player.viewAngle) * reduction;

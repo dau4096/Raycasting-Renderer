@@ -75,7 +75,8 @@
 <!-- Sensitivity -->
 <option function="TURN_SPEED_KEYBOARD" 					value="1.0"				note="Turn speed when using [ARROWKEY] turning. [NUMBER]" />
 <option function="TURN_SPEED_MOUSE" 					value="0.125" 			note="Turn speed when using [MOUSEINPUT] turning. [NUMBER]" />
-
+<option function="TURN_SPEED_GAMEPAD"					value="1.5"				note="Turn speed when using [GAMEPAD] turning. [NUMBER]" />
+<option function="TURN_DEADZONE_GAMEPAD"				value="0.05"			note="Deadzone when using [GAMEPAD] turning. [NUMBER]" />
 
 
 
@@ -104,7 +105,7 @@
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
 <option function="VIEW_LIGHTING_TYPE"					value="ARB"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
-<option function="VIEW_ARB_LUXEL_SIZE"					value="0.01" 			note="How big (in world units) each lighting 'luxel' should be when using ARB lighting [FLOAT]" />
+<option function="VIEW_ARB_LUXEL_SIZE"					value="0.01" 			note="How big (in world units) each lighting 'luxel' should be when using ARB lighting [NUMBER]" />
 
 
 
@@ -135,7 +136,7 @@
 <!-- Misc -->
 <option function="SCREEN_MAX_FREQ" 						value="75" 				note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Integer Hertz]" />
 <option function="SCREEN_VSYNC"							value="True" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
-<option function="SCREEN_FULLSCREEN"					value="TRUE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
+<option function="SCREEN_FULLSCREEN"					value="FALSE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
 <option function="SCREEN_CONSOLE_RENDER"				value="FALSE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
 
 
