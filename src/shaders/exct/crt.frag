@@ -1,57 +1,26 @@
 /* crt.frag */
-
 #version 460 core
 
-in vec2 fragTexCoord;
+in vec2 fragUV;
 out vec4 fragColour;
 
+layout(binding=0) uniform sampler2D finishedFrame;
+layout(binding=1) uniform sampler2D finishedInterface;
+layout(binding=2) uniform sampler2D bezelTexture;
 
-layout(binding=0) uniform sampler2D renderedFrameSampler2D;
-layout(binding=1) uniform sampler2D depthMap;
-layout(binding=2) uniform sampler2D interfaceTexture;
-layout(binding=3) uniform sampler2DArray lightMapsArray;
-layout(binding=4) uniform sampler2D positionMap;
-
-layout(rgba32f, binding=0) writeonly uniform image2D frameToScreenshot;
-
-
-//Camera
-uniform float maxRayDistance;
 uniform ivec2 screenResolution;
-uniform ivec2 renderResolution;
 
-//Sky
-uniform vec3 fogColour;
-
-//Debug
-uniform int debugMode;
-
-//Other
-uniform bool antiAliasing;
-uniform int quantisingLevel;
-uniform int lightingType;
-uniform bool screenshotHasHUD;
-uniform bool shouldTakeScreenshot;
-uniform uint numLights;
-uniform vec4 screenTint;
-uniform bool isInvertEffect;
-
-
-#define EPSILON 1e-4f
 
 //////////////// Config stuff ////////////////
 //CRT;
 #define SCREEN_CURVATURE 5.0f
-#define SCREEN_NORMALS false
 #define BEZEL_UV_BOUNDARY_LO 0.01f
 #define BEZEL_UV_BOUNDARY_HI 1.0f - BEZEL_UV_BOUNDARY_LO
 #define BEZEL_NORMAL_STRENGTH 1.0f
 #define SCALING 1.0f
 
-//Lighting;
-#define MIN_BRIGHTNESS 0.175f
-#define MAX_BRIGHTNESS 2.25f
-#define NUM_PSEUDO_LIGHTS 2
+//exct;
+//#define HAS_NORMALS
 //////////////// Config stuff ////////////////
 
 
@@ -83,6 +52,9 @@ uint pcg_hash(uint seed) {
 }
 
 
+
+
+
 void main() {
 	vec2 mainUV = getUV(gl_FragCoord.xy);
 
@@ -108,22 +80,29 @@ void main() {
 	
 	}
 
-	if (inScreen && SCREEN_NORMALS) {
+
+#ifdef HAS_NORMALS
+	if (inScreen) {
 		normalDirection.xy = curveOffset;
 	} else {
 		uint seedX = uint(mainUV.x * SCALING) * 73856093u ^ uint(mainUV.y * SCALING) * 19349663u;
 		uint seedY = uint(mainUV.y * SCALING) * 73856093u ^ uint(mainUV.x * SCALING) * 19349663u;
-		/*
 		normalDirection.xy += vec2(
 			(pcg_hash(seedX) & 0xFF) - 0x7F,
 			(pcg_hash(seedY) & 0xFF) - 0x7F
 		) / 512.0f;
-		*/
 	}
+#endif
 
 
 	//fragColour = vec4(normalDirection.xyz * 0.5f + 0.5f, 1.0f); return; //Normal map
-	fragColour = (inScreen) ? vec4(curvedUV.xy, 1.0f, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 1.0f); return; //UV;
+	//fragColour = (inScreen) ? vec4(curvedUV.xy, 1.0f, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 1.0f); //UV map
 
-	fragColour = (inScreen) ? vec4(texture(renderedFrameSampler2D, curvedUV).rgb, 1.0f) : vec4(0.0f, 0.0f, 0.0f, 1.0f); //
+	if (inScreen) {
+		vec4 frameColour = texture(finishedFrame, curvedUV.xy);
+		vec4 uiColour = texture(finishedInterface, curvedUV.xy);
+		fragColour = vec4(mix(frameColour.rgb, uiColour.rgb, uiColour.a).rgb, 1.0f);
+	} else {
+		fragColour = vec4(texture(bezelTexture, vec2(mainUV.x, 1.0f-mainUV.y)).rgb, 1.0f);
+	}
 }

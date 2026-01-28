@@ -104,6 +104,7 @@ inline bool shouldTakeScreenshot;
 inline int lightFlickerRNG;
 inline glm::vec4 screenTint;
 inline bool isInvertEffect;
+inline bool useCRTshader = false;
 
 
 //Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
@@ -133,7 +134,7 @@ inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, po
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
-inline GLuint portalTextureID, surfaceLightMapsArrayID;
+inline GLuint portalTextureID, surfaceLightMapsArrayID, CRTbezelTexture;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;

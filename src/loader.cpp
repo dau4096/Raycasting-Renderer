@@ -1288,8 +1288,9 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
 
-	if (utils::strToUpper(userConfig["VIEW_RENDER_RESOLUTION_QUALITY"]) == "CRT") {
-		currentWindowResolution = glm::ivec2(640, 480);
+	if (utils::configToString("VIEW_RENDER_RESOLUTION_QUALITY") == "CRT") {
+		currentWindowResolution = display::CRT_BEZEL_RESOLUTION;
+		useCRTshader = true;
 	}
 
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
