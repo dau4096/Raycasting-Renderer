@@ -207,6 +207,7 @@ static void bindCommonUniforms(GLuint shaderProgram, float blendingAlpha, float 
 	bindUniformValue(shaderProgram, "maxRayDistance", utils::configToFloat("VIEW_MAX_RAY_DIST"));
 	bindUniformValue(shaderProgram, "maxRayAngle", rayAngle);
 	bindUniformValue(shaderProgram, "verticalFOV", verticalFOV);
+	bindUniformValue(shaderProgram, "aspectRatio", static_cast<float>(currentRenderResolution.x)/static_cast<float>(currentRenderResolution.y));
 	bindUniformValue(shaderProgram, "zoomFactor", display::ZOOM_MULT);
 	bindUniformValue(shaderProgram, "zoom", keyMap["USE_VIEWZOOM"]);
 	bindUniformValue(shaderProgram, "blendingAlpha", blendingAlpha);
