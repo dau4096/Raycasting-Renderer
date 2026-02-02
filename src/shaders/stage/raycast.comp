@@ -68,6 +68,7 @@ uniform uint numVisibleVisplanes;	//Onscreen
 uniform float blendingAlpha;
 uniform float maxRayDistance;
 uniform float maxRayAngle;
+uniform float aspectRatio;
 uniform float zoomFactor;
 uniform bool zoom;
 uniform vec3 playerPosition;
@@ -196,7 +197,7 @@ uint getXUV(vec2 intersectPoint, Wall thisWall) {
 
 
 uint getProjectedZ(float wallDistanceSQ, float wallLowZ, float wallTopZ) {
-	float invDistance = inversesqrt(wallDistanceSQ) * zoomEffect * 1.5f;
+	float invDistance = inversesqrt(wallDistanceSQ) * zoomEffect * aspectRatio;
 	//Inverse distance scaled by zooming and a set multiplier to make 1x1u more square (was 2:3 ratio before.)
 
 	//Low edge of the wall (bottom visually)

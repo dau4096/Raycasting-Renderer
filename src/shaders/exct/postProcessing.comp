@@ -47,49 +47,6 @@ vec2 getUV(vec2 pos) {
 }
 
 
-const vec2 offsets[8] = {
-	vec2(-1.0f, -1.0f), vec2( 0.0f, -1.0f), vec2( 1.0f, -1.0f),
-	vec2(-1.0f,  0.0f),                     vec2( 1.0f,  0.0f),
-	vec2(-1.0f,  1.0f), vec2( 0.0f,  1.0f), vec2( 1.0f,  1.0f)
-};
-vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
-	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
-	vec2 inverseScreenRes = 1.0f / vec2(renderResolution);
-	
-	int centreIData = int(texture(positionMap, mainUV).w); //Contains object index and type, encoded as bits.
-	vec3 colourSum = centreColour.rgb;
-	bool isEdge = false;
-
-	for (uint offsetIndex=0; offsetIndex<8; offsetIndex++) {
-		vec2 thisUV = mainUV + (offsets[offsetIndex] * inverseScreenRes);
-		int thisIData = int(texture(positionMap, thisUV).w);
-		colourSum += texture(renderedFrameSampler2D, thisUV).rgb;
-		if (abs(thisIData - centreIData) > 0) {
-			//Different object/surface was hit. Apply anti-aliasing.
-			isEdge = true;
-		}
-	}
-
-	//Rather unfortunate how large this is.
-	return vec4(
-		mix(
-			mix(
-				centreColour.rgb,
-				vec3(0.0f, 0.0f, 0.0f),
-				int(debugMode == 5)
-			),
-			mix(
-				colourSum / 8.0f,
-				vec3(1.0f, 0.0f, 1.0f),
-				int((debugMode == 4) || (debugMode == 5))
-			),
-			int(isEdge)
-		),
-		1.0f
-	);
-}
-
-
 vec4 quantisingFunc(vec2 mainUV) {
 	float delta = 255.0f / (quantisingLevel - 1.0f);
 
@@ -119,6 +76,51 @@ vec3 getBrightness(vec2 UV) {
 		return clamp(lightingSum, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
 
 	}
+}
+
+
+const vec2 offsets[8] = {
+	vec2(-1.0f, -1.0f), vec2( 0.0f, -1.0f), vec2( 1.0f, -1.0f),
+	vec2(-1.0f,  0.0f),                     vec2( 1.0f,  0.0f),
+	vec2(-1.0f,  1.0f), vec2( 0.0f,  1.0f), vec2( 1.0f,  1.0f)
+};
+vec4 antiAliasFunc(vec2 mainUV, vec3 centreColour) {
+	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
+	vec2 inverseScreenRes = 1.0f / vec2(renderResolution);
+	
+	int centreIData = int(texture(positionMap, mainUV).w); //Contains object index and type, encoded as bits.
+	vec3 colourSum = centreColour.rgb;
+	bool isEdge = false;
+
+	for (uint offsetIndex=0; offsetIndex<8; offsetIndex++) {
+		vec2 thisUV = mainUV + (offsets[offsetIndex] * inverseScreenRes);
+		int thisIData = int(texture(positionMap, thisUV).w);
+		vec3 thisBrightness = getBrightness(thisUV);
+		colourSum += texture(renderedFrameSampler2D, thisUV).rgb * thisBrightness;
+
+		if (abs(thisIData - centreIData) > 0) { //Different object index & vastly different normals, an actual edge rather than a join between 2 objects.
+			//Different object/surface was hit. Apply anti-aliasing.
+			isEdge = true;
+		}
+	}
+
+	//Rather unfortunate how large this is.
+	return vec4(
+		mix(
+			mix(
+				centreColour.rgb,
+				vec3(0.0f, 0.0f, 0.0f),
+				int(debugMode == 5)
+			),
+			mix(
+				colourSum / 8.0f,
+				vec3(1.0f, 0.0f, 1.0f),
+				int((debugMode == 4) || (debugMode == 5))
+			),
+			int(isEdge)
+		),
+		1.0f
+	);
 }
 
 
