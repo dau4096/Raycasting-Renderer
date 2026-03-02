@@ -284,7 +284,8 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
-	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION = glm::ivec2(1024, 1024);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_INITIAL = glm::ivec2(1024, 1024);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_MINIMUM = glm::ivec2(128, 128); //Don't get any smaller than this.
 	constexpr float ARB_SHADOW_TEXEL_SIZE = 0.01f;
 	constexpr glm::ivec2 ARB_SHADOW_MAX_RESOLUTION = glm::ivec2(4096, 4096);
 
@@ -292,6 +293,7 @@ namespace display {
 	//Texture Standardisation
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
+	constexpr glm::ivec2 CRT_BEZEL_RESOLUTION = glm::ivec2(640, 480);
 	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback.png";
 	constexpr const char* FALLBACK_NORMAL_PATH = "src/textures-env/fallback.normal.png";

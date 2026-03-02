@@ -11,7 +11,7 @@ layout(binding=3) uniform sampler2D portalTexture;
 
 //CameraData
 uniform float maxRayDistance;
-uniform float verticalFOV;
+uniform float aspectRatio;
 uniform float maxRayAngle;
 uniform float zoomFactor;
 uniform bool zoom;
@@ -91,7 +91,7 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 	WallIntersect wallIntersects[]; //2D Raycast results;
 };
 layout(std430, binding=8) buffer visplaneCheckSSBO {
-	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
+	uint visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 };
 
 
@@ -284,7 +284,7 @@ void getNormal(vec3 UV, float LODIndex, inout vec3 surfaceNormal, uint surfaceTy
 
 vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePosition, uint surfaceType) {
 	if (debugMode == 1) {
-		return vec4(UV.xy, UV.z / 32.0, maxRayDistance);
+		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
 
 	if (!useMipMapping) {
@@ -296,9 +296,9 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 	}
 
 	//LODIndex takes depth and slope components to be as unobtrusive as possible.
-	float depthComponent = (MIPMAP_LEVELS * 2.0 / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
+	float depthComponent = (MIPMAP_LEVELS * 2.0f / maxRayDistance) * (float(distance) - MIPMAP_MIN_DISTANCE);
 	float slopeComponent = -abs(dot(normalize(playerPosition - surfacePosition), surfaceNormal));
-	float LODIndex = clamp(depthComponent + slopeComponent, 0.0, MIPMAP_LEVELS);
+	float LODIndex = clamp(depthComponent + slopeComponent, 0.0f, MIPMAP_LEVELS);
 	float lod = ceil(LODIndex);
 
 
@@ -308,7 +308,7 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 	}
 
 	if (MIPMAP_DEBUG) {
-		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0, 1.0);
+		return vec4(LODIndex / MIPMAP_LEVELS, fract(LODIndex), 0.0f, 1.0f);
 	}
 
 	vec4 mipColour = textureLod(textureArray, UV, lod);
@@ -318,7 +318,7 @@ vec4 fetchUV(vec3 UV, double distance, inout vec3 surfaceNormal, vec3 surfacePos
 		return mipColour;
 	}
 
-	vec4 mipColourLow = textureLod(textureArray, UV, lod - 1.0);
+	vec4 mipColourLow = textureLod(textureArray, UV, lod - 1.0f);
 	return mix(mipColourLow, mipColour, fract(LODIndex));
 }
 
@@ -327,7 +327,7 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 	vec3 UV = thisIntersect.UV;
 	isPortal = false;
 	if (thisIntersect.foundType == T_WALL) {
-		surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0);
+		surfaceNormal = vec3(thisIntersect.normal2D.xy, 0.0f);
 		Wall thisWall = walls[thisIntersect.index];
 		if (thisWall.type == 15) { //Portal type.
 			vec2 surfaceDirection = vec2(-thisIntersect.normal2D.y, thisIntersect.normal2D.x);
@@ -339,7 +339,7 @@ vec4 fetchUVIntersect(in IntersectionData thisIntersect, out vec3 surfaceNormal,
 
 	} else if (thisIntersect.foundType == T_VISPLANE) {
 		Visplane thisVisplane = visplanes[thisIntersect.index];
-		surfaceNormal = vec3(0.0, 0.0, (thisVisplane.height < playerPosition.z) ? 1.0 : -1.0);
+		surfaceNormal = vec3(0.0f, 0.0f, (thisVisplane.height < playerPosition.z) ? 1.0f : -1.0f);
 		if (thisVisplane.type == 15) { //Portal type.
 			UV = vec3(fract(thisIntersect.position.xy), -1.0f);
 			isPortal = true;
@@ -537,21 +537,15 @@ void main() {
 
 	float antiProjection = 0.5f - (fragPosition.y/renderResolution.y);
 	if (abs(antiProjection) > EPSILON) {/* Avoids DivZero error */
-		float invAntiProjection = 1.5f * zoomEffect / antiProjection;
+		float invAntiProjection = aspectRatio * zoomEffect / antiProjection;
 		//Iterate through all visplanes. (3D)
 		uint visplaneStartIndex = uint(framePosition.x * numVisplanes);
 		for (int idx=0; idx<numVisibleVisplanes; idx++) {
 			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
 			uint actualIDX = visibleVisplaneIndices[idx];
 			uint SSBOIndex = visplaneStartIndex + actualIDX;
-
-			uvec2 VPintersectData = visplaneCheckIndices[SSBOIndex];
-			uint visplaneValue = VPintersectData.x;
-
-			int higherProj = int(VPintersectData.y >> 16u) - 0x7FFF;
-			int lowerProj = int(VPintersectData.y & 0xFFFFu) - 0x7FFF;
-
-			if (((visplaneValue & 0x1u) == 0u) || (fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
+			uint visplaneValue = visplaneCheckIndices[SSBOIndex];
+			if ((visplaneValue & 0x1) == 0u) {continue; /* No intersect. */}
 			Visplane thisVisplane = visplanes[visplaneValue >> 1];
 
 			if (

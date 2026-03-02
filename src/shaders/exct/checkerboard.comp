@@ -1,0 +1,96 @@
+/* checkerboard.comp */
+#version 460 core
+
+
+uniform ivec2 renderResolution;       //Checkerboard size (½ the pixels.)
+uniform ivec2 actualRenderResolution; //Actual screen size
+
+layout(binding=0) uniform sampler2D postProcessedFrame;				//Output from the post-processing pass
+layout(rgba32f, binding=0) writeonly uniform image2D finishedFrame; //Final frame to be shown.
+
+
+layout(local_size_x=16, local_size_y=16, local_size_z=1) in;
+
+
+vec2 getUV(vec2 pos) {
+	return vec2(pos.xy) / vec2(actualRenderResolution);
+}
+
+
+
+vec2 getOffsetUV(vec2 UV, ivec2 offset, vec2 inverseScreenRes) {
+	vec2 off01 = vec2(offset) * inverseScreenRes;
+	return UV + off01;
+}
+
+
+
+float getColourSimilarity(vec4 a, vec4 b) {
+    return 1.0f - clamp(
+    	length(a.rgb - b.rgb), 0.0f, 1.0f
+    );
+}
+
+
+
+void getMixing(vec2 mainUV, vec2 inverseScreenRes, in ivec2 offsets[2], out float similarity, out vec4 interp) {
+	vec2 UV;
+
+	//Get px0
+	UV = getOffsetUV(mainUV, offsets[0], inverseScreenRes);
+	vec4 albedo0 = texture(postProcessedFrame, UV);
+
+	//Get px1
+	UV = getOffsetUV(mainUV, offsets[1], inverseScreenRes);
+	vec4 albedo1 = texture(postProcessedFrame, UV);
+
+	similarity = getColourSimilarity(albedo0, albedo1); //How close the 2 colours are. Minimum value is 0.0f for "entirely different".
+	interp = (albedo0 + albedo1) / 2.0f; //Halfway between the 2.
+}
+
+
+
+vec4 getFillColour(vec2 mainUV) {
+	//Screenspace custom AA based on whether a pixel is an edge between 2 different surfaces or not.
+	vec2 inverseScreenRes = 1.0f / vec2(renderResolution);
+	ivec2 offsets[2];
+
+	//Vertical
+	float vContrib; //How close in colour the vertical pixels are.
+	vec4 vInterp; //Average of the verticals
+	offsets[0] = ivec2(0, -1);
+	offsets[1] = ivec2(0,  1);
+	getMixing(mainUV, inverseScreenRes, offsets, vContrib, vInterp);
+
+	//Horizontal
+	float hContrib; //How close in colour the horizontal pixels are.
+	vec4 hInterp; //Average of the horizontals
+	offsets[0] = ivec2(-1, 0);
+	offsets[1] = ivec2( 1, 0);
+	getMixing(mainUV, inverseScreenRes, offsets, hContrib, hInterp);
+
+
+	//Combine
+	return mix(
+		vInterp, hInterp,
+		hContrib / (hContrib+vContrib) //Mix them by their contributions.
+	);
+}
+
+
+
+void main() {
+	vec2 mainUV = getUV(gl_GlobalInvocationID.xy);
+	if ((mainUV.x > 1.0f) || (mainUV.y > 1.0f)) {return;}
+
+	vec4 finalColour;
+	if (bool((gl_GlobalInvocationID.x % 2) ^ (gl_GlobalInvocationID.y % 2))) {
+		//If it's already on the checkerboard; return that colour.
+		finalColour = texture(postProcessedFrame, mainUV);
+	} else {
+		//Fill with colour.
+		finalColour = getFillColour(mainUV);
+	}
+
+	imageStore(finishedFrame, ivec2(gl_GlobalInvocationID.xy), finalColour);
+}

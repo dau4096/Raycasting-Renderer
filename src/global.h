@@ -33,7 +33,7 @@ struct StageData {
 	float playerStartHealth, playerStartEnergy;
 
 
-	StageData()
+	StageData() //Defaults
 		: name("<NONE>"), filePath(""),
 		  skyboxTextureName("fallback-skybox"), fogColour(0.4157f, 0.6039f, 0.7098f),
 		  sunDirection(0.0f, 0.0f, 1.0f), sunColour(1.0f, 1.0f, 1.0f),
@@ -76,9 +76,11 @@ inline size_t currentTextureIndex = 0;
 
 
 
+inline glm::ivec2 currentConsoleResolution;
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
+inline glm::ivec2 actualRenderResolution; //Used whenever checkerboard rendering is on, has exactly double the pixels.
 inline glm::ivec2 currentShadowResolution;
 inline LightingType lightingType;
 
@@ -103,6 +105,8 @@ inline bool shouldTakeScreenshot;
 inline int lightFlickerRNG;
 inline glm::vec4 screenTint;
 inline bool isInvertEffect;
+inline bool useCRTshader = false;
+inline bool useCheckerboard = false;
 
 
 //Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
@@ -119,20 +123,20 @@ inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, d
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
 inline GLuint lightingMapsArrayID;
-inline GLuint screenshotImage2D;
+inline GLuint postProcessedFrame, finishedFrame;
 
 //Framebuffers
 inline GLuint frameFBO, frameAlbedoComponent, framePositionComponent, frameNormalComponent, frameDepthComponent; //Previously: renderedFrameID
 inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
-inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
-inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, displayShader; 
+inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D, checkerboardProcessingShader;
+inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, postProcessingShader, displayShader; 
 
 //Textures
 inline GLuint textureArrayEnvironment, normalArrayEnvironment, skyboxTextureID;
 inline GLuint textureArrayUI, textureArrayNumeric;
-inline GLuint portalTextureID, surfaceLightMapsArrayID;
+inline GLuint portalTextureID, surfaceLightMapsArrayID, CRTbezelTexture;
 
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;

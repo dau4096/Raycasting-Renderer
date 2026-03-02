@@ -127,10 +127,12 @@
 
 
     <!-- Portal testing -->
+    <!-- Remove for now as the V_PORTAL segfaults and neither are properly implemented.
     <wall start="-0.5 7.5 0.0" end="0.5 7.5 2.0" type="W_PORTAL" flag="portalTest" />
     <wall start="-0.5 -11.5 3.0" end="0.5 -11.5 5.0" type="W_PORTAL" flag="portalTest" />
     <visplane start="-8.0 15.0" end="-7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="90.0" />
     <visplane start="8.0 15.0" end="7.0 16.0" height="0.125" type="V_PORTAL" extra="TeleTest" texture="quake" exitDirection="-90.0" />
+    -->
 
 </environment>
 
