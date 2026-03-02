@@ -132,6 +132,7 @@ void main() {
 
 	vec4 resultant;
 	vec2 mainUV = getUV(gl_GlobalInvocationID.xy);
+	if ((mainUV.x > 1.0f) || (mainUV.y > 1.0f)) {return;}
 	vec4 albedo = texture(renderedFrameSampler2D, mainUV);
 	float fragDistance = texture(depthMap, mainUV).r * maxRayDistance;
 	if (fragDistance >= maxRayDistance) {

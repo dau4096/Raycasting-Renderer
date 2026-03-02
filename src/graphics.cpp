@@ -1415,8 +1415,15 @@ void prepareOpenGL() {
 	//Image2Ds
 	GLIndex::lightingMapsArrayID = createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
 	glObjectLabel(GL_TEXTURE, GLIndex::lightingMapsArrayID, -1, "lightingMapsArrayID");
-	GLIndex::finishedFrame = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	glObjectLabel(GL_TEXTURE, GLIndex::finishedFrame, -1, "finishedFrame");
+	if (useCheckerboard) {
+		GLIndex::postProcessedFrame = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+		glObjectLabel(GL_TEXTURE, GLIndex::postProcessedFrame, -1, "postProcessedFrame"); //Only used whenever checkerboard rendering is on, to add another pass.
+		GLIndex::finishedFrame = createGLImage2D(actualRenderResolution.x, actualRenderResolution.y);
+		glObjectLabel(GL_TEXTURE, GLIndex::finishedFrame, -1, "finishedFrame"); //Always used to hold final frame to screenshot/display.
+	} else {
+		GLIndex::finishedFrame = createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+		glObjectLabel(GL_TEXTURE, GLIndex::finishedFrame, -1, "finishedFrame"); //Always used to hold final frame to screenshot/display.
+	}
 
 	//Textures
 	GLIndex::textureArrayEnvironment = createTexture2DArray(textureNames, "textures-env", true, false, display::FALLBACK_TEXTURE_PATH);
@@ -1539,6 +1546,12 @@ void prepareOpenGL() {
 	GLIndex::uiShader = createShaderProgram("exct/interface.frag", "exct/interface.vert");
 	//Post-Processing Shader
 	GLIndex::postProcessingShader = createComputeShader("exct/postProcessing.comp");
+
+	if (useCheckerboard) {
+		//Checkerboard Processing Shader
+		GLIndex::checkerboardProcessingShader = createComputeShader("exct/checkerboard.comp");
+	}
+
 	//Display Shader
 	if (useCRTshader) { //Use custom CRT shader;
 		GLIndex::displayShader = createShaderProgram("exct/crt.frag");
@@ -2397,8 +2410,7 @@ void draw(double blendingAlpha, double currentTime) {
 		avgtickrate = utils::getAverage(rollingTPS);
 
 		ui::drawHUD(blendingAlpha, currentTime);
-	}	
-
+	}
 
 
 	//Post-Processing Shader.
@@ -2412,7 +2424,7 @@ void draw(double blendingAlpha, double currentTime) {
 	glBindTextureUnit(1, GLIndex::frameDepthComponent);
 	glBindTextureUnit(2, GLIndex::lightingMapsArrayID);
 	glBindTextureUnit(3, GLIndex::framePositionComponent);
-	glBindImageTexture(0, GLIndex::finishedFrame, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, (useCheckerboard) ? GLIndex::postProcessedFrame : GLIndex::finishedFrame, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	//Uniforms
 	uniforms::bindCommonUniforms(GLIndex::postProcessingShader, blendingAlpha, currentTime);
@@ -2432,6 +2444,24 @@ void draw(double blendingAlpha, double currentTime) {
 	GLErrorcheck("Post-Processing Shader", true);
 
 
+
+
+	if (useCheckerboard) {
+		//Apply pass to upscale into proper screen resolution.
+		glUseProgram(GLIndex::checkerboardProcessingShader);
+		const glm::uvec3 CHECKERBOARD_PROCESSING_LOCAL_SIZE = glm::uvec3(16, 16, 1);
+
+		glBindTextureUnit(0, GLIndex::postProcessedFrame); //From the post-processing.
+		glBindImageTexture(0, GLIndex::finishedFrame, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+		uniforms::bindCommonUniforms(GLIndex::checkerboardProcessingShader, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::checkerboardProcessingShader, "actualRenderResolution", actualRenderResolution);
+		glDispatchCompute(
+			(actualRenderResolution.x + CHECKERBOARD_PROCESSING_LOCAL_SIZE.x - 1) / CHECKERBOARD_PROCESSING_LOCAL_SIZE.x,
+			(actualRenderResolution.y + CHECKERBOARD_PROCESSING_LOCAL_SIZE.y - 1) / CHECKERBOARD_PROCESSING_LOCAL_SIZE.y,
+			1
+		);
+	}
 
 	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
 		//Draw to console using 256-colour mode;

@@ -80,6 +80,7 @@ inline glm::ivec2 currentConsoleResolution;
 inline glm::ivec2 currentWindowResolution;
 inline glm::ivec2 desiredRenderResolution;
 inline glm::ivec2 currentRenderResolution;
+inline glm::ivec2 actualRenderResolution; //Used whenever checkerboard rendering is on, has exactly double the pixels.
 inline glm::ivec2 currentShadowResolution;
 inline LightingType lightingType;
 
@@ -105,6 +106,7 @@ inline int lightFlickerRNG;
 inline glm::vec4 screenTint;
 inline bool isInvertEffect;
 inline bool useCRTshader = false;
+inline bool useCheckerboard = false;
 
 
 //Dataset used by all walls, visplanes etc to sync internal values between physicsDataset and graphicsDataset
@@ -121,14 +123,14 @@ inline GLuint displacementFBO, displacementFBOColour, displacementFBOPosition, d
 inline GLuint uiVAO, uiVBO, uiEBO;
 inline GLuint genericVAO;
 inline GLuint lightingMapsArrayID;
-inline GLuint finishedFrame;
+inline GLuint postProcessedFrame, finishedFrame;
 
 //Framebuffers
 inline GLuint frameFBO, frameAlbedoComponent, framePositionComponent, frameNormalComponent, frameDepthComponent; //Previously: renderedFrameID
 inline GLuint interfaceFBO, interfaceAlbedoComponent; //Previously: interfaceID
 
 //Shaders
-inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D;
+inline GLuint raycastShader, envShader, displacementShader3D, displacementShader2D, checkerboardProcessingShader;
 inline GLuint spriteShader, preLightingShader, frameLightingShader, uiShader, postProcessingShader, displayShader; 
 
 //Textures

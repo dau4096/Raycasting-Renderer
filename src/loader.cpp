@@ -1288,12 +1288,24 @@ void loadBindings() {
 	setConfigFromStringOptionsMap("VIEW_SHADOW_QUALITY", &shadowQualityMap, "LOW");
 	setConfigFromStringOptionsMap("VIEW_LIGHTING_TYPE", &lightTypeMap, "DYNAMIC", &lightingType);
 
+
 	if (utils::configToString("VIEW_RENDER_RESOLUTION_QUALITY") == "CRT") {
+		//CRT res and shader.
 		currentWindowResolution = display::CRT_BEZEL_RESOLUTION;
 		useCRTshader = true;
 	}
 
+	if (utils::configToBool("SCREEN_CHECKERBOARD")) {
+		//Use checkerboard rendering
+		actualRenderResolution = desiredRenderResolution;
+		desiredRenderResolution = glm::ivec2(glm::ceil(
+			glm::vec2(desiredRenderResolution) / sqrt(2.0f)
+		)); //Half of the total pixels.
+		useCheckerboard = true;
+	}
+
 	if (utils::configToBool("META_SHOW_CONSOLE")) {
+		//[WIN ONLY] show/hide console.
 		utils::showConsole();
 	} else {
 		utils::hideConsole();
