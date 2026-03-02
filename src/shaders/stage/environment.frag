@@ -91,7 +91,7 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 	WallIntersect wallIntersects[]; //2D Raycast results;
 };
 layout(std430, binding=8) buffer visplaneCheckSSBO {
-	uint visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
+	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 };
 
 
@@ -544,34 +544,28 @@ void main() {
 			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
 			uint actualIDX = visibleVisplaneIndices[idx];
 			uint SSBOIndex = visplaneStartIndex + actualIDX;
-			uint visplaneValue = visplaneCheckIndices[SSBOIndex];
-			if ((visplaneValue & 0x1) == 0u) {continue; /* No intersect. */}
+
+			uvec2 VPintersectData = visplaneCheckIndices[SSBOIndex];
+			uint visplaneValue = VPintersectData.x;
+
+			int higherProj = int(VPintersectData.y >> 16u) - 0x7FFF;
+			int lowerProj = int(VPintersectData.y & 0xFFFFu) - 0x7FFF;
+
+			if (((visplaneValue & 0x1) == 0u) || (fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
 			Visplane thisVisplane = visplanes[visplaneValue >> 1];
 
 			if (
-				(lowerHalf && thisVisplane.height > playerPosition.z) ||
-				(!lowerHalf && thisVisplane.height < playerPosition.z)
+				((lowerHalf) && (thisVisplane.height > playerPosition.z)) ||
+				((!lowerHalf) && (thisVisplane.height < playerPosition.z))
 			) {
-				//Fragray cannot possibly hit visplane.
+				//Frag's ray cannot possibly hit visplane.
 				continue;
 			}
 
 
 			float t = (playerPosition.z - thisVisplane.height) * invAntiProjection / horizontalScaling;
-			if (t < 0.0f || t >= maxRayDistance) {continue; /* Behind origin or out of range. */}
+			if ((t < 0.0f) || (t >= maxRayDistance)) {continue; /* Behind origin or out of range. */}
 			vec2 intersectPoint = playerPosition.xy + rayDirection * t;
-
-			vec2 minBB = min(thisVisplane.boundingBox.xy, thisVisplane.boundingBox.zw);
-			vec2 maxBB = max(thisVisplane.boundingBox.xy, thisVisplane.boundingBox.zw);
-
-			if (
-				(intersectPoint.x < minBB.x) || (intersectPoint.x > maxBB.x) ||
-				(intersectPoint.y < minBB.y) || (intersectPoint.y > maxBB.y) ||
-				!isInsideVP(intersectPoint, thisVisplane)
-			) {
-				//Fragray does not hit VP.
-				continue;
-			}
 
 			vec2 d = playerPosition.xy - intersectPoint;
 			thisIntersect.distanceSQ = dot(d,d);
@@ -583,7 +577,7 @@ void main() {
 			bvec4 textureFlags;
 			vec2 uv = getVisplaneUV(intersectPoint, thisVisplane, textureID, textureFlags);
 			thisIntersect.UV = vec3(
-				mix(uv.xy, uv.xy, int(textureFlags.x)),
+				mix(uv.xy, uv.xy, textureFlags.x),
 				textureID
 			);
 

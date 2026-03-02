@@ -30,7 +30,10 @@ def getValidity(uvec2:tuple[int,int]) -> bool:
 	(intersectionFound, index) = unpackIndices(uvec2[0]);
 	(lower, higher) = unpackProjections(uvec2[1]);
 
-	print(intersectionFound, index, lower, higher)
+	if (intersectionFound):
+		print(f"Found IDX: {index}, LOWER: {lower}, HIGHER: {higher}");
+	else:
+		print(f"Not found.");
 
 	if (not intersectionFound):
 		print("Intersection-bit was not true.");
@@ -51,5 +54,5 @@ def getValidity(uvec2:tuple[int,int]) -> bool:
 	return verdict;
 
 
-print(getValidity((5, 4294901760)));
-print(getValidity((7, 2420161034)));
+getValidity((5, 2156920832));
+getValidity((5, 2425852055));

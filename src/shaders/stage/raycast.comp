@@ -48,7 +48,8 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 	WallIntersect wallIntersects[]; //2D Raycast results;
 };
 layout(std430, binding=8) buffer visplaneCheckSSBO {
-	uint visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
+	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
+	//Stores index, and screen projections (near/far) for this vertical line.
 };
 layout(binding=0) uniform atomic_uint validWallIntersects;
 layout(binding=1) uniform atomic_uint validVisplaneIntersects;
@@ -79,7 +80,8 @@ uniform bool viewCorrection;
 
 
 float zoomEffect;
-#define EPSILON_ALT 1e-3f
+#define INF 1.0e7f
+#define EPSILON_ALT 1.0e-3f
 
 
 void writeNoWallIntersect(uint SSBOIndex) {
@@ -219,7 +221,7 @@ uint getProjectedZ(float wallDistanceSQ, float wallLowZ, float wallTopZ) {
 bool getLineIntersect(
 		vec2 lineStart, vec2 lineEnd, vec2 lineNormal,
 		vec2 rayStart, vec2 rayEnd, vec2 rayDelta,
-		out vec2 intersectPoint
+		out vec2 intersectPoint, out float t
 	) {
 
 	float projStart = dot(rayStart-lineStart, lineNormal);
@@ -229,7 +231,7 @@ bool getLineIntersect(
 		return false;
 	}
 
-	float t = projStart / (projEnd - projStart);
+	t = projStart / (projEnd - projStart);
 	intersectPoint = rayStart - rayDelta * t;
 	vec2 minLine = min(lineStart, lineEnd).xy;
 	vec2 maxLine = max(lineStart, lineEnd).xy;
@@ -245,7 +247,7 @@ bool getLineIntersect(
 }
 
 
-void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDelta2D, float distanceScalingSQ) {
+void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDelta2D, float horizontalScalingSQ) {
 	uint wallIndex = visibleWallIndices[IDX];
 	uint SSBOIndex = (screenX * numWalls) + wallIndex;
 	Wall thisWall = walls[wallIndex];
@@ -254,10 +256,11 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 	//Find wall intersect
 	WallIntersect intersect;
 	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+	float t;
 	bool success = getLineIntersect(
 		thisWall.start.xy, thisWall.end.xy, wallNormal,
 		playerPosition.xy, (playerPosition.xy + rayDelta2D), rayDelta2D,
-		intersect.position2D
+		intersect.position2D, t
 	);
 	if (!success) {
 		writeNoWallIntersect(SSBOIndex);
@@ -269,7 +272,7 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 	vec2 d = playerPosition.xy - intersect.position2D;
 	intersect.distanceSQ = dot(d, d); //Cheaper length() call
 	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersect.position2D, thisWall);
-	intersect.projections = getProjectedZ(intersect.distanceSQ * distanceScalingSQ, thisWall.start.z, thisWall.end.z);
+	intersect.projections = getProjectedZ(intersect.distanceSQ * horizontalScalingSQ, thisWall.start.z, thisWall.end.z);
 	wallIntersects[SSBOIndex] = intersect;
 }
 
@@ -294,36 +297,97 @@ bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
 	return true;
 }
 
-void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D) {
+
+uint encodeVPProjections(int higher, int lower) {
+	uint biasedHigher = uint(higher + 0x7FFF) & 0xFFFF;
+	uint biasedLower = uint(lower + 0x7FFF) & 0xFFFF;
+
+	return (biasedHigher << 16) | biasedLower;
+}
+
+
+void projectVPpoints(
+		float height,
+		float nearestT, float furthestT,
+		out int lower, out int higher,
+		float horizontalScaling
+	) {
+	float zScaling = aspectRatio * zoomEffect * (playerPosition.z - height);
+	float nDenom = max(nearestT * horizontalScaling, 1e-5);
+	float nearestY = renderResolution.y * (
+		0.5 - (zScaling / nDenom)
+	);
+	float fDenom = max(furthestT * horizontalScaling, 1e-5);
+	float furthestY = renderResolution.y * (
+		0.5 - (zScaling / fDenom)
+	);
+	lower = int(min(nearestY, furthestY));
+	higher = int(max(nearestY, furthestY));
+}
+
+
+void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D, float horizontalScaling) {
 	uint vpIndex = visibleVisplaneIndices[IDX];
 	uint SSBOIndex = (screenX * numVisplanes) + vpIndex;
 	Visplane thisVisplane = visplanes[vpIndex];
 
-	uint valueToWrite = 0u; //The lowest bit will represent whether a collision was found. The other 31 bits are the index.
+	//X: The lowest bit will represent whether a collision was found. The other 31 bits are the index.
+	//Y: Former 16 bits are biased higher-projection. Latter 16 bits are same for lower-projection. [SCREENSPACE]
+	uvec2 valueToWrite = uvec2(0u, 0u);
 
-	if (isInsideVP(playerPosition.xy, thisVisplane)) {
-		valueToWrite = (vpIndex << 1) | 0x1u;
-	} else {
-		for (uint vIndex=0; vIndex<thisVisplane.numVertices; vIndex++) {
-			vec2 currentVertex = getVertex(thisVisplane, vIndex);
-			vec2 nextVertex = getVertex(thisVisplane, (vIndex + 1) % thisVisplane.numVertices);
+	bool anyIntersect = false;
+	float nearestT = INF, furthestT = 0.0f;
 
-			vec2 edge = nextVertex - currentVertex;
-			vec2 edgeNormal = vec2(-edge.y, edge.x);
+	uint numberOfIntersects = 0u;
+	for (uint vIndex=0; vIndex<thisVisplane.numVertices; vIndex++) {
+		vec2 currentVertex = getVertex(thisVisplane, vIndex);
+		vec2 nextVertex = getVertex(thisVisplane, (vIndex + 1) % thisVisplane.numVertices);
 
-			vec2 intersectPoint;
+		vec2 edge = nextVertex - currentVertex;
+		vec2 edgeNormal = vec2(-edge.y, edge.x);
 
-			bool success = getLineIntersect(
-				currentVertex, nextVertex, edgeNormal,
-				playerPosition.xy, (playerPosition.xy + rayDelta2D), rayDelta2D,
-				intersectPoint
-			);
-			if (success) {
-				valueToWrite = (vpIndex << 1) | 0x1u;
-				break;
-			}
+		vec2 intersectPoint;
+		float t;
+		bool success = getLineIntersect(
+			currentVertex, nextVertex, edgeNormal,
+			playerPosition.xy,
+			playerPosition.xy + rayDelta2D,
+			rayDelta2D,
+			intersectPoint, t
+		);
+
+		if (success) {
+			anyIntersect = true;
+			float worldT = abs(t) * maxRayDistance;
+			nearestT = min(nearestT, worldT);
+			furthestT = max(furthestT, worldT);
+			numberOfIntersects++;
 		}
 	}
+
+	if (isInsideVP(playerPosition.xy + rayDelta2D, thisVisplane)) {
+		//If the end of the ray is inside the VP, because the VP was too big - Must still have an "upper" intersect.
+		furthestT = maxRayDistance;
+		anyIntersect = true;
+	}
+
+	if (anyIntersect) { 
+		int higher, lower;
+		uint encoded;
+		if (isInsideVP(playerPosition.xy, thisVisplane)) {
+			//Player is inside VP, lower proj will be invalid.
+			projectVPpoints(thisVisplane.height, furthestT, furthestT, lower, higher, horizontalScaling); //Still get higher, but with unused/overwritten lower.
+			encoded = encodeVPProjections(higher, higher) & 0xFFFF0000; //Zero-out the [lower] 16b.
+		} else if (numberOfIntersects > 0u) {
+			//Seems to have a problem when technically not inside VP but very close to being?
+			projectVPpoints(thisVisplane.height, nearestT, furthestT, lower, higher, horizontalScaling);
+			encoded = encodeVPProjections(higher, lower);
+		}
+		valueToWrite = uvec2(
+			(vpIndex << 1u) | 0x1u,	encoded
+		);
+	}
+
 	visplaneCheckIndices[SSBOIndex] = valueToWrite;
 }
 
@@ -339,8 +403,7 @@ void main() {
 
 	zoomEffect = (zoom) ? zoomFactor : 1.0f;
 	float rayOffset = -maxRayAngle + (screenX / float(renderResolution.x)) * 2.0f * maxRayAngle;
-	float distanceScalingSQ = (viewCorrection) ? cos(rayOffset) : 1.0f;
-	distanceScalingSQ *= distanceScalingSQ;
+	float horizontalScaling = (viewCorrection) ? cos(rayOffset) : 1.0f;
 	float rayAngleYaw = playerViewAngle + rayOffset;
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
@@ -349,8 +412,8 @@ void main() {
 
 
 	if (isWall) {
-		handle2DWallIntersect(screenX, IDX, rayDirection, rayDelta2D, distanceScalingSQ);
+		handle2DWallIntersect(screenX, IDX, rayDirection, rayDelta2D, horizontalScaling*horizontalScaling);
 	} else if (isVP) {
-		handle2DVisplaneIntersect(screenX, IDX - numVisibleWalls, rayDelta2D);
+		handle2DVisplaneIntersect(screenX, IDX - numVisibleWalls, rayDelta2D, horizontalScaling);
 	}
 }
