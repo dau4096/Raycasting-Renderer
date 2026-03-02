@@ -1496,7 +1496,7 @@ void prepareOpenGL() {
 	glObjectLabel(GL_BUFFER, GLIndex::wallIntersectSSBO, -1, "wallIntersectSSBO");
 
 	GLIndex::visplaneCheckSSBO = createShaderStorageBufferObject(
-		8, sizeof(uint) * currentRenderResolution.x * validVisplanes
+		8, sizeof(glm::uvec2) * currentRenderResolution.x * validVisplanes
 	);
 	glObjectLabel(GL_BUFFER, GLIndex::visplaneCheckSSBO, -1, "visplaneCheckSSBO");
 
