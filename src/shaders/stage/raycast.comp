@@ -72,8 +72,8 @@ layout(std430, binding=8) buffer visplaneCheckSSBO {
 	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 	//Stores index, and screen projections (near/far) for this vertical line.
 };
-layout(binding=0) uniform atomic_uint validWallIntersects;
-layout(binding=1) uniform atomic_uint validVisplaneIntersects;
+//Number of walls and number of visplanes found, in an atomic uint. (alternates walls and vps)
+layout(std430, binding=10) buffer numFoundObjectsAtomicSSBO {uint numFoundObjects[];};
 
 
 
@@ -145,13 +145,8 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 		intersect.position2D, t
 	);
 	if (!success) {
-		writeNoWallIntersect(SSBOIndex);
 		return;
 	}
-
-
-	float hUVy, lUVy; //High/Low UVs.
-	uint numUVRepeats; //Number of times the texture UV loops in that range, max 255.
 
 
 	intersect.normal2D = (dot(wallNormal, rayDirection) < 0.0f) ? wallNormal : -wallNormal;
@@ -159,7 +154,9 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersect.position2D, thisWall);
 	intersect.distanceSQ = dot(d, d); //Cheaper length() call
 	intersect.projections = getProjectedZ(intersect.distanceSQ * horizontalScalingSQ, thisWall.start.z, thisWall.end.z);
-	wallIntersects[SSBOIndex] = intersect;
+
+	uint insertIndex = atomicAdd(numFoundObjects[screenX * 2], 1);
+	wallIntersects[(screenX * numWalls) + insertIndex] = intersect;
 }
 //// WALL RAYCASTING FUNCTIONS ////
 
@@ -191,12 +188,6 @@ void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D, float ho
 	uint vpIndex = visibleVisplaneIndices[IDX];
 	uint SSBOIndex = (screenX * numVisplanes) + vpIndex;
 	Visplane thisVisplane = visplanes[vpIndex];
-
-	//X: The lowest bit will represent whether a collision was found. The other 31 bits are the index.
-	//Y: Former 16 bits are biased higher-projection. Latter 16 bits are same for lower-projection. [SCREENSPACE]
-	//Z: Upper encoded UV XY
-	//W: Lower encoded UV XY
-	uvec2 valueToWrite = uvec2(0u, 0u);
 
 	bool anyIntersect = false;
 	float nearestT = INF, furthestT = 0.0f;
@@ -246,12 +237,14 @@ void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D, float ho
 			projectVPpoints(thisVisplane.height, nearestT, furthestT, lower, higher, horizontalScaling);
 			encoded = encodeVPProjections(higher, lower);
 		}
-		valueToWrite = uvec2(
+
+		uint insertIndex = atomicAdd(numFoundObjects[screenX * 2 + 1], 1);
+		//X: The lowest bit will represent whether a collision was found. The other 31 bits are the index.
+		//Y: Former 16 bits are biased higher-projection. Latter 16 bits are same for lower-projection. [SCREENSPACE]
+		visplaneCheckIndices[(screenX * numVisplanes) + insertIndex] = uvec2(
 			(vpIndex << 1u) | 0x1u,	encoded
 		);
 	}
-
-	visplaneCheckIndices[SSBOIndex] = valueToWrite;
 }
 //// VISPLANE PROJECTION FUNCTIONS ////
 

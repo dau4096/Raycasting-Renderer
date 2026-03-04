@@ -100,6 +100,8 @@ layout(std430, binding=7) buffer wallIntersectSSBO {
 layout(std430, binding=8) buffer visplaneCheckSSBO {
 	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
 };
+//Number of walls and number of visplanes found, in an atomic uint. (alternates walls and vps)
+layout(std430, binding=10) buffer numFoundObjectsAtomicSSBO {uint numFoundObjects[];};
 //// BUFFERS ////
 
 
@@ -165,13 +167,11 @@ void main() {
 
 	//Iterate through all the walls. (2D)
 	uint wallStartIndex = uint(framePosition.x * numWalls);
-	for (int idx=0; idx<numVisibleWalls; idx++) {
-		//Access walls via a buffer containing indices of visible walls (could be onscreen.)
-		uint actualIDX = visibleWallIndices[idx];
-		uint SSBOIndex = wallStartIndex + actualIDX;
+	for (int idx=0; idx<numFoundObjects[framePosition.x * 2]; idx++) { //numFoundObjects[framePosition.x * 2]
+		//Access walls via a buffer containing indices of 2D-raycasted wall intersections.
+		uint SSBOIndex = wallStartIndex + idx;
 		WallIntersect intersect = wallIntersects[SSBOIndex];
 		float wallDistanceSQ = intersect.distanceSQ;
-		if (wallDistanceSQ <= MIN_WALL_DIST * MIN_WALL_DIST) {continue; /* No intersect found, i.e. distance is impossible. */}
 
 		uint wallIndex = (intersect.wallIndexAndXUV >> 8u);
 		float xUV = (intersect.wallIndexAndXUV & 0xFFu) / 255.0f;
@@ -185,7 +185,7 @@ void main() {
 		if (yUV == INF) {continue; /* Above/Below wall */}
 
 		thisIntersect.distanceSQ = wallDistanceSQ;
-		thisIntersect.index = actualIDX;
+		thisIntersect.index = wallIndex;
 		thisIntersect.position = vec3(intersect.position2D, fragZ);
 		thisIntersect.UV = (textureFlags.x) ? vec3(yUV, xUV, textureID) : vec3(xUV, yUV, textureID);
 		thisIntersect.foundType = 1;
@@ -202,19 +202,17 @@ void main() {
 		float invAntiProjection = aspectRatio * zoomEffect / antiProjection;
 		//Iterate through all visplanes. (3D)
 		uint visplaneStartIndex = uint(framePosition.x * numVisplanes);
-		for (int idx=0; idx<numVisibleVisplanes; idx++) {
-			//Access visplanes via a buffer containing indices of visible visplanes (could be onscreen.)
-			uint actualIDX = visibleVisplaneIndices[idx];
-			uint SSBOIndex = visplaneStartIndex + actualIDX;
-
+		for (int idx=0; idx<numFoundObjects[framePosition.x * 2 + 1]; idx++) { //numFoundObjects[framePosition.x * 2 + 1]
+			//Access visplanes via a buffer containing indices of 2D-raycasted visplane intersections.
+			uint SSBOIndex = visplaneStartIndex + idx;
 			uvec2 VPintersectData = visplaneCheckIndices[SSBOIndex];
-			uint visplaneValue = VPintersectData.x;
 
 			int higherProj = int(VPintersectData.y >> 16u) - 0x7FFF;
 			int lowerProj = int(VPintersectData.y & 0xFFFFu) - 0x7FFF;
 
-			if (((visplaneValue & 0x1) == 0u) || (fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
-			Visplane thisVisplane = visplanes[visplaneValue >> 1];
+			if ((fragPosition.y < lowerProj) || (fragPosition.y > higherProj)) {continue; /* No intersect. */}
+			uint vpIndex = VPintersectData.x >> 1;
+			Visplane thisVisplane = visplanes[vpIndex];
 
 			if (
 				((lowerHalf) && (thisVisplane.height > playerPosition.z)) ||
@@ -232,7 +230,7 @@ void main() {
 			vec2 d = playerPosition.xy - intersectPoint;
 			thisIntersect.distanceSQ = dot(d,d);
 			thisIntersect.position = vec3(intersectPoint, thisVisplane.height);
-			thisIntersect.index = actualIDX;
+			thisIntersect.index = vpIndex;
 			thisIntersect.foundType = 2;
 
 			int textureID;

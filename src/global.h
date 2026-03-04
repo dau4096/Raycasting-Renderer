@@ -141,7 +141,7 @@ inline GLuint portalTextureID, surfaceLightMapsArrayID, CRTbezelTexture;
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
-inline GLuint shadowMapResolutionsSSBO;
+inline GLuint shadowMapResolutionsSSBO, numFoundObjectsAtomicSSBO;
 
 
 inline std::set<std::string> supportedExtensions;

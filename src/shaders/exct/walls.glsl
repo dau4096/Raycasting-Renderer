@@ -1,14 +1,6 @@
 /* walls.glsl */
 //Contains all wall visual processing funcs.
 
-
-
-void writeNoWallIntersect(uint SSBOIndex) {
-	WallIntersect noHit;
-	noHit.distanceSQ = -1.0f; //Impossible depth means no hit.
-	wallIntersects[SSBOIndex] = noHit;
-}
-
 float xUVFromWorldspace(vec2 intersectPoint, in Wall thisWall) {
 	return mix(intersectPoint.x, intersectPoint.y, float(abs(thisWall.direction.y) > abs(thisWall.direction.x)));
 }

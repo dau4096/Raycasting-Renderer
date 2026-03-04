@@ -1496,7 +1496,6 @@ void prepareOpenGL() {
 	glObjectLabel(GL_FRAMEBUFFER, GLIndex::displacementFBO, -1, "displacementFBO");
 
 
-	createLightLOSSSBO(9); //At binding 9.
 	GLIndex::allVisplanesSSBO = createShaderStorageBufferObject(
 		0, sizeof(structs::VisplaneGPU) * validVisplanes
 	);
@@ -1541,6 +1540,13 @@ void prepareOpenGL() {
 		8, sizeof(glm::uvec2) * currentRenderResolution.x * validVisplanes
 	);
 	glObjectLabel(GL_BUFFER, GLIndex::visplaneCheckSSBO, -1, "visplaneCheckSSBO");
+
+	createLightLOSSSBO(9); //At binding 9.
+
+	GLIndex::numFoundObjectsAtomicSSBO = createShaderStorageBufferObject(
+		10, sizeof(uint) * currentRenderResolution.x * 2, GL_STREAM_COPY
+	);
+	glObjectLabel(GL_BUFFER, GLIndex::numFoundObjectsAtomicSSBO, -1, "numFoundObjectsAtomicSSBO");
 
 
 
@@ -2098,6 +2104,7 @@ namespace frame {
 std::vector<uint> visibleVisplaneIndices;
 std::vector<uint> visibleWallIndices;
 std::vector<uint> visibleDisplacementIndices;
+static uint zero = 0u;
 void updateSSBOs(bool drawLightBlockers) {
 	visibleVisplaneIndices.clear();
 	visibleWallIndices.clear();
@@ -2130,6 +2137,7 @@ void updateSSBOs(bool drawLightBlockers) {
 	graphics::updateShaderStorageBufferObject<uint>(
 		GLIndex::visibleWallIndicesSSBO, &visibleWallIndices
 	);
+	glClearNamedBufferData(GLIndex::numFoundObjectsAtomicSSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero); //Clear to 0s
 	utils::GLErrorcheck("Updating SSBOs", true);
 }
 
