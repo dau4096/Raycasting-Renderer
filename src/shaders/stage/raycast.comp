@@ -231,7 +231,9 @@ void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D, float ho
 		if (isInsideVP(playerPosition.xy, thisVisplane)) {
 			//Player is inside VP, lower proj will be invalid.
 			projectVPpoints(thisVisplane.height, furthestT, furthestT, lower, higher, horizontalScaling); //Still get higher, but with unused/overwritten lower.
-			encoded = encodeVPProjections(higher, higher) & 0xFFFF0000; //Zero-out the [lower] 16b.
+			encoded = encodeVPProjections(higher, higher);
+			if (playerPosition.z > thisVisplane.height) {encoded &= 0xFFFF0000; /* Zero-out the [lower] 16b. */}
+			else {encoded |= 0xFFFF0000; /* Set the [higher] 16b to 0xFFFF. */}
 		} else if (numberOfIntersects > 0u) {
 			//Seems to have a problem when technically not inside VP but very close to being?
 			projectVPpoints(thisVisplane.height, nearestT, furthestT, lower, higher, horizontalScaling);
