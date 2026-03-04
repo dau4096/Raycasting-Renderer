@@ -67,14 +67,14 @@ void unpackWallProjections(in Wall thisWall, uint projections, out float screenY
 
 
 
-float getWallYUVsingle(in Wall thisWall, float a, float invTextureScaleY, bool useWorldSpaceY, float textureOffsetY) {
-	float z = mix(thisWall.start.z, thisWall.end.z, a);
-	return 1.0f - (mix(a, z, float(useWorldSpaceY)) * invTextureScaleY) + textureOffsetY;
+float getWallYUVsingle(float z, float a, float invTextureScaleY, bool useWorldSpaceY, float textureOffsetY) {
+	//return 1.0f - (mix(a, z, float(useWorldSpaceY)) * invTextureScaleY) + textureOffsetY;
+	return (z * invTextureScaleY) + textureOffsetY;
 }
 
 
 void getWallYUVextremes(in Wall thisWall, uint projections, out float hUVy, out float lUVy, out uint numUVRepeats) {
-	//Only get the upper/lowermost parts of the wall's yUV.
+	//Only get the uppermost/lowermost parts of the wall's yUV.
 	//2nd formatting data;
 	bvec2 useWorldSpace;
 	vec2 invTextureScale;
@@ -84,9 +84,10 @@ void getWallYUVextremes(in Wall thisWall, uint projections, out float hUVy, out 
 		invTextureScale, textureOffset
 	);
 
-	hUVy = getWallYUVsingle(thisWall, 1.0f, invTextureScale.y, useWorldSpace.y, textureOffset.y);
-	lUVy = getWallYUVsingle(thisWall, 0.0f, invTextureScale.y, useWorldSpace.y, textureOffset.y);
+	//Somehow seems to depend on wall height, or possibly doesnt? everything tiles twice vertically, except the ones that don't inexplicably!?
+	hUVy = getWallYUVsingle(thisWall.end.z, 1.0f, invTextureScale.y, useWorldSpace.y, textureOffset.y);
+	lUVy = getWallYUVsingle(thisWall.start.z, 0.0f, invTextureScale.y, useWorldSpace.y, textureOffset.y);
 
 	//Number of times the wall repeats in the range. Minimum 1, maximum 255.
-	numUVRepeats = uint(ceil(abs(hUVy - lUVy)));
+	numUVRepeats = uint(ceil(abs(1.0f / invTextureScale.y)));
 }
