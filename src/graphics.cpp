@@ -68,21 +68,63 @@ void APIENTRY openGLErrorCallback(
 
 
 
+static unsigned int lineNumberAt(const std::string& s, size_t pos) {
+	//Find [#line] number from position
+    return std::count(s.begin(), s.begin() + pos, '\n');
+}
+
+std::string preprocessIncludes(const std::string& source, const std::string& currentFile) {
+    std::regex includeRegex(R"(^\s*#include\s*<([^>]+)>)", std::regex_constants::multiline);
+
+    std::string result;
+    std::sregex_iterator it(source.begin(), source.end(), includeRegex);
+    std::sregex_iterator end;
+
+    size_t lastPos = 0;
+    for (; it!=end; it++) {
+        const std::smatch& match = *it;
+
+        //Copy text before include
+        result.append(source.substr(lastPos, match.position() - lastPos));
+
+        std::string includeFile = match[1].str();
+        std::string includePath = "src/shaders/" + includeFile + ".glsl";
+
+        std::string includedSource = utils::readFile(includePath);
+
+        unsigned int includeLine = lineNumberAt(source, match.position());
+
+        result += "#line 1 \"src/shaders/"+includeFile+".glsl\"\n"+includedSource+"\n"+"#line "+std::to_string(includeLine+1u)+" \""+currentFile+"\"\n";
+
+        lastPos = match.position() + match.length();
+    }
+
+    // Append remaining source
+    result.append(source.substr(lastPos));
+
+    return result;
+}
+
+
+
 GLuint compileShader(GLenum shaderType, string filePath) {
 	std::string source = utils::readFile(filePath);
+	source = preprocessIncludes(source, filePath);
 	const char* src = source.c_str();
 
+	//Create a shader id
 	GLuint shader = glCreateShader(shaderType);
 	if (shader == 0) {
 		raise("Error: Failed to create shader.");
 		return 0;
 	}
 
+	//Attach the shader src
 	glShaderSource(shader, 1, &src, nullptr);
-
 	glCompileShader(shader);
 	
 
+	//Errorcheck
 	GLint success;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if (!success) {
