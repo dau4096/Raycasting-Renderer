@@ -26,10 +26,10 @@
 *.lib
 
 # Compiled programs
-app
+prgm
 *.exe
 *.ini
 
 # Other
 notes.md
-stb_image*.h
+tst.py
