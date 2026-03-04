@@ -1,0 +1,567 @@
+/* lightingStatic.fixed.comp */
+#version 460 core
+
+layout(binding=0) uniform sampler2DArray textureArray;
+layout(binding=1) uniform sampler2DArray normalMapArray;
+layout(rgba32f, binding=0) writeonly uniform image2DArray shadowMaps;
+
+uniform vec3 startPosition;
+uniform vec3 inNormal;
+uniform vec3 endPosition;
+uniform ivec2 mapResolution;
+uniform bool allowTransparency;
+uniform int debugMode; //Might be UINT?
+uniform float maxRayDistance;
+
+uniform uint objectType;
+uniform uint objectIndex;
+
+uniform uint numVisplanes;
+uniform uint numWalls;
+uniform uint numDisplacements;
+uniform uint numLights;
+
+//Sun
+uniform vec3 sunDirection;
+uniform vec3 sunColour;
+
+
+struct Visplane {
+	vec4 vertices[4];	//2D points
+	uint numVertices;	//Number of 2D points
+	float height;		//1D height (Z)
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	vec4 boundingBox;	//Bounding box in 2D.
+	uint type;			//Visplanetype.
+	float extra;		//Extra data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
+};
+layout(std430, binding=0) buffer visplaneSSBO {
+	Visplane visplanes[];
+};
+
+struct Wall {
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Walltype.
+	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
+};
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
+};
+
+struct Displacement {
+	vec4 vertices[3];
+	vec2 UV[3];
+	vec4 normal_texID;
+};
+layout(std430, binding=4) buffer displacementSSBO {
+	Displacement displacements[];
+};
+
+struct Light {
+	vec3 position;		//Light Position.
+	vec3 colour;		//Light Colour.
+	float intensity;	//Light Intensity.
+	bool enabled;		//Light Validity.
+	uint LOSSSBOdata;	//Data surrounding the LOSSSBO. (Start index, number of entries.)
+};
+layout(std430, binding=3) buffer lightSSBO {
+	Light lights[];
+};
+layout(std430, binding=9) buffer LOSSSBO {
+	uint losData[];
+};
+
+
+#define NORMAL_UP vec3(0.0f, 0.0f, 1.0f)
+#define EPSILON 1e-5f
+#define EPSILON_ALT 1e-3f
+#define T_NONE 0x0u
+#define T_WALL 0x1u
+#define T_VISPLANE 0x2u
+#define T_DISPLACEMENT 0x3u
+
+
+
+void unpackTextureFormattingBits1(
+		uint inputBits, out bvec4 textureFlags,
+		out int textureID
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	- textureFlags; (4 bit flags) [0 - 15]
+		1111 0000 0000 0000 0000 0000 0000 0000
+	- textureID; (12 bit uint) [0 - 65535]
+		0000 1111 1111 1111 0000 0000 0000 0000
+	*/
+	textureFlags = bvec4(
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u),
+		bool(inputBits & 0x20000000u),
+		bool(inputBits & 0x10000000u)
+	);
+
+	uint texIDbits = (inputBits >> 16u) & 0xFFFu;
+	textureID = (texIDbits == 0xFFFu) ? -1 : int(texIDbits);
+}
+void unpackTextureFormattingBits2(
+		uint inputBits, out bvec2 isWorldspace,
+		out vec2 invTextureScale, out vec2 textureOffset
+	) {
+	/*
+	- Full 32bits; (uint)
+		0000 0000 0000 0000 0000 0000 0000 0000
+	isWorldspace.x; (bool) [0 / 1]
+		1000 0000 0000 0000 0000 0000 0000 0000
+	- isWorldspace.y; (bool) [0 / 1]
+		0100 0000 0000 0000 0000 0000 0000 0000
+	- textureScale.x; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0011 1111 1100 0000 0000 0000 0000 0000
+	- textureScale.y; ((8-bit uint) / 16.0f) [0.0 - 16.0]
+		0000 0000 0011 1111 1100 0000 0000 0000
+	- textureOffset.x; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0011 1111 1000 0000
+	- textureOffset.y; ((7-bit uint) / 128.0f) [0.0 - 1.0]
+		0000 0000 0000 0000 0000 0000 0111 1111
+	*/
+
+	isWorldspace = bvec2(
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u)
+	);
+
+	invTextureScale = 16.0f / vec2(
+		float((inputBits >> 22u) & 0xFFu),
+		float((inputBits >> 14u) & 0xFFu)
+	);
+
+	textureOffset = vec2(
+		float((inputBits >> 7u) & 0x7Fu),
+		float((inputBits >> 0u) & 0x7Fu)
+	) / 128.0f;
+}
+
+
+
+
+vec2 getVertex(Visplane thisVisplane, uint index) {
+	uint actualIndex = index / 2;
+	return (index % 2 == 0) ? thisVisplane.vertices[actualIndex].xy : thisVisplane.vertices[actualIndex].zw;
+}
+
+bool isInsideVP(vec2 point2D, Visplane thisVisplane) {
+	for (uint i=0; i<thisVisplane.numVertices; i++) {
+		vec2 a = getVertex(thisVisplane, i);
+		vec2 b = getVertex(thisVisplane, (i + 1) % thisVisplane.numVertices);
+		vec2 edge = b - a;
+		vec2 toPoint = point2D - a;
+		vec2 normal = vec2(-edge.y, edge.x); //90° Anti-Clockwise
+
+		if (dot(normal, toPoint) < -EPSILON) {return false; /* Point is outside the edge */}
+	}
+	return true;
+}
+
+
+
+
+vec2 getWallUV(vec3 position3D, Wall thisWall, out int textureID, out bvec4 textureFlags) {
+	//Unpack formatting bits
+	unpackTextureFormattingBits1(thisWall.textureData1, textureFlags, textureID);
+	bvec2 useWorldSpace;
+	vec2 invTextureScale, textureOffset;
+	unpackTextureFormattingBits2(thisWall.textureData2, useWorldSpace, invTextureScale, textureOffset);
+
+	//Select UV type from bits;
+	vec2 local = vec2(
+		mix(
+			(position3D.y - thisWall.start.y) / (thisWall.end.y - thisWall.start.y),
+			(position3D.x - thisWall.start.x) / (thisWall.end.x - thisWall.start.x),
+			int(abs(thisWall.direction.y) > abs(thisWall.direction.x))
+		),
+		position3D.z
+	) * invTextureScale;
+	vec2 world = vec2(
+		mix(position3D.x, position3D.y, int(abs(thisWall.direction.y) > abs(thisWall.direction.x))),
+		position3D.z
+	) * invTextureScale;
+	vec2 uv = mix(
+		local,	//Local UV
+		world,	//World UV
+		useWorldSpace
+	);
+	uv *= vec2(1.0f, -1.0f);
+
+	return uv + textureOffset;
+}
+
+
+vec2 getVisplaneUV(vec2 position2D, Visplane thisVisplane, out int textureID, out bvec4 textureFlags) {
+	//Unpack formatting bits
+	unpackTextureFormattingBits1(thisVisplane.textureData1, textureFlags, textureID);
+	bvec2 useWorldSpace;
+	vec2 invTextureScale, textureOffset;
+	unpackTextureFormattingBits2(thisVisplane.textureData2, useWorldSpace, invTextureScale, textureOffset);
+
+	//Select UV type from bits;
+	vec2 uv = mix(
+		(position2D - thisVisplane.boundingBox.xy) / (thisVisplane.boundingBox.xy - thisVisplane.boundingBox.zw),	//Local UV
+		position2D * invTextureScale,																				//World UV
+		useWorldSpace
+	);
+
+	return uv + textureOffset;
+}
+
+
+//LOS
+vec4 globalLightTint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+bool wallCheck3D(vec3 pointA, vec3 pointB, Wall thisWall, vec3 LOSDelta) {
+	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+	float projStart = dot(pointA.xy-thisWall.start.xy, wallNormal);
+	float projEnd = dot(pointB.xy-thisWall.start.xy, wallNormal);
+	if (projStart * projEnd >= 0.0f) {return false; /* Ray never crosses wall. */}
+
+	float t = projStart / (projEnd - projStart);
+	vec3 intersectPoint = pointA - LOSDelta * t;
+	vec3 minWall = min(thisWall.start, thisWall.end);
+	vec3 maxWall = max(thisWall.start, thisWall.end);
+	if (
+		intersectPoint.x + EPSILON_ALT < minWall.x || intersectPoint.x - EPSILON_ALT > maxWall.x ||
+		intersectPoint.y + EPSILON_ALT < minWall.y || intersectPoint.y - EPSILON_ALT > maxWall.y ||
+		intersectPoint.z + EPSILON_ALT < minWall.z || intersectPoint.z - EPSILON_ALT > maxWall.z
+	) {
+		//Outside of valid wall segment.
+		return false;
+	}
+
+	if (allowTransparency) {
+		int textureID;
+		bvec4 textureFlags;
+		vec2 UV = getWallUV(intersectPoint, thisWall, textureID, textureFlags);
+		vec4 surfaceColour = textureLod(textureArray, vec3(UV.xy, textureID), 0.0f);
+		if (surfaceColour.a > 0.75f) {
+			return true;
+		}
+		if (surfaceColour.a > EPSILON_ALT) {
+			globalLightTint.rgba *= surfaceColour.rgba;
+		}
+	} else {
+		return true;
+	}
+
+	return false;
+}
+
+
+bool visplaneCheck3D(vec3 pointA, vec3 pointB, Visplane thisVisplane, vec3 LOSDelta) {
+	if (thisVisplane.height < min(pointA.z, pointB.z) || thisVisplane.height > max(pointA.z, pointB.z)) {return false;}
+
+
+	if (abs(LOSDelta.z) < EPSILON) {return false;}
+
+	float tFrac = (thisVisplane.height - pointA.z) / LOSDelta.z;
+	if (tFrac <= 0.0 || tFrac >= 1.0) {return false;}
+
+	vec2 intersectPoint = (pointA + LOSDelta * tFrac).xy;
+	if (isInsideVP(intersectPoint.xy, thisVisplane)) {
+		if (allowTransparency) {
+			int textureID;
+			bvec4 textureFlags;
+			vec2 UV = getVisplaneUV(intersectPoint, thisVisplane, textureID, textureFlags);
+			vec4 surfaceColour = textureLod(textureArray, vec3(UV.xy, textureID), 0.0f);
+			if (surfaceColour.a > 0.75f) {
+				return true;
+			}
+			if (surfaceColour.a > EPSILON_ALT) {
+				globalLightTint.rgba *= surfaceColour.rgba;
+			}
+		} else {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement, vec3 LOSDelta) {
+	vec3 edgeA = thisDisplacement.vertices[1].xyz - thisDisplacement.vertices[0].xyz;
+	vec3 edgeB = thisDisplacement.vertices[2].xyz - thisDisplacement.vertices[0].xyz;
+	vec3 rayCrossEdgeB = cross(LOSDelta, edgeB);
+	float det = dot(edgeA, rayCrossEdgeB);
+
+	if (det > -EPSILON && det < EPSILON) {return false; /* Near parallel */}
+
+	float invDeterminant = 1.0f / det;
+	vec3 s = pointA - thisDisplacement.vertices[0].xyz;
+	float u = invDeterminant * dot(s, rayCrossEdgeB);
+	if ((u < 0 && abs(u) > EPSILON) || (u > 1 && abs(u-1) > EPSILON)) {return false; /* No hit. */}
+
+	vec3 sCrossEdgeA = cross(s, edgeA);
+	float v = invDeterminant * dot(LOSDelta, sCrossEdgeA);
+	if ((v < 0 && abs(v) > EPSILON) || (u + v > 1 && abs(u + v - 1) > EPSILON)) {return false; /* No hit. */}
+
+	float t = invDeterminant * dot(edgeB, sCrossEdgeA);
+	if (t > EPSILON) {
+		if (allowTransparency) {
+			vec2 UV = ((1.0f - u - v) * thisDisplacement.UV[0]) + (u * thisDisplacement.UV[1]) + (v * thisDisplacement.UV[2]);
+			vec4 surfaceColour = textureLod(textureArray, vec3(UV.xy, thisDisplacement.normal_texID.w), 0.0f);
+			if (surfaceColour.a >= 0.75f) {
+				return true;
+			}
+			if (surfaceColour.a > EPSILON_ALT) {
+				globalLightTint.rgba *= surfaceColour.rgba;
+			}
+		} else {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex, uint foundType) {
+	vec3 LOSDelta = pointB - pointA;
+
+	//Iterate through all the walls. (2D)
+	for (int idx=0; idx<numWalls; idx++) {
+		Wall thisWall = walls[idx];
+		if (idx == thisIndex && foundType == T_WALL) {continue; /* Wall is the index calling the LOS check. */}
+		bool wallResult = wallCheck3D(pointA, pointB, thisWall, LOSDelta);
+		if (wallResult) {return true; /* Exit early. */}
+	}
+
+
+	//Iterate through all visplanes. (3D-ish)
+	for (int idx=0; idx<numVisplanes; idx++) {
+		Visplane thisVisplane = visplanes[idx];
+		if (idx == thisIndex && foundType == T_VISPLANE) {continue; /* Visplane is the index calling the LOS check. */}
+		bool visplaneResult = visplaneCheck3D(pointA, pointB, thisVisplane, LOSDelta);
+		if (visplaneResult) {return true; /* Exit early. */}
+	}
+
+	for (int idx=0; idx<numDisplacements; idx++) {
+		Displacement thisDisplacement = displacements[idx];
+		if (idx == thisIndex && foundType == T_DISPLACEMENT) {continue; /* Displacement is the index calling the LOS check. */}
+		bool displacementResult = displacementCheck3D(pointA, pointB, thisDisplacement, LOSDelta);
+		if (displacementResult) {return true; /* Exit early. */}
+	}
+
+	return false;
+}
+
+bool checkLOSLightSpecific(vec3 origin, Light thisLight, int foundIndex, uint foundType) {
+	uint lightLOSDataStartIndex = thisLight.LOSSSBOdata >> 16u;		//Former 4 bytes.
+	uint lightLOSDataEntryCount = thisLight.LOSSSBOdata & 0xFFFFu;	//Latter 4 bytes.
+	if (lightLOSDataEntryCount < 1) {return false; /* Cannot possibly hit anything because it has nothing to hit. */}
+	vec3 LOSDelta = thisLight.position - origin;
+
+	for (uint entryIndex=lightLOSDataStartIndex; entryIndex<lightLOSDataStartIndex+lightLOSDataEntryCount; entryIndex++) {
+		uint thisObjectData = losData[entryIndex];
+		uint thisObjectIndex = thisObjectData >> 3u; //Former 29 bits.
+		uint thisObjectType = thisObjectData & 0x7u; //Latter 3 bits.
+
+		switch(thisObjectType) {
+			case T_WALL: { //Walls
+				if (thisObjectIndex == foundIndex && foundType == T_WALL) {continue; /* Wall is the index calling the LOS check. */}
+				Wall thisWall = walls[thisObjectIndex];
+				bool wallResult = wallCheck3D(origin, thisLight.position, thisWall, LOSDelta);
+				if (wallResult) {return true; /* Exit early. */}
+				break;
+			}
+
+			case T_VISPLANE: { //Visplanes
+				if (thisObjectIndex == foundIndex && foundType == T_VISPLANE) {continue; /* Visplane is the index calling the LOS check. */}
+				Visplane thisVisplane = visplanes[thisObjectIndex];
+				bool visplaneResult = visplaneCheck3D(origin, thisLight.position, thisVisplane, LOSDelta);
+				if (visplaneResult) {return true; /* Exit early. */}
+				break;
+			}
+
+			case T_DISPLACEMENT: { //Displacements
+				if (thisObjectIndex == foundIndex && foundType == T_DISPLACEMENT) {continue; /* Displacement is the index calling the LOS check. */}
+				Displacement thisDisplacement = displacements[thisObjectIndex];
+				bool displacementResult = displacementCheck3D(origin, thisLight.position, thisDisplacement, LOSDelta);
+				if (displacementResult) {return true; /* Exit early. */}
+				break;
+			}
+
+			default: { //Should not be called as LOS data only stores the former 3; but handle it someway anyway.
+				break;
+			}
+		}
+	}
+
+	return false;
+}
+
+
+
+
+float getNormalDot(vec3 normal, vec3 direction) {
+	if (dot(normal, normal) < EPSILON) {
+		return 1.0f; /* When normal is invalid (all 0s, used on sprites/sky where no normal exists) then treat it as 1.0f. */
+	}
+	return dot(normal, direction);
+}
+
+
+void getNormal(vec3 normalMapValue, inout vec3 surfaceNormal, uint surfaceType) {
+	switch (surfaceType) {
+		case T_WALL: {
+			//Tangent-space normals.
+			vec3 tangentNormal = normalize(normalMapValue * 2.0f - 1.0f);
+			vec3 N = surfaceNormal;
+			vec3 T = (abs(N.z) > 0.999f) ? vec3(1.0f, 0.0f, 0.0f) : normalize(cross(NORMAL_UP, N));
+			vec3 B = cross(N, T);
+		
+			//Tangent-space to worldspace.
+			surfaceNormal = normalize(mat3(T, B, N) * tangentNormal) * vec3(1.0f, 1.0f, -1.0f);
+			break;
+		}
+		case T_VISPLANE: {
+			vec3 thisNormal = normalMapValue * 2.0f - 1.0f;
+			surfaceNormal = thisNormal * vec3(1.0f, 1.0f, sign(surfaceNormal.z));
+			break;
+		}
+
+		default: {
+			return;
+		}
+	}
+}
+
+
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+
+
+void exit(ivec3 mapPosition) {
+	imageStore(shadowMaps, mapPosition, vec4(1.0f, 0.0f, 1.0f, 0.0f));
+	return;
+}
+
+
+vec3 calculateLighting(vec3 interpPos, vec3 fragNormal, uint objectIndex) {
+	vec3 lightColour = vec3(0.0f, 0.0f, 0.0f);
+	if ((debugMode > 0) && (debugMode != 3)) { //Debug modes, aside from Lighting.
+		return vec3(1.0f, 1.0f, 1.0f);
+	}
+
+	//Iterate through all lights.
+	for (uint lightIndex=0u; lightIndex<numLights; lightIndex++) {
+		Light thisLight = lights[lightIndex];
+		if (!thisLight.enabled) {continue; /* Light is turned off. */}
+
+		vec3 delta = thisLight.position - interpPos;
+		if (dot(delta,delta) < EPSILON_ALT) {
+			lightColour += thisLight.colour;
+		} else {
+			vec3 lightDir = normalize(delta);
+			float normalDot = getNormalDot(fragNormal, lightDir);
+			if (normalDot <= EPSILON_ALT) {continue; /* Surface would reflect no lighting due to cosine of angles being negative. */}
+
+			float distSQ = dot(delta, delta);
+			float attenuation = max(0.0f, 1.0f - abs(distSQ / (thisLight.intensity*thisLight.intensity))) * normalDot; //Intensity fades with distance to light.
+			if (attenuation <= EPSILON_ALT) {continue; /* Light is too dim to contribute. */}
+
+			
+			//Shadow Checks
+			bool inShadow = checkLOSLightSpecific(interpPos, thisLight, int(lightIndex), objectType);
+
+			if (!inShadow) {
+				lightColour += thisLight.colour * attenuation * globalLightTint.rgb * globalLightTint.a;
+			}
+		}
+	}
+
+
+	//Calculate sun;
+	if (dot(sunColour, sunColour) > 0.025f) { //Sun's effect is noticable;
+		float normalDot = getNormalDot(fragNormal, normalize(sunDirection));
+		vec3 offset = fragNormal * 0.01f;
+		if (normalDot > -0.125f) {
+			bool sunBlocked = checkLOSGeneral(interpPos + offset, interpPos + sunDirection * maxRayDistance, -1, T_NONE);
+			if (!sunBlocked) {
+				float sunNormalDot = normalDot * 0.5f + 0.5f;
+				lightColour += sunColour.rgb * sunNormalDot * globalLightTint.rgb * globalLightTint.a;
+			}
+		}
+	}
+
+
+	return lightColour;
+}
+
+
+
+
+
+void main() {
+	uint invokeX = gl_GlobalInvocationID.x;
+	uint invokeY = gl_GlobalInvocationID.y;
+	uint frontBack = gl_GlobalInvocationID.z; //0: Front face 1: Backface
+	if ((invokeX >= mapResolution.x) || (invokeY >= mapResolution.y)) {return; /* Offscreen or out of range. */}
+
+	uint mapIndex = ((objectIndex + ((objectType == T_WALL) ? numVisplanes : 0)) * 2u) + frontBack;
+	ivec3 mapPosition = ivec3(invokeX, invokeY, mapIndex);
+	vec2 mapDecimal = vec2(invokeX, invokeY) / vec2(mapResolution);
+	vec3 interpPos;
+
+	Visplane thisVisplane;
+	Wall thisWall;
+
+	vec2 textureUV;
+	uint textureID;
+	bvec4 textureFlags;
+
+	switch (objectType) {
+		case T_WALL: {
+			thisWall = walls[objectIndex];
+			interpPos = vec3(
+				mix(thisWall.start.xy, thisWall.end.xy, mapDecimal.x),
+				mix(thisWall.start.z, thisWall.end.z, mapDecimal.y)
+			);
+			textureUV = getWallUV(interpPos.xyz, thisWall, textureID, textureFlags);
+			break;
+		}
+		case T_VISPLANE: {
+			thisVisplane = visplanes[objectIndex];
+			interpPos = vec3(
+				mix(thisVisplane.boundingBox.xy, thisVisplane.boundingBox.zw, mapDecimal.xy),
+				thisVisplane.height
+			);
+			if (!isInsideVP(interpPos.xy, thisVisplane)) {
+				//Not inside actual visplane, exit.
+				exit(mapPosition);
+				return;
+			}
+			textureUV = getVisplaneUV(interpPos.xy, thisVisplane, textureID, textureFlags);
+			break;
+		}
+		default: {
+			//Unknown type; reject.
+			return;
+		}
+	}
+
+
+	vec4 mapAlbedo = texture(textureArray, vec3(textureUV.xy, textureID)).rgba;
+
+	vec3 mainNormal = (bool(frontBack)) ? inNormal : -inNormal;
+	vec3 mapNormal = texture(normalMapArray, vec3(textureUV.xy, textureID)).xyz;
+	getNormal(mapNormal, mainNormal, objectType);
+
+	vec3 finalLighting = calculateLighting(interpPos, mainNormal, objectType);
+
+	imageStore(shadowMaps, mapPosition, vec4(finalLighting, 2.25f));
+}

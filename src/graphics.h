@@ -46,7 +46,7 @@ namespace graphics {
 	GLuint loadGLTexture2D(const std::string textureName, std::string subFolder="textures-env", int expectedWidth=-1, int expectedHeight=-1);
 	GLuint createTexture2DArray(std::array<std::string, display::TEXTURE_ARRAY_MAX_LAYERS>& textureNames, std::string subFolder="textures-env", bool hasMipMap=false);
 	void writeToSpecificTexture2DArrayLayer(GLuint sheetArrayID, std::string textureName, size_t layer, bool hasMipMap=false);
-	GLuint createGLImage2DArray(size_t width, size_t height, size_t layers);
+	GLuint createGLImage2DArray(size_t width, size_t height, size_t layers, GLenum filtering=GL_NEAREST);
 	GLint fetchTextureID(std::string textureName, std::string subFolder="textures-env");
 	void handleTextureLoadQueue();
 
@@ -68,6 +68,15 @@ namespace graphics {
 
 	GLuint createDisplacementsFBO(size_t width, size_t height);
 
+
+}
+
+
+
+namespace lighting {
+
+	void createLightMaps();
+
 }
 
 
@@ -75,7 +84,6 @@ namespace graphics {
 namespace frame {
 
 	void updateSSBOs(bool drawLightBlockers);
-
 	void draw(double blendingAlpha, double currentTime);
 
 }

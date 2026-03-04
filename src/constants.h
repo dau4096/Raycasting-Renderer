@@ -1,7 +1,16 @@
 #pragma once
 
 #include "includes.h"
-#include <C:/Users/User/Documents/code/.cpp/glm/glm.hpp>
+#include <glm/glm.hpp>
+
+
+
+#define T_NONE 0x0u
+#define T_WALL 0x1u
+#define T_VISPLANE 0x2u
+#define T_DISPLACEMENT 0x3u
+#define T_SPRITE 0x4u
+
 
 enum Event {
 	E_NONE, E_DEAD,
@@ -28,7 +37,8 @@ enum VisplaneType {
 	V_MOVEZ_FAST, V_MOVEZ_SLOW,
 	V_HURT, V_PASSTHROUGH,
 	V_NODRAW, V_TELEPORT,
-	V_CONVEY, V_LIGHTBLOCKER
+	V_CONVEY, V_LIGHTBLOCKER,
+	V_PORTAL
 };
 
 enum WallType {
@@ -59,6 +69,11 @@ enum SpriteType {
 	SPR_INVALID,
 	SPR_DECO, SPR_LIGHT,
 	SPR_PHYSICS, SPR_PARTICLE
+};
+
+enum LightingType {
+	LIGHT_NONE, LIGHT_STATIC_FIXED,
+	LIGHT_STATIC_ARB, LIGHT_DYNAMIC
 };
 
 enum LogicInput {
@@ -269,11 +284,16 @@ namespace display {
 	//Resolutions
 	constexpr glm::ivec2 INITIAL_SCREEN_RESOLUTION = glm::ivec2(960, 540);
 	constexpr glm::ivec2 UI_RESOLUTION = glm::ivec2(960, 540);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_INITIAL = glm::ivec2(1024, 1024);
+	constexpr glm::ivec2 FIXED_SHADOW_RESOLUTION_MINIMUM = glm::ivec2(128, 128); //Don't get any smaller than this.
+	constexpr float ARB_SHADOW_TEXEL_SIZE = 0.01f;
+	constexpr glm::ivec2 ARB_SHADOW_MAX_RESOLUTION = glm::ivec2(4096, 4096);
 
 
 	//Texture Standardisation
 	constexpr glm::ivec2 SKYBOX_RESOLUTION = glm::ivec2(512, 256);
 	constexpr glm::ivec2 TEXTURE_RESOLUTION = glm::ivec2(128, 128);
+	constexpr glm::ivec2 CRT_BEZEL_RESOLUTION = glm::ivec2(640, 480);
 	constexpr size_t TEXTURE_ARRAY_MAX_LAYERS = 64;
 	constexpr const char* FALLBACK_TEXTURE_PATH = "src/textures-env/fallback.png";
 	constexpr const char* FALLBACK_NORMAL_PATH = "src/textures-env/fallback.normal.png";
@@ -283,6 +303,7 @@ namespace display {
 	//Rendering Assorted
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr size_t MAX_TEXTOBJECT_CHARACTERS = 64;
+	constexpr float SHADOWMAP_SCALING = 0.01f;
 }
 
 namespace initial {

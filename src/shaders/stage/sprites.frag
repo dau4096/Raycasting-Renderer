@@ -18,6 +18,7 @@ layout(location=2) out vec4 outFragNormal;
 uniform float maxRayDistance;
 uniform float maxRayAngle;
 uniform float verticalFOV;
+uniform float aspectRatio;
 uniform float zoomFactor;
 uniform bool useMipMapping;
 uniform bool viewCorrection;
@@ -33,7 +34,7 @@ uniform ivec2 renderResolution;
 uniform int debugMode;
 
 //Other
-uniform int numSprites;
+uniform uint numSprites;
 uniform float shadowMapQuality;
 
 
@@ -81,7 +82,7 @@ float fragDepth, tanVerticalViewAngleOffset, zoomEffect;
 
 
 
-vec4 fetchUV(vec3 UV, double distance, bool fetchTexture=true) {
+vec4 fetchUV(vec3 UV, double distance, bool fetchTexture) {
 	if (debugMode == 1) {
 		return vec4(UV.xy, UV.z / 32.0f, maxRayDistance);
 	}
@@ -110,7 +111,7 @@ vec4 fetchUV(vec3 UV, double distance, bool fetchTexture=true) {
 
 
 
-vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
+vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance, float zoomEffect, vec2 fragPosition) {
 	float spriteFootZ = thisSprite.position.z - thisSprite.height/2.0f;
 	float spriteHeadZ = thisSprite.position.z + thisSprite.height/2.0f;
 
@@ -119,7 +120,7 @@ vec2 getSpriteUV(Sprite thisSprite, float centrePixelX, float invdistance) {
 	if (distanceOffset <= EPSILON_ALT) {return INVALIDv2;}
 	float distDiv = (viewCorrection) ? clamp(1.0f / distanceOffset, 1.0f, maxRayDistance) : 1.0f;
 
-	float mult = invdistance * zoomEffect * 1.5f * distDiv;
+	float mult = invdistance * zoomEffect * aspectRatio * distDiv;
 	float projectedYLow = (playerPosition.z - spriteFootZ) * mult;
 	float projectedYTop = (playerPosition.z - spriteHeadZ) * mult;
 	
@@ -185,24 +186,24 @@ void main() {
 
 
 		float invdistance = inversesqrt(spriteDistanceSQ);
-		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, invdistance);
+		vec2 spriteUV = getSpriteUV(thisSprite, thisSprite.centreX, invdistance, zoomEffect, fragPosition);
 		if (spriteUV == INVALIDv2) {continue; /* Invalid UV, from getSpriteUV() */}
 		
 		
-		uint texID = (thisSprite.textureID_transparency & 0xFFFF);
+		uint texID = (thisSprite.textureID_transparency & 0xFFFFu);
 		switch (debugMode) {
 			case 1: { //DrawUV
 				spriteAlbedo = vec3(spriteUV.xy, texID/64.0f);
 				break;
 			}
 			case 2: { //DrawNormals
-				vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
+				vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance, false);
 				if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 				spriteAlbedo = vec3(0.5f, 0.5f, 0.5f);
 				break;
 			}
 			default: {
-				vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance);
+				vec4 alphaTexture = fetchUV(vec3(spriteUV.xy, texID), 1.0f / invdistance, true);
 				if (alphaTexture.a < 0.5f) {continue; /* This pixel is transparent. */}
 				spriteAlbedo = alphaTexture.rgb;
 				break;

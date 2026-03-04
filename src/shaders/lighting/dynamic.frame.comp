@@ -1,4 +1,4 @@
-/* lighting.comp */
+/* dynamic.frame.comp */
 #version 460 core
 
 
@@ -27,10 +27,10 @@ uniform vec3 sunColour;
 uniform int debugMode;
 
 //Other
-uniform int numVisplanes;
-uniform int numWalls;
-uniform int numDisplacements;
-uniform int numLights;
+uniform uint numVisplanes;
+uniform uint numWalls;
+uniform uint numDisplacements;
+uniform uint numLights;
 uniform ivec2 shadowResolution;
 uniform ivec2 renderResolution;
 uniform bool allowTransparency;
@@ -41,6 +41,7 @@ layout(binding=1) uniform sampler2D normalMap;
 layout(binding=2) uniform sampler2DArray textureArray;
 layout(rgba32f, binding=0) writeonly uniform image2DArray lightMapArray;
 
+
 struct Visplane {
 	vec4 vertices[4];	//2D points
 	uint numVertices;	//Number of 2D points
@@ -48,6 +49,9 @@ struct Visplane {
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
 	vec4 boundingBox;	//Bounding box in 2D.
+	uint type;			//Visplanetype.
+	float extra;		//Extra data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
 };
 layout(std430, binding=0) buffer visplaneSSBO {
 	Visplane visplanes[];
@@ -59,8 +63,9 @@ struct Wall {
 	vec2 direction;		//2D Direction
 	uint textureData1;	//1st Texture formatting data.
 	uint textureData2;	//2nd Texture formatting data.
-	uint type;			//Wall Type
+	uint type;			//Walltype.
 	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
 };
 layout(std430, binding=1) buffer wallSSBO {
 	Wall walls[];
@@ -85,7 +90,7 @@ struct Light {
 layout(std430, binding=3) buffer lightSSBO {
 	Light lights[];
 };
-layout(std430, binding=9) buffer LOSSSBO { //Seems to be very wrong.
+layout(std430, binding=9) buffer LOSSSBO {
 	uint losData[];
 };
 
@@ -101,6 +106,10 @@ vec2 fragPosition;
 #define INVALIDv2 vec2(INF, INF)
 #define INVALIDv3 vec3(INF, INF, INF)
 #define INVALIDv4 vec4(INF, INF, INF, INF)
+#define T_NONE 0x0
+#define T_WALL 0x1
+#define T_VISPLANE 0x2
+#define T_DISPLACEMENT 0x3
 
 
 
@@ -121,14 +130,14 @@ void unpackTextureFormattingBits1(
 		0000 1111 1111 1111 0000 0000 0000 0000
 	*/
 	textureFlags = bvec4(
-		bool(inputBits & 0x80000000),
-		bool(inputBits & 0x40000000),
-		bool(inputBits & 0x20000000),
-		bool(inputBits & 0x10000000)
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u),
+		bool(inputBits & 0x20000000u),
+		bool(inputBits & 0x10000000u)
 	);
 
-	uint texIDbits = (inputBits >> 16) & 0xFFF;
-	textureID = (texIDbits == 0xFFF) ? -1 : int(texIDbits);
+	uint texIDbits = (inputBits >> 16u) & 0xFFFu;
+	textureID = (texIDbits == 0xFFFu) ? -1 : int(texIDbits);
 }
 void unpackTextureFormattingBits2(
 		uint inputBits, out bvec2 isWorldspace,
@@ -152,18 +161,18 @@ void unpackTextureFormattingBits2(
 	*/
 
 	isWorldspace = bvec2(
-		bool(inputBits & 0x80000000),
-		bool(inputBits & 0x40000000)
+		bool(inputBits & 0x80000000u),
+		bool(inputBits & 0x40000000u)
 	);
 
 	invTextureScale = 16.0f / vec2(
-		float((inputBits >> 22) & 0xFF),
-		float((inputBits >> 14) & 0xFF)
+		float((inputBits >> 22u) & 0xFFu),
+		float((inputBits >> 14u) & 0xFFu)
 	);
 
 	textureOffset = vec2(
-		float((inputBits >> 7) & 0x7F),
-		float((inputBits >> 0) & 0x7F)
+		float((inputBits >> 7u) & 0x7Fu),
+		float((inputBits >> 0u) & 0x7Fu)
 	) / 128.0f;
 }
 
@@ -391,13 +400,7 @@ bool displacementCheck3D(vec3 pointA, vec3 pointB, Displacement thisDisplacement
 	return false;
 }
 
-
-#define T_NONE 0x0
-#define T_WALL 0x1
-#define T_VISPLANE 0x2
-#define T_DISPLACEMENT 0x3
-
-bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=T_NONE) {
+bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex, int foundType) {
 	vec3 LOSDelta = pointB - pointA;
 
 	//Iterate through all the walls. (2D)
@@ -427,16 +430,16 @@ bool checkLOSGeneral(vec3 pointA, vec3 pointB, int thisIndex=-1, int foundType=T
 	return false;
 }
 
-bool checkLOSLightSpecific(vec3 origin, Light thisLight, int foundIndex=-1, int foundType=T_NONE) {
-	uint lightLOSDataStartIndex = thisLight.LOSSSBOdata >> 16;		//Former 4 bytes.
-	uint lightLOSDataEntryCount = thisLight.LOSSSBOdata & 0xFFFF;	//Latter 4 bytes.
+bool checkLOSLightSpecific(vec3 origin, Light thisLight, int foundIndex, int foundType) {
+	uint lightLOSDataStartIndex = thisLight.LOSSSBOdata >> 16u;		//Former 4 bytes.
+	uint lightLOSDataEntryCount = thisLight.LOSSSBOdata & 0xFFFFu;	//Latter 4 bytes.
 	if (lightLOSDataEntryCount < 1) {return false; /* Cannot possibly hit anything because it has nothing to hit. */}
 	vec3 LOSDelta = thisLight.position - origin;
 
 	for (uint entryIndex=lightLOSDataStartIndex; entryIndex<lightLOSDataStartIndex+lightLOSDataEntryCount; entryIndex++) {
 		uint thisObjectData = losData[entryIndex];
-		uint thisObjectIndex = thisObjectData >> 3; //Former 29 bits.
-		uint thisObjectType = thisObjectData & 0x7; //Latter 3 bits.
+		uint thisObjectIndex = thisObjectData >> 3u; //Former 29 bits.
+		uint thisObjectType = thisObjectData & 0x7u; //Latter 3 bits.
 
 		switch(thisObjectType) {
 			case T_WALL: { //Walls
@@ -517,7 +520,7 @@ void main() {
 	vec3 lightDir;
 	vec3 fragDir = normalize(origin - playerPosition);
 
-	if (lightIndex == (numLights + 0)) {
+	if (lightIndex == (numLights + 0u)) {
 		//Sun & sky's lighting (Highest index + 1)
 		if (dot(sunColour, sunColour) < 0.025f) {exit(framePosition); return; /* Sun's effect is near 0 and can be ignored. */}
 
@@ -534,7 +537,7 @@ void main() {
 		normalDot = getNormalDot(normal, normalize(sunDirection), shouldUseSpecularHighlights);
 		vec3 offset = normal * 0.01f;
 		if (normalDot > -0.125f) {
-			bool sunBlocked = checkLOSGeneral(origin + offset, origin + sunDirection * maxRayDistance);
+			bool sunBlocked = checkLOSGeneral(origin + offset, origin + sunDirection * maxRayDistance, -1, T_NONE);
 			if (!sunBlocked) {
 				float sunNormalDot = normalDot * 0.5f + 0.5f;
 				lightColour = sunColour.rgb * sunNormalDot * globalLightTint.rgb * globalLightTint.a;
@@ -545,20 +548,16 @@ void main() {
 
 
 
-	} else if (lightIndex == (numLights + 1)) {
+	} else if (lightIndex == (numLights + 1u)) {
 		//Headlamp (Highest index + 2)
 		if (!headLampEnabled) {exit(framePosition); return; /* Headlamp is turned off, don't bother calculating. */}
 
 		const vec3 headLampColour = vec3(1.0f, 1.0f, 1.0f);
 
-		vec2 normPos = (2.0f * fragPosition / vec2(shadowResolution)) - 1.0f;
-		vec2 anglePos = normPos * vec2(maxRayAngle, verticalFOV / 2.0f);
-		if (dot(anglePos, anglePos) > 0.0625f) {exit(framePosition); return; /* Outside headlamp FOV */}
-
 		vec3 delta3D = playerPosition - origin;
 		float distanceSQ = dot(delta3D, delta3D);
 		float normalDot = clamp(getNormalDot(normal, normalize(delta3D), shouldUseSpecularHighlights), 0.0f, 1.0f);
-		float attenuation = max(0.0, 1.0 - (distanceSQ / (headLampIntensity*headLampIntensity))) * normalDot; //Intensity fades with distance to light.
+		float attenuation = max(0.0f, 1.0f - (distanceSQ / (headLampIntensity*headLampIntensity))) * normalDot; //Intensity fades with distance to light.
 		float brightness = clamp(attenuation, 0.0f, 1.0f);
 
 		lightColour = headLampColour * brightness;

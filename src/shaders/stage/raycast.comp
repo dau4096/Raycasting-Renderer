@@ -1,0 +1,284 @@
+/* raycast.comp */
+#version 460 core
+
+
+//// UNIFORMS ////
+uniform uint numWalls;			//Total
+uniform uint numVisibleWalls; 	//Onscreen
+uniform uint numVisplanes;			//Total
+uniform uint numVisibleVisplanes;	//Onscreen
+
+//Camera data
+uniform float blendingAlpha;
+uniform float maxRayDistance;
+uniform float maxRayAngle;
+uniform float aspectRatio;
+uniform float zoomFactor;
+uniform bool zoom;
+uniform vec3 playerPosition;
+uniform float playerViewAngle;
+uniform ivec2 renderResolution;
+uniform bool viewCorrection;
+//// UNIFORMS ////
+
+
+//// BUFFERS ////
+struct Visplane {
+	vec4 vertices[4];	//2D points
+	uint numVertices;	//Number of 2D points
+	float height;		//1D height (Z)
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	vec4 boundingBox;	//Bounding box in 2D.
+	uint type;			//Visplanetype.
+	float extra;		//Extra data.
+	uint lightingHandles[4]; //ARB shadowMap handles.
+};
+layout(std430, binding=0) buffer visplaneSSBO {
+	Visplane visplanes[];
+};
+
+struct Wall {
+	vec3 start;			//3D start point
+	vec3 end;			//3D end point
+	vec2 direction;		//2D Direction
+	uint textureData1;	//1st Texture formatting data.
+	uint textureData2;	//2nd Texture formatting data.
+	uint type;			//Walltype.
+	float extra;		//Extra data.
+	uint lightingHandles[8]; //ARB shadowMap handles.
+};
+layout(std430, binding=1) buffer wallSSBO {
+	Wall walls[];
+};
+
+//Buffers containing indices of all valid objects (referencing their actual datasets above.)
+layout(std430, binding=5) buffer visibleVisplaneIndicesSSBO {uint visibleVisplaneIndices[];};
+layout(std430, binding=6) buffer visibleWallIndicesSSBO {uint visibleWallIndices[];};
+
+//Could be space-optimised.
+struct WallIntersect {
+	vec2 position2D;
+	vec2 normal2D;
+	uint projections;
+	uint wallIndexAndXUV;
+	float distanceSQ;
+	float _padding;
+};
+layout(std430, binding=7) buffer wallIntersectSSBO {
+	WallIntersect wallIntersects[]; //2D Raycast results;
+};
+layout(std430, binding=8) buffer visplaneCheckSSBO {
+	uvec2 visplaneCheckIndices[]; //Horizontal checks for if visplane could be hit.
+	//Stores index, and screen projections (near/far) for this vertical line.
+};
+layout(binding=0) uniform atomic_uint validWallIntersects;
+layout(binding=1) uniform atomic_uint validVisplaneIntersects;
+
+
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+//// BUFFERS ////
+
+
+//// GLOBAL ////
+float zoomEffect;
+//// GLOBAL ////
+
+
+//// INCLUDES ////
+#include <exct/constants> //For constant values.
+#include <exct/packing>   //For bit-packing of data.
+#include <exct/textures>  //For texture read/UV funcs.
+#include <exct/visplanes> //For visplane functions.
+#include <exct/walls>     //For wall functions.
+//// INCLUDES ////
+
+
+
+
+
+
+//// WALL RAYCASTING FUNCTIONS ////
+bool getLineIntersect(
+		vec2 lineStart, vec2 lineEnd, vec2 lineNormal,
+		vec2 rayStart, vec2 rayEnd, vec2 rayDelta,
+		out vec2 intersectPoint, out float t
+	) {
+
+	float projStart = dot(rayStart-lineStart, lineNormal);
+	float projEnd = dot(rayEnd-lineStart, lineNormal);
+	if (projStart * projEnd > 0.0f) {
+		//Ray never crosses infinite line.
+		return false;
+	}
+
+	t = projStart / (projEnd - projStart);
+	intersectPoint = rayStart - rayDelta * t;
+	vec2 minLine = min(lineStart, lineEnd).xy;
+	vec2 maxLine = max(lineStart, lineEnd).xy;
+	if (
+		intersectPoint.x + EPSILON_ALT < minLine.x || intersectPoint.x - EPSILON_ALT > maxLine.x ||
+		intersectPoint.y + EPSILON_ALT < minLine.y || intersectPoint.y - EPSILON_ALT > maxLine.y
+	) {
+		//Outside of valid line segment.
+		return false;
+	}
+
+	return true;
+}
+
+
+void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDelta2D, float horizontalScalingSQ) {
+	uint wallIndex = visibleWallIndices[IDX];
+	uint SSBOIndex = (screenX * numWalls) + wallIndex;
+	Wall thisWall = walls[wallIndex];
+
+
+	//Find wall intersect
+	WallIntersect intersect;
+	vec2 wallNormal = vec2(-thisWall.direction.y, thisWall.direction.x);
+	float t;
+	bool success = getLineIntersect(
+		thisWall.start.xy, thisWall.end.xy, wallNormal,
+		playerPosition.xy, (playerPosition.xy + rayDelta2D), rayDelta2D,
+		intersect.position2D, t
+	);
+	if (!success) {
+		writeNoWallIntersect(SSBOIndex);
+		return;
+	}
+
+
+	float hUVy, lUVy; //High/Low UVs.
+	uint numUVRepeats; //Number of times the texture UV loops in that range, max 255.
+
+
+	intersect.normal2D = (dot(wallNormal, rayDirection) < 0.0f) ? wallNormal : -wallNormal;
+	vec2 d = playerPosition.xy - intersect.position2D;
+	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersect.position2D, thisWall);
+	intersect.distanceSQ = dot(d, d); //Cheaper length() call
+	intersect.projections = getProjectedZ(intersect.distanceSQ * horizontalScalingSQ, thisWall.start.z, thisWall.end.z);
+	wallIntersects[SSBOIndex] = intersect;
+}
+//// WALL RAYCASTING FUNCTIONS ////
+
+
+
+
+//// VISPLANE PROJECTION FUNCTIONS ////
+void projectVPpoints(
+		float height,
+		float nearestT, float furthestT,
+		out int lower, out int higher,
+		float horizontalScaling
+	) {
+	float zScaling = aspectRatio * zoomEffect * (playerPosition.z - height);
+	float nDenom = max(nearestT * horizontalScaling, 1e-5);
+	float nearestY = renderResolution.y * (
+		0.5 - (zScaling / nDenom)
+	);
+	float fDenom = max(furthestT * horizontalScaling, 1e-5);
+	float furthestY = renderResolution.y * (
+		0.5 - (zScaling / fDenom)
+	);
+	lower = int(min(nearestY, furthestY));
+	higher = int(max(nearestY, furthestY));
+}
+
+
+void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D, float horizontalScaling) {
+	uint vpIndex = visibleVisplaneIndices[IDX];
+	uint SSBOIndex = (screenX * numVisplanes) + vpIndex;
+	Visplane thisVisplane = visplanes[vpIndex];
+
+	//X: The lowest bit will represent whether a collision was found. The other 31 bits are the index.
+	//Y: Former 16 bits are biased higher-projection. Latter 16 bits are same for lower-projection. [SCREENSPACE]
+	//Z: Upper encoded UV XY
+	//W: Lower encoded UV XY
+	uvec2 valueToWrite = uvec2(0u, 0u);
+
+	bool anyIntersect = false;
+	float nearestT = INF, furthestT = 0.0f;
+
+	uint numberOfIntersects = 0u;
+	for (uint vIndex=0; vIndex<thisVisplane.numVertices; vIndex++) {
+		vec2 currentVertex = getVertex(thisVisplane, vIndex);
+		vec2 nextVertex = getVertex(thisVisplane, (vIndex + 1) % thisVisplane.numVertices);
+
+		vec2 edge = nextVertex - currentVertex;
+		vec2 edgeNormal = vec2(-edge.y, edge.x);
+
+		vec2 intersectPoint;
+		float t;
+		bool success = getLineIntersect(
+			currentVertex, nextVertex, edgeNormal,
+			playerPosition.xy,
+			playerPosition.xy + rayDelta2D,
+			rayDelta2D,
+			intersectPoint, t
+		);
+
+		if (success) {
+			anyIntersect = true;
+			float worldT = abs(t) * maxRayDistance;
+			nearestT = min(nearestT, worldT);
+			furthestT = max(furthestT, worldT);
+			numberOfIntersects++;
+		}
+	}
+
+	if (isInsideVP(playerPosition.xy + rayDelta2D, thisVisplane)) {
+		//If the end of the ray is inside the VP, because the VP was too big - Must still have an "upper" intersect.
+		furthestT = maxRayDistance;
+		anyIntersect = true;
+	}
+
+	if (anyIntersect) { 
+		int higher, lower;
+		uint encoded;
+		if (isInsideVP(playerPosition.xy, thisVisplane)) {
+			//Player is inside VP, lower proj will be invalid.
+			projectVPpoints(thisVisplane.height, furthestT, furthestT, lower, higher, horizontalScaling); //Still get higher, but with unused/overwritten lower.
+			encoded = encodeVPProjections(higher, higher) & 0xFFFF0000; //Zero-out the [lower] 16b.
+		} else if (numberOfIntersects > 0u) {
+			//Seems to have a problem when technically not inside VP but very close to being?
+			projectVPpoints(thisVisplane.height, nearestT, furthestT, lower, higher, horizontalScaling);
+			encoded = encodeVPProjections(higher, lower);
+		}
+		valueToWrite = uvec2(
+			(vpIndex << 1u) | 0x1u,	encoded
+		);
+	}
+
+	visplaneCheckIndices[SSBOIndex] = valueToWrite;
+}
+//// VISPLANE PROJECTION FUNCTIONS ////
+
+
+
+
+void main() {
+	uint screenX = gl_GlobalInvocationID.x;
+	uint IDX = gl_GlobalInvocationID.y;
+	bool isWall = IDX < numVisibleWalls;
+	bool isVP = (IDX >= numVisibleWalls) && (IDX < numVisibleWalls + numVisibleVisplanes);
+	if ((screenX >= renderResolution.x) || (!isWall && !isVP)) {return; /* Offscreen or out of range. */}
+
+
+	zoomEffect = (zoom) ? zoomFactor : 1.0f;
+	float rayOffset = -maxRayAngle + (screenX / float(renderResolution.x)) * 2.0f * maxRayAngle;
+	float horizontalScaling = (viewCorrection) ? cos(rayOffset) : 1.0f;
+	float rayAngleYaw = playerViewAngle + rayOffset;
+
+	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
+	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;
+
+
+
+	if (isWall) {
+		handle2DWallIntersect(screenX, IDX, rayDirection, rayDelta2D, horizontalScaling*horizontalScaling);
+	} else if (isVP) {
+		handle2DVisplaneIntersect(screenX, IDX - numVisibleWalls, rayDelta2D, horizontalScaling);
+	}
+}

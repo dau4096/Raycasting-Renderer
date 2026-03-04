@@ -2,8 +2,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #pragma execution_character_set("utf-8")
 
-#include "C:/Users/User/Documents/code/.cpp/stb_image.h"
-#include "C:/Users/User/Documents/code/.cpp/stb_image_write.h"
+#include <stb_image.h>
+#include <stb_image_write.h>
 #include "src/includes.h"
 #include "src/global.h"
 #include "src/loader.h"
@@ -15,7 +15,32 @@ using namespace utils;
 using namespace glm;
 
 
+//framebufferSizeCallback but for the terminal render mode instead.
+void handleWinChange(int sig) {
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleResolution();
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
+		currentRenderResolution = currentConsoleResolution;
+		currentWindowResolution = currentConsoleResolution;
+		desiredRenderResolution = currentConsoleResolution;
+		if (lightingType == LIGHT_DYNAMIC) {currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));}
 
+		//SSBOs
+		GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
+			7, sizeof(structs::WallIntersect) * currentRenderResolution.x * validWalls
+		);
+
+		//Image2Ds
+		GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
+		GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
+
+		//Framebuffers
+		GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
+		GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
+
+		verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+	}
+}
 
 GLFWwindow* Window;
 
@@ -29,7 +54,9 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 		glm::min(width, desiredRenderResolution.x),
 		glm::min(height, desiredRenderResolution.y)
 	);
-	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	if (lightingType == LIGHT_DYNAMIC) {
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	}
 
 	//SSBOs
 	GLIndex::wallIntersectSSBO = graphics::createShaderStorageBufferObject(
@@ -37,15 +64,18 @@ void framebufferSizeCallback(GLFWwindow* Window, int width, int height) {
 	);
 
 	//Image2Ds
+	GLIndex::finishedFrame = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
 	GLIndex::lightingMapsArrayID = graphics::createGLImage2DArray(currentShadowResolution.x, currentShadowResolution.y, validLights + 2);
-	GLIndex::screenshotImage2D = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y);
-	GLIndex::portalMask = graphics::createGLImage2D(currentRenderResolution.x, currentRenderResolution.y+1u);
 
 	//Framebuffers
 	GLIndex::frameFBO = graphics::createEnvironmentFBO(currentRenderResolution);
 	GLIndex::displacementFBO = graphics::createDisplacementsFBO(currentRenderResolution.x, currentRenderResolution.y);
 
 	verticalFOV = 2.0f * atan(tan(utils::configToFloat("VIEW_FOV") * 0.5f * constants::TO_RAD) * (float(currentRenderResolution.y) / float(currentRenderResolution.x)));
+
+
+	//The console may have changed size.
+	currentConsoleResolution = utils::getConsoleResolution();
 }
 
 
@@ -245,31 +275,59 @@ inline void stopPhysics() {
 
 int main() {
 	try { //Catch exceptions
-	SetConsoleOutputCP(65001); //CP_UTF8
 
+#ifdef __WIN32
+	SetConsoleOutputCP(65001); //CP_UTF8
+#else
+	setlocale(LC_ALL, "C.UTF-8");
+#endif
+
+	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
 	loader::loadBindings();
 	loader::loadStage(
 		userConfig["META_STAGE_NAME"], &player,
 		physicsData, &logicGates
 	);
-	player.state = E_RESPAWN;
+	player.state = E_RESPAWN; //Player initial state, uses the screenspace effect associated with E_RESPAWN.
 
-	currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
-	currentRenderResolution = glm::ivec2(
-		glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
-		glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
-	);
-	currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+
+	if (utils::configToBool("SCREEN_CONSOLE_RENDER")) {
+		currentConsoleResolution = utils::getConsoleResolution();
+
+		currentRenderResolution = currentConsoleResolution; currentWindowResolution = currentConsoleResolution; desiredRenderResolution = currentConsoleResolution;
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	} else {
+		currentWindowResolution = display::INITIAL_SCREEN_RESOLUTION;
+		currentConsoleResolution = utils::getConsoleSizeChars();
+		currentRenderResolution = glm::ivec2(
+			glm::min(display::INITIAL_SCREEN_RESOLUTION.x, desiredRenderResolution.x),
+			glm::min(display::INITIAL_SCREEN_RESOLUTION.y, desiredRenderResolution.y)
+		);
+		currentShadowResolution = glm::ivec2(glm::vec2(currentRenderResolution) * utils::configToFloat("VIEW_SHADOW_QUALITY"));
+	}
 
 
 	Window = graphics::initialiseWindow(currentWindowResolution.x, currentWindowResolution.y, "Raycasting-Renderer/GPU");
 	glfwSetFramebufferSizeCallback(Window, framebufferSizeCallback);
+	signal(SIGWINCH, handleWinChange);
+	glfwSetJoystickCallback(nullptr); //Stop it from trying to callback for joystick.
 	glfwGetCursorPos(Window, &cursorXPos, &cursorYPos);
 	glEnable(GL_BLEND);
-	bool vsync = utils::configToBool("VIEW_VSYNC");
-	if (vsync) {
-		glfwSwapInterval(1);
+	bool vsync = utils::configToBool("SCREEN_VSYNC");
+	glfwSwapInterval((vsync) ? 1 : 0);
+
+
+
+
+	//Lighting support checks;
+	loader::getSupportedExtensions();
+
+	if ((lightingType == LIGHT_STATIC_ARB) && !loader::OpenGLSupportsARB()) {
+		utils::print("Attempted to use ARB texturing for shadowmapping. This is unsupported on your hardware. Falling back to lower-fidelity fixed resolution maps.");
+		lightingType = LIGHT_STATIC_FIXED; //ARB is not supported; fallback to "old" fixed size method.
 	}
+
+
 
 	cursorXPosPrev = cursorXPos;
 	cursorYPosPrev = cursorYPos;
@@ -277,41 +335,61 @@ int main() {
 
 	graphics::prepareOpenGL();
 	*graphicsData = *physicsData;
-	frame::updateSSBOs(true);
-	double maxFrameTime = 1.0f/utils::configToFloat("VIEW_MAX_FREQ");
+	frame::updateSSBOs(true); //Include W_NODRAW/V_NODRAW objects.
+	double maxFrameTime = 1.0d / static_cast<double>(utils::configToFloat("SCREEN_MAX_FREQ"));
+
+
+
+	//Create lightmaps if required
+	if ((lightingType == LIGHT_STATIC_FIXED) || (lightingType == LIGHT_STATIC_ARB)) {lighting::createLightMaps();}
 
 
 	//Threads;
 	physicsThread = std::thread(physicsLoop);
 	tickStart = glfwGetTime();
 
-	frameNumber = 0;
+	//Timer queries;
+	GLuint timerQuery;
+	GLuint64 GPUnanosecs; //Nanoseconds
+	glGenQueries(1, &timerQuery);
+
+	frameNumber = 0u;
 	while (!glfwWindowShouldClose(Window)) {
 		double frameStart = glfwGetTime();
-		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY;
+		double blendingAlpha = (frameStart - tickStart) * constants::PHYSICS_FREQUENCY; //Manages smooth motion when graphics freq > physics tickrate.
 
+		//Handle inputs.
 		handleInputs();
 		if (utils::isPressed("META_EXIT")) {break; /* Quit Immediately */}
 
 
+		//Draw this frame
+		glBeginQuery(GL_TIME_ELAPSED, timerQuery);
 		graphics::handleTextureLoadQueue();
 		frame::draw(blendingAlpha, frameStart);
-		glfwSwapBuffers(Window);
+		glEndQuery(GL_TIME_ELAPSED);
 		glFinish();
 
+
+		//Calculate dt and report back if needed.
 		float dt = glfwGetTime() - frameStart;
 		if (utils::configToBool("META_SHOW_DT_CONSOLE")) {
-			std::cout << "Frame #" << frameNumber << " took " << std::setprecision(2) << (dt * 1e3f) << "ms / Hypothetical framerate: " << static_cast<int>(1.0f / dt) << endl;
+			glGetQueryObjectui64v(timerQuery, GL_QUERY_RESULT, &GPUnanosecs);
+			double ms = GPUnanosecs / 1e6;
+			std::cout << "Frame #" << frameNumber << " took " << std::setprecision(2) << ms << "ms / Hypothetical framerate: " << static_cast<int>(1000.0d/ms) << endl;
 		}
-		if (!vsync) {
-			while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}
-		}
-		framerate = floor(1.0f / (glfwGetTime() - frameStart));
-		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);}
-		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {
-			std::cout << "Framerate: " << framerate << "Hz" << std::endl;
-		}
+		//Wait for the correct freq.
+		if (!vsync) {while (glfwGetTime() - frameStart < maxFrameTime) {std::this_thread::yield();}}
+		glfwSwapBuffers(Window); //Swap to show the new frame, at the correct time.
 
+
+		framerate = floor(1.0f / (glfwGetTime() - frameStart));
+		if (!shouldTakeScreenshot) {rollingFPS.push_back(framerate);} //Screenshots (obviously) cause a lag-spike. Don't "poison" the rolling values with it.
+		//Show framerate (One after the mandatory wait-period of the frame.)
+		if (utils::configToBool("META_SHOW_FRAMERATE_CONSOLE")) {std::cout << "Framerate: " << framerate << "Hz" << std::endl;}
+
+
+		//End-of-frame management.
 		cursorXPosPrev = cursorXPos;
 		cursorYPosPrev = cursorYPos;
 		frameNumber++;
@@ -333,7 +411,7 @@ int main() {
 			utils::showConsole();
 		}
 		std::cerr << "An exception was thrown: " << e.what() << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	} catch (...) {
 		stopPhysics();
@@ -341,7 +419,7 @@ int main() {
 			utils::showConsole();
 		}
 		std::cerr << "An unspecified exception was thrown." << std::endl;
-		pause();
+		utils::pause();
 		return -1;
 	}
 }

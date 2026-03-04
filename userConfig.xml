@@ -37,6 +37,7 @@
 <bind function="META_RELOAD_ENV" 		key="KEY_F4" 				note="Reloads environmental objects in stage." />
 <bind function="META_EXIT" 				key="KEY_ESCAPE" 			note="Close the program." />
 <bind function="META_FREECURSOR" 		key="KEY_1" 				note="Stop controlling camera with mouse and use cursor while held." />
+<bind function="META_RELOAD_LIGHTMAPS"  key="KEY_2"					note="Reloads all lightmaps in the stage. May cause large stutter." />
 
 </keybinds>
 
@@ -91,20 +92,19 @@
 
 
 <!-- Rendering specific -->
-<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="MEDIUM"			note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/DS/LOW/MEDIUM/HIGH/AMAZING]" />
-<option function="VIEW_PORTAL_ITERATIONS" 				value="1" 				note="Number of portal passes to render. When exceeded, draws portal sky. [uINTEGER]" />
+<option function="VIEW_RENDER_RESOLUTION_QUALITY" 		value="MEDIUM"			note="Changes render resolution [TERRIBLE/AWFUL/CALCULATOR/CRT/DS/LOW/MEDIUM/HIGH/AMAZING]" />
 <option function="VIEW_TEXTURE_QUALITY" 				value="FULL"			note="Changes default texture Mip Level [TERRIBLE/AWFUL/LOW/MEDIUM/FULL]" />
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
-<option function="VIEW_MAX_RAY_DIST" 					value="127.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
+<option function="VIEW_MAX_RAY_DIST" 					value="255.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
 <option function="VIEW_CORRECTION" 						value="TRUE" 			note="Enables view correction. When disabled, natural fish-eye effect. [TRUE/FALSE]" />
-<option function="VIEW_MAX_FREQ" 						value="75.0" 			note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Hertz]" />
 
 
 <!-- Lighting -->
 <option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
-<option function="VIEW_LIGHTING" 						value="TRUE"			note="When disabled, no lighting pass is applied. [TRUE/FALSE]" />
+<option function="VIEW_LIGHTING_TYPE"					value="ARB"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
+<option function="VIEW_ARB_LUXEL_SIZE"					value="0.01" 			note="How big (in world units) each lighting 'luxel' should be when using ARB lighting [FLOAT]" />
 
 
 
@@ -121,7 +121,7 @@
 
 
 <!-- Post-processing -->
-<option function="VIEW_LUMINANCE_QUANTISATION" 			value="0" 				note="Whether to quantise frame colours via luminance. [LessThan] 2 is none. [INTEGER]"/>
+<option function="VIEW_LUMINANCE_QUANTISATION" 			value="0" 				note="Quantisation from frame colours via luminance. [LessThan] 2 is none. [INTEGER]"/>
 <option function="VIEW_ANTIALIAS" 						value="FALSE" 			note="Applies simple anti-aliasing to the final frame. [TRUE/FALSE]" />
 
 
@@ -129,8 +129,15 @@
 <option function="META_SHOW_FRAMERATE_CONSOLE" 			value="FALSE" 			note="Show graphics framerate in the console. [TRUE/FALSE]" />
 <option function="META_SHOW_FRAMERATE_UI" 				value="TRUE" 			note="Show graphics framerate in the HUD. [TRUE/FALSE]" />
 <option function="META_SHOW_TICKRATE_UI" 				value="FALSE" 			note="Show physics tickrate in the HUD. [TRUE/FALSE]" />
-<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics framerate in console, with theoretical FPS. [TRUE/FALSE]" />
-<option function="VIEW_VSYNC" 							value="FALSE" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
+<option function="META_SHOW_DT_CONSOLE" 				value="FALSE" 			note="Show Delta-Time for graphics in console, with theoretical FPS. [TRUE/FALSE]" />
+
+
+<!-- Misc -->
+<option function="SCREEN_CHECKERBOARD"					value="TRUE"			note="Use checkerboard rendering to improve frametimes. [TRUE/FALSE]" />
+<option function="SCREEN_MAX_FREQ" 						value="75" 				note="Maximum framerate to render graphics at. Physics is locked at 60Hz. [Integer Hertz]" />
+<option function="SCREEN_VSYNC"							value="TRUE" 			note="Utilise VSYNC for graphics framerate. [TRUE/FALSE]" />
+<option function="SCREEN_FULLSCREEN"					value="FALSE"			note="Whether the program should be fullscreen or windowed. [TRUE/FALSE]" />
+<option function="SCREEN_CONSOLE_RENDER"				value="FALSE"			note="Renders the screen to the console using ANSI-Escape codes. Only works on Linux. [TRUE/FALSE]" />
 
 
 
@@ -143,11 +150,11 @@
 <!-- Debug -->
 <option function="META_SHOW_CONSOLE" 					value="TRUE"			note="Show/Hide console window. [TRUE/FALSE]" />
 <option function="META_DEBUG_MODE" 						value="NONE" 			note="Debugging visualisations. [NONE/UV/NORMALS/LIGHTING/EDGE/WIREFRAME]" />
-<option function="META_SHOW_DATA" 						value="FALSE" 			note="Shows player information in the console. [TRUE/FALSE]" />
+<option function="META_SHOW_DATA" 						value="TRUE" 			note="Shows player information in the console. [TRUE/FALSE]" />
 
 
 <!-- Stage-specific -->
-<option function="META_STAGE_NAME" 						value="dev-quake"	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
+<option function="META_STAGE_NAME" 						value="dev-quake" 	 	note="Stage XML from /stages/ to load + uses corresponding 'ASSETS-{name}' folder. [STRING]" />
 <option function="META_DYNAMIC_UPD" 					value="FALSE"			note="Reloads stage every physics tick. [TRUE/FALSE]" />
 <option function="META_DYNAMIC_UPD_ALLOW_NEW_TEXTURES" 	value="FALSE"			note="Allows stage to reload textures every tick. [TRUE/FALSE]" />
 

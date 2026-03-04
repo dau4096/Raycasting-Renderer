@@ -17,6 +17,10 @@ namespace loader {
 	);
 
 
+	void getSupportedExtensions();
+	bool OpenGLSupportsARB();
+
+
 	void loadBindings();
 
 }

@@ -777,9 +777,11 @@ void updatePhysicsObjects() {
 void updateSpecials(bool interactKey) {
 
 	for (size_t wIndex=0; wIndex<validWalls; wIndex++) {
-		structs::Wall wall = physicsData->wallData.at(wIndex);
+		structs::Wall& wall = physicsData->wallData.at(wIndex);
 		bool enabled = false;
+		bool upd = true;
 		if (wall.IOPtr) {enabled = *(wall.IOPtr);}
+		if ((!wall.internal) && (wall.type != W_NORMAL) && (wall.type != W_INVALID)) {wall.type = W_INVALID; continue; /* Invalid. */}
 
 		switch(wall.type) {
 			case W_TRIGGER: {
@@ -877,23 +879,28 @@ void updateSpecials(bool interactKey) {
 			}
 
 			default: {
+				upd = false;
 				break;
 			}
 		}
-		physicsData->wallData.at(wIndex) = wall;
+		if (upd) {
+			physicsData->wallData.at(wIndex) = wall;
+		}
 	}
 
 
 	player.onConveyor = false;
 	for (size_t vIndex=0; vIndex<validVisplanes; vIndex++) {
-		structs::Visplane vPlane = physicsData->visplaneData.at(vIndex);
+		structs::Visplane& vPlane = physicsData->visplaneData.at(vIndex);
 		bool enabled = false;
+		bool upd = true;
 		if (vPlane.IOPtr) {enabled = *(vPlane.IOPtr);}
 
 
 		bool inPlaneXYRange = isInsideVP(glm::vec2(player.position), vPlane);
 		bool abovePlane = player.position.z >= vPlane.height;
 		bool planeTouch = false;
+		if ((!vPlane.internal) && (vPlane.type != V_NORMAL) && (vPlane.type != V_INVALID)) {vPlane.type = V_INVALID; continue; /* Invalid. */}
 
 		if (inPlaneXYRange) {
 			float playerFootZ = player.position.z - (player.height/2.0f);
@@ -958,6 +965,7 @@ void updateSpecials(bool interactKey) {
 				break;
 			}
 
+			case V_PORTAL:
 			case V_TELEPORT: {
 				if (planeTouch && (vPlane.internal->first <= 0.0f)) {
 					int partnerIndex = int(vPlane.data);
@@ -1008,10 +1016,13 @@ void updateSpecials(bool interactKey) {
 			}
 
 			default: {
+				upd = false;
 				break;
 			}
 		}
-		physicsData->visplaneData.at(vIndex) = vPlane;
+		if (upd) {
+			physicsData->visplaneData.at(vIndex) = vPlane;
+		}
 	}
 }
 
