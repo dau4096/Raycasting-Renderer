@@ -620,7 +620,7 @@ struct WallIntersect {
 	alignas(4) glm::uint projections;
 	alignas(4) glm::uint wallIndexAndXUV;
 	alignas(4) float distanceSQ;
-	alignas(4) float _padding;
+	alignas(4) glm::uint uv;
 
 	WallIntersect()
 		: position2D(), normal2D(),

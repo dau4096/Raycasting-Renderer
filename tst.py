@@ -24,7 +24,7 @@ def unpackProjections(packed:int) -> tuple[int,int]:
 	return (lower, higher);
 
 
-def getValidity(uvec2:tuple[int,int]) -> bool:
+def getValidityProjections(uvec2:tuple[int,int]) -> bool:
 	verdict:bool = True;
 
 	(intersectionFound, index) = unpackIndices(uvec2[0]);
@@ -54,5 +54,33 @@ def getValidity(uvec2:tuple[int,int]) -> bool:
 	return verdict;
 
 
-getValidity((5, 2156920832));
-getValidity((5, 2425852055));
+UV_SCALE_CONSTANT:int = 65535.0;
+def unpackInvUV(en):
+	return float(en) / UV_SCALE_CONSTANT;
+
+def unpackWallTextureUVs(en):
+	return (unpackInvUV(en >> 16), unpackInvUV(en & 0xFFFF));
+
+def getValidityWallUV(uint:int) -> bool:
+	hUVy, lUVy = unpackWallTextureUVs(uint);
+	print(f"HigherUV: {hUVy}, LowerUV: {lUVy}");
+	return True;
+
+def getNumRepeats(uint:int) -> int:
+	print(hex(uint)[2:].zfill(8), end=" ");
+	return (uint >> 8) & 0xFF;
+
+
+
+#Visplane Projections
+#getValidityProjections((5, 2156920832));
+#getValidityProjections((5, 2425852055));
+
+
+#Wall things
+getValidityWallUV(3212836864);
+getValidityWallUV(1065353216);
+getValidityWallUV(1090519040);
+getValidityWallUV(3238002688);
+getValidityWallUV(4292935672);
+print(getNumRepeats(524918));
