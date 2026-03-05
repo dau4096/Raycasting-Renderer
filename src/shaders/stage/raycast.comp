@@ -7,6 +7,8 @@ uniform uint numWalls;			//Total
 uniform uint numVisibleWalls; 	//Onscreen
 uniform uint numVisplanes;			//Total
 uniform uint numVisibleVisplanes;	//Onscreen
+uniform uint maxPortals;      //Max number of portals
+uniform uint portalIteration; //Current iter num
 
 //Camera data
 uniform float blendingAlpha;
@@ -75,6 +77,15 @@ layout(std430, binding=8) buffer visplaneCheckSSBO {
 //Number of walls and number of visplanes found, in an atomic uint. (alternates walls and vps)
 layout(std430, binding=10) buffer numFoundObjectsAtomicSSBO {uint numFoundObjects[];};
 
+//Acts as a mask for this column's values
+struct PortalColumn {
+	vec3 cameraPosition; //Translated position for this column's ray.
+	float cameraYaw;	 //Rotated yaw angle for this column's ray.
+	uint projections;    //Min/Max Y positions to allow drawing to.
+	float baseDistance;  //Cumulative distance (Used for distance ordering later).
+};
+layout(std430, binding=11) buffer portalMaskStackSSBO {PortalColumn portalMaskStack[];};
+layout(std430, binding=12) buffer numPortalsSSBO {uint numPortals[];};
 
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
@@ -129,6 +140,38 @@ bool getLineIntersect(
 }
 
 
+void getPartnerRelative(
+	in Wall portal, in Wall partner,
+	vec3 curPosition, float curYaw,
+	out vec3 newPosition, out float newYaw
+) {
+	//Get translated position & rotated yaw.
+	vec2 portalNormal = vec2(-portal.direction.y, portal.direction.x);
+	vec2 partnerNormal = vec2(-partner.direction.y, partner.direction.x);
+
+	//Convert to local space relative to wall.
+	vec3 delta = curPosition - portal.start;
+	float i = dot(portal.direction, delta.xy); //Pseudo "X" along wall length
+	float j = dot(portalNormal, delta.xy); //Pseudo "Y" along normal.
+	float k = delta.z; //Just the change in Z relative to portal.start.
+
+	//Convert back to worldspace relative to partner.
+	newPosition = vec3((
+			(partner.direction * i) + //i // "X"
+			(partnerNormal * j)       //j // "Y"
+		), partner.start.z + k        //k // [Z]
+	);
+
+	//Get relative rotation of partner compared to portal, then apply offset to curYaw to get newYaw.
+	float rotationDelta = atan(
+	    (portal.direction.x * partner.direction.y) - (portal.direction.y * partner.direction.x), //Pseudo 2D-cross-product.
+	    dot(portal.direction, partner.direction)
+	);
+
+	newYaw = curYaw + rotationDelta;
+}
+
+
 void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDelta2D, float horizontalScalingSQ) {
 	uint wallIndex = visibleWallIndices[IDX];
 	uint SSBOIndex = (screenX * numWalls) + wallIndex;
@@ -157,6 +200,26 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 
 	uint insertIndex = atomicAdd(numFoundObjects[screenX * 2], 1);
 	wallIntersects[(screenX * numWalls) + insertIndex] = intersect;
+
+	if (thisWall.type == 15) {
+		//W_PORTAL type;
+		Wall partner = walls[uint(thisWall.extra)]; //.extra contains the partner index.
+
+		uint portalStackIndex = atomicAdd(numPortals[screenX], 1);
+		uint pIdx = (screenX * maxPortals) + portalStackIndex;
+
+		portalMaskStack[pIdx].cameraPosition = translatedPosition;
+		portalMaskStack[pIdx].cameraYaw      = rotatedYaw;
+		portalMaskStack[pIdx].projections    = intersect.projections;
+		portalMaskStack[pIdx].baseDistance  += intersect.distanceSQ;
+
+		getPartnerRelative(
+			thisWall, partner,
+			playerPosition, playerViewAngle,
+			portalMaskStack[pIdx].cameraPosition,
+			portalMaskStack[pIdx].cameraYaw
+		);
+	}
 }
 //// WALL RAYCASTING FUNCTIONS ////
 

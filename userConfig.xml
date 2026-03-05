@@ -97,13 +97,14 @@
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
 <option function="VIEW_MAX_RAY_DIST" 					value="255.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
 <option function="VIEW_CORRECTION" 						value="TRUE" 			note="Enables view correction. When disabled, natural fish-eye effect. [TRUE/FALSE]" />
+<option function="VIEW_PORTAL_ITERATIONS"				value="4.0"				note="Number of portal iterations to calculate. [uINTEGER]" />
 
 
 <!-- Lighting -->
 <option function="VIEW_ALLOW_TRANSPARENT_SHADOWS" 		value="TRUE"			note="Allows transparency in lighting calculations. [TRUE/FALSE]" />
 <option function="VIEW_ALLOW_TRANSPARENCY" 				value="TRUE"			note="Allows transparency in graphics rendering. [TRUE/FALSE]" />
 <option function="VIEW_SHADOW_QUALITY" 					value="FULL"			note="Controls resolution of lighting pass. [EIGHTH/QUARTER/HALF/FULL]" />
-<option function="VIEW_LIGHTING_TYPE"					value="ARB"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
+<option function="VIEW_LIGHTING_TYPE"					value="NONE"				note="Lighting system to use. Older GPUs can't support ARB. [NONE/OLD/ARB/DYNAMIC]" />
 <option function="VIEW_ARB_LUXEL_SIZE"					value="0.01" 			note="How big (in world units) each lighting 'luxel' should be when using ARB lighting [FLOAT]" />
 
 

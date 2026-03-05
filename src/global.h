@@ -141,7 +141,7 @@ inline GLuint portalTextureID, surfaceLightMapsArrayID, CRTbezelTexture;
 //Storage Buffers and similar.
 inline GLuint wallIntersectSSBO, visplaneCheckSSBO, allVisplanesSSBO, allWallsSSBO, spriteSSBO, lightSSBO;
 inline GLuint displacementSSBO, visibleVisplaneIndicesSSBO, visibleWallIndicesSSBO, lightLOSSSBO;
-inline GLuint shadowMapResolutionsSSBO, numFoundObjectsAtomicSSBO;
+inline GLuint shadowMapResolutionsSSBO, numFoundObjectsAtomicSSBO, portalMaskStackSSBO, numPortalsSSBO;
 
 
 inline std::set<std::string> supportedExtensions;
@@ -626,6 +626,16 @@ struct WallIntersect {
 		: position2D(), normal2D(),
 		  projections(),
 		  wallIndexAndXUV(), distanceSQ() {}
+};
+
+
+struct PortalColumn {
+	glm::vec3 cameraPosition; 	//Translated position for this column's ray.
+	float cameraYaw;	 		//Rotated yaw angle for this column's ray.
+	uint projections;    		//Min/Max Y positions to allow drawing to.
+	float baseDistance;  		//Cumulative distance (Used for distance ordering later).
+
+	PortalColumn(const glm::vec3& cPos, float cYaw) : cameraPosition(cPos), cameraYaw(cYaw), projections(0xFFFF0000u), baseDistance(0.0f) {}
 };
 
 

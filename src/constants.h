@@ -304,6 +304,7 @@ namespace display {
 	constexpr float ZOOM_MULT = 3.0f;
 	constexpr size_t MAX_TEXTOBJECT_CHARACTERS = 64;
 	constexpr float SHADOWMAP_SCALING = 0.01f;
+	constexpr int MAX_PORTALS_PER_COLUMN = 4; //Stack size of 4 for every column of the screen to manage portals.
 }
 
 namespace initial {

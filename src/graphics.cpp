@@ -651,7 +651,7 @@ void findVisibleObjects(
 
 
 void saveScreenshot(GLuint frameTextureID) {
-	std::vector<unsigned char> pixels(currentRenderResolution.x * currentRenderResolution.y * 3);
+	std::vector<unsigned char> pixels(actualRenderResolution.x * actualRenderResolution.y * 3);
 
 	glBindTexture(GL_TEXTURE_2D, frameTextureID);
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
@@ -667,8 +667,8 @@ void saveScreenshot(GLuint frameTextureID) {
 
 	stbi_write_png(
 		imagePath.string().c_str(),
-		currentRenderResolution.x, currentRenderResolution.y,
-		3, pixels.data(), currentRenderResolution.x*3
+		actualRenderResolution.x, actualRenderResolution.y,
+		3, pixels.data(), actualRenderResolution.x*3
 	);
 
 
@@ -1548,6 +1548,16 @@ void prepareOpenGL() {
 	);
 	glObjectLabel(GL_BUFFER, GLIndex::numFoundObjectsAtomicSSBO, -1, "numFoundObjectsAtomicSSBO");
 
+	GLIndex::portalMaskStackSSBO = createShaderStorageBufferObject(
+		11, sizeof(structs::PortalColumn) * currentRenderResolution.x * display::MAX_PORTALS_PER_COLUMN
+	);
+	glObjectLabel(GL_BUFFER, GLIndex::portalMaskStackSSBO, -1, "portalMaskStackSSBO");
+
+	GLIndex::numPortalsSSBO = createShaderStorageBufferObject(
+		12, sizeof(uint) * currentRenderResolution.x, GL_STREAM_COPY
+	);
+	glObjectLabel(GL_BUFFER, GLIndex::numPortalsSSBO, -1, "numPortalsSSBO");
+
 
 
 	//Raycast compute shader
@@ -2114,6 +2124,9 @@ void updateSSBOs(bool drawLightBlockers) {
 		drawLightBlockers
 	);
 
+	std::vector<structs::PortalColumn>columns(
+	    currentRenderResolution.x, structs::PortalColumn(player.position, player.viewAngle)
+	);
 
 	//Update SSBOs.
 	graphics::updateShaderStorageBufferObject<structs::VisplaneGPU>(
@@ -2137,7 +2150,12 @@ void updateSSBOs(bool drawLightBlockers) {
 	graphics::updateShaderStorageBufferObject<uint>(
 		GLIndex::visibleWallIndicesSSBO, &visibleWallIndices
 	);
-	glClearNamedBufferData(GLIndex::numFoundObjectsAtomicSSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero); //Clear to 0s
+	glClearNamedBufferData(GLIndex::numFoundObjectsAtomicSSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero); //Clear stack sizes to 0s
+	graphics::updateShaderStorageBufferObject<structs::PortalColumn>(
+		GLIndex::portalMaskStackSSBO, &columns
+	);
+	glClearNamedBufferData(GLIndex::numPortalsSSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero); //Clear stack sizes to 0s
+
 	utils::GLErrorcheck("Updating SSBOs", true);
 }
 
@@ -2341,16 +2359,24 @@ void draw(double blendingAlpha, double currentTime) {
 
 	//Raycasting compute shader.
 	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
-	glUseProgram(GLIndex::raycastShader);
-	uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime);
-	size_t numberOfObjects = numVisibleWalls + numVisibleVisplanes;
-	glDispatchCompute(
-		(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
-		(numberOfObjects + RAYCASTING_LOCAL_SIZE.y - 1) / RAYCASTING_LOCAL_SIZE.y,
-		1
-	);
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	GLErrorcheck("Raycasting Shader", true);
+	//Run iteratively until all portals are calculated.
+	for (unsigned int portalIteration=0u; portalIteration<utils::configToInt("VIEW_PORTAL_ITERATIONS"); portalIteration++) {
+		glUseProgram(GLIndex::raycastShader);
+
+		//Uniforms
+		uniforms::bindCommonUniforms(GLIndex::raycastShader, blendingAlpha, currentTime);
+		uniforms::bindUniformValue(GLIndex::raycastShader, "maxPortals", static_cast<size_t>(display::MAX_PORTALS_PER_COLUMN));
+		uniforms::bindUniformValue(GLIndex::raycastShader, "portalIteration", static_cast<size_t>(portalIteration));
+
+		size_t numberOfObjects = numVisibleWalls + numVisibleVisplanes;
+		glDispatchCompute(
+			(currentRenderResolution.x + RAYCASTING_LOCAL_SIZE.x - 1) / RAYCASTING_LOCAL_SIZE.x,
+			numberOfObjects, (portalIteration) ? display::MAX_PORTALS_PER_COLUMN : 1 //1 on the first pass, then MAX_PORTALS_PER_COLUMN to handle the stacks.
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		GLErrorcheck("Raycasting Shader", true);
+	}
 
 
 
