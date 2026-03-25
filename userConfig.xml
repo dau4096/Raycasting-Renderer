@@ -97,7 +97,7 @@
 <option function="VIEW_USE_MIPMAPPING" 					value="TRUE" 			note="Use mip-mapping for Environment/Sprite textures. [TRUE/FALSE]" />
 <option function="VIEW_MAX_RAY_DIST" 					value="255.0" 			note="Maximum ray distance for objects, also controls distance fog. [uINTEGER]" />
 <option function="VIEW_CORRECTION" 						value="TRUE" 			note="Enables view correction. When disabled, natural fish-eye effect. [TRUE/FALSE]" />
-<option function="VIEW_PORTAL_ITERATIONS"				value="4.0"				note="Number of portal iterations to calculate. [uINTEGER]" />
+<option function="VIEW_PORTAL_ITERATIONS"				value="1.0"				note="Number of portal iterations to calculate. [uINTEGER]" />
 
 
 <!-- Lighting -->

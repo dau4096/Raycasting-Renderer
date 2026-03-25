@@ -2360,7 +2360,7 @@ void draw(double blendingAlpha, double currentTime) {
 	//Raycasting compute shader.
 	const glm::uvec3 RAYCASTING_LOCAL_SIZE = glm::uvec3(32, 1, 1);
 	//Run iteratively until all portals are calculated.
-	for (unsigned int portalIteration=0u; portalIteration<utils::configToInt("VIEW_PORTAL_ITERATIONS"); portalIteration++) {
+	for (unsigned int portalIteration=0u; portalIteration<=utils::configToInt("VIEW_PORTAL_ITERATIONS"); portalIteration++) { //0 is no portal iters, just 1st pass.
 		glUseProgram(GLIndex::raycastShader);
 
 		//Uniforms

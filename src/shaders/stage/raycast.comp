@@ -79,10 +79,9 @@ layout(std430, binding=10) buffer numFoundObjectsAtomicSSBO {uint numFoundObject
 
 //Acts as a mask for this column's values
 struct PortalColumn {
-	vec3 cameraPosition; //Translated position for this column's ray.
-	float cameraYaw;	 //Rotated yaw angle for this column's ray.
-	uint projections;    //Min/Max Y positions to allow drawing to.
-	float baseDistance;  //Cumulative distance (Used for distance ordering later).
+	vec4 cameraPositionYaw; //Translated position and rotated yaw angle for this column's ray.
+	uint projections;       //Min/Max Y positions to allow drawing to.
+	float baseDistanceSQ;   //Cumulative distance (Used for distance ordering later).
 };
 layout(std430, binding=11) buffer portalMaskStackSSBO {PortalColumn portalMaskStack[];};
 layout(std430, binding=12) buffer numPortalsSSBO {uint numPortals[];};
@@ -172,7 +171,12 @@ void getPartnerRelative(
 }
 
 
-void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDelta2D, float horizontalScalingSQ) {
+void handle2DWallIntersect(
+	uint screenX, uint IDX, uint minmaxY,
+	vec3 cameraPosition, float cameraYaw, float baseDistanceSQ,
+	vec2 rayDirection, vec2 rayDelta2D,
+	float horizontalScalingSQ
+) {
 	uint wallIndex = visibleWallIndices[IDX];
 	uint SSBOIndex = (screenX * numWalls) + wallIndex;
 	Wall thisWall = walls[wallIndex];
@@ -184,7 +188,7 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 	float t;
 	bool success = getLineIntersect(
 		thisWall.start.xy, thisWall.end.xy, wallNormal,
-		playerPosition.xy, (playerPosition.xy + rayDelta2D), rayDelta2D,
+		cameraPosition.xy, (cameraPosition.xy + rayDelta2D), rayDelta2D,
 		intersect.position2D, t
 	);
 	if (!success) {
@@ -193,32 +197,38 @@ void handle2DWallIntersect(uint screenX, uint IDX, vec2 rayDirection, vec2 rayDe
 
 
 	intersect.normal2D = (dot(wallNormal, rayDirection) < 0.0f) ? wallNormal : -wallNormal;
-	vec2 d = playerPosition.xy - intersect.position2D;
+	vec2 d = cameraPosition.xy - intersect.position2D;
 	intersect.wallIndexAndXUV = ((wallIndex & 0xFFFFFF) << 8) | getXUV(intersect.position2D, thisWall);
-	intersect.distanceSQ = dot(d, d); //Cheaper length() call
-	intersect.projections = getProjectedZ(intersect.distanceSQ * horizontalScalingSQ, thisWall.start.z, thisWall.end.z);
+	intersect.distanceSQ = dot(d, d) + baseDistanceSQ; //Cheaper length() call
+	intersect.projections = getProjectedZ(
+		intersect.distanceSQ * horizontalScalingSQ,
+		thisWall.start.z, thisWall.end.z,
+		cameraPosition.z, minmaxY
+	);
 
 	uint insertIndex = atomicAdd(numFoundObjects[screenX * 2], 1);
-	wallIntersects[(screenX * numWalls) + insertIndex] = intersect;
+	if (insertIndex >= numWalls) {return; /* Overflowing stack. */}
 
 	if (thisWall.type == 15) {
 		//W_PORTAL type;
 		Wall partner = walls[uint(thisWall.extra)]; //.extra contains the partner index.
 
 		uint portalStackIndex = atomicAdd(numPortals[screenX], 1);
+		if (portalStackIndex >= maxPortals) {return; /* Overflowing stack. */}
 		uint pIdx = (screenX * maxPortals) + portalStackIndex;
 
-		portalMaskStack[pIdx].cameraPosition = translatedPosition;
-		portalMaskStack[pIdx].cameraYaw      = rotatedYaw;
-		portalMaskStack[pIdx].projections    = intersect.projections;
-		portalMaskStack[pIdx].baseDistance  += intersect.distanceSQ;
+		portalMaskStack[pIdx].projections     = intersect.projections;
+		portalMaskStack[pIdx].baseDistanceSQ += intersect.distanceSQ;
 
 		getPartnerRelative(
 			thisWall, partner,
-			playerPosition, playerViewAngle,
-			portalMaskStack[pIdx].cameraPosition,
-			portalMaskStack[pIdx].cameraYaw
+			cameraPosition, cameraYaw,
+			portalMaskStack[pIdx].cameraPositionYaw.xyz, //Pos
+			portalMaskStack[pIdx].cameraPositionYaw.w //Yaw
 		);
+	} else {
+		//Add to the dataset;
+		wallIntersects[(screenX * numWalls) + insertIndex] = intersect;		
 	}
 }
 //// WALL RAYCASTING FUNCTIONS ////
@@ -304,6 +314,7 @@ void handle2DVisplaneIntersect(uint screenX, uint IDX, vec2 rayDelta2D, float ho
 		}
 
 		uint insertIndex = atomicAdd(numFoundObjects[screenX * 2 + 1], 1);
+		if (insertIndex >= numVisplanes) {return; /* Overflowing stack. */}
 		//X: The lowest bit will represent whether a collision was found. The other 31 bits are the index.
 		//Y: Former 16 bits are biased higher-projection. Latter 16 bits are same for lower-projection. [SCREENSPACE]
 		visplaneCheckIndices[(screenX * numVisplanes) + insertIndex] = uvec2(
@@ -324,10 +335,39 @@ void main() {
 	if ((screenX >= renderResolution.x) || (!isWall && !isVP)) {return; /* Offscreen or out of range. */}
 
 
-	zoomEffect = (zoom) ? zoomFactor : 1.0f;
-	float rayOffset = -maxRayAngle + (screenX / float(renderResolution.x)) * 2.0f * maxRayAngle;
-	float horizontalScaling = (viewCorrection) ? cos(rayOffset) : 1.0f;
-	float rayAngleYaw = playerViewAngle + rayOffset;
+
+	float rayAngleYaw;
+	vec3 cameraPosition;
+	uint minmaxY;
+	float baseDistanceSQ;
+	float horizontalScaling;
+	if (portalIteration > 0u) {
+		//Use value from the dataset of PortalColumns
+		uint stackIndex = gl_GlobalInvocationID.z;
+		if ((stackIndex > maxPortals) || (stackIndex >= numPortals[screenX])) {return; /* Can't read past the end of the stack. */}
+		atomicAdd(numPortals[screenX], -1);
+
+		uint pIdx = (screenX * maxPortals) + stackIndex;
+		PortalColumn portal = portalMaskStack[pIdx]; //Get this PortalColumn instance
+		minmaxY = portal.projections;
+		if (minmaxY == 0x0000FFFFu) {return; /* Known impossible/invalid projections value. */}
+
+		cameraPosition = vec3(-3.5, -3.5, 1.0);//portal.cameraPositionYaw.xyz;
+		rayAngleYaw = 0.0f;//portal.cameraPositionYaw.w; //Use player defaults for now.
+		baseDistanceSQ = 0.0f;//portal.baseDistanceSQ;
+
+	} else {
+		//Use uniform values for main camera.
+		zoomEffect = (zoom) ? zoomFactor : 1.0f;
+		float rayOffset = -maxRayAngle + (screenX / float(renderResolution.x)) * 2.0f * maxRayAngle;
+		horizontalScaling = (viewCorrection) ? cos(rayOffset) : 1.0f;
+		rayAngleYaw = playerViewAngle + rayOffset;
+
+		cameraPosition = playerPosition;
+		minmaxY = 0xFFFF0000u; //Top/Bottom of screen.
+		baseDistanceSQ = 0.0f;
+	}
+
 
 	vec2 rayDirection = vec2(sin(rayAngleYaw), cos(rayAngleYaw));
 	vec2 rayDelta2D = rayDirection.xy * maxRayDistance;
@@ -335,8 +375,17 @@ void main() {
 
 
 	if (isWall) {
-		handle2DWallIntersect(screenX, IDX, rayDirection, rayDelta2D, horizontalScaling*horizontalScaling);
-	} else if (isVP) {
-		handle2DVisplaneIntersect(screenX, IDX - numVisibleWalls, rayDelta2D, horizontalScaling);
+		handle2DWallIntersect(
+			screenX, IDX, minmaxY,
+			cameraPosition, rayAngleYaw, baseDistanceSQ,
+			rayDirection, rayDelta2D,
+			horizontalScaling*horizontalScaling
+		);
+	} else if (isVP && (portalIteration == 0u) && false) { //Don't render until walls are fixed.
+		handle2DVisplaneIntersect(
+			screenX, IDX - numVisibleWalls,
+			rayDelta2D,
+			horizontalScaling
+		);
 	}
 }

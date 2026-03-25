@@ -80,10 +80,10 @@ float getWallYUV(Wall thisWall, uint projections, out int textureID, out bvec4 t
 
 	//The ideal offset is -0x7FFF (-32,767), but they have slight offsets to account for floating-point inconsistencies later. (+/- 1px.)
 	float lowOffset = (playerPosition.z < thisWall.start.z) ? 0.0f : -1.0f;
-	float screenYLow = float(int((projections >> 16) & 0xFFFFu) - 0x7FFF) + lowOffset;
+	float screenYLow = float(int(projections & 0xFFFFu) - 0x7FFF) + lowOffset;
 
 	float topOffset = ((playerPosition.z > thisWall.end.z) ? 0.0f : 1.0f);
-	float screenYTop = float(int(projections & 0xFFFFu) - 0x7FFF) + topOffset;
+	float screenYTop = float(int((projections >> 16) & 0xFFFFu) - 0x7FFF) + topOffset;
 
 	if (fragPosition.y >= screenYTop || fragPosition.y <= screenYLow) {
 		return INF;

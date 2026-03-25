@@ -188,16 +188,26 @@ static inline int getTexture(
 
 
 
-static std::unordered_map<std::string, std::pair<size_t, size_t>> indexMap;
+static std::unordered_map<std::string, std::pair<size_t, size_t>> vIndexMap;
+static std::unordered_map<std::string, std::pair<size_t, size_t>> wIndexMap;
 float assignExtra(const pugi::xml_node& node, size_t index=0) {
 	std::string nodeType = utils::strToUpper(node.attribute("type").value());
-	if ((nodeType == "V_TELEPORT") || (nodeType == "W_PORTAL")) {
+	if (nodeType == "V_TELEPORT") {
 		std::string teleflag = node.attribute("extra").as_string();
-		auto it = indexMap.find(teleflag);
-		if (it == indexMap.end()) {
-			indexMap[teleflag] = std::pair<size_t, size_t>{index, 0};
+		auto it = vIndexMap.find(teleflag);
+		if (it == vIndexMap.end()) {
+			vIndexMap[teleflag] = std::pair<size_t, size_t>{index, 0};
 		} else {
-			indexMap[teleflag].second = index;
+			vIndexMap[teleflag].second = index;
+		}
+		return 0.0f;
+	} else if (nodeType == "W_PORTAL") {
+		std::string teleflag = node.attribute("extra").as_string();
+		auto it = wIndexMap.find(teleflag);
+		if (it == wIndexMap.end()) {
+			wIndexMap[teleflag] = std::pair<size_t, size_t>{index, 0};
+		} else {
+			wIndexMap[teleflag].second = index;
 		}
 		return 0.0f;
 	}
@@ -214,10 +224,17 @@ static inline float getExtra(const pugi::xml_node& node, float defaultValue=0.0f
 
 
 
-void processTeleporterPartners(std::vector<structs::Visplane>* visplaneData) {
-	for (std::pair<std::string, std::pair<size_t, size_t>> pair : indexMap) {
+void processTeleporterPartners(
+	std::vector<structs::Visplane>* visplaneData,
+	std::vector<structs::Wall>* wallData
+) {
+	for (const std::pair<std::string, std::pair<size_t, size_t>>& pair : vIndexMap) {
 		visplaneData->at(pair.second.first).data = pair.second.second;
 		visplaneData->at(pair.second.second).data = pair.second.first;
+	}
+	for (const std::pair<std::string, std::pair<size_t, size_t>>& pair : wIndexMap) {
+		wallData->at(pair.second.first).data = pair.second.second;
+		wallData->at(pair.second.second).data = pair.second.first;
 	}
 }
 
@@ -1243,7 +1260,7 @@ void loadStage(
 	stageData.name = stageName;
 	stageData.filePath = filePath;
 	xml::retrieveStageMetaData(doc);
-	processTeleporterPartners(&(physicsData->visplaneData));
+	processTeleporterPartners(&(physicsData->visplaneData), &(physicsData->wallData));
 }
 
 

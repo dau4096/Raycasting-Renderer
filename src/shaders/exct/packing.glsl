@@ -19,22 +19,33 @@ void unpackVPProjections(uint en, out int higher, out int lower) {
 
 
 //Walls
-uint getProjectedZ(float wallDistanceSQ, float wallLowZ, float wallTopZ) {
+uint getProjectedZ(
+	float wallDistanceSQ,
+	float wallLowZ, float wallTopZ,
+	float cameraZ, uint minmaxY
+) {
 	float invDistance = inversesqrt(wallDistanceSQ) * zoomEffect * aspectRatio;
 	//Inverse distance scaled by zooming and a set multiplier to make 1x1u more square (was 2:3 ratio before.)
 
+	uint maxY = minmaxY >> 16u;
+	uint minY = minmaxY & 0xFFFFu;
+
 	//Low edge of the wall (bottom visually)
-	float projectedYLow = (playerPosition.z - wallLowZ) * invDistance;
+	float projectedYLow = (cameraZ - wallLowZ) * invDistance;
 	float screenYLow = renderResolution.y * (0.5f - projectedYLow);
-	uint clampedScreenYLow = uint(clamp(int(screenYLow) + 0x7FFF, 0x0000, 0xFFFF));
+	uint clampedScreenYLow = uint(clamp(int(screenYLow) + 0x7FFF, minY, maxY));
 
 	//High edge of the wall (top visually)
-	float projectedYTop = (playerPosition.z - wallTopZ) * invDistance;
+	float projectedYTop = (cameraZ - wallTopZ) * invDistance;
 	float screenYTop = renderResolution.y * (0.5f - projectedYTop);
-	uint clampedScreenYTop = uint(clamp(int(screenYTop) + 0x7FFF, 0x0000, 0xFFFF));
+	uint clampedScreenYTop = uint(clamp(int(screenYTop) + 0x7FFF, minY, maxY));
+
+	if (clampedScreenYLow >= clampedScreenYTop) {
+	    return 0xFFFF0000u;
+	}
 
 	//Convert to 16-bit unsigned integers and return combined projection.
-	return (clampedScreenYLow << 16) | clampedScreenYTop;
+	return (clampedScreenYTop << 16) | clampedScreenYLow;
 }
 
 

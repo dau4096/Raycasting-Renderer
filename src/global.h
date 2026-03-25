@@ -630,12 +630,11 @@ struct WallIntersect {
 
 
 struct PortalColumn {
-	glm::vec3 cameraPosition; 	//Translated position for this column's ray.
-	float cameraYaw;	 		//Rotated yaw angle for this column's ray.
-	uint projections;    		//Min/Max Y positions to allow drawing to.
-	float baseDistance;  		//Cumulative distance (Used for distance ordering later).
+	alignas(16) glm::vec4 cameraPositionYaw; //Translated position and rotated yaw angle for this column's ray.
+	alignas(4)  uint projections;    		 //Min/Max Y positions to allow drawing to. Default value is 0x0000FFFF, so lower/higher rather than higher/lower == invalid.
+	alignas(4)  float baseDistanceSQ;  		 //Cumulative distance (Used for distance ordering later).
 
-	PortalColumn(const glm::vec3& cPos, float cYaw) : cameraPosition(cPos), cameraYaw(cYaw), projections(0xFFFF0000u), baseDistance(0.0f) {}
+	PortalColumn(const glm::vec3& cPos, float cYaw) : cameraPositionYaw(cPos, cYaw), projections(0x0000FFFFu), baseDistanceSQ(0.0f) {}
 };
 
 
